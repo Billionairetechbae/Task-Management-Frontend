@@ -3,36 +3,75 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
-import Plans from "./pages/Plans";
-import Assistants from "./pages/Assistants";
-import Checkout from "./pages/Checkout";
-import Dashboard from "./pages/Dashboard";
+import SignupExecutive from "./pages/SignupExecutive";
+import SignupAssistant from "./pages/SignupAssistant";
+import Profile from "./pages/Profile";
+import DashboardExecutive from "./pages/DashboardExecutive";
+import DashboardAssistant from "./pages/DashboardAssistant";
+import DashboardAdmin from "./pages/DashboardAdmin";
 import AIHub from "./pages/AIHub";
 import TaskDetails from "./pages/TaskDetails";
+import Unauthorized from "./pages/Unauthorized";
+import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/plans" element={<Plans />} />
-          <Route path="/assistants" element={<Assistants />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/ai-hub" element={<AIHub />} />
-          <Route path="/task-details" element={<TaskDetails />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/signup-executive" element={<SignupExecutive />} />
+            <Route path="/signup-assistant" element={<SignupAssistant />} />
+            
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/dashboard-executive" element={
+              <ProtectedRoute allowedRoles={['executive']}>
+                <DashboardExecutive />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/dashboard-assistant" element={
+              <ProtectedRoute allowedRoles={['assistant']}>
+                <DashboardAssistant />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/dashboard-admin" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardAdmin />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/ai-hub" element={
+              <ProtectedRoute>
+                <AIHub />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/task-details" element={
+              <ProtectedRoute>
+                <TaskDetails />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
