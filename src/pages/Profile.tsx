@@ -1,0 +1,182 @@
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Mail, Building2, Award, DollarSign, Briefcase } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+
+const Profile = () => {
+  const { user, logout } = useAuth();
+
+  if (!user) return null;
+
+  const getDashboardRoute = () => {
+    switch (user.role) {
+      case 'executive':
+        return '/dashboard-executive';
+      case 'assistant':
+        return '/dashboard-assistant';
+      case 'admin':
+        return '/dashboard-admin';
+      default:
+        return '/';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <Link
+          to={getDashboardRoute()}
+          className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Dashboard
+        </Link>
+
+        <div className="bg-card border border-border rounded-2xl p-8">
+          <div className="flex items-start justify-between mb-8">
+            <div className="flex items-start gap-6">
+              <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-3xl font-bold text-primary">
+                  {user.firstName[0]}{user.lastName[0]}
+                </span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold mb-2">
+                  {user.firstName} {user.lastName}
+                </h1>
+                <div className="flex items-center gap-3 mb-3">
+                  <Badge variant={user.role === 'executive' ? 'default' : 'secondary'}>
+                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                  </Badge>
+                  <Badge variant={user.isVerified ? 'default' : 'secondary'}>
+                    {user.isVerified ? 'Verified' : 'Not Verified'}
+                  </Badge>
+                  {user.subscriptionTier && (
+                    <Badge variant="outline">{user.subscriptionTier}</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button variant="outline" onClick={logout}>
+              Logout
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Mail className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-medium">{user.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Building2 className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Company</p>
+                  <p className="font-medium">{user.company}</p>
+                </div>
+              </div>
+
+              {user.companySize && (
+                <div className="flex items-center gap-3">
+                  <Briefcase className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Company Size</p>
+                    <p className="font-medium">{user.companySize}</p>
+                  </div>
+                </div>
+              )}
+
+              {user.industry && (
+                <div className="flex items-center gap-3">
+                  <Award className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Industry</p>
+                    <p className="font-medium">{user.industry}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              {user.specialization && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Specialization</p>
+                  <p className="font-medium capitalize">{user.specialization}</p>
+                </div>
+              )}
+
+              {user.experience !== undefined && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Experience</p>
+                  <p className="font-medium">{user.experience} years</p>
+                </div>
+              )}
+
+              {user.hourlyRate !== undefined && (
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Hourly Rate</p>
+                    <p className="font-medium">${user.hourlyRate}/hour</p>
+                  </div>
+                </div>
+              )}
+
+              {user.rating !== undefined && user.rating > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Rating</p>
+                  <p className="font-medium">{user.rating} / 5.0</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {user.bio && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-sm text-muted-foreground mb-2">Bio</p>
+              <p className="text-foreground">{user.bio}</p>
+            </div>
+          )}
+
+          {user.skills && user.skills.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-sm text-muted-foreground mb-3">Skills</p>
+              <div className="flex flex-wrap gap-2">
+                {user.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 pt-6 border-t border-border grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+            <div>
+              <p>Account Created</p>
+              <p className="font-medium text-foreground">
+                {new Date(user.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+            <div>
+              <p>Last Updated</p>
+              <p className="font-medium text-foreground">
+                {new Date(user.updatedAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Profile;
