@@ -1,119 +1,157 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Star, Search } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const assistants = [
-  {
-    name: "Sarah Chen",
-    role: "Chief of Staff",
-    skills: ["Operations", "Strategic Planning", "Project Management"],
-    experience: "8 years",
-    rate: "$75/hour",
-    status: "Available",
-    selected: false,
-  },
-  {
-    name: "Michael Rodriguez",
-    role: "Sales Executive Assistant",
-    skills: ["Sales", "CRM Management", "Client Relations"],
-    experience: "6 years",
-    rate: "$65/hour",
-    status: "Available",
-    selected: true,
-  },
-  {
-    name: "Emily Thompson",
-    role: "Marketing Chief of Staff",
-    skills: ["Marketing", "Content Strategy", "Social Media"],
-    experience: "7 years",
-    rate: "$70/hour",
-    status: "Available",
-    selected: false,
-  },
-];
+import { useState, useEffect } from "react";
+import { api, Assistant } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Assistants = () => {
-  return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        <Link
-          to="/plans"
-          className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Plans
-        </Link>
+  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
 
-        <div className="text-center mb-4">
+  useEffect(() => {
+    fetchAssistants();
+  }, []);
+
+  const fetchAssistants = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getAssistants();
+      setAssistants(response.data.assistants);
+    } catch (error) {
+      console.error('Failed to fetch assistants:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load assistants",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAssistants = assistants.filter(
+    (assistant) =>
+      assistant.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assistant.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assistant.specialization.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card px-6 py-4">
+        <div className="flex items-center justify-between">
           <h1 className="text-primary font-bold text-2xl">
             admiino<span className="text-accent">°</span>
           </h1>
+          <Button variant="outline" asChild>
+            <Link to="/dashboard">Back to Dashboard</Link>
+          </Button>
+        </div>
+      </header>
+
+      <main className="px-6 py-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold mb-2">Browse Assistants</h2>
+          <p className="text-muted-foreground">Find the perfect assistant for your tasks</p>
         </div>
 
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4">Choose Your Executive Assistant</h2>
-          <p className="text-muted-foreground text-lg">
-            Select a Chief of Staff or Executive Assistant based on their skills and expertise.
-          </p>
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or specialization..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assistants.map((assistant) => (
-            <div
-              key={assistant.name}
-              className={`bg-card rounded-3xl p-8 transition-all ${
-                assistant.selected ? "border-2 border-primary" : "border-2 border-border"
-              }`}
-            >
-              <div className="flex flex-col items-center mb-6">
-                <div className="relative mb-4">
-                  <div className="w-24 h-24 bg-muted rounded-full" />
-                  <div
-                    className={`absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-card ${
-                      assistant.status === "Available" ? "bg-success" : "bg-warning"
-                    }`}
-                  />
-                </div>
-                <h3 className="text-xl font-bold text-center">{assistant.name}</h3>
-                <p className="text-muted-foreground text-center">{assistant.role}</p>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-6 justify-center">
-                {assistant.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading assistants...</p>
+          </div>
+        ) : filteredAssistants.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No assistants found</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAssistants.map((assistant) => (
+              <div key={assistant.id} className="bg-card border border-border rounded-2xl p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary font-bold text-xl">
+                      {assistant.firstName.charAt(0)}
+                      {assistant.lastName.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg mb-1">
+                      {assistant.firstName} {assistant.lastName}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-2 capitalize">
+                      {assistant.specialization} Specialist
+                    </p>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-4 h-4 ${
+                            star <= assistant.rating
+                              ? "fill-accent text-accent"
+                              : "text-muted"
+                          }`}
+                        />
+                      ))}
+                      <span className="text-sm text-muted-foreground ml-1">
+                        ({assistant.rating.toFixed(1)})
+                      </span>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className={
+                      assistant.isAvailable
+                        ? "bg-success/10 text-success border-success/20"
+                        : "bg-destructive/10 text-destructive border-destructive/20"
+                    }
                   >
-                    {skill}
-                  </span>
-                ))}
-              </div>
+                    {assistant.isAvailable ? "Available" : "Busy"}
+                  </Badge>
+                </div>
 
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Experience:</span>
-                  <span className="font-semibold">{assistant.experience}</span>
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                  {assistant.bio}
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {assistant.skills.slice(0, 3).map((skill, index) => (
+                    <Badge key={index} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rate:</span>
-                  <span className="font-semibold">{assistant.rate}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <span className="text-success font-semibold">{assistant.status}</span>
+
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Hourly Rate</p>
+                    <p className="font-bold text-lg">${assistant.hourlyRate}/hr</p>
+                  </div>
+                  <Button disabled={!assistant.isAvailable}>
+                    {assistant.isAvailable ? "Hire Now" : "Not Available"}
+                  </Button>
                 </div>
               </div>
-
-              <Button className="w-full h-12 font-semibold" asChild>
-                <Link to="/checkout">
-                  <Check className="w-5 h-5 mr-2" />
-                  Select Assistant
-                </Link>
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 };
