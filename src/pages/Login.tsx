@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import Logo from "@/components/Logo";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -53,9 +54,7 @@ const Login = () => {
     <div className="min-h-screen bg-background grid lg:grid-cols-2">
       <div className="flex flex-col justify-center px-8 lg:px-16 py-12">
         <div className="mb-12">
-          <h1 className="text-primary font-bold text-2xl">
-            admiino<span className="text-accent">°</span>
-          </h1>
+          <Logo className="h-8" />
         </div>
 
         <div className="max-w-md">

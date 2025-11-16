@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { api, Assistant } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import Logo from "@/components/Logo";
 
 const Assistants = () => {
   const [assistants, setAssistants] = useState<Assistant[]>([]);
@@ -45,9 +46,7 @@ const Assistants = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-primary font-bold text-2xl">
-            admiino<span className="text-accent">°</span>
-          </h1>
+          <Logo className="h-8" />
           <Button variant="outline" asChild>
             <Link to="/dashboard">Back to Dashboard</Link>
           </Button>

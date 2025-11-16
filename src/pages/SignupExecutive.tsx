@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import Logo from "@/components/Logo";
 
 const SignupExecutive = () => {
   const navigate = useNavigate();
@@ -57,9 +58,7 @@ const SignupExecutive = () => {
         </Link>
 
         <div className="text-center mb-8">
-          <h1 className="text-primary font-bold text-2xl mb-2">
-            admiino<span className="text-accent">°</span>
-          </h1>
+          <Logo className="h-8 mb-2" />
           <div className="flex items-center justify-center gap-2 mb-4">
             <Building2 className="w-8 h-8 text-primary" />
           </div>
