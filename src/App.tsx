@@ -61,11 +61,11 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            <Route path="/task-details" element={
-              <ProtectedRoute>
-                <TaskDetails />
-              </ProtectedRoute>
-            } />
+          <Route path="/task-details/:id" element={
+            <ProtectedRoute>
+              <TaskDetails />
+            </ProtectedRoute>
+          } />
             
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />

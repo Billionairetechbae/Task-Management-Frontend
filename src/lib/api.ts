@@ -65,6 +65,108 @@ export interface LoginData {
   password: string;
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  deadline: string;
+  category: string;
+  estimatedHours: number;
+  actualHours: number | null;
+  tier: string;
+  assignedAssistantId: string | null;
+  executiveId: string;
+  assigneeId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  executive?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  assignee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  } | null;
+}
+
+export interface CreateTaskData {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  deadline: string;
+  category: string;
+  estimatedHours: number;
+  assigneeId?: string;
+}
+
+export interface UpdateTaskData {
+  title?: string;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high';
+  status?: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  deadline?: string;
+  actualHours?: number;
+}
+
+export interface TaskFilters {
+  status?: string;
+  priority?: string;
+  category?: string;
+}
+
+export interface ExecutiveDashboard {
+  tasks: Task[];
+  stats: {
+    totalTasks: number;
+    pendingTasks: number;
+    inProgressTasks: number;
+    completedTasks: number;
+    urgentTasks: number;
+  };
+}
+
+export interface AssistantDashboard {
+  tasks: Task[];
+  stats: {
+    totalTasks: number;
+    pendingTasks: number;
+    inProgressTasks: number;
+    completedTasks: number;
+    urgentTasks: number;
+  };
+}
+
+export interface Assistant {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  company: string;
+  role: string;
+  subscriptionTier: string;
+  isVerified: boolean;
+  isActive: boolean;
+  specialization: string;
+  experience: number;
+  hourlyRate: number;
+  bio: string;
+  skills: string[];
+  isAvailable: boolean;
+  rating: number;
+}
+
+export interface AssistantFilters {
+  specialization?: string;
+  minRating?: number;
+  maxHourlyRate?: number;
+}
+
 class ApiClient {
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem('auth_token');
@@ -151,6 +253,160 @@ class ApiClient {
 
   logout(): void {
     localStorage.removeItem('auth_token');
+  }
+
+  // Task endpoints
+  async createTask(data: CreateTaskData): Promise<{ status: string; message: string; data: { task: Task } }> {
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to create task');
+    }
+
+    return result;
+  }
+
+  async getTasks(filters?: TaskFilters): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
+    const queryParams = new URLSearchParams();
+    if (filters?.status) queryParams.append('status', filters.status);
+    if (filters?.priority) queryParams.append('priority', filters.priority);
+    if (filters?.category) queryParams.append('category', filters.category);
+
+    const response = await fetch(`${API_BASE_URL}/tasks?${queryParams}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch tasks');
+    }
+
+    return result;
+  }
+
+  async updateTask(taskId: string, data: UpdateTaskData): Promise<{ status: string; message: string; data: { task: Task } }> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update task');
+    }
+
+    return result;
+  }
+
+  async deleteTask(taskId: string): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to delete task');
+    }
+
+    return result;
+  }
+
+  // Dashboard endpoints
+  async getExecutiveDashboard(): Promise<{ status: string; data: ExecutiveDashboard }> {
+    const response = await fetch(`${API_BASE_URL}/dashboard/executive`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch dashboard');
+    }
+
+    return result;
+  }
+
+  async getAssistantDashboard(): Promise<{ status: string; data: AssistantDashboard }> {
+    const response = await fetch(`${API_BASE_URL}/dashboard/assistant`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch dashboard');
+    }
+
+    return result;
+  }
+
+  // Assistants endpoints
+  async getAssistants(filters?: AssistantFilters): Promise<{ status: string; results: number; data: { assistants: Assistant[] } }> {
+    const queryParams = new URLSearchParams();
+    if (filters?.specialization) queryParams.append('specialization', filters.specialization);
+    if (filters?.minRating) queryParams.append('minRating', filters.minRating.toString());
+    if (filters?.maxHourlyRate) queryParams.append('maxHourlyRate', filters.maxHourlyRate.toString());
+
+    const response = await fetch(`${API_BASE_URL}/assistants?${queryParams}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch assistants');
+    }
+
+    return result;
+  }
+
+  async getAssistantById(assistantId: string): Promise<{ status: string; data: { assistant: Assistant } }> {
+    const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch assistant');
+    }
+
+    return result;
+  }
+
+  async updateAssistantAvailability(
+    assistantId: string,
+    data: { isAvailable?: boolean; hourlyRate?: number; specialization?: string }
+  ): Promise<{ status: string; message: string; data: { assistant: Assistant } }> {
+    const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}/availability`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update availability');
+    }
+
+    return result;
   }
 }
 
