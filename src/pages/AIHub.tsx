@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Bot, CheckCircle, Clock, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import Logo from "@/components/Logo";
 
 const aiAgents = [
   {
@@ -40,9 +41,7 @@ const AIHub = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-primary font-bold text-2xl">
-            admiino<span className="text-accent">°</span>
-          </h1>
+          <Logo className="h-8" />
           <Link
             to="/dashboard"
             className="text-foreground hover:text-primary font-medium flex items-center gap-2"

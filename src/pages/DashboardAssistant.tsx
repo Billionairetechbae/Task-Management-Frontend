@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { api, Task } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import Logo from "@/components/Logo";
 
 const DashboardAssistant = () => {
   const { user } = useAuth();
@@ -65,9 +66,7 @@ const DashboardAssistant = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-primary font-bold text-2xl">
-            admiino<span className="text-accent">°</span>
-          </h1>
+          <Logo className="h-8" />
 
           <div className="flex items-center gap-4">
             <button className="relative">

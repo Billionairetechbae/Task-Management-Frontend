@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, Task } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
+import Logo from "@/components/Logo";
 
 const DashboardExecutive = () => {
   const [showBanner, setShowBanner] = useState(true);
@@ -73,9 +74,7 @@ const DashboardExecutive = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-primary font-bold text-2xl">
-            admiino<span className="text-accent">°</span>
-          </h1>
+          <Logo className="h-8" />
 
           <div className="flex items-center gap-4">
             <Button variant="outline" className="gap-2" asChild>
