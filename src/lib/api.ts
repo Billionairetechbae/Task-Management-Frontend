@@ -408,6 +408,22 @@ class ApiClient {
 
     return result;
   }
+
+  // Add this function to your ApiClient class in lib/api.js
+  async getTaskById(taskId: string): Promise<{ status: string; data: { task: Task } }> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch task');
+    }
+
+    return result;
+  }
 }
 
 export const api = new ApiClient();

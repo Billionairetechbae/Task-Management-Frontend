@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Send, Clock } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { api, Task } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -28,25 +28,17 @@ const TaskDetails = () => {
     
     try {
       setLoading(true);
-      const response = await api.getTasks();
-      const foundTask = response.data.tasks.find(t => t.id === id);
-      if (foundTask) {
-        setTask(foundTask);
-      } else {
-        toast({
-          title: "Error",
-          description: "Task not found",
-          variant: "destructive",
-        });
-        navigate(-1);
-      }
-    } catch (error) {
+      // Use the new getTaskById function
+      const response = await api.getTaskById(id);
+      setTask(response.data.task);
+    } catch (error: any) {
       console.error('Failed to fetch task:', error);
       toast({
         title: "Error",
-        description: "Failed to load task details",
+        description: error.message || "Failed to load task details",
         variant: "destructive",
       });
+      navigate(-1);
     } finally {
       setLoading(false);
     }
@@ -66,7 +58,7 @@ const TaskDetails = () => {
         description: "Task status updated successfully",
       });
       
-      fetchTask();
+      fetchTask(); // Refresh task data
     } catch (error: any) {
       toast({
         title: "Error",
@@ -123,10 +115,9 @@ const TaskDetails = () => {
               {getStatusDisplay(task.status)}
             </Badge>
           </div>
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/dashboard">
-              <X className="w-5 h-5" />
-            </Link>
+          {/* FIXED: Use navigate(-1) instead of hardcoded path */}
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <X className="w-5 h-5" />
           </Button>
         </div>
 
