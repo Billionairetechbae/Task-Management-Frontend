@@ -41,28 +41,51 @@ const DashboardExecutive = () => {
       setLoading(true);
       const response = await api.getExecutiveDashboard();
       
-      // Updated response structure matching new backend
-      setTasks(response.data.recentActivity?.tasks || []);
+      // Destructure with default values
+      const {
+        overview = {
+          team: {
+            totalAssistants: 0,
+            availableAssistants: 0,
+            pendingVerifications: 0,
+            totalExecutives: 0,
+          },
+          tasks: {
+            totalTasks: 0,
+            pendingTasks: 0,
+            inProgressTasks: 0,
+            completedTasks: 0,
+            overdueTasks: 0,
+            urgentTasks: 0,
+            completionRate: 0,
+          }
+        },
+        recentActivity = { tasks: [] }
+      } = response.data || {};
+
+      const { team: teamStats, tasks: taskStats } = overview;
+      
+      setTasks(recentActivity.tasks || []);
       setTaskStats({
-        totalTasks: response.data.overview?.tasks?.totalTasks || 0,
-        pendingTasks: response.data.overview?.tasks?.pendingTasks || 0,
-        inProgressTasks: response.data.overview?.tasks?.inProgressTasks || 0,
-        completedTasks: response.data.overview?.tasks?.completedTasks || 0,
-        overdueTasks: response.data.overview?.tasks?.overdueTasks || 0,
-        urgentTasks: response.data.overview?.tasks?.urgentTasks || 0,
-        completionRate: response.data.overview?.tasks?.completionRate || 0,
+        totalTasks: taskStats.totalTasks || 0,
+        pendingTasks: taskStats.pendingTasks || 0,
+        inProgressTasks: taskStats.inProgressTasks || 0,
+        completedTasks: taskStats.completedTasks || 0,
+        overdueTasks: taskStats.overdueTasks || 0,
+        urgentTasks: taskStats.urgentTasks || 0,
+        completionRate: taskStats.completionRate || 0,
       });
       setTeamStats({
-        totalAssistants: response.data.overview?.team?.totalAssistants || 0,
-        availableAssistants: response.data.overview?.team?.availableAssistants || 0,
-        pendingVerifications: response.data.overview?.team?.pendingVerifications || 0,
-        totalExecutives: response.data.overview?.team?.totalExecutives || 0,
+        totalAssistants: teamStats.totalAssistants || 0,
+        availableAssistants: teamStats.availableAssistants || 0,
+        pendingVerifications: teamStats.pendingVerifications || 0,
+        totalExecutives: teamStats.totalExecutives || 0,
       });
     } catch (error) {
       console.error('Failed to fetch dashboard:', error);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data",
+        description: error instanceof Error ? error.message : "Failed to load dashboard data",
         variant: "destructive",
       });
     } finally {

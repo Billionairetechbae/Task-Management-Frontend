@@ -436,7 +436,12 @@ class ApiClient {
     const result = await response.json();
     
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch executive dashboard');
+      console.error('Dashboard API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        result
+      });
+      throw new Error(result.message || `Failed to fetch executive dashboard: ${response.status}`);
     }
 
     return result;

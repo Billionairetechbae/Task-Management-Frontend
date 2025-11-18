@@ -12,6 +12,7 @@ import DashboardAssistant from "./pages/DashboardAssistant";
 import DashboardAdmin from "./pages/DashboardAdmin";
 import AIHub from "./pages/AIHub";
 import TaskDetails from "./pages/TaskDetails";
+import TeamManagement from "./pages/TeamManagement"; // Add this import
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -61,11 +62,18 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-          <Route path="/task-details/:id" element={
-            <ProtectedRoute>
-              <TaskDetails />
-            </ProtectedRoute>
-          } />
+            <Route path="/task-details/:id" element={
+              <ProtectedRoute>
+                <TaskDetails />
+              </ProtectedRoute>
+            } />
+            
+            {/* Add TeamManagement Route - Accessible to both executives and assistants */}
+            <Route path="/team-management" element={
+              <ProtectedRoute allowedRoles={['executive', 'assistant']}>
+                <TeamManagement />
+              </ProtectedRoute>
+            } />
             
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />
