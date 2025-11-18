@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, CheckCircle2, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -14,12 +14,13 @@ const SignupAssistant = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1); // 1: Registration, 2: Pending approval
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
-    company: "",
+    companyCode: "", // Changed from company name to company code
     specialization: "",
     experience: 0,
     hourlyRate: 0,
@@ -35,14 +36,14 @@ const SignupAssistant = () => {
     try {
       await api.signupAssistant(formData);
       toast({
-        title: "Account created successfully!",
-        description: "Welcome to the Admiino network",
+        title: "Application submitted!",
+        description: "Your account is pending verification from the company executive",
       });
-      navigate("/dashboard-assistant");
+      setStep(2); // Show pending approval step
     } catch (error: any) {
       toast({
-        title: "Signup failed",
-        description: error.message || "Please try again",
+        title: "Registration failed",
+        description: error.message || "Please check your company code and try again",
         variant: "destructive",
       });
     } finally {
@@ -71,6 +72,69 @@ const SignupAssistant = () => {
     }));
   };
 
+  const handleBackToLogin = () => {
+    navigate("/");
+  };
+
+  // Step 2: Pending approval screen
+  if (step === 2) {
+    return (
+      <div className="min-h-screen bg-background py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <Logo className="h-8 mb-2" />
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Clock className="w-12 h-12 text-warning" />
+            </div>
+            <h2 className="text-3xl font-bold mb-2">Application Submitted</h2>
+            <p className="text-muted-foreground">Your account is pending executive approval</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl p-8 text-center">
+            <div className="space-y-4 text-left max-w-md mx-auto mb-6">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold">Profile Created</h4>
+                  <p className="text-sm text-muted-foreground">Your assistant profile has been created successfully</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold">Pending Verification</h4>
+                  <p className="text-sm text-muted-foreground">The company executive will review and approve your application</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-muted-foreground">Access Granted</h4>
+                  <p className="text-sm text-muted-foreground">You'll receive access once verified by the executive</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-6">
+              <p className="text-sm text-warning">
+                <strong>Note:</strong> You will not be able to access the dashboard until your account is verified by the company executive.
+              </p>
+            </div>
+
+            <Button 
+              onClick={handleBackToLogin}
+              variant="outline"
+              className="w-full h-12 text-base font-semibold"
+            >
+              Back to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 1: Registration form
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
@@ -84,8 +148,8 @@ const SignupAssistant = () => {
           <div className="flex items-center justify-center gap-2 mb-4">
             <Users className="w-8 h-8 text-accent" />
           </div>
-          <h2 className="text-3xl font-bold mb-2">Create Assistant Account</h2>
-          <p className="text-muted-foreground">Join our network of executive assistants</p>
+          <h2 className="text-3xl font-bold mb-2">Join a Company as Assistant</h2>
+          <p className="text-muted-foreground">Get verified and start working with executives</p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-8">
@@ -137,20 +201,24 @@ const SignupAssistant = () => {
                 onChange={(e) => handleChange("password", e.target.value)}
                 placeholder="••••••••"
                 required
+                minLength={6}
                 className="mt-2"
               />
             </div>
 
             <div>
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="companyCode">Company Code</Label>
               <Input
-                id="company"
-                value={formData.company}
-                onChange={(e) => handleChange("company", e.target.value)}
-                placeholder="Admiino Network"
+                id="companyCode"
+                value={formData.companyCode}
+                onChange={(e) => handleChange("companyCode", e.target.value)}
+                placeholder="Enter company code provided by executive"
                 required
                 className="mt-2"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Get this code from the company executive to join their team
+              </p>
             </div>
 
             <div>
@@ -179,6 +247,8 @@ const SignupAssistant = () => {
                   value={formData.experience}
                   onChange={(e) => handleChange("experience", parseInt(e.target.value) || 0)}
                   placeholder="4"
+                  min="0"
+                  max="50"
                   required
                   className="mt-2"
                 />
@@ -191,6 +261,8 @@ const SignupAssistant = () => {
                   value={formData.hourlyRate}
                   onChange={(e) => handleChange("hourlyRate", parseInt(e.target.value) || 0)}
                   placeholder="28"
+                  min="0"
+                  max="500"
                   required
                   className="mt-2"
                 />
@@ -242,7 +314,7 @@ const SignupAssistant = () => {
             </div>
 
             <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
-              {loading ? "Creating Account..." : "Create Assistant Account"}
+              {loading ? "Submitting Application..." : "Join Company as Assistant"}
             </Button>
           </form>
 

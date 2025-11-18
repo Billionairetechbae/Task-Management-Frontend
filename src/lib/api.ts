@@ -6,6 +6,7 @@ export interface User {
   lastName: string;
   email: string;
   company: string;
+  companyCode?: string;
   role: 'executive' | 'assistant' | 'admin';
   subscriptionTier: string;
   companySize?: string;
@@ -52,7 +53,7 @@ export interface SignupAssistantData {
   lastName: string;
   email: string;
   password: string;
-  company: string;
+  companyCode: string;
   specialization: string;
   experience: number;
   hourlyRate: number;
@@ -86,12 +87,14 @@ export interface Task {
     firstName: string;
     lastName: string;
     email: string;
+    company: string;
   };
   assignee?: {
     id: string;
     firstName: string;
     lastName: string;
     email?: string;
+    company?: string;
   } | null;
 }
 
@@ -121,24 +124,80 @@ export interface TaskFilters {
 }
 
 export interface ExecutiveDashboard {
-  tasks: Task[];
-  stats: {
-    totalTasks: number;
-    pendingTasks: number;
-    inProgressTasks: number;
-    completedTasks: number;
-    urgentTasks: number;
+  overview: {
+    team: {
+      totalAssistants: number;
+      availableAssistants: number;
+      pendingVerifications: number;
+      totalExecutives: number;
+    };
+    tasks: {
+      totalTasks: number;
+      pendingTasks: number;
+      inProgressTasks: number;
+      completedTasks: number;
+      overdueTasks: number;
+      urgentTasks: number;
+      completionRate: number;
+    };
+    timeframe: string;
+  };
+  analytics: {
+    tasksByCategory: Record<string, number>;
+    assistantPerformance: Array<{
+      assistantId: string;
+      assistantName: string;
+      completedTasks: number;
+      averageHours: number;
+      totalHours: number;
+    }>;
+  };
+  recentActivity: {
+    tasks: Task[];
   };
 }
 
 export interface AssistantDashboard {
-  tasks: Task[];
-  stats: {
-    totalTasks: number;
-    pendingTasks: number;
-    inProgressTasks: number;
-    completedTasks: number;
-    urgentTasks: number;
+  overview: {
+    totalAssigned: number;
+    completed: number;
+    inProgress: number;
+    pending: number;
+    overdue: number;
+    completionRate: number;
+    totalHours: number;
+    averageHours: number;
+    onTimeCompletionRate: number;
+  };
+  analytics: {
+    tasksByPriority: Record<string, number>;
+    timeframe: string;
+  };
+  activity: {
+    recentCompleted: Array<{
+      id: string;
+      title: string;
+      completedAt: string;
+      executive: {
+        firstName: string;
+        lastName: string;
+      };
+      actualHours: number;
+    }>;
+    upcomingDeadlines: Array<{
+      id: string;
+      title: string;
+      deadline: string;
+      priority: string;
+      executive: {
+        firstName: string;
+        lastName: string;
+      };
+    }>;
+  };
+  currentTasks: {
+    inProgress: number;
+    pending: number;
   };
 }
 
@@ -159,12 +218,41 @@ export interface Assistant {
   skills: string[];
   isAvailable: boolean;
   rating: number;
+  invitationStatus?: 'pending' | 'approved' | 'rejected' | 'invited';
+  invitedByExecutive?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  createdAt?: string;
 }
 
 export interface AssistantFilters {
   specialization?: string;
   minRating?: number;
   maxHourlyRate?: number;
+}
+
+export interface TeamAssistantsResponse {
+  status: string;
+  results: number;
+  data: {
+    assistants: Assistant[];
+  };
+}
+
+export interface PendingVerificationsResponse {
+  status: string;
+  results: number;
+  data: {
+    pendingAssistants: Assistant[];
+  };
+}
+
+export interface InviteAssistantData {
+  email: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 class ApiClient {
@@ -292,6 +380,21 @@ class ApiClient {
     return result;
   }
 
+  async getTaskById(taskId: string): Promise<{ status: string; data: { task: Task } }> {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch task');
+    }
+
+    return result;
+  }
+
   async updateTask(taskId: string, data: UpdateTaskData): Promise<{ status: string; message: string; data: { task: Task } }> {
     const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
       method: 'PATCH',
@@ -333,7 +436,7 @@ class ApiClient {
     const result = await response.json();
     
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch dashboard');
+      throw new Error(result.message || 'Failed to fetch executive dashboard');
     }
 
     return result;
@@ -348,7 +451,7 @@ class ApiClient {
     const result = await response.json();
     
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch dashboard');
+      throw new Error(result.message || 'Failed to fetch assistant dashboard');
     }
 
     return result;
@@ -409,9 +512,9 @@ class ApiClient {
     return result;
   }
 
-  // Add this function to your ApiClient class in lib/api.js
-  async getTaskById(taskId: string): Promise<{ status: string; data: { task: Task } }> {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+  // Team management endpoints
+  async getCompanyAssistants(): Promise<TeamAssistantsResponse> {
+    const response = await fetch(`${API_BASE_URL}/team/assistants`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -419,7 +522,89 @@ class ApiClient {
     const result = await response.json();
     
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch task');
+      throw new Error(result.message || 'Failed to fetch company assistants');
+    }
+
+    return result;
+  }
+
+  async getPendingVerifications(): Promise<PendingVerificationsResponse> {
+    const response = await fetch(`${API_BASE_URL}/team/pending-verifications`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch pending verifications');
+    }
+
+    return result;
+  }
+
+  async verifyAssistant(assistantId: string): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/team/verify/${assistantId}`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to verify assistant');
+    }
+
+    return result;
+  }
+
+  async rejectAssistant(assistantId: string): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/team/reject/${assistantId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to reject assistant');
+    }
+
+    return result;
+  }
+
+  async inviteAssistant(data: InviteAssistantData): Promise<{ status: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/team/invite`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to invite assistant');
+    }
+
+    return result;
+  }
+
+  // Available assistants for task assignment (company-scoped)
+  async getAvailableAssistants(filters?: AssistantFilters): Promise<{ status: string; results: number; data: { assistants: Assistant[] } }> {
+    const queryParams = new URLSearchParams();
+    if (filters?.specialization) queryParams.append('specialization', filters.specialization);
+    if (filters?.minRating) queryParams.append('minRating', filters.minRating.toString());
+    if (filters?.maxHourlyRate) queryParams.append('maxHourlyRate', filters.maxHourlyRate.toString());
+
+    const response = await fetch(`${API_BASE_URL}/assistants/available?${queryParams}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch available assistants');
     }
 
     return result;
