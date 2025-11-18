@@ -17,6 +17,8 @@ import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import CompanyProfile from "./pages/CompanyProfile";
+
 
 const queryClient = new QueryClient();
 
@@ -72,6 +74,12 @@ const App = () => (
             <Route path="/team-management" element={
               <ProtectedRoute allowedRoles={['executive', 'assistant']}>
                 <TeamManagement />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/company-profile" element={
+              <ProtectedRoute allowedRoles={['executive', 'assistant']}>
+                <CompanyProfile />
               </ProtectedRoute>
             } />
             

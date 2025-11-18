@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, Assistant } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { User, Clock, CheckCircle2 } from "lucide-react";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -16,7 +17,10 @@ interface CreateTaskDialogProps {
 
 const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogProps) => {
   const [loading, setLoading] = useState(false);
+  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [assistantsLoading, setAssistantsLoading] = useState(false);
   const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -24,11 +28,42 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
     deadline: "",
     category: "",
     estimatedHours: 0,
+    assigneeId: "",
   });
+
+  // Fetch verified assistants
+  useEffect(() => {
+    if (open) fetchCompanyAssistants();
+  }, [open]);
+
+  const fetchCompanyAssistants = async () => {
+    try {
+      setAssistantsLoading(true);
+      const response = await api.getCompanyAssistants();
+
+      const validAssistants = response.data.assistants.filter(
+        (assistant: Assistant) =>
+          assistant.id &&
+          assistant.id.trim() !== "" &&
+          assistant.isVerified // Only verified assistants can be assigned
+      );
+
+      setAssistants(validAssistants);
+    } catch (error) {
+      console.error("Failed to fetch assistants:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load assistants",
+        variant: "destructive",
+      });
+    } finally {
+      setAssistantsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.description || !formData.deadline || !formData.category) {
       toast({
         title: "Validation Error",
@@ -40,16 +75,29 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
 
     try {
       setLoading(true);
-      await api.createTask({
-        ...formData,
+
+      const taskData: any = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
         deadline: new Date(formData.deadline).toISOString(),
-      });
-      
+        category: formData.category,
+        estimatedHours: formData.estimatedHours,
+      };
+
+      if (formData.assigneeId) {
+        taskData.assigneeId = formData.assigneeId;
+      }
+
+      await api.createTask(taskData);
+
       toast({
         title: "Success",
-        description: "Task created successfully!",
+        description: formData.assigneeId
+          ? "Task created and assigned successfully!"
+          : "Task created successfully!",
       });
-      
+
       setFormData({
         title: "",
         description: "",
@@ -57,8 +105,9 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
         deadline: "",
         category: "",
         estimatedHours: 0,
+        assigneeId: "",
       });
-      
+
       onSuccess();
     } catch (error: any) {
       toast({
@@ -71,14 +120,32 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
     }
   };
 
+  const getSpecializationDisplay = (spec: string | null) => {
+    if (!spec) return "General";
+
+    const map: Record<string, string> = {
+      sales: "Sales",
+      marketing: "Marketing",
+      operations: "Operations",
+      general: "General",
+      customer_support: "Customer Support",
+    };
+
+    return map[spec] || spec;
+  };
+
+  const getHourlyRateDisplay = (rate: number | null) =>
+    rate ? `$${rate}/hr` : "Rate not set";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Delegate New Task</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title */}
           <div>
             <Label htmlFor="title">Task Title *</Label>
             <Input
@@ -90,18 +157,20 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
             />
           </div>
 
+          {/* Description */}
           <div>
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe the task in detail"
+              placeholder="Describe the task"
               rows={4}
               required
             />
           </div>
 
+          {/* Category + Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="category">Category *</Label>
@@ -109,13 +178,13 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
                 id="category"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                placeholder="e.g., Project Management"
+                placeholder="e.g., Operations"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="priority">Priority *</Label>
+              <Label>Priority *</Label>
               <Select
                 value={formData.priority}
                 onValueChange={(value: "low" | "medium" | "high") =>
@@ -134,6 +203,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
             </div>
           </div>
 
+          {/* Deadline + Hours */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="deadline">Deadline *</Label>
@@ -154,19 +224,66 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
                 step="0.5"
                 min="0"
                 value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: parseFloat(e.target.value) })}
-                placeholder="0"
+                onChange={(e) =>
+                  setFormData({ ...formData, estimatedHours: parseFloat(e.target.value) || 0 })
+                }
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
+          {/* Assistant Assignment */}
+          <div>
+            <Label htmlFor="assigneeId">Assign to Assistant (Optional)</Label>
+
+            {assistantsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                <Clock className="w-4 h-4 animate-spin" /> Loading assistants...
+              </div>
+            ) : assistants.length === 0 ? (
+              <div className="text-sm text-muted-foreground mt-2 border border-dashed border-muted-foreground/30 rounded-lg p-4 text-center">
+                <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>No verified assistants available</p>
+                <p className="text-xs">Verify assistants in Team Management</p>
+              </div>
+            ) : (
+              <Select
+                value={formData.assigneeId || "none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, assigneeId: value === "none" ? "" : value })
+                }
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select an assistant" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+
+                  {assistants.map((assistant) => (
+                    <SelectItem
+                      key={assistant.id}
+                      value={assistant.id}
+                      disabled={!assistant.isVerified}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {assistant.firstName} {assistant.lastName}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {getSpecializationDisplay(assistant.specialization)} •{" "}
+                          {getHourlyRateDisplay(assistant.hourlyRate)} • Verified
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
