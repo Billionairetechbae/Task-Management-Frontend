@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, Assistant } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { User, Clock, CheckCircle2 } from "lucide-react";
+import { User, Clock } from "lucide-react";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -19,6 +19,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
   const [loading, setLoading] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [assistantsLoading, setAssistantsLoading] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -61,6 +62,12 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -76,20 +83,24 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
     try {
       setLoading(true);
 
-      const taskData: any = {
-        title: formData.title,
-        description: formData.description,
-        priority: formData.priority,
-        deadline: new Date(formData.deadline).toISOString(),
-        category: formData.category,
-        estimatedHours: formData.estimatedHours,
-      };
+      const form = new FormData();
+      form.append("title", formData.title);
+      form.append("description", formData.description);
+      form.append("priority", formData.priority);
+      form.append("deadline", new Date(formData.deadline).toISOString());
+      form.append("category", formData.category);
+      form.append("estimatedHours", formData.estimatedHours.toString());
 
       if (formData.assigneeId) {
-        taskData.assigneeId = formData.assigneeId;
+        form.append("assigneeId", formData.assigneeId);
       }
 
-      await api.createTask(taskData);
+      // Append files
+      files.forEach((file) => {
+        form.append("files", file);
+      });
+
+      await api.createTask(form);
 
       toast({
         title: "Success",
@@ -98,6 +109,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
           : "Task created successfully!",
       });
 
+      // Reset form
       setFormData({
         title: "",
         description: "",
@@ -107,8 +119,10 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
         estimatedHours: 0,
         assigneeId: "",
       });
+      setFiles([]);
 
       onSuccess();
+      onOpenChange(false);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -119,23 +133,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
       setLoading(false);
     }
   };
-
-  const getSpecializationDisplay = (spec: string | null) => {
-    if (!spec) return "General";
-
-    const map: Record<string, string> = {
-      sales: "Sales",
-      marketing: "Marketing",
-      operations: "Operations",
-      general: "General",
-      customer_support: "Customer Support",
-    };
-
-    return map[spec] || spec;
-  };
-
-  const getHourlyRateDisplay = (rate: number | null) =>
-    rate ? `$${rate}/hr` : "Rate not set";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -168,6 +165,23 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
               rows={4}
               required
             />
+          </div>
+
+          {/* File Upload */}
+          <div>
+            <Label>Attachments (Optional)</Label>
+            <Input type="file" multiple onChange={handleFileChange} className="mt-2" />
+
+            {files.length > 0 && (
+              <div className="mt-2 text-sm text-muted-foreground">
+                <p className="font-medium mb-1">Selected Files:</p>
+                <ul className="pl-4 list-disc">
+                  {files.map((file, index) => (
+                    <li key={index}>{file.name}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Category + Priority */}
@@ -243,7 +257,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
               <div className="text-sm text-muted-foreground mt-2 border border-dashed border-muted-foreground/30 rounded-lg p-4 text-center">
                 <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p>No verified assistants available</p>
-                <p className="text-xs">Verify assistants in Team Management</p>
               </div>
             ) : (
               <Select
@@ -255,25 +268,11 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder="Select an assistant" />
                 </SelectTrigger>
-
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-
                   {assistants.map((assistant) => (
-                    <SelectItem
-                      key={assistant.id}
-                      value={assistant.id}
-                      disabled={!assistant.isVerified}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {assistant.firstName} {assistant.lastName}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {getSpecializationDisplay(assistant.specialization)} •{" "}
-                          {getHourlyRateDisplay(assistant.hourlyRate)} • Verified
-                        </span>
-                      </div>
+                    <SelectItem key={assistant.id} value={assistant.id}>
+                      {assistant.firstName} {assistant.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>

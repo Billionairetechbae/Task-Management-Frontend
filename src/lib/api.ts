@@ -65,6 +65,14 @@ export interface LoginData {
   email: string;
   password: string;
 }
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
 
 export interface Task {
   id: string;
@@ -96,6 +104,8 @@ export interface Task {
     email?: string;
     company?: string;
   } | null;
+
+  attachments?: TaskAttachment[];
 }
 
 export interface CreateTaskData {
@@ -344,21 +354,35 @@ class ApiClient {
   }
 
   // Task endpoints
-  async createTask(data: CreateTaskData): Promise<{ status: string; message: string; data: { task: Task } }> {
+
+  
+
+  async createTask(
+    data: FormData | CreateTaskData
+  ): Promise<{ status: string; message: string; data: { task: Task } }> {
+    
+    const isFormData = data instanceof FormData;
+
     const response = await fetch(`${API_BASE_URL}/tasks`, {
       method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
+      headers: isFormData
+        ? {
+            // Attach only Authorization header
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          }
+        : this.getAuthHeaders(),
+      body: isFormData ? data : JSON.stringify(data),
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
-      throw new Error(result.message || 'Failed to create task');
+      throw new Error(result.message || "Failed to create task");
     }
 
     return result;
   }
+
 
   async getTasks(filters?: TaskFilters): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
     const queryParams = new URLSearchParams();
