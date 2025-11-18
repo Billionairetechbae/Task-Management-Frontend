@@ -167,41 +167,27 @@ export interface AssistantFilters {
   maxHourlyRate?: number;
 }
 
-
 class ApiClient {
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem('auth_token');
     return {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
     };
   }
 
-  private async makeRequest(url: string, options: RequestInit = {}) {
-    const response = await fetch(url, {
-      ...options,
-      credentials: 'include', // Add this for CORS with authentication
-      headers: {
-        ...this.getAuthHeaders(),
-        ...options.headers,
-      },
+  async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/signup/executive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     });
 
     const result = await response.json();
     
     if (!response.ok) {
-      throw new Error(result.message || 'Request failed');
+      throw new Error(result.message || 'Signup failed');
     }
-
-    return result;
-  }
-
-  async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
-    const result = await this.makeRequest(`${API_BASE_URL}/auth/signup/executive`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
 
     if (result.token) {
       localStorage.setItem('auth_token', result.token);
@@ -211,10 +197,17 @@ class ApiClient {
   }
 
   async signupAssistant(data: SignupAssistantData): Promise<AuthResponse> {
-    const result = await this.makeRequest(`${API_BASE_URL}/auth/signup/assistant`, {
+    const response = await fetch(`${API_BASE_URL}/auth/signup/assistant`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Signup failed');
+    }
 
     if (result.token) {
       localStorage.setItem('auth_token', result.token);
@@ -224,10 +217,17 @@ class ApiClient {
   }
 
   async login(data: LoginData): Promise<AuthResponse> {
-    const result = await this.makeRequest(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Login failed');
+    }
 
     if (result.token) {
       localStorage.setItem('auth_token', result.token);
@@ -237,9 +237,18 @@ class ApiClient {
   }
 
   async getCurrentUser(): Promise<{ status: string; data: { user: User } }> {
-    return await this.makeRequest(`${API_BASE_URL}/auth/me`, {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
       method: 'GET',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch user');
+    }
+
+    return result;
   }
 
   logout(): void {
@@ -248,10 +257,19 @@ class ApiClient {
 
   // Task endpoints
   async createTask(data: CreateTaskData): Promise<{ status: string; message: string; data: { task: Task } }> {
-    return await this.makeRequest(`${API_BASE_URL}/tasks`, {
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
       method: 'POST',
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to create task');
+    }
+
+    return result;
   }
 
   async getTasks(filters?: TaskFilters): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
@@ -260,35 +278,80 @@ class ApiClient {
     if (filters?.priority) queryParams.append('priority', filters.priority);
     if (filters?.category) queryParams.append('category', filters.category);
 
-    return await this.makeRequest(`${API_BASE_URL}/tasks?${queryParams}`, {
+    const response = await fetch(`${API_BASE_URL}/tasks?${queryParams}`, {
       method: 'GET',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch tasks');
+    }
+
+    return result;
   }
 
   async updateTask(taskId: string, data: UpdateTaskData): Promise<{ status: string; message: string; data: { task: Task } }> {
-    return await this.makeRequest(`${API_BASE_URL}/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
       method: 'PATCH',
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update task');
+    }
+
+    return result;
   }
 
   async deleteTask(taskId: string): Promise<{ status: string; message: string }> {
-    return await this.makeRequest(`${API_BASE_URL}/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
       method: 'DELETE',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to delete task');
+    }
+
+    return result;
   }
 
   // Dashboard endpoints
   async getExecutiveDashboard(): Promise<{ status: string; data: ExecutiveDashboard }> {
-    return await this.makeRequest(`${API_BASE_URL}/dashboard/executive`, {
+    const response = await fetch(`${API_BASE_URL}/dashboard/executive`, {
       method: 'GET',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch dashboard');
+    }
+
+    return result;
   }
 
   async getAssistantDashboard(): Promise<{ status: string; data: AssistantDashboard }> {
-    return await this.makeRequest(`${API_BASE_URL}/dashboard/assistant`, {
+    const response = await fetch(`${API_BASE_URL}/dashboard/assistant`, {
       method: 'GET',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch dashboard');
+    }
+
+    return result;
   }
 
   // Assistants endpoints
@@ -298,31 +361,68 @@ class ApiClient {
     if (filters?.minRating) queryParams.append('minRating', filters.minRating.toString());
     if (filters?.maxHourlyRate) queryParams.append('maxHourlyRate', filters.maxHourlyRate.toString());
 
-    return await this.makeRequest(`${API_BASE_URL}/assistants?${queryParams}`, {
+    const response = await fetch(`${API_BASE_URL}/assistants?${queryParams}`, {
       method: 'GET',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch assistants');
+    }
+
+    return result;
   }
 
   async getAssistantById(assistantId: string): Promise<{ status: string; data: { assistant: Assistant } }> {
-    return await this.makeRequest(`${API_BASE_URL}/assistants/${assistantId}`, {
+    const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}`, {
       method: 'GET',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch assistant');
+    }
+
+    return result;
   }
 
   async updateAssistantAvailability(
     assistantId: string,
     data: { isAvailable?: boolean; hourlyRate?: number; specialization?: string }
   ): Promise<{ status: string; message: string; data: { assistant: Assistant } }> {
-    return await this.makeRequest(`${API_BASE_URL}/assistants/${assistantId}/availability`, {
+    const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}/availability`, {
       method: 'PATCH',
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update availability');
+    }
+
+    return result;
   }
 
+  // Add this function to your ApiClient class in lib/api.js
   async getTaskById(taskId: string): Promise<{ status: string; data: { task: Task } }> {
-    return await this.makeRequest(`${API_BASE_URL}/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
       method: 'GET',
+      headers: this.getAuthHeaders(),
     });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to fetch task');
+    }
+
+    return result;
   }
 }
 
