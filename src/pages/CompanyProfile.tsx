@@ -2,10 +2,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Bell, HelpCircle, User, Building, Mail, Users, Copy, CheckCircle2, Save } from "lucide-react";
+import {
+  Bell,
+  HelpCircle,
+  User,
+  Building,
+  Mail,
+  Users,
+  Copy,
+  CheckCircle2,
+  Save,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -16,51 +38,54 @@ import Logo from "@/components/Logo";
 const CompanyProfile = () => {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+
+  const isExecutive = user?.role === "executive";
+
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Form values based on the *Company* object (NOT user object)
   const [formData, setFormData] = useState({
-    company: '',
-    companySize: '',
-    industry: '',
-    bio: '',
+    name: "",
+    industry: "",
+    size: "",
+    bio: "",
   });
 
-  const isExecutive = user?.role === 'executive';
-
-  // Initialize form data from user profile
   useEffect(() => {
-    if (user) {
+    if (user?.company) {
       setFormData({
-        company: user.company || '',
-        companySize: user.companySize || '',
-        industry: user.industry || '',
-        bio: user.bio || '',
+        name: user.company.name,
+        industry: user.company.industry || "",
+        size: user.company.size || "",
+        bio: user.company.bio || "",
       });
     }
   }, [user]);
 
   const handleSave = async () => {
-    if (!isExecutive) return;
+    if (!user?.companyId) return;
 
     try {
       setSaving(true);
-      // Here you would call an API to update company profile
-      // For now, we'll simulate the update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Profile updated!",
-        description: "Your company information has been saved successfully.",
+
+      await api.updateCompanyProfile(user.companyId, {
+        name: formData.name,
+        industry: formData.industry,
+        size: formData.size,
+        bio: formData.bio,
       });
-      
-      // Refresh user data to get any updates
+
+      toast({
+        title: "Profile updated",
+        description: "Company profile updated successfully",
+      });
+
       await refreshUser();
-    } catch (error) {
-      console.error('Failed to update company profile:', error);
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update company profile",
+        description: error.message || "Failed to update company profile",
         variant: "destructive",
       });
     } finally {
@@ -69,40 +94,54 @@ const CompanyProfile = () => {
   };
 
   const copyCompanyCode = () => {
-    if (user?.companyCode) {
-      navigator.clipboard.writeText(user.companyCode);
-      setCopied(true);
-      toast({
-        title: "Copied!",
-        description: "Company code copied to clipboard",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!user?.company?.companyCode) return;
+
+    navigator.clipboard.writeText(user.company.companyCode);
+    setCopied(true);
+
+    toast({
+      title: "Copied!",
+      description: "Company code has been copied to clipboard",
+    });
+
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (key: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  /* =============================================================
+     NON-EXECUTIVE ACCESS VIEW
+  ============================================================= */
   if (!isExecutive) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <main className="px-6 py-8">
           <Card>
-            <CardContent className="p-8">
-              <div className="max-w-md mx-auto text-center">
-                <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Company Profile</h3>
-                <p className="text-muted-foreground mb-6">
-                  Company profile management is only available for executives.
+            <CardContent className="p-8 text-center">
+              <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                Company Profile (View Only)
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Only executives can edit company information.
+              </p>
+
+              <div className="bg-muted/50 rounded-lg p-4 text-left inline-block">
+                <p className="font-semibold">{user?.company?.name}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Industry: {user?.company?.industry || "Not set"}
                 </p>
-                <Button asChild>
-                  <Link to="/dashboard-assistant">
-                    Back to Dashboard
-                  </Link>
-                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Size: {user?.company?.size || "Not set"}
+                </p>
               </div>
+
+              <Button className="mt-6" asChild>
+                <Link to="/dashboard-assistant">Back to Dashboard</Link>
+              </Button>
             </CardContent>
           </Card>
         </main>
@@ -110,38 +149,31 @@ const CompanyProfile = () => {
     );
   }
 
+  /* =============================================================
+     EXECUTIVE VIEW
+  ============================================================= */
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="px-6 py-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Company Profile</h2>
-              <p className="text-muted-foreground">
-                Manage your company information and settings
-              </p>
-            </div>
-            
-            <Button onClick={handleSave} disabled={saving} className="gap-2">
-              {saving ? (
-                <>Saving...</>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+        {/* PAGE HEADER */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Company Profile</h2>
+            <p className="text-muted-foreground">
+              Manage your company’s information
+            </p>
           </div>
+
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? "Saving..." : <><Save className="w-5 h-5" /> Save Changes</>}
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Company Information */}
+          {/* LEFT SIDE – MAIN FORM */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Basic Information Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -149,50 +181,33 @@ const CompanyProfile = () => {
                   Company Information
                 </CardTitle>
                 <CardDescription>
-                  Basic details about your company
+                  Update your company’s public information
                 </CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company Name</Label>
-                    <Input
-                      id="company"
-                      value={formData.company}
-                      onChange={(e) => handleChange('company', e.target.value)}
-                      placeholder="Your company name"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="companySize">Company Size</Label>
-                    <Select value={formData.companySize} onValueChange={(value) => handleChange('companySize', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select company size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1-10">1-10 employees</SelectItem>
-                        <SelectItem value="11-50">11-50 employees</SelectItem>
-                        <SelectItem value="51-200">51-200 employees</SelectItem>
-                        <SelectItem value="201-500">201-500 employees</SelectItem>
-                        <SelectItem value="500+">500+ employees</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label>Company Name</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => handleChange("name", e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="industry">Industry</Label>
-                  <Select value={formData.industry} onValueChange={(value) => handleChange('industry', value)}>
+                  <Label>Industry</Label>
+                  <Select
+                    value={formData.industry}
+                    onValueChange={(v) => handleChange("industry", v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SaaS">SaaS</SelectItem>
-                      <SelectItem value="E-commerce">E-commerce</SelectItem>
+                      <SelectItem value="Technology">Technology</SelectItem>
                       <SelectItem value="Finance">Finance</SelectItem>
                       <SelectItem value="Healthcare">Healthcare</SelectItem>
-                      <SelectItem value="Technology">Technology</SelectItem>
+                      <SelectItem value="SaaS">SaaS</SelectItem>
                       <SelectItem value="Real Estate">Real Estate</SelectItem>
                       <SelectItem value="Consulting">Consulting</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
@@ -201,22 +216,37 @@ const CompanyProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Company Bio</Label>
+                  <Label>Company Size</Label>
+                  <Select
+                    value={formData.size}
+                    onValueChange={(v) => handleChange("size", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select company size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1-10">1–10 employees</SelectItem>
+                      <SelectItem value="11-50">11–50 employees</SelectItem>
+                      <SelectItem value="51-200">51–200 employees</SelectItem>
+                      <SelectItem value="201-500">201–500 employees</SelectItem>
+                      <SelectItem value="500+">500+ employees</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Company Bio</Label>
                   <Textarea
-                    id="bio"
-                    value={formData.bio}
-                    onChange={(e) => handleChange('bio', e.target.value)}
-                    placeholder="Tell us about your company..."
                     rows={4}
+                    value={formData.bio}
+                    onChange={(e) => handleChange("bio", e.target.value)}
+                    placeholder="Tell assistants about your company vision..."
                   />
-                  <p className="text-sm text-muted-foreground">
-                    This helps assistants understand your company culture and work environment.
-                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Team Management Card */}
+            {/* TEAM MANAGEMENT */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -224,79 +254,47 @@ const CompanyProfile = () => {
                   Team Management
                 </CardTitle>
                 <CardDescription>
-                  Manage your assistants and team settings
+                  Manage assistants and pending verifications
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                    <div>
-                      <h4 className="font-semibold">Assistant Team</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Manage your company assistants and verifications
-                      </p>
-                    </div>
-                    <Button asChild>
-                      <Link to="/team-management">
-                        Manage Team
-                      </Link>
-                    </Button>
+                <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <h4 className="font-semibold">Assistants</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Approve or reject assistant applications
+                    </p>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-                    <div>
-                      <h4 className="font-semibold text-sm">Invitation Settings</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Control how assistants join your company
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Manual Approval
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        All assistants require executive approval
-                      </p>
-                    </div>
-                  </div>
+                  <Button asChild>
+                    <Link to="/team-management">Manage Team</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column - Company Code & Quick Actions */}
+          {/* RIGHT SIDE – COMPANY CODE & STATS */}
           <div className="space-y-6">
-            {/* Company Code Card */}
+            {/* COMPANY CODE CARD */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Company Code
-                </CardTitle>
+                <CardTitle>Company Code</CardTitle>
                 <CardDescription>
-                  Share this code with assistants to join your company
+                  Assistants use this code to join your company
                 </CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-4">
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-mono font-bold text-primary mb-2">
-                      {user?.companyCode || 'Loading...'}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Unique company identifier
-                    </p>
+                <div className="bg-primary/10 p-4 text-center rounded-md border border-primary/20">
+                  <div className="text-2xl font-mono font-bold text-primary">
+                    {user?.company?.companyCode || "Loading..."}
                   </div>
                 </div>
-                
-                <Button 
-                  onClick={copyCompanyCode} 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="w-full gap-2"
-                  disabled={!user?.companyCode}
+                  onClick={copyCompanyCode}
                 >
                   {copied ? (
                     <>
@@ -310,66 +308,38 @@ const CompanyProfile = () => {
                     </>
                   )}
                 </Button>
-
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">How to use:</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Share this code with potential assistants</li>
-                    <li>• Assistants use it to join your company</li>
-                    <li>• You'll need to approve their applications</li>
-                    <li>• Keep this code secure</li>
-                  </ul>
-                </div>
               </CardContent>
             </Card>
 
-            {/* Quick Stats Card */}
+            {/* QUICK STATS */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Stats</CardTitle>
-                <CardDescription>
-                  Your company at a glance
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Company Status</span>
-                  <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                <div className="flex justify-between">
+                  <span className="text-sm">Company Status</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-success/10 text-success border-success/20"
+                  >
                     Active
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Subscription</span>
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Subscription</span>
                   <Badge variant="outline">
-                    {user?.subscriptionTier === 'premium' ? 'Premium' : 'Free'}
+                    {user?.subscriptionTier || "Free"}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Member Since</span>
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Member Since</span>
                   <span className="text-sm text-muted-foreground">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                    {new Date(user?.createdAt || "").toLocaleDateString()}
                   </span>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Support Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Need Help?</CardTitle>
-                <CardDescription>
-                  Get support for your company account
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start gap-2">
-                  <HelpCircle className="w-4 h-4" />
-                  Help Center
-                </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
-                  <Mail className="w-4 h-4" />
-                  Contact Support
-                </Button>
               </CardContent>
             </Card>
           </div>
@@ -379,7 +349,9 @@ const CompanyProfile = () => {
   );
 };
 
-// Header Component
+/* =============================================================
+   HEADER COMPONENT
+============================================================= */
 const Header = () => {
   const { user } = useAuth();
 
@@ -389,18 +361,22 @@ const Header = () => {
         <Logo className="h-8" />
 
         <div className="flex items-center gap-4">
-          <Button variant="outline" className="gap-2" asChild>
-            <Link to={user?.role === 'executive' ? "/dashboard-executive" : "/dashboard-assistant"}>
+          <Button variant="outline" asChild className="gap-2">
+            <Link
+              to={
+                user?.role === "executive"
+                  ? "/dashboard-executive"
+                  : "/dashboard-assistant"
+              }
+            >
               <Users className="w-5 h-5" />
               Dashboard
             </Link>
           </Button>
-          <button className="relative">
-            <HelpCircle className="w-6 h-6 text-muted-foreground" />
-          </button>
-          <button className="relative">
-            <Bell className="w-6 h-6 text-muted-foreground" />
-          </button>
+
+          <HelpCircle className="w-6 h-6 text-muted-foreground" />
+          <Bell className="w-6 h-6 text-muted-foreground" />
+
           <Button variant="outline" asChild>
             <Link to="/profile">
               <User className="w-5 h-5 mr-2" />

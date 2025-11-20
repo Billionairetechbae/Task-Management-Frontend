@@ -322,7 +322,7 @@ const DashboardExecutive = () => {
             </p>
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 inline-block">
               <code className="text-2xl font-mono font-bold text-primary">
-                {user?.companyCode || 'Loading...'}
+                {user?.company?.companyCode || 'Loading...'}
               </code>
             </div>
           </div>

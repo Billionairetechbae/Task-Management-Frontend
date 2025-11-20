@@ -33,7 +33,7 @@ const SignupExecutive = () => {
       const response = await api.signupExecutive(formData);
       
       // Store company code for display
-      setCompanyCode(response.data.user.companyCode);
+      setCompanyCode(response.data.user.company?.companyCode || "");
       
       toast({
         title: "Company created successfully!",

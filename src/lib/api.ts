@@ -1,28 +1,65 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://admiino-backend.onrender.com/api/v1';
+// src/lib/api.ts
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://admiino-backend.onrender.com/api/v1";
+
+/* ============================
+   SHARED TYPES
+============================ */
+
+export type UserRole = "executive" | "manager" | "assistant" | "admin" ;
+
+export interface Company {
+  id: string;
+  name: string;
+  companyCode: string;
+  industry: string | null;
+  size: "1-10" | "11-50" | "51-200" | "201-500" | "500+" | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  company: string;
-  companyCode?: string;
-  role: 'executive' | 'assistant' | 'admin';
-  subscriptionTier: string;
-  companySize?: string;
-  industry?: string;
-  specialization?: string;
-  experience?: number;
-  hourlyRate?: number;
-  bio?: string;
+
+  // NEW — backend now returns companyId + nested company object
+  companyId: string | null;
+  company?: Company | null;
+
+  // Roles updated
+  role: "executive" | "manager" | "assistant" | "admin";
+
+  subscriptionTier: "free" | "premium";
+
+  isVerified: boolean;
+  invitationStatus: "pending" | "approved" | "rejected" | "invited";
+  invitedBy: string | null;
+
+  isActive: boolean;
+
+  // Optional fields (assistants/managers)
+  specialization?: string | null;
+  experience?: number | null;
+  hourlyRate?: number | null;
+  bio?: string | null;
   skills?: string[];
+
+  // Assistant availability & rating
   isAvailable?: boolean;
   rating?: number;
-  isVerified: boolean;
-  isActive: boolean;
+
+  // Profile picture
+  profilePictureUrl?: string | null;
+
   createdAt: string;
   updatedAt: string;
 }
+
 
 export interface AuthResponse {
   status: string;
@@ -37,6 +74,10 @@ export interface ErrorResponse {
   status: string;
   message: string;
 }
+
+/* ============================
+   AUTH PAYLOADS
+============================ */
 
 export interface SignupExecutiveData {
   firstName: string;
@@ -65,6 +106,11 @@ export interface LoginData {
   email: string;
   password: string;
 }
+
+/* ============================
+   TASKS & ATTACHMENTS
+============================ */
+
 export interface TaskAttachment {
   id: string;
   taskId: string;
@@ -74,22 +120,29 @@ export interface TaskAttachment {
   fileSize: number;
 }
 
+export type TaskPriority = "low" | "medium" | "high";
+export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
+
 export interface Task {
   id: string;
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority: TaskPriority;
+  status: TaskStatus;
   deadline: string;
   category: string;
   estimatedHours: number;
   actualHours: number | null;
   tier: string;
+
+  // Backend fields for relation scoping
   assignedAssistantId: string | null;
-  executiveId: string;
+  executiveId: string; // creator/owner on backend
   assigneeId: string | null;
+
   createdAt: string;
   updatedAt: string;
+
   executive?: {
     id: string;
     firstName: string;
@@ -97,6 +150,7 @@ export interface Task {
     email: string;
     company: string;
   };
+
   assignee?: {
     id: string;
     firstName: string;
@@ -111,8 +165,8 @@ export interface Task {
 export interface CreateTaskData {
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high';
-  deadline: string;
+  priority: TaskPriority;
+  deadline: string; // ISO string
   category: string;
   estimatedHours: number;
   assigneeId?: string;
@@ -121,8 +175,8 @@ export interface CreateTaskData {
 export interface UpdateTaskData {
   title?: string;
   description?: string;
-  priority?: 'low' | 'medium' | 'high';
-  status?: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority?: TaskPriority;
+  status?: TaskStatus;
   deadline?: string;
   actualHours?: number;
 }
@@ -132,6 +186,10 @@ export interface TaskFilters {
   priority?: string;
   category?: string;
 }
+
+/* ============================
+   DASHBOARDS
+============================ */
 
 export interface ExecutiveDashboard {
   overview: {
@@ -211,6 +269,10 @@ export interface AssistantDashboard {
   };
 }
 
+/* ============================
+   ASSISTANTS & TEAM
+============================ */
+
 export interface Assistant {
   id: string;
   firstName: string;
@@ -228,7 +290,7 @@ export interface Assistant {
   skills: string[];
   isAvailable: boolean;
   rating: number;
-  invitationStatus?: 'pending' | 'approved' | 'rejected' | 'invited';
+  invitationStatus?: "pending" | "approved" | "rejected" | "invited";
   invitedByExecutive?: {
     id: string;
     firstName: string;
@@ -265,112 +327,182 @@ export interface InviteAssistantData {
   lastName?: string;
 }
 
+/* ============================
+   API CLIENT
+============================ */
+
 class ApiClient {
+  /* -------- Auth header helper -------- */
   private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
     };
   }
 
+  /* -------- Generic request helper -------- */
+  private async request<T>(
+    path: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, options);
+
+    let result: any;
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error("Unexpected server response");
+    }
+
+    if (!response.ok) {
+      throw new Error(result?.message || "Request failed");
+    }
+
+    return result as T;
+  }
+
+  /* ============================
+     AUTH
+  ============================ */
+
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/signup/executive`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const result = await this.request<AuthResponse>("/auth/signup/executive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Signup failed');
-    }
-
     if (result.token) {
-      localStorage.setItem('auth_token', result.token);
+      localStorage.setItem("auth_token", result.token);
     }
 
     return result;
   }
 
   async signupAssistant(data: SignupAssistantData): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/signup/assistant`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const result = await this.request<AuthResponse>("/auth/signup/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Signup failed');
-    }
-
     if (result.token) {
-      localStorage.setItem('auth_token', result.token);
+      localStorage.setItem("auth_token", result.token);
     }
 
     return result;
   }
 
-  async login(data: LoginData): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  // ===============================
+  // EXECUTIVE JOIN EXISTING COMPANY
+  // ===============================
+  async signupExecutiveJoin(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    companyCode: string;
+  }): Promise<AuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/signup/executive-join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
-      throw new Error(result.message || 'Login failed');
+      throw new Error(result.message || "Executive join failed");
     }
 
     if (result.token) {
-      localStorage.setItem('auth_token', result.token);
+      localStorage.setItem("auth_token", result.token);
+    }
+
+    return result;
+  }
+
+  // ===============================
+  // MANAGER SIGNUP (JOIN COMPANY)
+  // ===============================
+  async signupManager(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    companyCode: string;
+    specialization?: string;
+    experience?: number;
+    hourlyRate?: number;
+    bio?: string;
+    skills?: string[];
+  }): Promise<AuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/signup/manager`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Manager signup failed");
+    }
+
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+    }
+
+    return result;
+  }
+
+
+  async login(data: LoginData): Promise<AuthResponse> {
+    const result = await this.request<AuthResponse>("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
     }
 
     return result;
   }
 
   async getCurrentUser(): Promise<{ status: string; data: { user: User } }> {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      method: 'GET',
+    return this.request<{ status: string; data: { user: User } }>("/auth/me", {
+      method: "GET",
       headers: this.getAuthHeaders(),
     });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch user');
-    }
-
-    return result;
   }
 
   logout(): void {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem("auth_token");
   }
 
-  // Task endpoints
-
-  
+  /* ============================
+     TASKS
+  ============================ */
 
   async createTask(
     data: FormData | CreateTaskData
   ): Promise<{ status: string; message: string; data: { task: Task } }> {
-    
     const isFormData = data instanceof FormData;
 
+    const headers: HeadersInit = isFormData
+      ? (() => {
+          const token = localStorage.getItem("auth_token");
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        })()
+      : this.getAuthHeaders();
+
     const response = await fetch(`${API_BASE_URL}/tasks`, {
-      method: 'POST',
-      headers: isFormData
-        ? {
-            // Attach only Authorization header
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-          }
-        : this.getAuthHeaders(),
+      method: "POST",
+      headers,
       body: isFormData ? data : JSON.stringify(data),
     });
 
@@ -383,260 +515,235 @@ class ApiClient {
     return result;
   }
 
-
-  async getTasks(filters?: TaskFilters): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
+  async getTasks(
+    filters?: TaskFilters
+  ): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
     const queryParams = new URLSearchParams();
-    if (filters?.status) queryParams.append('status', filters.status);
-    if (filters?.priority) queryParams.append('priority', filters.priority);
-    if (filters?.category) queryParams.append('category', filters.category);
+    if (filters?.status) queryParams.append("status", filters.status);
+    if (filters?.priority) queryParams.append("priority", filters.priority);
+    if (filters?.category) queryParams.append("category", filters.category);
 
-    const response = await fetch(`${API_BASE_URL}/tasks?${queryParams}`, {
-      method: 'GET',
+    return this.request<{
+      status: string;
+      results: number;
+      data: { tasks: Task[] };
+    }>(`/tasks?${queryParams.toString()}`, {
+      method: "GET",
       headers: this.getAuthHeaders(),
     });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch tasks');
-    }
-
-    return result;
   }
 
-  async getTaskById(taskId: string): Promise<{ status: string; data: { task: Task } }> {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch task');
-    }
-
-    return result;
+  async getTaskById(
+    taskId: string
+  ): Promise<{ status: string; data: { task: Task } }> {
+    return this.request<{ status: string; data: { task: Task } }>(
+      `/tasks/${taskId}`,
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
-  async updateTask(taskId: string, data: UpdateTaskData): Promise<{ status: string; message: string; data: { task: Task } }> {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-      method: 'PATCH',
+  async updateTask(
+    taskId: string,
+    data: UpdateTaskData
+  ): Promise<{ status: string; message: string; data: { task: Task } }> {
+    return this.request<{
+      status: string;
+      message: string;
+      data: { task: Task };
+    }>(`/tasks/${taskId}`, {
+      method: "PATCH",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to update task');
-    }
-
-    return result;
   }
 
-  async deleteTask(taskId: string): Promise<{ status: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to delete task');
-    }
-
-    return result;
+  async deleteTask(
+    taskId: string
+  ): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      `/tasks/${taskId}`,
+      {
+        method: "DELETE",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
-  // Dashboard endpoints
-  async getExecutiveDashboard(): Promise<{ status: string; data: ExecutiveDashboard }> {
-    const response = await fetch(`${API_BASE_URL}/dashboard/executive`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
+  /* ============================
+     DASHBOARDS
+  ============================ */
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Dashboard API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        result
-      });
-      throw new Error(result.message || `Failed to fetch executive dashboard: ${response.status}`);
-    }
-
-    return result;
+  async getExecutiveDashboard(): Promise<{
+    status: string;
+    data: ExecutiveDashboard;
+  }> {
+    return this.request<{ status: string; data: ExecutiveDashboard }>(
+      "/dashboard/executive",
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
-  async getAssistantDashboard(): Promise<{ status: string; data: AssistantDashboard }> {
-    const response = await fetch(`${API_BASE_URL}/dashboard/assistant`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch assistant dashboard');
-    }
-
-    return result;
+  async getAssistantDashboard(): Promise<{
+    status: string;
+    data: AssistantDashboard;
+  }> {
+    return this.request<{ status: string; data: AssistantDashboard }>(
+      "/dashboard/assistant",
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
-  // Assistants endpoints
-  async getAssistants(filters?: AssistantFilters): Promise<{ status: string; results: number; data: { assistants: Assistant[] } }> {
+  /* ============================
+     ASSISTANTS (Public / Browsing)
+  ============================ */
+
+  async getAssistants(
+    filters?: AssistantFilters
+  ): Promise<{
+    status: string;
+    results: number;
+    data: { assistants: Assistant[] };
+  }> {
     const queryParams = new URLSearchParams();
-    if (filters?.specialization) queryParams.append('specialization', filters.specialization);
-    if (filters?.minRating) queryParams.append('minRating', filters.minRating.toString());
-    if (filters?.maxHourlyRate) queryParams.append('maxHourlyRate', filters.maxHourlyRate.toString());
+    if (filters?.specialization)
+      queryParams.append("specialization", filters.specialization);
+    if (filters?.minRating)
+      queryParams.append("minRating", filters.minRating.toString());
+    if (filters?.maxHourlyRate)
+      queryParams.append("maxHourlyRate", filters.maxHourlyRate.toString());
 
-    const response = await fetch(`${API_BASE_URL}/assistants?${queryParams}`, {
-      method: 'GET',
+    return this.request<{
+      status: string;
+      results: number;
+      data: { assistants: Assistant[] };
+    }>(`/assistants?${queryParams.toString()}`, {
+      method: "GET",
       headers: this.getAuthHeaders(),
     });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch assistants');
-    }
-
-    return result;
   }
 
-  async getAssistantById(assistantId: string): Promise<{ status: string; data: { assistant: Assistant } }> {
-    const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch assistant');
-    }
-
-    return result;
+  async getAssistantById(
+    assistantId: string
+  ): Promise<{ status: string; data: { assistant: Assistant } }> {
+    return this.request<{ status: string; data: { assistant: Assistant } }>(
+      `/assistants/${assistantId}`,
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
   async updateAssistantAvailability(
     assistantId: string,
-    data: { isAvailable?: boolean; hourlyRate?: number; specialization?: string }
-  ): Promise<{ status: string; message: string; data: { assistant: Assistant } }> {
-    const response = await fetch(`${API_BASE_URL}/assistants/${assistantId}/availability`, {
-      method: 'PATCH',
+    data: {
+      isAvailable?: boolean;
+      hourlyRate?: number;
+      specialization?: string;
+    }
+  ): Promise<{
+    status: string;
+    message: string;
+    data: { assistant: Assistant };
+  }> {
+    return this.request<{
+      status: string;
+      message: string;
+      data: { assistant: Assistant };
+    }>(`/assistants/${assistantId}/availability`, {
+      method: "PATCH",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to update availability');
-    }
-
-    return result;
   }
 
-  // Team management endpoints
-  async getCompanyAssistants(): Promise<TeamAssistantsResponse> {
-    const response = await fetch(`${API_BASE_URL}/team/assistants`, {
-      method: 'GET',
+  async getAvailableAssistants(
+    filters?: AssistantFilters
+  ): Promise<{
+    status: string;
+    results: number;
+    data: { assistants: Assistant[] };
+  }> {
+    const queryParams = new URLSearchParams();
+    if (filters?.specialization)
+      queryParams.append("specialization", filters.specialization);
+    if (filters?.minRating)
+      queryParams.append("minRating", filters.minRating.toString());
+    if (filters?.maxHourlyRate)
+      queryParams.append("maxHourlyRate", filters.maxHourlyRate.toString());
+
+    return this.request<{
+      status: string;
+      results: number;
+      data: { assistants: Assistant[] };
+    }>(`/assistants/available?${queryParams.toString()}`, {
+      method: "GET",
       headers: this.getAuthHeaders(),
     });
+  }
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch company assistants');
-    }
+  /* ============================
+     TEAM MANAGEMENT (Company-scoped)
+  ============================ */
 
-    return result;
+  async getCompanyAssistants(): Promise<TeamAssistantsResponse> {
+    return this.request<TeamAssistantsResponse>("/team/assistants", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
   }
 
   async getPendingVerifications(): Promise<PendingVerificationsResponse> {
-    const response = await fetch(`${API_BASE_URL}/team/pending-verifications`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch pending verifications');
-    }
-
-    return result;
+    return this.request<PendingVerificationsResponse>(
+      "/team/pending-verifications",
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
-  async verifyAssistant(assistantId: string): Promise<{ status: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/team/verify/${assistantId}`, {
-      method: 'PATCH',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to verify assistant');
-    }
-
-    return result;
+  async verifyAssistant(
+    assistantId: string
+  ): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      `/team/verify/${assistantId}`,
+      {
+        method: "PATCH",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
-  async rejectAssistant(assistantId: string): Promise<{ status: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/team/reject/${assistantId}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to reject assistant');
-    }
-
-    return result;
+  async rejectAssistant(
+    assistantId: string
+  ): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      `/team/reject/${assistantId}`,
+      {
+        method: "DELETE",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
-  async inviteAssistant(data: InviteAssistantData): Promise<{ status: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/team/invite`, {
-      method: 'POST',
+  async inviteAssistant(
+    data: InviteAssistantData
+  ): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>("/team/invite", {
+      method: "POST",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to invite assistant');
-    }
-
-    return result;
-  }
-
-  // Available assistants for task assignment (company-scoped)
-  async getAvailableAssistants(filters?: AssistantFilters): Promise<{ status: string; results: number; data: { assistants: Assistant[] } }> {
-    const queryParams = new URLSearchParams();
-    if (filters?.specialization) queryParams.append('specialization', filters.specialization);
-    if (filters?.minRating) queryParams.append('minRating', filters.minRating.toString());
-    if (filters?.maxHourlyRate) queryParams.append('maxHourlyRate', filters.maxHourlyRate.toString());
-
-    const response = await fetch(`${API_BASE_URL}/assistants/available?${queryParams}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to fetch available assistants');
-    }
-
-    return result;
   }
 }
 
