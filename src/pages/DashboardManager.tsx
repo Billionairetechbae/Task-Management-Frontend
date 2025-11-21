@@ -11,7 +11,6 @@ import {
   Clock,
   AlertTriangle,
   TrendingUp,
-  Mail,
 } from "lucide-react";
 
 import Logo from "@/components/Logo";
@@ -31,7 +30,6 @@ const DashboardManager = () => {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
-  const [pendingAssistants, setPendingAssistants] = useState<Assistant[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
 
   const [stats, setStats] = useState({
@@ -44,7 +42,6 @@ const DashboardManager = () => {
     completionRate: 0,
     totalAssistants: 0,
     verifiedAssistants: 0,
-    pendingVerifications: 0,
   });
 
   const filteredTasks = statusFilter
@@ -59,23 +56,24 @@ const DashboardManager = () => {
     try {
       setLoading(true);
 
-      // Managers use the same tasks endpoint as executives
       const tasksRes = await api.getTasks();
       const assistantsRes = await api.getCompanyAssistants();
-      const pendingRes = await api.getPendingVerifications();
+
+      const assistantList = assistantsRes.data.assistants.filter(
+        (a) => a.role === "assistant"
+      );
 
       setTasks(tasksRes.data.tasks);
-      setAssistants(assistantsRes.data.assistants);
-      setPendingAssistants(pendingRes.data.pendingAssistants);
+      setAssistants(assistantList);
 
-      const completed = tasksRes.data.tasks.filter((t) => t.status === "completed").length;
+      const completed = tasksRes.data.tasks.filter(t => t.status === "completed").length;
       const total = tasksRes.data.tasks.length;
-      const pending = tasksRes.data.tasks.filter((t) => t.status === "pending").length;
-      const inProgress = tasksRes.data.tasks.filter((t) => t.status === "in_progress").length;
+      const pending = tasksRes.data.tasks.filter(t => t.status === "pending").length;
+      const inProgress = tasksRes.data.tasks.filter(t => t.status === "in_progress").length;
       const overdue = tasksRes.data.tasks.filter(
-        (t) => new Date(t.deadline) < new Date() && t.status !== "completed"
+        t => new Date(t.deadline) < new Date() && t.status !== "completed"
       ).length;
-      const urgent = tasksRes.data.tasks.filter((t) => t.priority === "high").length;
+      const urgent = tasksRes.data.tasks.filter(t => t.priority === "high").length;
 
       setStats({
         totalTasks: total,
@@ -85,10 +83,10 @@ const DashboardManager = () => {
         overdue,
         urgent,
         completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-        totalAssistants: assistantsRes.data.assistants.length,
-        verifiedAssistants: assistantsRes.data.assistants.filter((a) => a.isVerified).length,
-        pendingVerifications: pendingRes.data.pendingAssistants.length,
+        totalAssistants: assistantList.length,
+        verifiedAssistants: assistantList.filter(a => a.isVerified).length,
       });
+
     } catch (err: any) {
       toast({
         title: "Error",
@@ -97,34 +95,6 @@ const DashboardManager = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleVerifyAssistant = async (assistantId: string) => {
-    try {
-      await api.verifyAssistant(assistantId);
-      toast({ title: "Assistant verified!" });
-      loadDashboard();
-    } catch (err: any) {
-      toast({
-        title: "Verification failed",
-        description: err.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRejectAssistant = async (assistantId: string) => {
-    try {
-      await api.rejectAssistant(assistantId);
-      toast({ title: "Assistant rejected" });
-      loadDashboard();
-    } catch (err: any) {
-      toast({
-        title: "Rejection failed",
-        description: err.message,
-        variant: "destructive",
-      });
     }
   };
 
@@ -138,25 +108,22 @@ const DashboardManager = () => {
     return map[status] || status;
   };
 
-  const getPriorityDisplay = (priority: string) => {
-    return priority.charAt(0).toUpperCase() + priority.slice(1);
-  };
+  const getPriorityDisplay = (priority: string) =>
+    priority.charAt(0).toUpperCase() + priority.slice(1);
 
-  const getPriorityBadge = (priority: string) => {
-    return (
-      <Badge
-        className={
-          priority === "high"
-            ? "bg-destructive/10 text-destructive border-destructive/20"
-            : priority === "medium"
-            ? "bg-warning/10 text-warning border-warning/20"
-            : "bg-blue-100 text-blue-800"
-        }
-      >
-        {getPriorityDisplay(priority)}
-      </Badge>
-    );
-  };
+  const getPriorityBadge = (priority: string) => (
+    <Badge
+      className={
+        priority === "high"
+          ? "bg-destructive/10 text-destructive border-destructive/20"
+          : priority === "medium"
+          ? "bg-warning/10 text-warning border-warning/20"
+          : "bg-blue-100 text-blue-800"
+      }
+    >
+      {getPriorityDisplay(priority)}
+    </Badge>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,13 +135,14 @@ const DashboardManager = () => {
           <div className="flex items-center gap-4">
             <HelpCircle className="w-6 h-6 text-muted-foreground" />
             <Bell className="w-6 h-6 text-muted-foreground" />
+
             <Button variant="outline" asChild>
               <Link to="/profile">
-                <User className="w-5 h-5 mr-2" />
-                Profile
+                <User className="w-5 h-5 mr-2" /> Profile
               </Link>
             </Button>
 
+            {/* MANAGERS CAN ASSIGN TASKS */}
             <Button className="gap-2" onClick={() => setCreateTaskOpen(true)}>
               <Plus className="w-5 h-5" /> Delegate Task
             </Button>
@@ -186,15 +154,32 @@ const DashboardManager = () => {
       <main className="px-6 py-8">
         {/* WELCOME */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">
-            Welcome, {user?.firstName}!
-          </h2>
-          <p className="text-muted-foreground">
-            Manage your company’s tasks and team.
-          </p>
+          <h2 className="text-3xl font-bold mb-2">Manager Dashboard</h2>
+          <p className="text-muted-foreground">Manage your team and delegate tasks.</p>
         </div>
 
-        {/* METRICS GRID */}
+        {/* TEAM OVERVIEW (ABOVE TASKS) */}
+        <h3 className="text-xl font-bold mb-4">Team Overview</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <MetricCard label="Assistants" value={stats.totalAssistants} icon={<Users />} />
+          <MetricCard
+            label="Verified Assistants"
+            value={stats.verifiedAssistants}
+            color="text-success"
+            icon={<CheckCircle2 />}
+          />
+          <MetricCard
+            label="Active Tasks"
+            value={stats.inProgress}
+            color="text-primary"
+            icon={<Clock />}
+          />
+        </div>
+
+        {/* ===== TASK METRICS ===== */}
+        <h3 className="text-xl font-bold mb-4">Task Overview</h3>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <MetricCard label="Total Tasks" value={stats.totalTasks} icon={<ClipboardList />} />
           <MetricCard
@@ -205,14 +190,14 @@ const DashboardManager = () => {
           />
           <MetricCard label="In Progress" value={stats.inProgress} icon={<Clock />} />
           <MetricCard
-            label="Overdue Tasks"
+            label="Overdue"
             value={stats.overdue}
             icon={<AlertTriangle />}
             color="text-destructive"
           />
         </div>
 
-        {/* TASK TABS */}
+        {/* TASK FILTER TABS */}
         <div className="mb-6 flex gap-2 border-b border-border">
           {["", "pending", "in_progress", "completed"].map((s) => (
             <button
@@ -239,22 +224,9 @@ const DashboardManager = () => {
         ) : (
           <TaskTable tasks={filteredTasks} getPriorityBadge={getPriorityBadge} />
         )}
-
-        {/* TEAM MANAGEMENT SECTION */}
-        <h3 className="text-xl font-semibold mt-12 mb-4">Team Overview</h3>
-
-        <TeamStats stats={stats} />
-
-        {/* PENDING ASSISTANT APPROVALS */}
-        {stats.pendingVerifications > 0 && (
-          <PendingApprovals
-            pendingAssistants={pendingAssistants}
-            onApprove={handleVerifyAssistant}
-            onReject={handleRejectAssistant}
-          />
-        )}
       </main>
 
+      {/* TASK CREATION MODAL */}
       <CreateTaskDialog
         open={createTaskOpen}
         onOpenChange={setCreateTaskOpen}
@@ -278,7 +250,7 @@ const MetricCard = ({
   color?: string;
 }) => (
   <div className="bg-card border border-border rounded-2xl p-6">
-    <div className="flex items-center justify-between mb-2">
+    <div className="flex items-center justify-between mb-3">
       <p className="text-sm text-muted-foreground">{label}</p>
       <div className="w-5 h-5 text-muted-foreground">{icon}</div>
     </div>
@@ -327,63 +299,6 @@ const EmptyState = ({ onCreate }: { onCreate: () => void }) => (
       Start by delegating a new task to your team.
     </p>
     <Button onClick={onCreate}>Create Task</Button>
-  </div>
-);
-
-const TeamStats = ({ stats }: any) => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <MetricCard label="Assistants" value={stats.totalAssistants} icon={<Users />} />
-    <MetricCard
-      label="Verified Assistants"
-      value={stats.verifiedAssistants}
-      color="text-success"
-      icon={<CheckCircle2 />}
-    />
-    <MetricCard
-      label="Pending Verification"
-      value={stats.pendingVerifications}
-      color="text-warning"
-      icon={<Clock />}
-    />
-  </div>
-);
-
-const PendingApprovals = ({
-  pendingAssistants,
-  onApprove,
-  onReject,
-}: {
-  pendingAssistants: Assistant[];
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-}) => (
-  <div className="bg-card border rounded-xl p-6 mt-8">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="text-lg font-semibold">Pending Assistant Approvals</h3>
-      <Badge>{pendingAssistants.length} pending</Badge>
-    </div>
-
-    {pendingAssistants.map((assistant) => (
-      <div
-        key={assistant.id}
-        className="p-4 border rounded-lg flex items-center justify-between mb-3"
-      >
-        <div>
-          <p className="font-semibold">
-            {assistant.firstName} {assistant.lastName}
-          </p>
-          <p className="text-muted-foreground text-sm">{assistant.email}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => onApprove(assistant.id)}>
-            Approve
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => onReject(assistant.id)}>
-            Reject
-          </Button>
-        </div>
-      </div>
-    ))}
   </div>
 );
 

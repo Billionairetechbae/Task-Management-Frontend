@@ -31,61 +31,53 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
 
 const CompanyProfile = () => {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
-
-  const isExecutive = user?.role === "executive";
-
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // Form values based on the *Company* object (NOT user object)
   const [formData, setFormData] = useState({
-    name: "",
+    company: "",
+    companySize: "",
     industry: "",
-    size: "",
     bio: "",
   });
 
+  const isExecutive = user?.role === "executive";
+
   useEffect(() => {
-    if (user?.company) {
+    if (user) {
       setFormData({
-        name: user.company.name,
-        industry: user.company.industry || "",
-        size: user.company.size || "",
-        bio: user.company.bio || "",
+        company: user.company?.name || "",
+        companySize: user.company?.size || "",
+        industry: user.company?.industry || "",
+        bio: user.bio || "",
       });
     }
   }, [user]);
 
   const handleSave = async () => {
-    if (!user?.companyId) return;
+    if (!isExecutive) return;
 
     try {
       setSaving(true);
-
-      await api.updateCompanyProfile(user.companyId, {
-        name: formData.name,
-        industry: formData.industry,
-        size: formData.size,
-        bio: formData.bio,
-      });
+      // TODO: call backend PATCH /company or similar when available
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       toast({
-        title: "Profile updated",
-        description: "Company profile updated successfully",
+        title: "Profile updated!",
+        description: "Your company information has been saved successfully.",
       });
 
       await refreshUser();
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Failed to update company profile:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update company profile",
+        description: "Failed to update company profile",
         variant: "destructive",
       });
     } finally {
@@ -94,54 +86,39 @@ const CompanyProfile = () => {
   };
 
   const copyCompanyCode = () => {
-    if (!user?.company?.companyCode) return;
-
-    navigator.clipboard.writeText(user.company.companyCode);
-    setCopied(true);
-
-    toast({
-      title: "Copied!",
-      description: "Company code has been copied to clipboard",
-    });
-
-    setTimeout(() => setCopied(false), 2000);
+    const code = user?.company?.companyCode;
+    if (code) {
+      navigator.clipboard.writeText(code);
+      setCopied(true);
+      toast({
+        title: "Copied!",
+        description: "Company code copied to clipboard",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
-  const handleChange = (key: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  /* =============================================================
-     NON-EXECUTIVE ACCESS VIEW
-  ============================================================= */
   if (!isExecutive) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <main className="px-6 py-8">
           <Card>
-            <CardContent className="p-8 text-center">
-              <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                Company Profile (View Only)
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Only executives can edit company information.
-              </p>
-
-              <div className="bg-muted/50 rounded-lg p-4 text-left inline-block">
-                <p className="font-semibold">{user?.company?.name}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Industry: {user?.company?.industry || "Not set"}
+            <CardContent className="p-8">
+              <div className="max-w-md mx-auto text-center">
+                <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Company Profile</h3>
+                <p className="text-muted-foreground mb-6">
+                  Company profile management is only available for executives.
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Size: {user?.company?.size || "Not set"}
-                </p>
+                <Button asChild>
+                  <Link to="/dashboard-assistant">Back to Dashboard</Link>
+                </Button>
               </div>
-
-              <Button className="mt-6" asChild>
-                <Link to="/dashboard-assistant">Back to Dashboard</Link>
-              </Button>
             </CardContent>
           </Card>
         </main>
@@ -149,31 +126,38 @@ const CompanyProfile = () => {
     );
   }
 
-  /* =============================================================
-     EXECUTIVE VIEW
-  ============================================================= */
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="px-6 py-8">
-        {/* PAGE HEADER */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Company Profile</h2>
-            <p className="text-muted-foreground">
-              Manage your company’s information
-            </p>
-          </div>
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Company Profile</h2>
+              <p className="text-muted-foreground">
+                Manage your company information and settings
+              </p>
+            </div>
 
-          <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? "Saving..." : <><Save className="w-5 h-5" /> Save Changes</>}
-          </Button>
+            <Button onClick={handleSave} disabled={saving} className="gap-2">
+              {saving ? (
+                <>Saving...</>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT SIDE – MAIN FORM */}
+          {/* Left Column - Company Information */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Basic Information Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -181,33 +165,60 @@ const CompanyProfile = () => {
                   Company Information
                 </CardTitle>
                 <CardDescription>
-                  Update your company’s public information
+                  Basic details about your company
                 </CardDescription>
               </CardHeader>
-
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Company Name</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => handleChange("name", e.target.value)}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company Name</Label>
+                    <Input
+                      id="company"
+                      value={formData.company}
+                      onChange={(e) =>
+                        handleChange("company", e.target.value)
+                      }
+                      placeholder="Your company name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="companySize">Company Size</Label>
+                    <Select
+                      value={formData.companySize}
+                      onValueChange={(value) =>
+                        handleChange("companySize", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select company size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1-10">1-10 employees</SelectItem>
+                        <SelectItem value="11-50">11-50 employees</SelectItem>
+                        <SelectItem value="51-200">51-200 employees</SelectItem>
+                        <SelectItem value="201-500">201-500 employees</SelectItem>
+                        <SelectItem value="500+">500+ employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Industry</Label>
+                  <Label htmlFor="industry">Industry</Label>
                   <Select
                     value={formData.industry}
-                    onValueChange={(v) => handleChange("industry", v)}
+                    onValueChange={(value) => handleChange("industry", value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Technology">Technology</SelectItem>
+                      <SelectItem value="SaaS">SaaS</SelectItem>
+                      <SelectItem value="E-commerce">E-commerce</SelectItem>
                       <SelectItem value="Finance">Finance</SelectItem>
                       <SelectItem value="Healthcare">Healthcare</SelectItem>
-                      <SelectItem value="SaaS">SaaS</SelectItem>
+                      <SelectItem value="Technology">Technology</SelectItem>
                       <SelectItem value="Real Estate">Real Estate</SelectItem>
                       <SelectItem value="Consulting">Consulting</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
@@ -216,37 +227,23 @@ const CompanyProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Company Size</Label>
-                  <Select
-                    value={formData.size}
-                    onValueChange={(v) => handleChange("size", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select company size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-10">1–10 employees</SelectItem>
-                      <SelectItem value="11-50">11–50 employees</SelectItem>
-                      <SelectItem value="51-200">51–200 employees</SelectItem>
-                      <SelectItem value="201-500">201–500 employees</SelectItem>
-                      <SelectItem value="500+">500+ employees</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Company Bio</Label>
+                  <Label htmlFor="bio">Company Bio</Label>
                   <Textarea
-                    rows={4}
+                    id="bio"
                     value={formData.bio}
                     onChange={(e) => handleChange("bio", e.target.value)}
-                    placeholder="Tell assistants about your company vision..."
+                    placeholder="Tell us about your company..."
+                    rows={4}
                   />
+                  <p className="text-sm text-muted-foreground">
+                    This helps assistants understand your company culture and
+                    work environment.
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* TEAM MANAGEMENT */}
+            {/* Team Management Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -254,47 +251,82 @@ const CompanyProfile = () => {
                   Team Management
                 </CardTitle>
                 <CardDescription>
-                  Manage assistants and pending verifications
+                  Manage your assistants and team settings
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Assistants</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Approve or reject assistant applications
-                    </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <div>
+                      <h4 className="font-semibold">Assistant Team</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Manage your company assistants and verifications
+                      </p>
+                    </div>
+                    <Button asChild>
+                      <Link to="/team-management">Manage Team</Link>
+                    </Button>
                   </div>
-                  <Button asChild>
-                    <Link to="/team-management">Manage Team</Link>
-                  </Button>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                    <div>
+                      <h4 className="font-semibold text-sm">
+                        Invitation Settings
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Control how assistants join your company
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="bg-success/10 text-success border-success/20"
+                        >
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Manual Approval
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        All assistants require executive approval
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* RIGHT SIDE – COMPANY CODE & STATS */}
+          {/* Right Column - Company Code & Quick Actions */}
           <div className="space-y-6">
-            {/* COMPANY CODE CARD */}
+            {/* Company Code Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Company Code</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  Company Code
+                </CardTitle>
                 <CardDescription>
-                  Assistants use this code to join your company
+                  Share this code with assistants to join your company
                 </CardDescription>
               </CardHeader>
-
               <CardContent className="space-y-4">
-                <div className="bg-primary/10 p-4 text-center rounded-md border border-primary/20">
-                  <div className="text-2xl font-mono font-bold text-primary">
-                    {user?.company?.companyCode || "Loading..."}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-mono font-bold text-primary mb-2">
+                      {user?.company?.companyCode || "Loading..."}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Unique company identifier
+                    </p>
                   </div>
                 </div>
 
                 <Button
+                  onClick={copyCompanyCode}
                   variant="outline"
                   className="w-full gap-2"
-                  onClick={copyCompanyCode}
+                  disabled={!user?.company?.companyCode}
                 >
                   {copied ? (
                     <>
@@ -308,17 +340,28 @@ const CompanyProfile = () => {
                     </>
                   )}
                 </Button>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">How to use:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Share this code with potential assistants</li>
+                    <li>• Assistants use it to join your company</li>
+                    <li>• You'll need to approve their applications</li>
+                    <li>• Keep this code secure</li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
 
-            {/* QUICK STATS */}
+            {/* Quick Stats Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Stats</CardTitle>
+                <CardDescription>Your company at a glance</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm">Company Status</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Company Status</span>
                   <Badge
                     variant="outline"
                     className="bg-success/10 text-success border-success/20"
@@ -326,20 +369,48 @@ const CompanyProfile = () => {
                     Active
                   </Badge>
                 </div>
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Subscription</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Subscription</span>
                   <Badge variant="outline">
-                    {user?.subscriptionTier || "Free"}
+                    {user?.subscriptionTier === "premium"
+                      ? "Premium"
+                      : "Free"}
                   </Badge>
                 </div>
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Member Since</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Member Since</span>
                   <span className="text-sm text-muted-foreground">
-                    {new Date(user?.createdAt || "").toLocaleDateString()}
+                    {user?.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString()
+                      : "N/A"}
                   </span>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Support Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Need Help?</CardTitle>
+                <CardDescription>
+                  Get support for your company account
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Help Center
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  Contact Support
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -349,9 +420,6 @@ const CompanyProfile = () => {
   );
 };
 
-/* =============================================================
-   HEADER COMPONENT
-============================================================= */
 const Header = () => {
   const { user } = useAuth();
 
@@ -361,11 +429,13 @@ const Header = () => {
         <Logo className="h-8" />
 
         <div className="flex items-center gap-4">
-          <Button variant="outline" asChild className="gap-2">
+          <Button variant="outline" className="gap-2" asChild>
             <Link
               to={
                 user?.role === "executive"
                   ? "/dashboard-executive"
+                  : user?.role === "manager"
+                  ? "/dashboard-manager"
                   : "/dashboard-assistant"
               }
             >
@@ -373,10 +443,12 @@ const Header = () => {
               Dashboard
             </Link>
           </Button>
-
-          <HelpCircle className="w-6 h-6 text-muted-foreground" />
-          <Bell className="w-6 h-6 text-muted-foreground" />
-
+          <button className="relative">
+            <HelpCircle className="w-6 h-6 text-muted-foreground" />
+          </button>
+          <button className="relative">
+            <Bell className="w-6 h-6 text-muted-foreground" />
+          </button>
           <Button variant="outline" asChild>
             <Link to="/profile">
               <User className="w-5 h-5 mr-2" />

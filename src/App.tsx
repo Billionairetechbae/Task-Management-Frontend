@@ -21,11 +21,14 @@ import TaskDetails from "./pages/TaskDetails";
 import TeamManagement from "./pages/TeamManagement";
 import CompanyProfile from "./pages/CompanyProfile";
 
+import TeamDirectory from "./pages/TeamDirectory"
+
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import TeamMemberProfile from "./pages/TeamMemberProfile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -134,6 +137,27 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/team-directory"
+              element={
+                <ProtectedRoute allowedRoles={["executive", "manager"]}>
+                  <TeamDirectory />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/team-member/:id"
+              element={
+                <ProtectedRoute allowedRoles={["executive", "manager"]}>
+                  <TeamMemberProfile />
+                </ProtectedRoute>
+              }
+            />
+
+
+
 
             {/* SYSTEM ROUTES */}
             <Route path="/unauthorized" element={<Unauthorized />} />

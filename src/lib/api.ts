@@ -745,6 +745,82 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  async getCompanyTeam(): Promise<{
+    status: string;
+    results: number;
+    data: { team: User[] };
+  }> {
+    return this.request("/team/members", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getTeamDirectory(): Promise<{
+    status: string;
+    results: number;
+    data: { team: User[] };
+  }> {
+    return this.request("/team/directory", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getUserById(
+    userId: string
+  ): Promise<{ status: string; data: { user: User } }> {
+    return this.request<{ status: string; data: { user: User } }>(
+      `/users/${userId}`,
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
+  }
+
+
+  // PATCH /profile/update
+  async updateUserProfile(updates: {
+    firstName?: string;
+    lastName?: string;
+    bio?: string;
+    specialization?: string;
+    experience?: number;
+    hourlyRate?: number;
+  }) {
+    return this.request("/profile/update", {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async uploadProfilePicture(file: File) {
+    const form = new FormData();
+    form.append("profilePicture", file);
+
+    const response = await fetch(`${API_BASE_URL}/profile/upload-picture`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
+      },
+      body: form,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) throw new Error(result.message || "Upload failed");
+
+    return result;
+  }
+
+
+
+
+
+
 }
 
 export const api = new ApiClient();
