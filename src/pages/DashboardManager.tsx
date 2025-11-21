@@ -1,3 +1,4 @@
+// src/pages/DashboardManager.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -44,10 +45,16 @@ const DashboardManager = () => {
     verifiedAssistants: 0,
   });
 
+  /* ---------------------------------------------
+   * Filtered tasks for status tab
+   * --------------------------------------------*/
   const filteredTasks = statusFilter
     ? tasks.filter((t) => t.status === statusFilter)
     : tasks;
 
+  /* ---------------------------------------------
+   * Load dashboard (tasks + assistants)
+   * --------------------------------------------*/
   useEffect(() => {
     loadDashboard();
   }, []);
@@ -66,14 +73,23 @@ const DashboardManager = () => {
       setTasks(tasksRes.data.tasks);
       setAssistants(assistantList);
 
-      const completed = tasksRes.data.tasks.filter(t => t.status === "completed").length;
-      const total = tasksRes.data.tasks.length;
-      const pending = tasksRes.data.tasks.filter(t => t.status === "pending").length;
-      const inProgress = tasksRes.data.tasks.filter(t => t.status === "in_progress").length;
-      const overdue = tasksRes.data.tasks.filter(
-        t => new Date(t.deadline) < new Date() && t.status !== "completed"
+      const completed = tasksRes.data.tasks.filter(
+        (t) => t.status === "completed"
       ).length;
-      const urgent = tasksRes.data.tasks.filter(t => t.priority === "high").length;
+      const total = tasksRes.data.tasks.length;
+      const pending = tasksRes.data.tasks.filter(
+        (t) => t.status === "pending"
+      ).length;
+      const inProgress = tasksRes.data.tasks.filter(
+        (t) => t.status === "in_progress"
+      ).length;
+      const overdue = tasksRes.data.tasks.filter(
+        (t) =>
+          new Date(t.deadline) < new Date() && t.status !== "completed"
+      ).length;
+      const urgent = tasksRes.data.tasks.filter(
+        (t) => t.priority === "high"
+      ).length;
 
       setStats({
         totalTasks: total,
@@ -82,11 +98,12 @@ const DashboardManager = () => {
         completed,
         overdue,
         urgent,
-        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+        completionRate:
+          total > 0 ? Math.round((completed / total) * 100) : 0,
         totalAssistants: assistantList.length,
-        verifiedAssistants: assistantList.filter(a => a.isVerified).length,
+        verifiedAssistants: assistantList.filter((a) => a.isVerified)
+          .length,
       });
-
     } catch (err: any) {
       toast({
         title: "Error",
@@ -98,6 +115,9 @@ const DashboardManager = () => {
     }
   };
 
+  /* ---------------------------------------------
+   * Helpers
+   * --------------------------------------------*/
   const getStatusDisplay = (status: string) => {
     const map: Record<string, string> = {
       pending: "Pending",
@@ -125,6 +145,9 @@ const DashboardManager = () => {
     </Badge>
   );
 
+  /* ---------------------------------------------
+   * Render
+   * --------------------------------------------*/
   return (
     <div className="min-h-screen bg-background">
       {/* HEADER */}
@@ -133,6 +156,14 @@ const DashboardManager = () => {
           <Logo className="h-8" />
 
           <div className="flex items-center gap-4">
+            {/* NEW BUTTON — Team Directory */}
+            <Button variant="outline" className="gap-2" asChild>
+              <Link to="/team-directory">
+                <Users className="w-4 h-4" />
+                Team Directory
+              </Link>
+            </Button>
+
             <HelpCircle className="w-6 h-6 text-muted-foreground" />
             <Bell className="w-6 h-6 text-muted-foreground" />
 
@@ -142,7 +173,6 @@ const DashboardManager = () => {
               </Link>
             </Button>
 
-            {/* MANAGERS CAN ASSIGN TASKS */}
             <Button className="gap-2" onClick={() => setCreateTaskOpen(true)}>
               <Plus className="w-5 h-5" /> Delegate Task
             </Button>
@@ -155,11 +185,22 @@ const DashboardManager = () => {
         {/* WELCOME */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Manager Dashboard</h2>
-          <p className="text-muted-foreground">Manage your team and delegate tasks.</p>
+          <p className="text-muted-foreground">
+            Manage your team and delegate tasks.
+          </p>
         </div>
 
-        {/* TEAM OVERVIEW (ABOVE TASKS) */}
-        <h3 className="text-xl font-bold mb-4">Team Overview</h3>
+        {/* TEAM OVERVIEW SECTION */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold">Team Overview</h3>
+
+          {/* NEW: View All Team Members */}
+          <Button variant="outline" className="gap-2" asChild>
+            <Link to="/team-directory">
+              <Users className="w-4 h-4" /> View Team Members
+            </Link>
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <MetricCard label="Assistants" value={stats.totalAssistants} icon={<Users />} />
@@ -177,7 +218,7 @@ const DashboardManager = () => {
           />
         </div>
 
-        {/* ===== TASK METRICS ===== */}
+        {/* TASK OVERVIEW */}
         <h3 className="text-xl font-bold mb-4">Task Overview</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -226,7 +267,7 @@ const DashboardManager = () => {
         )}
       </main>
 
-      {/* TASK CREATION MODAL */}
+      {/* CREATE TASK MODAL */}
       <CreateTaskDialog
         open={createTaskOpen}
         onOpenChange={setCreateTaskOpen}
@@ -284,7 +325,9 @@ const TaskTable = ({ tasks, getPriorityBadge }: any) => (
           {new Date(task.deadline).toLocaleDateString()}
         </div>
         <div>
-          <Badge className="capitalize">{task.status.replace("_", " ")}</Badge>
+          <Badge className="capitalize">
+            {task.status.replace("_", " ")}
+          </Badge>
         </div>
       </div>
     ))}

@@ -1,23 +1,48 @@
+// src/pages/DashboardExecutive.tsx
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Bot, Crown, HelpCircle, Plus, User, X, Users, Clock, CheckCircle2, Mail } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import {
+  Bell,
+  Bot,
+  Crown,
+  HelpCircle,
+  Plus,
+  User,
+  X,
+  Users,
+  Clock,
+  CheckCircle2,
+  Mail,
+} from "lucide-react";
+
+import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, Assistant } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
-import Logo from "@/components/Logo";
+
+type TeamTab = "tasks" | "team";
 
 const DashboardExecutive = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   const [showBanner, setShowBanner] = useState(true);
+  const [activeTab, setActiveTab] = useState<TeamTab>("tasks");
+
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>("");
+
   const [teamStats, setTeamStats] = useState({
     totalAssistants: 0,
     availableAssistants: 0,
     pendingVerifications: 0,
     totalExecutives: 0,
   });
+
   const [taskStats, setTaskStats] = useState({
     totalTasks: 0,
     pendingTasks: 0,
@@ -27,21 +52,42 @@ const DashboardExecutive = () => {
     urgentTasks: 0,
     completionRate: 0,
   });
+
   const [pendingAssistants, setPendingAssistants] = useState<Assistant[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamLoading, setTeamLoading] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'team'>('tasks');
-  const { user } = useAuth();
-  const { toast } = useToast();
+
+  /* -----------------------------------
+   * Helpers
+   * ----------------------------------*/
+
+  const filteredTasks = statusFilter
+    ? tasks.filter((task) => task.status === statusFilter)
+    : tasks;
+
+  const getStatusDisplay = (status: string) => {
+    const statusMap: Record<string, string> = {
+      pending: "Pending",
+      in_progress: "In Progress",
+      completed: "Completed",
+      cancelled: "Cancelled",
+    };
+    return statusMap[status] || status;
+  };
+
+  const getPriorityDisplay = (priority: string) =>
+    priority.charAt(0).toUpperCase() + priority.slice(1);
+
+  /* -----------------------------------
+   * Data Fetchers
+   * ----------------------------------*/
 
   const fetchDashboard = async () => {
     try {
       setLoading(true);
       const response = await api.getExecutiveDashboard();
-      
-      // Destructure with default values
+
       const {
         overview = {
           team: {
@@ -58,34 +104,39 @@ const DashboardExecutive = () => {
             overdueTasks: 0,
             urgentTasks: 0,
             completionRate: 0,
-          }
+          },
         },
-        recentActivity = { tasks: [] }
+        recentActivity = { tasks: [] as Task[] },
       } = response.data || {};
 
-      const { team: teamStats, tasks: taskStats } = overview;
-      
+      const { team, tasks: t } = overview;
+
       setTasks(recentActivity.tasks || []);
-      setTaskStats({
-        totalTasks: taskStats.totalTasks || 0,
-        pendingTasks: taskStats.pendingTasks || 0,
-        inProgressTasks: taskStats.inProgressTasks || 0,
-        completedTasks: taskStats.completedTasks || 0,
-        overdueTasks: taskStats.overdueTasks || 0,
-        urgentTasks: taskStats.urgentTasks || 0,
-        completionRate: taskStats.completionRate || 0,
-      });
+
       setTeamStats({
-        totalAssistants: teamStats.totalAssistants || 0,
-        availableAssistants: teamStats.availableAssistants || 0,
-        pendingVerifications: teamStats.pendingVerifications || 0,
-        totalExecutives: teamStats.totalExecutives || 0,
+        totalAssistants: team.totalAssistants || 0,
+        availableAssistants: team.availableAssistants || 0,
+        pendingVerifications: team.pendingVerifications || 0,
+        totalExecutives: team.totalExecutives || 0,
+      });
+
+      setTaskStats({
+        totalTasks: t.totalTasks || 0,
+        pendingTasks: t.pendingTasks || 0,
+        inProgressTasks: t.inProgressTasks || 0,
+        completedTasks: t.completedTasks || 0,
+        overdueTasks: t.overdueTasks || 0,
+        urgentTasks: t.urgentTasks || 0,
+        completionRate: t.completionRate || 0,
       });
     } catch (error) {
-      console.error('Failed to fetch dashboard:', error);
+      console.error("Failed to fetch dashboard:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load dashboard data",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to load dashboard data",
         variant: "destructive",
       });
     } finally {
@@ -99,7 +150,7 @@ const DashboardExecutive = () => {
       const response = await api.getPendingVerifications();
       setPendingAssistants(response.data.pendingAssistants || []);
     } catch (error) {
-      console.error('Failed to fetch pending assistants:', error);
+      console.error("Failed to fetch pending assistants:", error);
       toast({
         title: "Error",
         description: "Failed to load team data",
@@ -112,10 +163,17 @@ const DashboardExecutive = () => {
 
   useEffect(() => {
     fetchDashboard();
-    if (activeTab === 'team') {
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "team") {
       fetchPendingAssistants();
     }
   }, [activeTab]);
+
+  /* -----------------------------------
+   * Actions
+   * ----------------------------------*/
 
   const handleTaskCreated = () => {
     fetchDashboard();
@@ -127,10 +185,11 @@ const DashboardExecutive = () => {
       await api.verifyAssistant(assistantId);
       toast({
         title: "Assistant verified!",
-        description: "The assistant has been approved and can now receive tasks",
+        description:
+          "The assistant has been approved and can now receive tasks",
       });
       fetchPendingAssistants();
-      fetchDashboard(); // Refresh team stats
+      fetchDashboard();
     } catch (error: any) {
       toast({
         title: "Verification failed",
@@ -148,7 +207,7 @@ const DashboardExecutive = () => {
         description: "The assistant registration has been removed",
       });
       fetchPendingAssistants();
-      fetchDashboard(); // Refresh team stats
+      fetchDashboard();
     } catch (error: any) {
       toast({
         title: "Rejection failed",
@@ -158,7 +217,11 @@ const DashboardExecutive = () => {
     }
   };
 
-  const handleInviteAssistant = async (email: string, firstName?: string, lastName?: string) => {
+  const handleInviteAssistant = async (
+    email: string,
+    firstName?: string,
+    lastName?: string
+  ) => {
     try {
       await api.inviteAssistant({ email, firstName, lastName });
       toast({
@@ -174,43 +237,54 @@ const DashboardExecutive = () => {
     }
   };
 
-  const filteredTasks = statusFilter
-    ? tasks.filter(task => task.status === statusFilter)
-    : tasks;
-
-  const getStatusDisplay = (status: string) => {
-    const statusMap: Record<string, string> = {
-      pending: 'Pending',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-    };
-    return statusMap[status] || status;
-  };
-
-  const getPriorityDisplay = (priority: string) => {
-    return priority.charAt(0).toUpperCase() + priority.slice(1);
-  };
+  /* -----------------------------------
+   * Sections
+   * ----------------------------------*/
 
   const TeamManagementSection = () => (
     <div className="space-y-6">
       {/* Team Overview Cards */}
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xl font-semibold">Team Overview</h2>
+        {/* NEW: View all team members button */}
+        <Button variant="outline" className="gap-2" asChild>
+          <Link to="/team-directory">
+            <Users className="w-4 h-4" />
+            View All Team Members
+          </Link>
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Total Assistants</h3>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Total Assistants
+          </h3>
           <p className="text-3xl font-bold">{teamStats.totalAssistants}</p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Available Now</h3>
-          <p className="text-3xl font-bold text-success">{teamStats.availableAssistants}</p>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Available Now
+          </h3>
+          <p className="text-3xl font-bold text-success">
+            {teamStats.availableAssistants}
+          </p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Pending Verification</h3>
-          <p className="text-3xl font-bold text-warning">{teamStats.pendingVerifications}</p>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Pending Verification
+          </h3>
+          <p className="text-3xl font-bold text-warning">
+            {teamStats.pendingVerifications}
+          </p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Team Executives</h3>
-          <p className="text-3xl font-bold text-primary">{teamStats.totalExecutives}</p>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Team Executives
+          </h3>
+          <p className="text-3xl font-bold text-primary">
+            {teamStats.totalExecutives}
+          </p>
         </div>
       </div>
 
@@ -218,34 +292,71 @@ const DashboardExecutive = () => {
       <div className="bg-card border border-border rounded-2xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Quick Actions</h3>
-          <Button onClick={() => {/* Open invite dialog */}} className="gap-2">
-            <Mail className="w-4 h-4" />
-            Invite Assistant
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() =>
+                handleInviteAssistant("example@email.com", "New", "Assistant")
+              }
+            >
+              <Mail className="w-4 h-4" />
+              Invite Assistant
+            </Button>
+
+            {/* Also link to team directory here */}
+            <Button variant="outline" className="gap-2" asChild>
+              <Link to="/team-directory">
+                <Users className="w-4 h-4" />
+                Team Directory
+              </Link>
+            </Button>
+          </div>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button variant="outline" className="justify-start gap-3 h-auto py-4" asChild>
+          <Button
+            variant="outline"
+            className="justify-start gap-3 h-auto py-4"
+            asChild
+          >
             <Link to="/team-management">
               <Users className="w-5 h-5" />
               <div className="text-left">
                 <div className="font-semibold">Manage Team</div>
-                <div className="text-sm text-muted-foreground">View all assistants</div>
+                <div className="text-sm text-muted-foreground">
+                  View all assistants & managers
+                </div>
               </div>
             </Link>
           </Button>
-          <Button variant="outline" className="justify-start gap-3 h-auto py-4" onClick={() => setCreateTaskOpen(true)}>
+
+          <Button
+            variant="outline"
+            className="justify-start gap-3 h-auto py-4"
+            onClick={() => setCreateTaskOpen(true)}
+          >
             <Plus className="w-5 h-5" />
             <div className="text-left">
               <div className="font-semibold">Delegate Task</div>
-              <div className="text-sm text-muted-foreground">Assign to assistant</div>
+              <div className="text-sm text-muted-foreground">
+                Assign work to your team
+              </div>
             </div>
           </Button>
-          <Button variant="outline" className="justify-start gap-3 h-auto py-4" asChild>
+
+          <Button
+            variant="outline"
+            className="justify-start gap-3 h-auto py-4"
+            asChild
+          >
             <Link to="/company-profile">
               <User className="w-5 h-5" />
               <div className="text-left">
                 <div className="font-semibold">Company Settings</div>
-                <div className="text-sm text-muted-foreground">Manage company info</div>
+                <div className="text-sm text-muted-foreground">
+                  Manage company info
+                </div>
               </div>
             </Link>
           </Button>
@@ -261,10 +372,12 @@ const DashboardExecutive = () => {
               {pendingAssistants.length} waiting
             </Badge>
           </div>
-          
+
           {teamLoading ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Loading pending verifications...</p>
+              <p className="text-muted-foreground">
+                Loading pending verifications...
+              </p>
             </div>
           ) : pendingAssistants.length === 0 ? (
             <div className="text-center py-8">
@@ -274,32 +387,47 @@ const DashboardExecutive = () => {
           ) : (
             <div className="space-y-4">
               {pendingAssistants.map((assistant) => (
-                <div key={assistant.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                <div
+                  key={assistant.id}
+                  className="flex items-center justify-between p-4 border border-border rounded-lg"
+                >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
                       <User className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold">{assistant.firstName} {assistant.lastName}</h4>
-                      <p className="text-sm text-muted-foreground">{assistant.email}</p>
+                      <h4 className="font-semibold">
+                        {assistant.firstName} {assistant.lastName}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {assistant.email}
+                      </p>
                       <div className="flex gap-2 mt-1">
-                        <Badge variant="outline">{assistant.specialization}</Badge>
-                        <Badge variant="outline">{assistant.experience} years exp</Badge>
+                        {assistant.specialization && (
+                          <Badge variant="outline">
+                            {assistant.specialization}
+                          </Badge>
+                        )}
+                        {assistant.experience !== undefined && (
+                          <Badge variant="outline">
+                            {assistant.experience} years exp
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       onClick={() => handleVerifyAssistant(assistant.id)}
                       className="gap-2"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       Approve
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleRejectAssistant(assistant.id)}
                     >
                       Reject
@@ -312,17 +440,18 @@ const DashboardExecutive = () => {
         </div>
       )}
 
-      {/* Company Code Display */}
+      {/* Company Code */}
       <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold mb-2">Your Company Code</h3>
             <p className="text-muted-foreground mb-4">
-              Share this code with assistants so they can join your company
+              Share this code with executives, managers and assistants so they
+              can join your workspace.
             </p>
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 inline-block">
               <code className="text-2xl font-mono font-bold text-primary">
-                {user?.company?.companyCode || 'Loading...'}
+                {user?.company?.companyCode || "Loading..."}
               </code>
             </div>
           </div>
@@ -340,20 +469,34 @@ const DashboardExecutive = () => {
       {/* Task Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Total Tasks</h3>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Total Tasks
+          </h3>
           <p className="text-3xl font-bold">{taskStats.totalTasks}</p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Completion Rate</h3>
-          <p className="text-3xl font-bold text-success">{taskStats.completionRate}%</p>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Completion Rate
+          </h3>
+          <p className="text-3xl font-bold text-success">
+            {taskStats.completionRate}%
+          </p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">In Progress</h3>
-          <p className="text-3xl font-bold text-primary">{taskStats.inProgressTasks}</p>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            In Progress
+          </h3>
+          <p className="text-3xl font-bold text-primary">
+            {taskStats.inProgressTasks}
+          </p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Overdue</h3>
-          <p className="text-3xl font-bold text-destructive">{taskStats.overdueTasks}</p>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            Overdue
+          </h3>
+          <p className="text-3xl font-bold text-destructive">
+            {taskStats.overdueTasks}
+          </p>
         </div>
       </div>
 
@@ -361,33 +504,49 @@ const DashboardExecutive = () => {
       <div className="mb-6">
         <div className="flex gap-2 border-b border-border">
           <button
-            onClick={() => setStatusFilter('')}
-            className={`px-4 py-2 font-semibold ${!statusFilter ? 'border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setStatusFilter("")}
+            className={`px-4 py-2 font-semibold ${
+              !statusFilter
+                ? "border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             All Tasks
           </button>
           <button
-            onClick={() => setStatusFilter('pending')}
-            className={`px-4 py-2 ${statusFilter === 'pending' ? 'font-semibold border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setStatusFilter("pending")}
+            className={`px-4 py-2 ${
+              statusFilter === "pending"
+                ? "font-semibold border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             Pending
           </button>
           <button
-            onClick={() => setStatusFilter('in_progress')}
-            className={`px-4 py-2 ${statusFilter === 'in_progress' ? 'font-semibold border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setStatusFilter("in_progress")}
+            className={`px-4 py-2 ${
+              statusFilter === "in_progress"
+                ? "font-semibold border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             In Progress
           </button>
           <button
-            onClick={() => setStatusFilter('completed')}
-            className={`px-4 py-2 ${statusFilter === 'completed' ? 'font-semibold border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setStatusFilter("completed")}
+            className={`px-4 py-2 ${
+              statusFilter === "completed"
+                ? "font-semibold border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             Completed
           </button>
         </div>
       </div>
 
-      {/* Tasks List */}
+      {/* Task List */}
       {loading ? (
         <div className="bg-card border border-border rounded-2xl p-8 text-center">
           <p className="text-muted-foreground">Loading tasks...</p>
@@ -399,8 +558,13 @@ const DashboardExecutive = () => {
               <Plus className="w-8 h-8 text-primary" />
             </div>
             <h3 className="text-xl font-semibold mb-2">No tasks yet</h3>
-            <p className="text-muted-foreground mb-6">Get started by delegating your first task to your team</p>
-            <Button onClick={() => setCreateTaskOpen(true)} className="gap-2">
+            <p className="text-muted-foreground mb-6">
+              Get started by delegating your first task to your team.
+            </p>
+            <Button
+              onClick={() => setCreateTaskOpen(true)}
+              className="gap-2"
+            >
               <Plus className="w-5 h-5" />
               Delegate New Task
             </Button>
@@ -424,11 +588,15 @@ const DashboardExecutive = () => {
             >
               <div className="font-medium">{task.title}</div>
               <div className="text-muted-foreground">
-                {task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}` : 'Unassigned'}
+                {task.assignee
+                  ? `${task.assignee.firstName} ${task.assignee.lastName}`
+                  : "Unassigned"}
               </div>
               <div>
                 <Badge
-                  variant={task.priority === "high" ? "destructive" : "secondary"}
+                  variant={
+                    task.priority === "high" ? "destructive" : "secondary"
+                  }
                   className={
                     task.priority === "medium"
                       ? "bg-warning/10 text-warning border-warning/20"
@@ -467,8 +635,13 @@ const DashboardExecutive = () => {
     </div>
   );
 
+  /* -----------------------------------
+   * Render
+   * ----------------------------------*/
+
   return (
     <div className="min-h-screen bg-background">
+      {/* HEADER */}
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
           <Logo className="h-8" />
@@ -480,6 +653,14 @@ const DashboardExecutive = () => {
                 AI Hub
               </Link>
             </Button>
+
+            <Button variant="outline" className="gap-2" asChild>
+              <Link to="/team-directory">
+                <Users className="w-5 h-5" />
+                Team Directory
+              </Link>
+            </Button>
+
             <button className="relative">
               <HelpCircle className="w-6 h-6 text-muted-foreground" />
             </button>
@@ -503,7 +684,9 @@ const DashboardExecutive = () => {
         </div>
       </header>
 
+      {/* MAIN */}
       <main className="px-6 py-8">
+        {/* Banner */}
         {showBanner && (
           <div className="bg-primary rounded-2xl p-6 mb-8 relative">
             <button
@@ -521,35 +704,55 @@ const DashboardExecutive = () => {
                   Build Your Assistant Team
                 </h3>
                 <p className="text-primary-foreground/90 mb-4">
-                  You have {teamStats.pendingVerifications} assistant{teamStats.pendingVerifications !== 1 ? 's' : ''} waiting for verification. 
-                  Review and approve them to grow your team.
+                  You have {teamStats.pendingVerifications} assistant
+                  {teamStats.pendingVerifications !== 1 ? "s" : ""} waiting for
+                  verification. Review and approve them to grow your team.
                 </p>
-                <Button
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
-                  onClick={() => setActiveTab('team')}
-                >
-                  Manage Team
-                </Button>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
+                    onClick={() => setActiveTab("team")}
+                  >
+                    Manage Team
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="bg-primary/10 text-primary-foreground border-primary-foreground/40 gap-2"
+                    asChild
+                  >
+                    <Link to="/team-directory">
+                      <Users className="w-4 h-4" />
+                      View All Team Members
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* Welcome */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
             Welcome back, {user?.firstName}!
           </h2>
           <p className="text-muted-foreground">
-            {activeTab === 'tasks' ? 'Manage and track all delegated tasks' : 'Manage your company team and assistants'}
+            {activeTab === "tasks"
+              ? "Manage and track all delegated tasks."
+              : "Manage your company team, verification and structure."}
           </p>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tabs */}
         <div className="mb-6">
           <div className="flex gap-2 border-b border-border">
             <button
-              onClick={() => setActiveTab('tasks')}
-              className={`px-4 py-2 font-semibold ${activeTab === 'tasks' ? 'border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setActiveTab("tasks")}
+              className={`px-4 py-2 font-semibold ${
+                activeTab === "tasks"
+                  ? "border-b-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Tasks
               {taskStats.totalTasks > 0 && (
@@ -559,8 +762,12 @@ const DashboardExecutive = () => {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('team')}
-              className={`px-4 py-2 font-semibold ${activeTab === 'team' ? 'border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setActiveTab("team")}
+              className={`px-4 py-2 font-semibold ${
+                activeTab === "team"
+                  ? "border-b-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Team Management
               {teamStats.pendingVerifications > 0 && (
@@ -572,8 +779,7 @@ const DashboardExecutive = () => {
           </div>
         </div>
 
-        {/* Content based on active tab */}
-        {activeTab === 'tasks' ? <TasksSection /> : <TeamManagementSection />}
+        {activeTab === "tasks" ? <TasksSection /> : <TeamManagementSection />}
       </main>
 
       <CreateTaskDialog
