@@ -172,7 +172,7 @@ const TaskDetails = () => {
                   ? task.assignee
                     ? `${task.assignee.firstName} ${task.assignee.lastName}`
                     : "Unassigned"
-                  : `${task.executive?.firstName} ${task.executive?.lastName}`}
+                  : `${task.creator?.firstName} ${task.creator?.lastName}`}
               </p>
             </div>
 
@@ -249,11 +249,11 @@ const TaskDetails = () => {
 
           <div className="bg-muted p-4 rounded-lg flex gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold">
-              {task.executive?.firstName?.charAt(0)}
+              {task.creator?.firstName?.charAt(0)}
             </div>
             <div className="flex-1">
               <p className="font-semibold">
-                {task.executive?.firstName} {task.executive?.lastName}
+                {task.creator?.firstName} {task.creator?.lastName}
               </p>
               <p className="text-xs text-muted-foreground">
                 {new Date(task.createdAt).toLocaleString()}

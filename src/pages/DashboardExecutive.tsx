@@ -23,6 +23,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, Assistant } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
+import InviteUserDialog from "@/components/InviteUserDialog";
+
 
 type TeamTab = "tasks" | "team";
 
@@ -35,6 +37,9 @@ const DashboardExecutive = () => {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("");
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+
 
   const [teamStats, setTeamStats] = useState({
     totalAssistants: 0,
@@ -217,25 +222,25 @@ const DashboardExecutive = () => {
     }
   };
 
-  const handleInviteAssistant = async (
-    email: string,
-    firstName?: string,
-    lastName?: string
-  ) => {
-    try {
-      await api.inviteAssistant({ email, firstName, lastName });
-      toast({
-        title: "Invitation sent!",
-        description: `An invitation has been sent to ${email}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Invitation failed",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
+  // const handleInviteAssistant = async (
+  //   email: string,
+  //   firstName?: string,
+  //   lastName?: string
+  // ) => {
+  //   try {
+  //     await api.inviteAssistant({ email, firstName, lastName });
+  //     toast({
+  //       title: "Invitation sent!",
+  //       description: `An invitation has been sent to ${email}`,
+  //     });
+  //   } catch (error: any) {
+  //     toast({
+  //       title: "Invitation failed",
+  //       description: error.message || "Please try again",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
 
   /* -----------------------------------
    * Sections
@@ -293,16 +298,22 @@ const DashboardExecutive = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Quick Actions</h3>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() =>
-                handleInviteAssistant("example@email.com", "New", "Assistant")
-              }
-            >
-              <Mail className="w-4 h-4" />
-              Invite Assistant
-            </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setInviteOpen(true)}
+          >
+            <Mail className="w-4 h-4" />
+            Invite Team Member
+
+            <InviteUserDialog
+              open={inviteOpen}
+              onOpenChange={setInviteOpen}
+              onSuccess={fetchDashboard}
+            />
+
+          </Button>
+
 
             {/* Also link to team directory here */}
             <Button variant="outline" className="gap-2" asChild>

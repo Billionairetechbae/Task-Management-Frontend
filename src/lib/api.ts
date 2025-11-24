@@ -37,7 +37,7 @@ export interface User {
   subscriptionTier: "free" | "premium";
 
   isVerified: boolean;
-  invitationStatus: "pending" | "approved" | "rejected" | "invited";
+  invitationStatus: "pending" | "approved" | "rejected" | "invited" | "removed";
   invitedBy: string | null;
 
   isActive: boolean;
@@ -143,13 +143,14 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
 
-  executive?: {
+  creator?: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
-    company: string;
+    role?: string;
   };
+
 
   assignee?: {
     id: string;
@@ -290,7 +291,7 @@ export interface Assistant {
   skills: string[];
   isAvailable: boolean;
   rating: number;
-  invitationStatus?: "pending" | "approved" | "rejected" | "invited";
+  invitationStatus?: "pending" | "approved" | "rejected" | "invited" | "removed";
   invitedByExecutive?: {
     id: string;
     firstName: string;
@@ -736,10 +737,36 @@ class ApiClient {
     );
   }
 
-  async inviteAssistant(
-    data: InviteAssistantData
-  ): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>("/team/invite", {
+  // async removeTeamMember(userId: string): Promise<{ status: string; message: string }> {
+  //   return this.request(`/team/remove/${userId}`, {
+  //     method: "DELETE",
+  //     headers: this.getAuthHeaders(),
+  //   });
+  // }
+
+  async removeTeamMember(userId: string) {
+    return this.request(`/team/remove/${userId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async restoreTeamMember(userId: string) {
+    return this.request(`/team/restore/${userId}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+
+
+  async inviteAssistant(data: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    invitedRole: "assistant" | "manager" | "executive";
+  }): Promise<{ status: string; message: string }> {
+    return this.request("/team/invite", {
       method: "POST",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),

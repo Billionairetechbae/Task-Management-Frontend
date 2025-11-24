@@ -1,47 +1,103 @@
+// src/pages/TeamManagement.tsx
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+
+import {
+  Bell,
+  HelpCircle,
+  User,
+  Users,
+  Search,
+  Filter,
+  CheckCircle2,
+  Clock,
+  X,
+  Mail,
+  Trash2,
+  RotateCcw,
+  Activity,
+} from "lucide-react";
+
+import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bell, HelpCircle, User, Mail, Search, Filter, CheckCircle2, Clock, X, Crown, Users } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { api, Assistant } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import Logo from "@/components/Logo";
+import InviteUserDialog from "@/components/InviteUserDialog";
+
+type Tab = "active" | "removed";
+
+type ActivityEvent = {
+  id: string;
+  type: "removed" | "restored";
+  userName: string;
+  role: string;
+  at: string;
+};
 
 const TeamManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const isExecutive = user?.role === "executive";
+
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [specializationFilter, setSpecializationFilter] = useState<string>('all');
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteLoading, setInviteLoading] = useState(false);
 
-  const isExecutive = user?.role === 'executive';
-  const isAssistant = user?.role === 'assistant';
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [specializationFilter, setSpecializationFilter] = useState("all");
 
-  const fetchTeamAssistants = async () => {
+  const [activeTab, setActiveTab] = useState<Tab>("active");
+
+  // Invite dialog
+  const [inviteOpen, setInviteOpen] = useState(false);
+
+  // Confirm modal
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmType, setConfirmType] = useState<"remove" | "restore" | null>(
+    null
+  );
+  const [selectedMember, setSelectedMember] = useState<Assistant | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Activity log (frontend only)
+  const [activityLog, setActivityLog] = useState<ActivityEvent[]>([]);
+
+  /* ---------------------------
+   * LOAD TEAM DATA
+   * --------------------------*/
+  const loadAssistants = async () => {
     try {
       setLoading(true);
-      if (isExecutive) {
-        const response = await api.getCompanyAssistants();
-        setAssistants(response.data.assistants);
-      } else {
-        // For assistants, we might want to show limited team info or their own status
-        // For now, we'll show an empty state with appropriate messaging
+      if (!isExecutive) {
         setAssistants([]);
+        return;
       }
-    } catch (error) {
-      console.error('Failed to fetch team assistants:', error);
+
+      const res = await api.getCompanyAssistants();
+      setAssistants(res.data.assistants || []);
+    } catch (err: any) {
       toast({
         title: "Error",
-        description: "Failed to load team data",
+        description: err.message || "Could not load team.",
         variant: "destructive",
       });
     } finally {
@@ -50,145 +106,203 @@ const TeamManagement = () => {
   };
 
   useEffect(() => {
-    fetchTeamAssistants();
+    loadAssistants();
   }, [isExecutive]);
 
-  const handleVerifyAssistant = async (assistantId: string) => {
-    try {
-      await api.verifyAssistant(assistantId);
-      toast({
-        title: "Assistant verified!",
-        description: "The assistant has been approved and can now receive tasks",
-      });
-      fetchTeamAssistants();
-    } catch (error: any) {
-      toast({
-        title: "Verification failed",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
+  /* ---------------------------
+   * HELPERS
+   * --------------------------*/
+  const isRemoved = (a: Assistant) =>
+    a.isActive === false || a.invitationStatus === "removed";
 
-  const handleRejectAssistant = async (assistantId: string) => {
-    try {
-      await api.rejectAssistant(assistantId);
-      toast({
-        title: "Assistant rejected",
-        description: "The assistant registration has been removed",
-      });
-      fetchTeamAssistants();
-    } catch (error: any) {
-      toast({
-        title: "Rejection failed",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
+  const filteredAssistants = assistants.filter((a) => {
+    const isInTab =
+      activeTab === "active" ? !isRemoved(a) : isRemoved(a);
 
-  const handleInviteAssistant = async () => {
-    if (!inviteEmail) {
-      toast({
-        title: "Error",
-        description: "Please enter an email address",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!isInTab) return false;
 
-    try {
-      setInviteLoading(true);
-      await api.inviteAssistant({ email: inviteEmail });
-      toast({
-        title: "Invitation sent!",
-        description: `An invitation has been sent to ${inviteEmail}`,
-      });
-      setInviteEmail('');
-      setInviteDialogOpen(false);
-      fetchTeamAssistants();
-    } catch (error: any) {
-      toast({
-        title: "Invitation failed",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
-    } finally {
-      setInviteLoading(false);
-    }
-  };
+    const matchesSearch =
+      a.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.email.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // Filter assistants based on search and filters
-  const filteredAssistants = assistants.filter(assistant => {
-    const matchesSearch = 
-      assistant.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assistant.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assistant.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "verified" && a.isVerified && !isRemoved(a)) ||
+      (statusFilter === "pending" && !a.isVerified && !isRemoved(a));
 
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'verified' && assistant.isVerified) ||
-      (statusFilter === 'pending' && !assistant.isVerified);
-
-    const matchesSpecialization = specializationFilter === 'all' || 
-      assistant.specialization === specializationFilter;
+    const matchesSpecialization =
+      specializationFilter === "all" ||
+      a.specialization === specializationFilter;
 
     return matchesSearch && matchesStatus && matchesSpecialization;
   });
 
-  const getStatusBadge = (assistant: Assistant) => {
-    if (assistant.isVerified) {
-      return (
-        <Badge className="bg-success text-success-foreground">
-          <CheckCircle2 className="w-3 h-3 mr-1" />
-          Verified
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-          <Clock className="w-3 h-3 mr-1" />
-          Pending
-        </Badge>
-      );
-    }
-  };
+  const pendingCount = assistants.filter(
+    (a) => !a.isVerified && !isRemoved(a)
+  ).length;
 
-  const getSpecializationBadge = (specialization: string) => {
-    const colorMap: Record<string, string> = {
+  const verifiedCount = assistants.filter(
+    (a) => a.isVerified && !isRemoved(a)
+  ).length;
+
+  const removedCount = assistants.filter((a) => isRemoved(a)).length;
+
+  const getStatusBadge = (a: Assistant) =>
+    isRemoved(a) ? (
+      <Badge className="bg-destructive/10 text-destructive border border-destructive/30">
+        Removed
+      </Badge>
+    ) : a.isVerified ? (
+      <Badge className="bg-success/20 text-success border border-success/30">
+        <CheckCircle2 className="w-3 h-3 mr-1" />
+        Verified
+      </Badge>
+    ) : (
+      <Badge className="bg-warning/10 text-warning border border-warning/30">
+        <Clock className="w-3 h-3 mr-1" />
+        Pending
+      </Badge>
+    );
+
+  const getSpecBadge = (spec?: string | null) => {
+    const map: Record<string, string> = {
       sales: "bg-blue-100 text-blue-800 border-blue-200",
       marketing: "bg-purple-100 text-purple-800 border-purple-200",
       operations: "bg-green-100 text-green-800 border-green-200",
       general: "bg-gray-100 text-gray-800 border-gray-200",
       customer_support: "bg-orange-100 text-orange-800 border-orange-200",
     };
-    return colorMap[specialization] || "bg-gray-100 text-gray-800 border-gray-200";
+    return map[spec || "general"] || "";
   };
 
-  const pendingVerifications = assistants.filter(a => !a.isVerified).length;
-  const verifiedAssistants = assistants.filter(a => a.isVerified).length;
+  const pushActivity = (
+    type: "removed" | "restored",
+    target: Assistant
+  ) => {
+    const event: ActivityEvent = {
+      id: `${Date.now()}-${target.id}-${type}`,
+      type,
+      userName: `${target.firstName} ${target.lastName}`,
+      role: target.role,
+      at: new Date().toLocaleString(),
+    };
+    setActivityLog((prev) => [event, ...prev].slice(0, 20));
+  };
 
+  /* ---------------------------
+   * ACTIONS
+   * --------------------------*/
+  const handleVerify = async (id: string) => {
+    try {
+      await api.verifyAssistant(id);
+      toast({ title: "Assistant verified!" });
+      loadAssistants();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await api.rejectAssistant(id);
+      toast({ title: "Assistant rejected." });
+      loadAssistants();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openConfirm = (
+    type: "remove" | "restore",
+    member: Assistant
+  ) => {
+    setConfirmType(type);
+    setSelectedMember(member);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmType || !selectedMember) return;
+
+    try {
+      setActionLoading(true);
+
+      if (confirmType === "remove") {
+        await api.removeTeamMember(selectedMember.id);
+        toast({
+          title: "User removed",
+          description: `${selectedMember.firstName} ${selectedMember.lastName} has been deactivated.`,
+        });
+        pushActivity("removed", selectedMember);
+      }
+
+      if (confirmType === "restore") {
+        await api.restoreTeamMember(selectedMember.id);
+        toast({
+          title: "User restored",
+          description: `${selectedMember.firstName} ${selectedMember.lastName} is now active again.`,
+        });
+        pushActivity("restored", selectedMember);
+      }
+
+      await loadAssistants();
+
+      setConfirmOpen(false);
+      setSelectedMember(null);
+      setConfirmType(null);
+    } catch (err: any) {
+      toast({
+        title: "Action failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /* ---------------------------
+   * RENDER UI
+   * --------------------------*/
   return (
     <div className="min-h-screen bg-background">
+      {/* HEADER */}
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
           <Logo className="h-8" />
 
           <div className="flex items-center gap-4">
-            <Button variant="outline" className="gap-2" asChild>
-              <Link to="/dashboard-executive">
-                <Users className="w-5 h-5" />
+            <Button variant="outline" asChild>
+              <Link
+                to={
+                  user?.role === "executive"
+                    ? "/dashboard-executive"
+                    : "/dashboard-assistant"
+                }
+              >
+                <Users className="w-4 h-4 mr-1" />
                 Dashboard
               </Link>
             </Button>
-            <button className="relative">
-              <HelpCircle className="w-6 h-6 text-muted-foreground" />
-            </button>
-            <button className="relative">
-              <Bell className="w-6 h-6 text-muted-foreground" />
-              {isExecutive && pendingVerifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full" />
-              )}
-            </button>
+
+            <HelpCircle className="w-6 h-6 text-muted-foreground" />
+            <Bell className="w-6 h-6 text-muted-foreground" />
+
+            <Button variant="outline" asChild>
+              <Link to="/team-directory">
+                <Users className="w-4 h-4 mr-1" /> Team Directory
+              </Link>
+            </Button>
+
             <Button variant="outline" asChild>
               <Link to="/profile">
                 <User className="w-5 h-5 mr-2" />
@@ -199,312 +313,357 @@ const TeamManagement = () => {
         </div>
       </header>
 
-      <main className="px-6 py-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Team Management</h2>
-              <p className="text-muted-foreground">
-                {isExecutive 
-                  ? "Manage your company assistants and verifications"
-                  : "View your team information and status"
-                }
-              </p>
-            </div>
-            
-            {isExecutive && (
-              <Button onClick={() => setInviteDialogOpen(true)} className="gap-2">
-                <Mail className="w-5 h-5" />
-                Invite Assistant
-              </Button>
-            )}
+      {/* MAIN CONTENT */}
+      <main className="px-6 py-8 max-w-6xl mx-auto">
+        {/* Title + Invite */}
+        <div className="flex justify-between mb-8 gap-4 flex-wrap">
+          <div>
+            <h2 className="text-3xl font-bold">Team Management</h2>
+            <p className="text-muted-foreground">
+              Manage assistants, status, and removals.
+            </p>
           </div>
+
+          {isExecutive && (
+            <Button className="gap-2" onClick={() => setInviteOpen(true)}>
+              <Mail className="w-5 h-5" />
+              Invite Team Member
+            </Button>
+          )}
         </div>
 
-        {/* Executive View */}
+        {/* TABS */}
+        <div className="mb-6 border-b border-border flex gap-2">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-4 py-2 font-semibold ${
+              activeTab === "active"
+                ? "border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Active Users
+            <Badge variant="secondary" className="ml-2">
+              {assistants.filter((a) => !isRemoved(a)).length}
+            </Badge>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("removed")}
+            className={`px-4 py-2 font-semibold ${
+              activeTab === "removed"
+                ? "border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Removed / Rejected
+            {removedCount > 0 && (
+              <Badge variant="outline" className="ml-2">
+                {removedCount}
+              </Badge>
+            )}
+          </button>
+        </div>
+
+        {/* SUMMARY CARDS */}
         {isExecutive && (
-          <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Assistants</CardTitle>
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{assistants.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Across all specializations
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Verified</CardTitle>
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-success">{verifiedAssistants}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Active and verified
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Verification</CardTitle>
-                  <Clock className="w-4 h-4 text-warning" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-warning">{pendingVerifications}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Awaiting approval
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filters and Search */}
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search assistants by name or email..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
-                      <Filter className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="verified">Verified</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={specializationFilter} onValueChange={setSpecializationFilter}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Specialization" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Specializations</SelectItem>
-                      <SelectItem value="sales">Sales</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="operations">Operations</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="customer_support">Customer Support</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Team Members</CardTitle>
+                <CardDescription>All assistants in company</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{assistants.length}</p>
               </CardContent>
             </Card>
 
-            {/* Assistants List */}
-            {loading ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">Loading team data...</p>
-                </CardContent>
-              </Card>
-            ) : filteredAssistants.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <div className="max-w-md mx-auto">
-                    <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No assistants found</h3>
-                    <p className="text-muted-foreground mb-6">
-                      {searchTerm || statusFilter !== 'all' || specializationFilter !== 'all'
-                        ? "Try adjusting your search or filters"
-                        : "Get started by inviting assistants to join your company"
-                      }
-                    </p>
-                    <Button onClick={() => setInviteDialogOpen(true)} className="gap-2">
-                      <Mail className="w-5 h-5" />
-                      Invite Your First Assistant
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {filteredAssistants.map((assistant) => (
-                  <Card key={assistant.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="w-6 h-6 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">
-                              {assistant.firstName} {assistant.lastName}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">{assistant.email}</p>
-                            <div className="flex gap-2 mt-2">
-                              {getStatusBadge(assistant)}
-                              <Badge variant="outline" className={getSpecializationBadge(assistant.specialization)}>
-                                {assistant.specialization}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Verified</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-success">{verifiedCount}</p>
+              </CardContent>
+            </Card>
 
-                        <div className="flex items-center gap-3">
-                          {!assistant.isVerified && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleVerifyAssistant(assistant.id)}
-                                className="gap-2"
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRejectAssistant(assistant.id)}
-                              >
-                                <X className="w-4 h-4" />
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          {assistant.isVerified && (
-                            <Badge variant="secondary" className="gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Active
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </>
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-warning">{pendingCount}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Removed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-destructive">
+                  {removedCount}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        {/* Assistant View */}
-        {isAssistant && (
-          <Card>
-            <CardContent className="p-8">
-              <div className="max-w-md mx-auto text-center">
-                <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Team Overview</h3>
-                <p className="text-muted-foreground mb-6">
-                  {user?.isVerified
-                    ? "You can view basic team information here. Contact your executive for detailed team management."
-                    : "Once verified, you'll be able to see your team information here."
-                  }
-                </p>
-                
-                <div className="space-y-4 text-left bg-muted/50 rounded-lg p-4 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Your Status</span>
-                    {getStatusBadge(user as any)}
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Specialization</span>
-                    <Badge variant="outline" className={getSpecializationBadge(user?.specialization || 'general')}>
-                      {user?.specialization || 'Not specified'}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Hourly Rate</span>
-                    <span className="text-sm font-medium">${user?.hourlyRate || '0'}/hr</span>
-                  </div>
+        {/* FILTERS (only Active tab) */}
+        {activeTab === "active" && (
+          <Card className="mb-6">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by name or email…"
+                    className="pl-10"
+                  />
                 </div>
 
-                {!user?.isVerified && (
-                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-4 h-4 text-warning" />
-                      <span className="font-medium text-warning">Pending Verification</span>
-                    </div>
-                    <p className="text-sm text-warning">
-                      Your account is awaiting verification by the company executive. 
-                      You'll gain full access to team features once approved.
-                    </p>
-                  </div>
-                )}
+                {/* Status filter */}
+                <Select
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="verified">Verified</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <Button variant="outline" asChild>
-                  <Link to="/dashboard-assistant">
-                    Back to Dashboard
-                  </Link>
-                </Button>
+                {/* Specialization */}
+                <Select
+                  value={specializationFilter}
+                  onValueChange={setSpecializationFilter}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Specialization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="sales">Sales</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="operations">Operations</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="customer_support">
+                      Customer Support
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Invite Dialog */}
-        {inviteDialogOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Invite Assistant</CardTitle>
-                <CardDescription>
-                  Send an invitation to join your company team
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Email Address
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="assistant@company.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  The assistant will receive an email invitation to join your company.
-                  They'll need to complete their profile after signing up.
-                </p>
-              </CardContent>
-              <CardContent className="flex gap-3 pt-0">
-                <Button
-                  variant="outline"
-                  onClick={() => setInviteDialogOpen(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleInviteAssistant}
-                  disabled={inviteLoading}
-                  className="flex-1 gap-2"
-                >
-                  {inviteLoading ? (
-                    <>Sending...</>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4" />
-                      Send Invitation
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+        {/* LIST */}
+        {loading ? (
+          <Card><CardContent className="p-6">Loading…</CardContent></Card>
+        ) : filteredAssistants.length === 0 ? (
+          <Card>
+            <CardContent className="text-center p-8">
+              <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="font-semibold mb-2">
+                {activeTab === "active"
+                  ? "No active assistants"
+                  : "No removed users"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4 mb-8">
+            {filteredAssistants.map((a) => (
+              <Card key={a.id}>
+                <CardContent className="flex justify-between p-6 flex-wrap gap-4">
+                  <div className="flex gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">
+                        {a.firstName} {a.lastName}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{a.email}</p>
+
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {getStatusBadge(a)}
+                        <Badge className={getSpecBadge(a.specialization)}>
+                          {a.specialization || "general"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/team-member/${a.id}`}>View Profile</Link>
+                    </Button>
+
+                    {/* Actions */}
+                    {activeTab === "active" && !isRemoved(a) && (
+                      <>
+                        {!a.isVerified ? (
+                          <>
+                            <Button size="sm" onClick={() => handleVerify(a.id)}>
+                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleReject(a.id)}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="gap-1"
+                            onClick={() => openConfirm("remove", a)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remove
+                          </Button>
+                        )}
+                      </>
+                    )}
+
+                    {activeTab === "removed" && isRemoved(a) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        onClick={() => openConfirm("restore", a)}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Restore
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
+
+        {/* ACTIVITY LOG */}
+        {isExecutive && (
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-muted-foreground" />
+                <CardTitle>Activity Log</CardTitle>
+              </div>
+              <CardDescription>
+                Removals and restorations (local session)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {activityLog.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No activity recorded yet.
+                </p>
+              ) : (
+                activityLog.map((evt) => (
+                  <div
+                    key={evt.id}
+                    className="flex justify-between text-sm border-b border-border/50 pb-2 last:border-0"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {evt.type === "removed" ? "Removed" : "Restored"}{" "}
+                        {evt.userName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Role: {evt.role}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{evt.at}</p>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* INVITE USER DIALOG */}
+        <InviteUserDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          onSuccess={loadAssistants}
+        />
       </main>
+
+      {/* CONFIRM MODAL */}
+      {confirmOpen && confirmType && selectedMember && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-2">
+              {confirmType === "remove"
+                ? "Remove team member?"
+                : "Restore team member?"}
+            </h3>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              {confirmType === "remove" ? (
+                <>
+                  This will deactivate{" "}
+                  <strong>
+                    {selectedMember.firstName} {selectedMember.lastName}
+                  </strong>
+                  . They will lose login access but remain in history.
+                </>
+              ) : (
+                <>
+                  This will re-activate{" "}
+                  <strong>
+                    {selectedMember.firstName} {selectedMember.lastName}
+                  </strong>
+                  .
+                </>
+              )}
+            </p>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!actionLoading) {
+                    setConfirmOpen(false);
+                    setConfirmType(null);
+                    setSelectedMember(null);
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                variant={confirmType === "remove" ? "destructive" : "default"}
+                onClick={handleConfirm}
+                disabled={actionLoading}
+              >
+                {actionLoading
+                  ? "Please wait..."
+                  : confirmType === "remove"
+                  ? "Remove"
+                  : "Restore"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
