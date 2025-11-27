@@ -81,7 +81,7 @@ const SignupExecutive = () => {
                 <code className="text-2xl font-mono font-bold text-primary">{companyCode}</code>
               </div>
               <p className="text-sm text-muted-foreground mt-3">
-                Share this code with assistants so they can join your company
+                Share this code with Team Members so they can join your company
               </p>
             </div>
 
@@ -89,15 +89,15 @@ const SignupExecutive = () => {
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
                 <div>
-                  <h4 className="font-semibold">Invite Assistants</h4>
-                  <p className="text-sm text-muted-foreground">Share your company code with assistants to join your team</p>
+                  <h4 className="font-semibold">Invite Team Member</h4>
+                  <p className="text-sm text-muted-foreground">Share your company code with Team Members to join your team</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="font-semibold">Verify Team Members</h4>
-                  <p className="text-sm text-muted-foreground">Review and approve assistant registrations in your dashboard</p>
+                  <p className="text-sm text-muted-foreground">Review and approve team members registrations in your dashboard</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -136,7 +136,7 @@ const SignupExecutive = () => {
             <Building2 className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-3xl font-bold mb-2">Create Executive Account</h2>
-          <p className="text-muted-foreground">Create your company and build your assistant team</p>
+          <p className="text-muted-foreground">Create your company and build your team</p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-8">
@@ -204,7 +204,7 @@ const SignupExecutive = () => {
                 className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                This will create a new company. Assistants will join using your company code.
+                This will create a new company. Team Members will join using your company code.
               </p>
             </div>
 

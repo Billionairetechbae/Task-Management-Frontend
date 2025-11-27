@@ -20,9 +20,9 @@ const TeamDirectory = () => {
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<AppUser[]>([]);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "executive" | "manager" | "assistant">(
-    "all"
-  );
+  const [roleFilter, setRoleFilter] = useState<
+    "all" | "executive" | "manager" | "assistant"
+  >("all");
 
   useEffect(() => {
     loadTeam();
@@ -76,16 +76,26 @@ const TeamDirectory = () => {
 
   const filteredTeam = useMemo(() => {
     return team.filter((member) => {
+      // EXCLUDE removed users from directory
+      if (member.isActive === false || member.invitationStatus === "removed")
+        return false;
+
+      // Role filter
       if (roleFilter !== "all" && member.role !== roleFilter) return false;
 
-      if (!search.trim()) return true;
+      // Search filter
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (
+          !member.firstName.toLowerCase().includes(q) &&
+          !member.lastName.toLowerCase().includes(q) &&
+          !member.email.toLowerCase().includes(q)
+        ) {
+          return false;
+        }
+      }
 
-      const q = search.toLowerCase();
-      return (
-        member.firstName.toLowerCase().includes(q) ||
-        member.lastName.toLowerCase().includes(q) ||
-        member.email.toLowerCase().includes(q)
-      );
+      return true;
     });
   }, [team, roleFilter, search]);
 
@@ -122,7 +132,7 @@ const TeamDirectory = () => {
           <div>
             <h1 className="text-3xl font-bold mb-1">Company Directory</h1>
             <p className="text-muted-foreground">
-              Browse all executives, managers, and assistants in{" "}
+              Browse executives, managers, and team members in{" "}
               <span className="font-semibold">
                 {user?.company?.name || "your company"}
               </span>
@@ -139,12 +149,12 @@ const TeamDirectory = () => {
               { key: "all", label: "All" },
               { key: "executive", label: "Executives" },
               { key: "manager", label: "Managers" },
-              { key: "assistant", label: "Assistants" },
+              { key: "assistant", label: "Team Members" },
             ].map((r) => (
               <button
                 key={r.key}
                 onClick={() => setRoleFilter(r.key as any)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-t-md md:rounded-full ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-t-md md:rounded-full transition ${
                   roleFilter === r.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -167,14 +177,14 @@ const TeamDirectory = () => {
           </div>
         </div>
 
-        {/* Loading state */}
+        {/* Loading */}
         {loading && (
           <div className="text-center text-muted-foreground py-12">
             Loading team members...
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty */}
         {!loading && filteredTeam.length === 0 && (
           <div className="bg-card border border-border rounded-xl p-10 text-center">
             <Users className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
@@ -192,33 +202,33 @@ const TeamDirectory = () => {
               <Link
                 key={member.id}
                 to={`/team-member/${member.id}`}
-                className="bg-card border border-border rounded-xl shadow-sm p-3 hover:shadow-md hover:border-primary/50 transition cursor-pointer flex flex-col items-center text-center"
+                className="bg-card border border-border rounded-xl shadow-sm p-5 hover:shadow-md hover:border-primary/50 transition cursor-pointer flex flex-col items-center text-center"
               >
-                {/* Avatar */}
+                {/* Profile Avatar (BIGGER) */}
                 {member.profilePictureUrl ? (
                   <img
                     src={member.profilePictureUrl}
                     alt="Profile"
-                    className="w-20 h-20 rounded-full object-cover mb-4 border"
+                    className="w-28 h-28 rounded-full object-cover mb-4 border shadow-sm"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary mb-4 border">
+                  <div className="w-28 h-28 rounded-full bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary mb-4 border shadow-sm">
                     {member.firstName.charAt(0)}
                     {member.lastName.charAt(0)}
                   </div>
                 )}
 
                 {/* Name */}
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-xl font-semibold">
                   {member.firstName} {member.lastName}
                 </h3>
 
-                {/* Role */}
+                {/* Role Badge */}
                 <Badge className={`mt-2 ${getRoleColor(member.role)}`}>
                   {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                 </Badge>
 
-                {/* Specialization (if assistant/manager) */}
+                {/* Specialization */}
                 {member.specialization && (
                   <p className="text-sm text-muted-foreground mt-1">
                     {member.specialization}
@@ -226,7 +236,7 @@ const TeamDirectory = () => {
                 )}
 
                 {/* Email */}
-                <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                <p className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
                   <Mail className="w-3 h-3" />
                   {member.email}
                 </p>

@@ -457,7 +457,7 @@ const DashboardExecutive = () => {
           <div>
             <h3 className="text-lg font-semibold mb-2">Your Company Code</h3>
             <p className="text-muted-foreground mb-4">
-              Share this code with executives, managers and assistants so they
+              Share this code with executives, managers and team members so they
               can join your workspace.
             </p>
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 inline-block">
@@ -712,10 +712,10 @@ const DashboardExecutive = () => {
               </div>
               <div className="flex-1">
                 <h3 className="text-primary-foreground font-bold text-xl mb-2">
-                  Build Your Assistant Team
+                  Build Your Team
                 </h3>
                 <p className="text-primary-foreground/90 mb-4">
-                  You have {teamStats.pendingVerifications} assistant
+                  You have {teamStats.pendingVerifications} members
                   {teamStats.pendingVerifications !== 1 ? "s" : ""} waiting for
                   verification. Review and approve them to grow your team.
                 </p>
