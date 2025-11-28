@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
 const Profile = () => {
-  const { user, refreshUser, logout } = useAuth();
+  const { user, refreshUser, logout, setUser } = useAuth();
   const { toast } = useToast();
 
   if (!user) return null;
@@ -53,11 +53,42 @@ const Profile = () => {
   /* ========================================================
      UPLOAD PROFILE PICTURE
   ========================================================= */
+  // const handleUploadPicture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0];
+  //   if (!file) return;
+
+  //   // Optional size validation (2MB)
+  //   if (file.size > 2 * 1024 * 1024) {
+  //     toast({
+  //       title: "Image too large",
+  //       description: "Please upload an image under 2MB",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+
+  //   try {
+  //     setUploading(true);
+
+  //     await api.uploadProfilePicture(file);
+
+  //     toast({ title: "Profile picture updated!" });
+  //     await refreshUser();
+  //   } catch (err: any) {
+  //     toast({
+  //       title: "Upload failed",
+  //       description: err.message,
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
+
   const handleUploadPicture = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Optional size validation (2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "Image too large",
@@ -70,9 +101,17 @@ const Profile = () => {
     try {
       setUploading(true);
 
-      await api.uploadProfilePicture(file);
+      // --- NEW: capture the response
+      const result = await api.uploadProfilePicture(file);
+
+      // --- NEW: update user immediately
+      if (result?.data?.user) {
+        setUser(result.data.user);   // 👈 requires import from useAuth()
+      }
 
       toast({ title: "Profile picture updated!" });
+
+      // optional but recommended to sync with backend
       await refreshUser();
     } catch (err: any) {
       toast({

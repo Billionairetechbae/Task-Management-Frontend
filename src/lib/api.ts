@@ -824,6 +824,8 @@ class ApiClient {
     });
   }
 
+
+
   async uploadProfilePicture(file: File) {
     const form = new FormData();
     form.append("profilePicture", file);
@@ -842,9 +844,6 @@ class ApiClient {
 
     return result;
   }
-
-
-
 
 
 
