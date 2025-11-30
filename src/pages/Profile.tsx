@@ -97,7 +97,6 @@ const Profile = () => {
       });
       return;
     }
-
     try {
       setUploading(true);
 

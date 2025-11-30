@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Users,
+  Menu,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,6 +64,7 @@ const DashboardAssistant = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   /* -------------------------------------------------------
    * FETCH DASHBOARD
@@ -137,12 +139,20 @@ const DashboardAssistant = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* HEADER */}
-      <header className="border-b border-border bg-card px-6 py-4">
+      <header className="border-b border-border bg-card px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
-          <Logo className="h-8" />
-
           <div className="flex items-center gap-4">
+            <button 
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <Logo className="h-6 sm:h-8" />
+          </div>
 
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-3 lg:gap-4">
             {/* Team Directory */}
             <Button variant="outline" asChild className="gap-2">
               <Link to="/team-directory">
@@ -151,35 +161,65 @@ const DashboardAssistant = () => {
               </Link>
             </Button>
 
-            <HelpCircle className="w-6 h-6 text-muted-foreground" />
+            <button className="p-2">
+              <HelpCircle className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground" />
+            </button>
 
-            <button className="relative">
-              <Bell className="w-6 h-6 text-muted-foreground" />
+            <button className="relative p-2">
+              <Bell className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground" />
               {dashboardData.overview.overdue > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
               )}
             </button>
 
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="gap-2">
               <Link to="/profile">
-                <User className="w-5 h-5 mr-2" />
+                <User className="w-4 h-4" />
+                <span className="hidden lg:inline">Profile</span>
+              </Link>
+            </Button>
+          </div>
+
+          {/* Mobile Actions */}
+          <div className="flex md:hidden items-center gap-2">
+            <button className="relative p-2">
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              {dashboardData.overview.overdue > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-4 pt-4 border-t border-border space-y-3">
+            <Button variant="outline" className="w-full justify-start gap-2" asChild>
+              <Link to="/team-directory" onClick={() => setMobileMenuOpen(false)}>
+                <Users className="w-4 h-4" />
+                Team Directory
+              </Link>
+            </Button>
+            <Button variant="outline" className="w-full justify-start gap-2" asChild>
+              <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
+                <User className="w-4 h-4" />
                 Profile
               </Link>
             </Button>
           </div>
-        </div>
+        )}
       </header>
 
       {/* MAIN */}
-      <main className="px-6 py-8">
+      <main className="px-4 sm:px-6 py-6 sm:py-8">
 
         {/* WELCOME */}
-        <div className="mb-10">
-          <h2 className="text-3xl font-bold mb-2">
+        <div className="mb-8 sm:mb-10">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">
             Welcome, {user?.firstName}!
           </h2>
 
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             {user?.isVerified
               ? "Here are your assigned tasks and insights."
               : "Your account needs executive verification before tasks become visible."}
@@ -194,15 +234,33 @@ const DashboardAssistant = () => {
         </div>
 
         {/* STATS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-          <StatCard label="Total Assigned" value={dashboardData.overview.totalAssigned} icon={<CheckCircle2 className="text-primary" />} />
-          <StatCard label="Completion Rate" value={`${dashboardData.overview.completionRate}%`} icon={<TrendingUp className="text-success" />} color="text-success" />
-          <StatCard label="Overdue" value={dashboardData.overview.overdue} icon={<AlertTriangle className="text-destructive" />} color="text-destructive" />
-          <StatCard label="Total Earnings" value={`$${estimatedEarnings}`} icon={<CheckCircle2 className="text-accent" />} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
+          <StatCard 
+            label="Total Assigned" 
+            value={dashboardData.overview.totalAssigned} 
+            icon={<CheckCircle2 className="text-primary" />} 
+          />
+          <StatCard 
+            label="Completion Rate" 
+            value={`${dashboardData.overview.completionRate}%`} 
+            icon={<TrendingUp className="text-success" />} 
+            color="text-success" 
+          />
+          <StatCard 
+            label="Overdue" 
+            value={dashboardData.overview.overdue} 
+            icon={<AlertTriangle className="text-destructive" />} 
+            color="text-destructive" 
+          />
+          <StatCard 
+            label="Total Earnings" 
+            value={`$${estimatedEarnings}`} 
+            icon={<CheckCircle2 className="text-accent" />} 
+          />
         </div>
 
         {/* CURRENT TASK & PERFORMANCE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-12">
           <BoxCard title="Current Tasks">
             <KeyValue label="In Progress" value={dashboardData.currentTasks.inProgress} />
             <KeyValue label="Pending" value={dashboardData.currentTasks.pending} />
@@ -217,7 +275,7 @@ const DashboardAssistant = () => {
         {/* RECENT ACTIVITY */}
         {(dashboardData.activity.recentCompleted.length > 0 ||
           dashboardData.activity.upcomingDeadlines.length > 0) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-12">
 
             {/* Recently Completed */}
             {dashboardData.activity.recentCompleted.length > 0 && (
@@ -252,15 +310,15 @@ const DashboardAssistant = () => {
         )}
 
         {/* TASK FILTERS */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h3 className="text-xl font-semibold">Your Tasks</h3>
 
-          <div className="flex gap-2 border-b border-border">
+          <div className="flex gap-1 sm:gap-2 border-b border-border overflow-x-auto">
             {["", "pending", "in_progress", "completed"].map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-4 py-2 font-semibold ${
+                className={`px-3 py-2 text-sm sm:text-base font-semibold whitespace-nowrap ${
                   statusFilter === s
                     ? "border-b-2 border-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -274,13 +332,15 @@ const DashboardAssistant = () => {
 
         {/* TASK TABLE */}
         {loading ? (
-          <div className="bg-card border rounded-2xl p-8 text-center">
+          <div className="bg-card border rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
             Loading tasks...
           </div>
         ) : filteredTasks.length === 0 ? (
-          <div className="bg-card border rounded-2xl p-8 text-center">
-            <h3 className="text-xl font-semibold mb-2">No tasks assigned yet</h3>
-            <p className="text-muted-foreground">You will see tasks here once assigned.</p>
+          <div className="bg-card border rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">No tasks assigned yet</h3>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              You will see tasks here once assigned.
+            </p>
           </div>
         ) : (
           <TaskListTable
@@ -302,36 +362,40 @@ const DashboardAssistant = () => {
  ------------------------------------------------------- */
 
 const StatCard = ({ label, value, icon, color }: any) => (
-  <div className="bg-card border border-border rounded-2xl p-5">
+  <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5">
     <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <span className="w-5 h-5 text-muted-foreground">{icon}</span>
+      <p className="text-xs sm:text-sm text-muted-foreground">{label}</p>
+      <span className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground">{icon}</span>
     </div>
-    <p className={`text-3xl font-bold ${color}`}>{value}</p>
+    <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${color}`}>{value}</p>
   </div>
 );
 
 const BoxCard = ({ title, children }: any) => (
-  <div className="bg-card border border-border rounded-2xl p-6">
-    <h3 className="text-lg font-semibold mb-4">{title}</h3>
-    <div className="space-y-3">{children}</div>
+  <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6">
+    <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">{title}</h3>
+    <div className="space-y-2 sm:space-y-3">{children}</div>
   </div>
 );
 
 const KeyValue = ({ label, value }: any) => (
   <div className="flex justify-between items-center text-sm">
-    <span className="text-muted-foreground">{label}</span>
-    <Badge variant="secondary">{value}</Badge>
+    <span className="text-muted-foreground text-xs sm:text-sm">{label}</span>
+    <Badge variant="secondary" className="text-xs sm:text-sm">
+      {value}
+    </Badge>
   </div>
 );
 
 const ActivityCard = ({ title, subtitle, badge, badgeClass }: any) => (
-  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-    <div>
-      <p className="font-medium text-sm">{title}</p>
-      <p className="text-xs text-muted-foreground">{subtitle}</p>
+  <div className="flex justify-between items-center p-2 sm:p-3 bg-muted/50 rounded-lg">
+    <div className="min-w-0 flex-1">
+      <p className="font-medium text-sm truncate">{title}</p>
+      <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
     </div>
-    <Badge className={badgeClass || "bg-accent/10 text-accent border-accent/20"}>
+    <Badge 
+      className={`${badgeClass || "bg-accent/10 text-accent border-accent/20"} text-xs`}
+    >
       {badge}
     </Badge>
   </div>
@@ -344,8 +408,9 @@ const TaskListTable = ({
   getPriorityDisplay,
   getPriorityColor,
 }: any) => (
-  <div className="bg-card border border-border rounded-2xl overflow-hidden">
-    <div className="grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr] gap-4 p-4 border-b font-semibold text-sm">
+  <div className="bg-card border border-border rounded-xl sm:rounded-2xl overflow-hidden">
+    {/* Desktop Table Header */}
+    <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr] gap-4 p-4 border-b font-semibold text-sm">
       <div>Task Title</div>
       <div>Assigned By</div>
       <div>Priority</div>
@@ -354,10 +419,55 @@ const TaskListTable = ({
       <div>Actions</div>
     </div>
 
+    {/* Mobile Cards */}
+    <div className="md:hidden space-y-4 p-4">
+      {tasks.map((task: Task) => (
+        <div
+          key={task.id}
+          className="border border-border rounded-lg p-4 space-y-3"
+        >
+          <div className="flex justify-between items-start gap-2">
+            <h4 className="font-semibold text-sm flex-1">{task.title}</h4>
+            <Badge className={getPriorityColor(task.priority)}>
+              {getPriorityDisplay(task.priority)}
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-muted-foreground text-xs">Assigned By:</span>
+              <div className="font-medium text-sm">
+                {getCreatorName(task)}
+              </div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">Deadline:</span>
+              <div className="font-medium text-sm">
+                {new Date(task.deadline).toLocaleDateString()}
+              </div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">Status:</span>
+              <div>
+                <Badge variant="secondary" className="text-xs">
+                  {getStatusDisplay(task.status)}
+                </Badge>
+              </div>
+            </div>
+          </div>
+          
+          <Button variant="link" className="text-primary p-0 h-auto text-sm" asChild>
+            <Link to={`/task-details/${task.id}`}>View Details</Link>
+          </Button>
+        </div>
+      ))}
+    </div>
+
+    {/* Desktop Rows */}
     {tasks.map((task: Task) => (
       <div
         key={task.id}
-        className="grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr] gap-4 p-4 border-b items-center hover:bg-muted/50"
+        className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr] gap-4 p-4 border-b items-center hover:bg-muted/50"
       >
         <div className="font-medium">{task.title}</div>
 
