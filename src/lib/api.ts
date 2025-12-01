@@ -846,6 +846,232 @@ class ApiClient {
   }
 
 
+  /* ============================
+    ADMIN MODULE
+  ============================ */
+
+  // GET ADMIN SUMMARY
+  async getAdminSummary(): Promise<{
+    status: string;
+    data: {
+      totalCompanies: number;
+      activeCompanies: number;
+      totalUsers: number;
+      activeUsers: number;
+      totalTasks: number;
+      roleBreakdown: { role: string; count: number }[];
+    };
+  }> {
+    return this.request("/admin/analytics/summary", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // GET ALL USERS
+  async getAdminUsers(): Promise<{
+    status: string;
+    results: number;
+    data: { users: User[] };
+  }> {
+    return this.request("/admin/users", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // GET ALL COMPANIES
+  async getAdminCompanies(): Promise<{
+    status: string;
+    results: number;
+    data: { companies: Company[] };
+  }> {
+    return this.request("/admin/companies", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // GET ALL TASKS
+  async getAdminTasks(): Promise<{
+    status: string;
+    results: number;
+    data: { tasks: Task[] };
+  }> {
+    return this.request("/admin/tasks", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /* ============================
+    ADMIN — USERS
+  ============================ */
+
+  async adminGetUsers(filters?: {
+    role?: string;
+    status?: string;
+    companyId?: string;
+    search?: string;
+  }): Promise<{
+    status: string;
+    results: number;
+    data: { users: any[] };
+  }> {
+    const params = new URLSearchParams();
+    if (filters?.role) params.append("role", filters.role);
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.companyId) params.append("companyId", filters.companyId);
+    if (filters?.search) params.append("search", filters.search);
+
+    return this.request(`/admin/users?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+
+  async adminDeactivateUser(userId: string) {
+    return this.request(`/admin/users/${userId}/deactivate`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminReactivateUser(userId: string) {
+    return this.request(`/admin/users/${userId}/reactivate`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminDeleteUser(userId: string) {
+    return this.request(`/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminResetUserPassword(userId: string) {
+    return this.request(`/admin/users/${userId}/reset-password`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+
+
+  /* ============================
+    ADMIN — COMPANIES
+  ============================ */
+
+  async adminGetCompanies(filters?: {
+    search?: string;
+    status?: string;
+  }): Promise<{
+    status: string;
+    results: number;
+    data: { companies: any[] };
+  }> {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.status) params.append("status", filters.status);
+
+    return this.request(`/admin/companies?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminVerifyCompany(companyId: string) {
+    return this.request(`/admin/companies/${companyId}/verify`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminSuspendCompany(companyId: string) {
+    return this.request(`/admin/companies/${companyId}/suspend`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminReactivateCompany(companyId: string) {
+    return this.request(`/admin/companies/${companyId}/reactivate`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminGetCompany(companyId: string): Promise<{
+    status: string;
+    data: { company: any };
+  }> {
+    return this.request(`/admin/companies/${companyId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+
+  async adminGetTasks(filters?: {
+    status?: string;
+    priority?: string;
+    companyId?: string;
+    assigneeId?: string;
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.priority) params.append("priority", filters.priority);
+    if (filters?.companyId) params.append("companyId", filters.companyId);
+    if (filters?.assigneeId) params.append("assigneeId", filters.assigneeId);
+
+    return this.request(`/admin/tasks?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminDeleteTask(taskId: string) {
+    return this.request(`/admin/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+
+  async adminGetUserById(userId: string) {
+    return this.request(`/admin/users/${userId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+
+  async adminGetSystemLogs() {
+    return this.request("/admin/logs", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminSearch(keyword: string, type?: string) {
+    const params = new URLSearchParams();
+    params.append("keyword", keyword);
+    if (type) params.append("type", type);
+
+    return this.request(`/admin/search?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+
+
+
+
+
 
 }
 
