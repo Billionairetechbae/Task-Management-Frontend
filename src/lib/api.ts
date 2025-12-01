@@ -1015,12 +1015,17 @@ class ApiClient {
   }
 
 
+
   async adminGetTasks(filters?: {
     status?: string;
     priority?: string;
     companyId?: string;
     assigneeId?: string;
-  }) {
+  }): Promise<{
+    status: string;
+    results: number;
+    data: { tasks: Task[] };
+  }> {
     const params = new URLSearchParams();
     if (filters?.status) params.append("status", filters.status);
     if (filters?.priority) params.append("priority", filters.priority);
@@ -1041,7 +1046,10 @@ class ApiClient {
   }
 
 
-  async adminGetUserById(userId: string) {
+  async adminGetUserById(userId: string): Promise<{
+    status: string;
+    data: { user: any };
+  }> {
     return this.request(`/admin/users/${userId}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
@@ -1056,7 +1064,14 @@ class ApiClient {
     });
   }
 
-  async adminSearch(keyword: string, type?: string) {
+  async adminSearch(keyword: string, type?: string): Promise<{
+    status: string;
+    data: {
+      companies?: any[];
+      users?: any[];
+      tasks?: any[];
+    };
+  }> {
     const params = new URLSearchParams();
     params.append("keyword", keyword);
     if (type) params.append("type", type);
@@ -1066,6 +1081,30 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
+
+
+  async adminGetDeletedUsers(): Promise<{
+    status: string;
+    results: number;
+    data: { users: any[] };
+  }> {
+    return this.request("/admin/deleted/users", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async adminGetDeletedCompanies(): Promise<{
+    status: string;
+    results: number;
+    data: { companies: any[] };
+  }> {
+    return this.request("/admin/deleted/companies", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
 
 
 

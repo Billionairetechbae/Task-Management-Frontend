@@ -26,6 +26,20 @@ import NotFound from "./pages/NotFound";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
+
+// ADMIN PAGES
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminUserDetails from "./pages/admin/AdminUserDetails";
+import AdminCompanies from "./pages/admin/AdminCompanies";
+import AdminCompanyDetails from "./pages/admin/AdminCompanyDetails";
+import AdminTasks from "./pages/admin/AdminTasks";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminSearch from "./pages/admin/AdminSearch";
+import AdminLogs from "./pages/admin/AdminLogs";
+import AdminDeletedUsers from "./pages/admin/AdminDeletedUsers";
+import AdminDeletedCompanies from "./pages/admin/AdminDeletedCompanies";
+
+
 const App = () => (
   <>
     <Toaster />
@@ -137,6 +151,111 @@ const App = () => (
           </ProtectedRoute>
         }
       />
+
+
+
+
+      {/* ================= ADMIN ROUTES ================= */}
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <DashboardAdmin />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminUsers />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/users/:userId"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminUserDetails />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/companies"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminCompanies />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/companies/:companyId"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminCompanyDetails />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/tasks"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminTasks />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/search"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminSearch />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/logs"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminLogs />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/deleted/users"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDeletedUsers />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/deleted/companies"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDeletedCompanies />
+          </ProtectedRoute>
+        }
+      />
+
 
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="*" element={<NotFound />} />

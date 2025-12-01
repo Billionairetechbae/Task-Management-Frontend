@@ -89,7 +89,7 @@ const DashboardAdmin = () => {
 
         <nav className="flex flex-col gap-3 text-foreground flex-1">
           <Link
-            to="/admin"
+            to="/../DashboardAdmin"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <LayoutDashboard className="w-5 h-5" />
@@ -97,7 +97,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/users"
+            to="/admin/AdminUsers"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Users className="w-5 h-5" />
@@ -105,7 +105,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/companies"
+            to="/admin/AdminCompanies"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Building2 className="w-5 h-5" />
@@ -113,7 +113,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/tasks"
+            to="/admin/AdminTasks"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Briefcase className="w-5 h-5" />
@@ -121,7 +121,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/analytics"
+            to="/admin/AdminAnalytics"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <TrendingUp className="w-5 h-5" />
@@ -129,7 +129,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/search"
+            to="/admin/AdminSearch"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Search className="w-5 h-5" />
@@ -137,7 +137,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/deleted/users"
+            to="/admin/AdminDeletedUSers"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Users className="w-5 h-5 text-destructive" />
@@ -145,7 +145,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/deleted/companies"
+            to="/admin/AdminDeletedCompanies"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Building2 className="w-5 h-5 text-destructive" />
@@ -153,7 +153,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/logs"
+            to="/admin/AdminLogs"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Settings className="w-5 h-5" />
@@ -219,7 +219,7 @@ const DashboardAdmin = () => {
         {/* Quick Links */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <Link
-            to="/admin/users"
+            to="/admin/AdminUsers"
             className="bg-card border border-border rounded-2xl p-6 hover:shadow transition flex flex-col items-start gap-3"
           >
             <Users className="w-8 h-8 text-primary" />
@@ -228,7 +228,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/companies"
+            to="/admin/AdminCompanies"
             className="bg-card border border-border rounded-2xl p-6 hover:shadow transition flex flex-col items-start gap-3"
           >
             <Building2 className="w-8 h-8 text-blue-500" />
@@ -237,7 +237,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/tasks"
+            to="/admin/AdminTasks"
             className="bg-card border border-border rounded-2xl p-6 hover:shadow transition flex flex-col items-start gap-3"
           >
             <Briefcase className="w-8 h-8 text-accent" />
@@ -246,7 +246,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/analytics"
+            to="/admin/AdminAnalytics"
             className="bg-card border border-border rounded-2xl p-6 hover:shadow transition flex flex-col items-start gap-3"
           >
             <TrendingUp className="w-8 h-8 text-green-500" />
@@ -255,7 +255,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/search"
+            to="/admin/AdminSearch"
             className="bg-card border border-border rounded-2xl p-6 hover:shadow transition flex flex-col items-start gap-3"
           >
             <Search className="w-8 h-8 text-purple-500" />
