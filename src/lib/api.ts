@@ -1105,6 +1105,18 @@ class ApiClient {
     });
   }
 
+  async resendVerificationEmail(email: string): Promise<{
+    status: string;
+    message: string;
+  }> {
+    return this.request("/auth/resend-verification", {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ email }),
+    });
+  }
+
+
 
 
 

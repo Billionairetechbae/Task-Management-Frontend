@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
+import { api } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -48,12 +49,39 @@ const Login = () => {
         err instanceof Error ? err.message : "Login failed. Try again.";
 
       // Special handling for email not verified
-      if (errorMessage.includes("verify")) {
+      if (errorMessage.toLowerCase().includes("verify")) {
         toast({
           title: "Email Not Verified",
-          description: "Please check your inbox and verify your email before logging in.",
+          description: (
+            <span>
+              Please check your inbox. <br />
+              <button
+                onClick={async () => {
+                  try {
+                    await api.resendVerificationEmail(formData.email);
+                    toast({
+                      title: "Verification Sent!",
+                      description: "A new verification email has been sent to your inbox.",
+                    });
+                  } catch (err: any) {
+                    toast({
+                      title: "Failed to resend email",
+                      description: err.message,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="underline text-primary font-semibold mt-2"
+              >
+                Resend verification email
+              </button>
+            </span>
+          ),
           variant: "destructive",
         });
+
+        setLoading(false);
+        return;
       } else {
         toast({
           title: "Login failed",
