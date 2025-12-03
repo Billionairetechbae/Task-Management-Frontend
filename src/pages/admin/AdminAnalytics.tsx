@@ -89,6 +89,10 @@ const AdminAnalytics = () => {
 
   return (
     <div className="min-h-screen bg-background p-6">
+      {/* ===========================
+          SIDEBAR
+      =========================== */}
+
       <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
         <TrendingUp className="w-8 h-8 text-primary" />
         Platform Analytics

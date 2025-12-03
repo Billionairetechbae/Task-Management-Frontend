@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Building2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Building2, CheckCircle2, MailCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -12,9 +12,10 @@ import Logo from "@/components/Logo";
 const SignupExecutive = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1); // 1: Basic info, 2: Company created
-  const [companyCode, setCompanyCode] = useState("");
+  const [step, setStep] = useState<1 | 2>(1); // Step 1 = form, Step 2 = verification message
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -25,26 +26,28 @@ const SignupExecutive = () => {
     industry: "",
   });
 
+  const [emailForVerification, setEmailForVerification] = useState("");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const response = await api.signupExecutive(formData);
-      
-      // Store company code for display
-      setCompanyCode(response.data.user.company?.companyCode || "");
-      
+
+      // Store email for success screen
+      setEmailForVerification(formData.email);
+
       toast({
-        title: "Company created successfully!",
-        description: "Your executive account has been created",
+        title: "Account created!",
+        description: "Please check your email to verify your account.",
       });
-      
-      setStep(2); // Show success step
+
+      setStep(2);
     } catch (error: any) {
       toast({
         title: "Signup failed",
-        description: error.message || "Please try again",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -56,110 +59,87 @@ const SignupExecutive = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleContinueToDashboard = () => {
-    navigate("/dashboard-executive");
-  };
 
-  // Step 2: Success screen with company code
+  // ============================================
+  // STEP 2 — SUCCESS SCREEN (No auto login!)
+  // ============================================
   if (step === 2) {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <Logo className="h-8 mb-2" />
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <CheckCircle2 className="w-12 h-12 text-success" />
-            </div>
-            <h2 className="text-3xl font-bold mb-2">Welcome to Your Company!</h2>
-            <p className="text-muted-foreground">Your executive account has been created successfully</p>
-          </div>
+      <div className="min-h-screen bg-background py-8 px-4 flex items-center">
+        <div className="max-w-xl mx-auto text-center">
+          <Logo className="h-8 mb-6 mx-auto" />
 
-          <div className="bg-card border border-border rounded-2xl p-8 text-center">
-            <div className="mb-6">
-              <h3 className="text-xl font-bold mb-2">Your Company Code</h3>
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 max-w-md mx-auto">
-                <code className="text-2xl font-mono font-bold text-primary">{companyCode}</code>
-              </div>
-              <p className="text-sm text-muted-foreground mt-3">
-                Share this code with Team Members so they can join your company
-              </p>
-            </div>
+          <MailCheck className="w-16 h-16 text-primary mx-auto mb-4" />
 
-            <div className="space-y-4 text-left max-w-md mx-auto">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold">Invite Team Member</h4>
-                  <p className="text-sm text-muted-foreground">Share your company code with Team Members to join your team</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold">Verify Team Members</h4>
-                  <p className="text-sm text-muted-foreground">Review and approve team members registrations in your dashboard</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold">Start Delegating</h4>
-                  <p className="text-sm text-muted-foreground">Assign tasks to your verified assistants</p>
-                </div>
-              </div>
-            </div>
+          <h2 className="text-3xl font-bold mb-2">Verify Your Email</h2>
 
-            <Button 
-              onClick={handleContinueToDashboard}
-              className="w-full h-12 text-base font-semibold mt-8"
-            >
-              Go to Dashboard
-            </Button>
-          </div>
+          <p className="text-muted-foreground max-w-md mx-auto mb-6">
+            We sent a verification link to:
+          </p>
+
+          <p className="font-semibold text-lg mb-8">{emailForVerification}</p>
+
+          <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto">
+            Please verify your email before logging in.  
+            If you don't see the email, check your spam folder.
+          </p>
+
+          <Button 
+            onClick={() => navigate("/")}
+            className="w-full h-12 text-base font-semibold"
+          >
+            Back to Login
+          </Button>
         </div>
       </div>
     );
   }
 
-  // Step 1: Registration form
+
+  // ============================================
+  // STEP 1 — REGISTRATION FORM
+  // ============================================
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium">
+        
+        <Link 
+          to="/" 
+          className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium"
+        >
           <ArrowLeft className="w-5 h-5" />
           Back to Login
         </Link>
 
         <div className="text-center mb-8">
-          <Logo className="h-8 mb-2" />
+          <Logo className="h-8 mb-2 mx-auto" />
           <div className="flex items-center justify-center gap-2 mb-4">
             <Building2 className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-3xl font-bold mb-2">Create Executive Account</h2>
-          <p className="text-muted-foreground">Create your company and build your team</p>
+          <p className="text-muted-foreground">
+            Create your company and build your team
+          </p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label>First Name</Label>
                 <Input
-                  id="firstName"
                   value={formData.firstName}
                   onChange={(e) => handleChange("firstName", e.target.value)}
-                  placeholder="Sarah"
                   required
                   className="mt-2"
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label>Last Name</Label>
                 <Input
-                  id="lastName"
                   value={formData.lastName}
                   onChange={(e) => handleChange("lastName", e.target.value)}
-                  placeholder="Johnson"
                   required
                   className="mt-2"
                 />
@@ -167,26 +147,22 @@ const SignupExecutive = () => {
             </div>
 
             <div>
-              <Label htmlFor="email">Email Address</Label>
+              <Label>Email Address</Label>
               <Input
-                id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleChange("email", e.target.value)}
-                placeholder="sarah@techcorp.com"
                 required
                 className="mt-2"
               />
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label>Password</Label>
               <Input
-                id="password"
                 type="password"
                 value={formData.password}
                 onChange={(e) => handleChange("password", e.target.value)}
-                placeholder="••••••••"
                 required
                 minLength={6}
                 className="mt-2"
@@ -194,39 +170,40 @@ const SignupExecutive = () => {
             </div>
 
             <div>
-              <Label htmlFor="company">Company Name</Label>
+              <Label>Company Name</Label>
               <Input
-                id="company"
                 value={formData.company}
                 onChange={(e) => handleChange("company", e.target.value)}
-                placeholder="Tech Corp Inc"
                 required
                 className="mt-2"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                This will create a new company. Team Members will join using your company code.
-              </p>
             </div>
 
             <div>
-              <Label htmlFor="companySize">Company Size</Label>
-              <Select value={formData.companySize} onValueChange={(value) => handleChange("companySize", value)}>
+              <Label>Company Size</Label>
+              <Select 
+                value={formData.companySize} 
+                onValueChange={(value) => handleChange("companySize", value)}
+              >
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder="Select company size" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1-10">1-10 employees</SelectItem>
-                  <SelectItem value="11-50">11-50 employees</SelectItem>
-                  <SelectItem value="51-200">51-200 employees</SelectItem>
-                  <SelectItem value="201-500">201-500 employees</SelectItem>
-                  <SelectItem value="500+">500+ employees</SelectItem>
+                  <SelectItem value="1-10">1–10 Employees</SelectItem>
+                  <SelectItem value="11-50">11–50 Employees</SelectItem>
+                  <SelectItem value="51-200">51–200 Employees</SelectItem>
+                  <SelectItem value="201-500">201–500 Employees</SelectItem>
+                  <SelectItem value="500+">500+ Employees</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="industry">Industry</Label>
-              <Select value={formData.industry} onValueChange={(value) => handleChange("industry", value)}>
+              <Label>Industry</Label>
+              <Select 
+                value={formData.industry} 
+                onValueChange={(value) => handleChange("industry", value)}
+              >
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder="Select industry" />
                 </SelectTrigger>
@@ -243,9 +220,10 @@ const SignupExecutive = () => {
               </Select>
             </div>
 
-            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
-              {loading ? "Creating Company..." : "Create Executive Account"}
+            <Button type="submit" disabled={loading} className="w-full h-12 text-base font-semibold">
+              {loading ? "Creating Account..." : "Create Executive Account"}
             </Button>
+
           </form>
 
           <div className="mt-6 text-center">
@@ -254,6 +232,7 @@ const SignupExecutive = () => {
             </Link>
           </div>
         </div>
+
       </div>
     </div>
   );

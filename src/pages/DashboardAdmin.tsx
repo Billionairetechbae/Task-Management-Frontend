@@ -129,7 +129,7 @@ const DashboardAdmin = () => {
           </Link>
 
           <Link
-            to="/admin/admin/search"
+            to="/admin/search"
             className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition"
           >
             <Search className="w-5 h-5" />

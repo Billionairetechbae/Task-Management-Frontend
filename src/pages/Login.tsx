@@ -16,7 +16,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
 
-  // Redirect based on role
+  // Redirect based on role AFTER verified login
   useEffect(() => {
     if (user) {
       const route =
@@ -27,6 +27,7 @@ const Login = () => {
           : user.role === "assistant"
           ? "/dashboard-assistant"
           : "/dashboard-admin";
+
       navigate(route);
     }
   }, [user, navigate]);
@@ -42,12 +43,24 @@ const Login = () => {
         title: "Welcome back!",
         description: "Signing you in...",
       });
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message || "Check your credentials",
-        variant: "destructive",
-      });
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Login failed. Try again.";
+
+      // Special handling for email not verified
+      if (errorMessage.includes("verify")) {
+        toast({
+          title: "Email Not Verified",
+          description: "Please check your inbox and verify your email before logging in.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: errorMessage || "Incorrect credentials",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -72,17 +85,14 @@ const Login = () => {
           </p>
 
           <div className="space-y-6">
-            {/* Feature */}
             <Feature
               title="Smart Task Delegation"
               description="Assign tasks effortlessly and track progress across your team."
             />
-
             <Feature
               title="AI-Assisted Workflow"
               description="Let AI help you optimize workloads and automate repetitive tasks."
             />
-
             <Feature
               title="Centralized Team Management"
               description="Oversee your team, manage access, and streamline operations."
@@ -146,23 +156,6 @@ const Login = () => {
                   Register Your Company (Executive)
                 </Link>
               </Button>
-
-              {/* Join Existing Company */}
-              {/* <div className="text-center text-muted-foreground text-sm mt-2">
-                Are you an assistant or manager?
-              </div>
-
-              <Button variant="outline" className="w-full h-12" asChild>
-                <Link to="/signup-executive-join">
-                  Join Your Company with a Company Code
-                </Link>
-              </Button> */}
-
-              {/* Additional role signups hidden but linked subtly */}
-              {/* <p className="text-center text-muted-foreground text-xs mt-4">
-                Team members (Assistants & Managers) must join using a{" "}
-                <strong>Company Code</strong> provided by your executive.
-              </p> */}
             </div>
           </div>
         </div>

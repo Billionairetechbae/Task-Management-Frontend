@@ -343,7 +343,7 @@ class ApiClient {
   }
 
   /* -------- Generic request helper -------- */
-  private async request<T>(
+  async request<T>(
     path: string,
     options: RequestInit = {}
   ): Promise<T> {

@@ -38,6 +38,7 @@ import AdminSearch from "./pages/admin/AdminSearch";
 import AdminLogs from "./pages/admin/AdminLogs";
 import AdminDeletedUsers from "./pages/admin/AdminDeletedUsers";
 import AdminDeletedCompanies from "./pages/admin/AdminDeletedCompanies";
+import VerifyEmail from "./pages/VerifyEmail";
 
 
 const App = () => (
@@ -52,6 +53,8 @@ const App = () => (
       <Route path="/signup-assistant" element={<SignupAssistant />} />
       <Route path="/signup-manager" element={<SignupManager />} />
       <Route path="/signup-executive-join" element={<SignupExecutiveJoin />} />
+      <Route path="/verify-email/:token" element={<VerifyEmail />} />
+
 
       <Route
         path="/profile"
