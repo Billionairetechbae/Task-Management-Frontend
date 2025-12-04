@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 import { Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -16,6 +17,8 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
+
 
   // Redirect based on role AFTER verified login
   useEffect(() => {
@@ -155,19 +158,37 @@ const Login = () => {
               </div>
 
               {/* Password */}
-              <div>
+              <div className="relative">
                 <Label>Password</Label>
+
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="mt-2"
+                  className="mt-0 pr-10"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
                   required
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-10 transform -translate-y-1/2 text-muted-foreground hover:text-primary"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
+
+
+              <Link
+                to="/forgot-password"
+                className="text-sm text-primary hover:underline block text-right"
+              >
+                Forgot Password?
+              </Link>
+
 
               <Button className="w-full h-12" disabled={loading}>
                 {loading ? "Signing In..." : "Sign In"}

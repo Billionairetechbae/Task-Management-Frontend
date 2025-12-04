@@ -40,6 +40,10 @@ import AdminDeletedUsers from "./pages/admin/AdminDeletedUsers";
 import AdminDeletedCompanies from "./pages/admin/AdminDeletedCompanies";
 import VerifyEmail from "./pages/VerifyEmail";
 
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
+
 
 const App = () => (
   <>
@@ -54,6 +58,9 @@ const App = () => (
       <Route path="/signup-manager" element={<SignupManager />} />
       <Route path="/signup-executive-join" element={<SignupExecutiveJoin />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
+
 
 
       <Route
