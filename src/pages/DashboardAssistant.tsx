@@ -11,6 +11,10 @@ import {
   TrendingUp,
   Users,
   Menu,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,6 +70,10 @@ const DashboardAssistant = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // 10 tasks per page
+
   /* -------------------------------------------------------
    * FETCH DASHBOARD
    ------------------------------------------------------- */
@@ -97,12 +105,47 @@ const DashboardAssistant = () => {
   }, []);
 
   /* -------------------------------------------------------
-   * HELPERS
+   * PAGINATION HELPERS
    ------------------------------------------------------- */
   const filteredTasks = statusFilter
     ? tasks.filter((t) => t.status === statusFilter)
     : tasks;
 
+  // Calculate pagination values
+  const totalItems = filteredTasks.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentTasks = filteredTasks.slice(startIndex, endIndex);
+
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
+  /* -------------------------------------------------------
+   * HELPERS
+   ------------------------------------------------------- */
   const getStatusDisplay = (status: string) =>
     ({
       pending: "Pending",
@@ -309,9 +352,16 @@ const DashboardAssistant = () => {
           </div>
         )}
 
-        {/* TASK FILTERS */}
+        {/* TASK FILTERS & PAGINATION INFO */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 className="text-xl font-semibold">Your Tasks</h3>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Your Tasks</h3>
+            {!loading && filteredTasks.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of {totalItems} tasks
+              </p>
+            )}
+          </div>
 
           <div className="flex gap-1 sm:gap-2 border-b border-border overflow-x-auto">
             {["", "pending", "in_progress", "completed"].map((s) => (
@@ -330,6 +380,25 @@ const DashboardAssistant = () => {
           </div>
         </div>
 
+        {/* PAGINATION CONTROLS - TOP */}
+        {!loading && filteredTasks.length > 0 && totalPages > 1 && (
+          <div className="mb-4">
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              goToPage={goToPage}
+              goToFirstPage={goToFirstPage}
+              goToLastPage={goToLastPage}
+              goToPrevPage={goToPrevPage}
+              goToNextPage={goToNextPage}
+            />
+          </div>
+        )}
+
         {/* TASK TABLE */}
         {loading ? (
           <div className="bg-card border rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
@@ -343,13 +412,34 @@ const DashboardAssistant = () => {
             </p>
           </div>
         ) : (
-          <TaskListTable
-            tasks={filteredTasks}
-            getCreatorName={getCreatorName}
-            getStatusDisplay={getStatusDisplay}
-            getPriorityDisplay={getPriorityDisplay}
-            getPriorityColor={getPriorityColor}
-          />
+          <>
+            <TaskListTable
+              tasks={currentTasks}
+              getCreatorName={getCreatorName}
+              getStatusDisplay={getStatusDisplay}
+              getPriorityDisplay={getPriorityDisplay}
+              getPriorityColor={getPriorityColor}
+            />
+
+            {/* PAGINATION CONTROLS - BOTTOM */}
+            {totalPages > 1 && (
+              <div className="mt-6">
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={itemsPerPage}
+                  startIndex={startIndex}
+                  endIndex={endIndex}
+                  goToPage={goToPage}
+                  goToFirstPage={goToFirstPage}
+                  goToLastPage={goToLastPage}
+                  goToPrevPage={goToPrevPage}
+                  goToNextPage={goToNextPage}
+                />
+              </div>
+            )}
+          </>
         )}
 
       </main>
@@ -496,6 +586,139 @@ const TaskListTable = ({
         </div>
       </div>
     ))}
+  </div>
+);
+
+const PaginationControls = ({
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  startIndex,
+  endIndex,
+  goToPage,
+  goToFirstPage,
+  goToLastPage,
+  goToPrevPage,
+  goToNextPage,
+}: any) => (
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    {/* Page Info */}
+    <div className="text-sm text-muted-foreground">
+      Showing <span className="font-medium text-foreground">{startIndex + 1}-{Math.min(endIndex, totalItems)}</span> of{" "}
+      <span className="font-medium text-foreground">{totalItems}</span> tasks
+    </div>
+
+    {/* Desktop Pagination */}
+    <div className="hidden sm:flex items-center gap-1">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToFirstPage}
+        disabled={currentPage === 1}
+        className="h-8 w-8 p-0"
+      >
+        <ChevronsLeft className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToPrevPage}
+        disabled={currentPage === 1}
+        className="h-8 w-8 p-0"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      
+      {/* Page Numbers */}
+      <div className="flex items-center gap-1 mx-2">
+        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+          // Calculate which pages to show
+          let pageNum;
+          if (totalPages <= 5) {
+            pageNum = i + 1;
+          } else if (currentPage <= 3) {
+            pageNum = i + 1;
+          } else if (currentPage >= totalPages - 2) {
+            pageNum = totalPages - 4 + i;
+          } else {
+            pageNum = currentPage - 2 + i;
+          }
+          
+          return (
+            <Button
+              key={pageNum}
+              variant={currentPage === pageNum ? "default" : "outline"}
+              size="sm"
+              onClick={() => goToPage(pageNum)}
+              className="h-8 w-8 p-0"
+            >
+              {pageNum}
+            </Button>
+          );
+        })}
+      </div>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToNextPage}
+        disabled={currentPage === totalPages}
+        className="h-8 w-8 p-0"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToLastPage}
+        disabled={currentPage === totalPages}
+        className="h-8 w-8 p-0"
+      >
+        <ChevronsRight className="h-4 w-4" />
+      </Button>
+    </div>
+
+    {/* Mobile Pagination */}
+    <div className="flex sm:hidden items-center justify-between w-full">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToPrevPage}
+        disabled={currentPage === 1}
+        className="gap-1"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Prev
+      </Button>
+      <span className="text-sm font-medium">
+        Page {currentPage} of {totalPages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToNextPage}
+        disabled={currentPage === totalPages}
+        className="gap-1"
+      >
+        Next
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+
+    {/* Items per page selector */}
+    <div className="hidden sm:flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">Show:</span>
+      <select
+        className="text-sm border border-border rounded-md px-2 py-1 bg-background"
+        value={itemsPerPage}
+        disabled // Can be made interactive if you want to change items per page
+      >
+        <option value="10">10 per page</option>
+        <option value="20">20 per page</option>
+        <option value="50">50 per page</option>
+      </select>
+    </div>
   </div>
 );
 
