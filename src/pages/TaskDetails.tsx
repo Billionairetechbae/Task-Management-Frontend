@@ -10,8 +10,15 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, CheckCircle } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, Task, TaskComment } from "@/lib/api";
@@ -59,6 +66,7 @@ const TaskDetails = () => {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [pendingComments, setPendingComments] = useState<Map<string, {content: string, timestamp: number}>>(new Map());
+  const [showChatSheet, setShowChatSheet] = useState(false);
   
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -550,6 +558,163 @@ const TaskDetails = () => {
     return date.toLocaleDateString();
   };
 
+  // Mobile chat toggle
+  const renderMobileChatButton = () => (
+    <Button
+      onClick={() => setShowChatSheet(true)}
+      className="w-full mt-4 sm:hidden flex items-center justify-center gap-2"
+    >
+      <MessageCircle className="w-4 h-4" />
+      View Chat ({comments.length})
+      <ChevronRight className="w-4 h-4" />
+    </Button>
+  );
+
+  // Mobile chat sheet
+  const renderMobileChatSheet = () => (
+    <Sheet open={showChatSheet} onOpenChange={setShowChatSheet}>
+      <SheetContent side="bottom" className="h-[95vh] sm:hidden">
+        <SheetHeader className="text-left">
+          <SheetTitle className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Task Chat
+            <span className="text-xs text-muted-foreground">
+              {comments.length} messages
+            </span>
+          </SheetTitle>
+        </SheetHeader>
+        
+        {/* Messages area */}
+        <div className="flex-1 overflow-y-auto py-4 h-[calc(90vh-120px)]">
+          {loadingComments ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+              <MessageSquare className="w-12 h-12 mb-2" />
+              <p>No comments yet</p>
+              <p className="text-sm">Start the conversation</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {comments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className={`flex gap-3 ${
+                    comment.userId === user?.id ? 'flex-row-reverse' : ''
+                  }`}
+                >
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={comment.user?.profilePictureUrl} />
+                    <AvatarFallback>
+                      {getInitials(
+                        comment.user?.firstName || '',
+                        comment.user?.lastName || ''
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div
+                    className={`max-w-[70%] ${
+                      comment.userId === user?.id ? 'text-right' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium">
+                        {comment.isSystemMessage ? (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <AlertCircle className="w-3 h-3" />
+                            System
+                          </span>
+                        ) : (
+                          `${comment.user?.firstName} ${comment.user?.lastName}`
+                        )}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTime(comment.createdAt)}
+                      </span>
+                      {comment.isSystemMessage && (
+                        <Badge variant="outline" className="text-xs">
+                          {comment.systemEventType?.replace('_', ' ')}
+                        </Badge>
+                      )}
+                    </div>
+                    <div
+                      className={`p-3 rounded-lg ${
+                        comment.isSystemMessage
+                          ? 'bg-muted/50 border'
+                          : comment.userId === user?.id
+                          ? comment.id.startsWith('optimistic-')
+                            ? 'bg-primary/70 text-primary-foreground'
+                            : 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <p className="text-sm">{comment.content}</p>
+                      {comment.id.startsWith('optimistic-') && (
+                        <div className="text-xs opacity-70 mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3 animate-spin" />
+                          Sending...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div ref={commentsEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Chat input */}
+        <div className="border-t pt-3">
+          <div className="flex gap-2">
+            <Textarea
+              placeholder="Type a message..."
+              rows={2}
+              value={newComment}
+              onChange={(e) => {
+                setNewComment(e.target.value);
+                handleTyping();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendComment();
+                }
+              }}
+              className="flex-1 text-sm"
+              disabled={sendingComment}
+            />
+            <Button
+              size="icon"
+              onClick={handleSendComment}
+              disabled={!newComment.trim() || sendingComment}
+              className="flex-shrink-0"
+            >
+              {sendingComment ? (
+                <Clock className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Press Enter to send, Shift+Enter for new line
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
@@ -572,52 +737,58 @@ const TaskDetails = () => {
         />
       )}
 
+      {/* Mobile Chat Sheet */}
+      {renderMobileChatSheet()}
+
       {/* Main Overlay */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+        <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col my-auto">
 
           {/* HEADER */}
-          <div className="p-6 border-b flex justify-between items-start">
-            <div className="space-y-3">
-              <h1 className="text-2xl sm:text-3xl font-bold">{task.title}</h1>
+          <div className="p-4 sm:p-6 border-b flex justify-between items-start">
+            <div className="space-y-2 sm:space-y-3 pr-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{task.title}</h1>
 
-              <div className="flex gap-3 flex-wrap">
-                <Badge className={`px-3 py-1 ${PRIORITY_COLORS[task.priority]}`}>
+              <div className="flex flex-wrap gap-2">
+                <Badge className={`px-2 sm:px-3 py-1 text-xs sm:text-sm ${PRIORITY_COLORS[task.priority]}`}>
                   {task.priority.toUpperCase()}
                 </Badge>
 
-                <Badge className={`px-3 py-1 ${STATUS_COLORS[task.status]}`}>
+                <Badge className={`px-2 sm:px-3 py-1 text-xs sm:text-sm ${STATUS_COLORS[task.status]}`}>
                   {STATUS_LABEL[task.status]}
                 </Badge>
                 
                 {!isConnected && (
                   <Badge variant="outline" className="text-xs">
-                    Offline mode
+                    Offline
                   </Badge>
                 )}
               </div>
             </div>
 
-            <Button variant="ghost" onClick={() => navigate(-1)}>
-              <X className="w-6 h-6" />
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="flex-shrink-0">
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
           </div>
 
-          {/* MAIN CONTENT - Split into two columns */}
-          <div className="flex flex-1 overflow-hidden">
+          {/* MAIN CONTENT */}
+          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
             {/* Left column - Task details */}
-            <div className="flex-1 p-6 overflow-y-auto border-r">
+            <div className="flex-1 p-4 sm:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r">
               {/* GRID INFO */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
                 <div>
                   <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="font-semibold">{task.category}</p>
+                  <p className="font-semibold text-sm sm:text-base">{task.category}</p>
                 </div>
 
                 <div>
                   <p className="text-xs text-muted-foreground">Deadline</p>
-                  <p className="font-semibold">
-                    {new Date(task.deadline).toLocaleString()}
+                  <p className="font-semibold text-sm sm:text-base">
+                    {new Date(task.deadline).toLocaleDateString()}
+                    <span className="text-xs text-muted-foreground block sm:inline sm:ml-2">
+                      {new Date(task.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </p>
                 </div>
 
@@ -627,7 +798,7 @@ const TaskDetails = () => {
                       ? "Assigned By Executive"
                       : "Assigned Assistant"}
                   </p>
-                  <div className="flex items-center gap-2 font-semibold">
+                  <div className="flex items-center gap-2 font-semibold text-sm sm:text-base">
                     <User2 className="w-4 h-4 text-primary" />
                     {user?.role === "assistant"
                       ? `${task.creator?.firstName} ${task.creator?.lastName}`
@@ -639,7 +810,7 @@ const TaskDetails = () => {
 
                 <div className="sm:col-span-2">
                   <p className="text-xs text-muted-foreground">Hours</p>
-                  <p className="font-semibold flex items-center gap-2">
+                  <p className="font-semibold flex items-center gap-2 text-sm sm:text-base">
                     <Clock className="w-4 h-4" />
                     {task.actualHours
                       ? `${task.actualHours}h (actual)`
@@ -652,7 +823,7 @@ const TaskDetails = () => {
               {/* DESCRIPTION */}
               <div className="mb-6">
                 <p className="text-xs text-muted-foreground mb-1">Description</p>
-                <p className="text-sm leading-relaxed">{task.description}</p>
+                <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{task.description}</p>
               </div>
 
               {/* ATTACHMENTS */}
@@ -660,14 +831,14 @@ const TaskDetails = () => {
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold mb-2">Attachments</h3>
 
-                  <div className="grid gap-3">
+                  <div className="grid gap-2 sm:gap-3">
                     {task.attachments.map((file) => {
                       const Icon = getFileIcon(file.fileType, file.fileName);
 
                       return (
                         <div
                           key={file.id}
-                          className="p-3 border rounded-lg flex gap-4 hover:bg-muted transition cursor-pointer"
+                          className="p-2 sm:p-3 border rounded-lg flex flex-col sm:flex-row sm:gap-4 hover:bg-muted transition cursor-pointer"
                           onClick={() =>
                             setPreview({
                               url: file.fileUrl,
@@ -676,26 +847,30 @@ const TaskDetails = () => {
                             })
                           }
                         >
-                          {/* ICON */}
-                          <Icon className="w-8 h-8 text-primary" />
+                          <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-0">
+                            {/* ICON */}
+                            <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
 
-                          {/* DETAILS */}
-                          <div className="flex-1">
-                            <p className="font-semibold">{file.fileName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {file.fileType}
-                            </p>
+                            {/* DETAILS */}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">{file.fileName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {file.fileType}
+                              </p>
+                            </div>
                           </div>
 
                           {/* DOWNLOAD BUTTON */}
-                          <a
-                            href={file.fileUrl}
-                            download={file.fileName}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-primary underline text-sm"
-                          >
-                            Download
-                          </a>
+                          <div className="self-end sm:self-center">
+                            <a
+                              href={file.fileUrl}
+                              download={file.fileName}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-primary underline text-xs sm:text-sm"
+                            >
+                              Download
+                            </a>
+                          </div>
                         </div>
                       );
                     })}
@@ -726,16 +901,22 @@ const TaskDetails = () => {
                   </Select>
                 </div>
               )}
+
+              {/* Mobile Chat Button */}
+              {renderMobileChatButton()}
             </div>
 
-            {/* Right column - Chat */}
-            <div className="flex-1 flex flex-col border-l">
+            {/* Right column - Chat (Desktop Only) */}
+            <div className="hidden lg:flex flex-1 flex-col border-l">
               {/* Chat header */}
               <div className="p-4 border-b">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
                     <h3 className="font-semibold">Task Chat</h3>
+                    <Badge variant="outline" className="text-xs">
+                      {comments.length}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {typingUsers.size > 0 && (
@@ -784,7 +965,7 @@ const TaskDetails = () => {
                         }`}
                       >
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src={comment.user?.profilePictureUrl} /> {/* Changed to profilePictureUrl */}
+                          <AvatarImage src={comment.user?.profilePictureUrl} />
                           <AvatarFallback>
                             {getInitials(
                               comment.user?.firstName || '',

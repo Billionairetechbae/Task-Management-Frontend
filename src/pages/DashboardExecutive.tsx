@@ -269,12 +269,229 @@ const DashboardExecutive = () => {
    * ----------------------------------*/
 
   const TeamManagementSection = () => (
-    // ... (TeamManagementSection remains exactly the same)
     <div className="space-y-6">
       {/* Team Overview Cards */}
-      {/* ... existing team management content ... */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+        <h2 className="text-xl font-semibold">Team Overview</h2>
+        <Button variant="outline" className="gap-2 w-full sm:w-auto" asChild>
+          <Link to="/team-directory">
+            <Users className="w-4 h-4" />
+            View All Team Members
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">
+            Total Assistants
+          </h3>
+          <p className="text-2xl sm:text-3xl font-bold">{teamStats.totalAssistants}</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">
+            Available Now
+          </h3>
+          <p className="text-2xl sm:text-3xl font-bold text-success">
+            {teamStats.availableAssistants}
+          </p>
+        </div>
+        <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">
+            Pending Verification
+          </h3>
+          <p className="text-2xl sm:text-3xl font-bold text-warning">
+            {teamStats.pendingVerifications}
+          </p>
+        </div>
+        <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">
+            Team Executives
+          </h3>
+          <p className="text-2xl sm:text-3xl font-bold text-primary">
+            {teamStats.totalExecutives}
+          </p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h3 className="text-lg font-semibold">Quick Actions</h3>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="gap-2 w-full sm:w-auto"
+              onClick={() => setInviteOpen(true)}
+            >
+              <Mail className="w-4 h-4" />
+              Invite Team Member
+            </Button>
+
+            <Button variant="outline" className="gap-2 w-full sm:w-auto" asChild>
+              <Link to="/team-directory">
+                <Users className="w-4 h-4" />
+                Team Directory
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+          <Button
+            variant="outline"
+            className="justify-start gap-3 h-auto py-3 sm:py-4"
+            asChild
+          >
+            <Link to="/team-management">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="text-left">
+                <div className="font-semibold text-sm sm:text-base">Manage Team</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">
+                  View all assistants & managers
+                </div>
+              </div>
+            </Link>
+          </Button>
+
+          <Button
+            variant="outline"
+            className="justify-start gap-3 h-auto py-3 sm:py-4"
+            onClick={() => setCreateTaskOpen(true)}
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="text-left">
+              <div className="font-semibold text-sm sm:text-base">Delegate Task</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                Assign work to your team
+              </div>
+            </div>
+          </Button>
+
+          <Button
+            variant="outline"
+            className="justify-start gap-3 h-auto py-3 sm:py-4"
+            asChild
+          >
+            <Link to="/company-profile">
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="text-left">
+                <div className="font-semibold text-sm sm:text-base">Company Settings</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">
+                  Manage company info
+                </div>
+              </div>
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Pending Verifications */}
+      {teamStats.pendingVerifications > 0 && (
+        <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <h3 className="text-lg font-semibold">Pending Verifications</h3>
+            <Badge variant="outline" className="text-warning w-fit">
+              {pendingAssistants.length} waiting
+            </Badge>
+          </div>
+
+          {teamLoading ? (
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-muted-foreground">Loading pending verifications...</p>
+            </div>
+          ) : pendingAssistants.length === 0 ? (
+            <div className="text-center py-6 sm:py-8">
+              <CheckCircle2 className="w-8 h-8 sm:w-12 sm:h-12 text-success mx-auto mb-3 sm:mb-4" />
+              <p className="text-muted-foreground">No pending verifications</p>
+            </div>
+          ) : (
+            <div className="space-y-3 sm:space-y-4">
+              {pendingAssistants.map((assistant) => (
+                <div
+                  key={assistant.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border border-border rounded-lg gap-3 sm:gap-4"
+                >
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-sm sm:text-base truncate">
+                        {assistant.firstName} {assistant.lastName}
+                      </h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                        {assistant.email}
+                      </p>
+                      <div className="flex gap-1 sm:gap-2 mt-1 flex-wrap">
+                        {assistant.specialization && (
+                          <Badge variant="outline" className="text-xs">
+                            {assistant.specialization}
+                          </Badge>
+                        )}
+                        {assistant.experience !== undefined && (
+                          <Badge variant="outline" className="text-xs">
+                            {assistant.experience} years exp
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                      size="sm"
+                      onClick={() => handleVerifyAssistant(assistant.id)}
+                      className="gap-2 flex-1 sm:flex-none"
+                    >
+                      <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRejectAssistant(assistant.id)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Company Code */}
+      <div className="bg-primary/5 border border-primary/20 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold mb-2">Your Company Code</h3>
+            <p className="text-muted-foreground mb-4 text-sm sm:text-base">
+              Share this code with executives, managers and team members so they
+              can join your workspace.
+            </p>
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 sm:p-4 w-full lg:w-auto">
+              <code className="text-xl sm:text-2xl font-mono font-bold text-primary break-all">
+                {user?.company?.companyCode || "Loading..."}
+              </code>
+            </div>
+          </div>
+          <Button variant="outline" className="gap-2 w-full lg:w-auto mt-4 lg:mt-0">
+            <Mail className="w-4 h-4" />
+            Share Code
+          </Button>
+        </div>
+      </div>
+
+      <InviteUserDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onSuccess={fetchDashboard}
+      />
     </div>
   );
+
 
   const TasksSection = () => (
     <div className="space-y-6">
