@@ -328,6 +328,28 @@ export interface InviteAssistantData {
   lastName?: string;
 }
 
+
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  userId: string;
+  content: string;
+  isSystemMessage: boolean;
+  systemEventType?: string;
+  metadata: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    profilePictureUrl?: string;
+  };
+}
+
 /* ============================
    API CLIENT
 ============================ */
@@ -1119,11 +1141,82 @@ class ApiClient {
 
 
 
+  async getTaskComments(
+    taskId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<{
+    success: boolean;
+    comments: TaskComment[];
+    pagination?: {
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
 
+    const url = `/task-comments/task/${taskId}/comments${
+      queryParams.toString() ? `?${queryParams.toString()}` : ''
+    }`;
 
+    return this.request(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+  }
 
+  async addTaskComment(
+    taskId: string,
+    content: string
+  ): Promise<{
+    success: boolean;
+    comment: TaskComment;
+    involvedUsers: string[];
+  }> {
+    return this.request(`/task-comments/task/${taskId}/comments`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ content }),
+    });
+  }
 
+  async updateComment(
+    commentId: string,
+    content: string
+  ): Promise<{
+    success: boolean;
+    comment: TaskComment;
+  }> {
+    return this.request(`/task-comments/${commentId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ content }),
+    });
+  }
 
+  async deleteComment(
+    commentId: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    return this.request(`/task-comments/${commentId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // WebSocket token endpoint (optional, for secure WebSocket connections)
+  async getWebSocketToken(): Promise<{ token: string }> {
+    return this.request('/auth/websocket-token', {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+  }
 }
+
 
 export const api = new ApiClient();

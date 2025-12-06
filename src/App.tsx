@@ -43,12 +43,19 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
+import { WebSocketStatus } from '@/components/WebSocketStatus';
+import TaskDetailsDebug from "./pages/TaskDetailsDebug";
+
+
+
+
 
 
 const App = () => (
   <>
     <Toaster />
     <Sonner />
+    <WebSocketStatus /> {/* Add this line */}
 
     <Routes>
       {/* PUBLIC ROUTES */}
@@ -62,6 +69,16 @@ const App = () => (
       <Route path="/reset-password/:token" element={<ResetPassword />} />
 
 
+
+
+      <Route
+        path="/task-details-debug/:id"
+        element={
+          <ProtectedRoute>
+            <TaskDetailsDebug />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/profile"
