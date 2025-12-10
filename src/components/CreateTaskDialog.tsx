@@ -20,7 +20,7 @@ import {
 import { api, Assistant } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-import { User, Clock, X } from "lucide-react";
+import { User, Clock, X, Plus, Paperclip } from "lucide-react";
 import { getFileIcon } from "@/utils/fileIcons";
 
 interface CreateTaskDialogProps {
@@ -40,6 +40,7 @@ const CreateTaskDialog = ({
   const [assistantsLoading, setAssistantsLoading] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [fileInputKey, setFileInputKey] = useState(Date.now()); // To reset file input
 
   const [formData, setFormData] = useState({
     title: "",
@@ -78,16 +79,52 @@ const CreateTaskDialog = ({
   };
 
   /* =======================
-     File Handler
+     File Handlers
   ======================= */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
-    setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+    const newFiles = Array.from(e.target.files);
+    
+    // Check for duplicate file names
+    const uniqueNewFiles = newFiles.filter(newFile => 
+      !files.some(existingFile => 
+        existingFile.name === newFile.name && 
+        existingFile.size === newFile.size
+      )
+    );
+
+    if (uniqueNewFiles.length !== newFiles.length) {
+      toast({
+        title: "Duplicate Files",
+        description: "Some files were already added and were skipped.",
+        variant: "default",
+      });
+    }
+
+    if (uniqueNewFiles.length > 0) {
+      setFiles((prev) => [...prev, ...uniqueNewFiles]);
+    }
+
+    // Reset file input to allow selecting same file again
+    setFileInputKey(Date.now());
   };
 
   const removeAttachment = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearAllAttachments = () => {
+    if (files.length === 0) return;
+    
+    if (confirm(`Remove all ${files.length} attachments?`)) {
+      setFiles([]);
+    }
+  };
+
+  const triggerFileInput = () => {
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+    if (fileInput) fileInput.click();
   };
 
   /* =======================
@@ -129,6 +166,7 @@ const CreateTaskDialog = ({
         description: "Your task was created successfully.",
       });
 
+      // Reset form
       setFormData({
         title: "",
         description: "",
@@ -139,6 +177,7 @@ const CreateTaskDialog = ({
         assigneeId: "",
       });
       setFiles([]);
+      setFileInputKey(Date.now());
 
       onSuccess();
       onOpenChange(false);
@@ -160,15 +199,14 @@ const CreateTaskDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[95%] sm:w-[90%] max-h-[90vh] overflow-y-auto rounded-xl p-6">
-
         <DialogHeader>
-          <DialogTitle className="text-xl sm:text-2xl font-bold">
+          <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Paperclip className="w-5 h-5" />
             Create New Task
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-
           {/* Task Title */}
           <div>
             <Label>Task Title *</Label>
@@ -198,47 +236,140 @@ const CreateTaskDialog = ({
 
           {/* Attachments */}
           <div>
-            <Label>Attachments (Optional)</Label>
-            <Input type="file" multiple onChange={handleFileChange} />
+            <div className="flex items-center justify-between mb-2">
+              <Label>Attachments (Optional)</Label>
+              {files.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllAttachments}
+                  className="text-xs text-destructive hover:text-destructive"
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
 
+            {/* Hidden file input */}
+            <Input
+              id="file-input"
+              key={fileInputKey}
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {/* Add file button */}
+            <div className="mb-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={triggerFileInput}
+                className="w-full flex items-center justify-center gap-2 border-dashed hover:bg-muted/50"
+              >
+                <Plus className="w-4 h-4" />
+                Add Files
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {files.length} file(s) selected
+                </span>
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                Click to browse or drag and drop files
+              </p>
+            </div>
+
+            {/* File preview list */}
             {files.length > 0 && (
-              <div className="mt-3 space-y-3 max-h-48 overflow-y-auto">
+              <div className="space-y-3 max-h-60 overflow-y-auto border rounded-lg p-3 bg-muted/20">
                 {files.map((file, idx) => {
                   const Icon = getFileIcon(file.type, file.name);
 
                   return (
                     <div
-                      key={idx}
-                      className="flex items-center gap-3 p-3 border rounded-lg bg-muted/40"
+                      key={`${file.name}-${file.size}-${idx}`}
+                      className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors"
                     >
-                      <Icon className="w-6 h-6 text-primary" />
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-
-                        {/* Thumbnail for images */}
-                        {file.type.startsWith("image") && (
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt="preview"
-                            className="mt-2 w-24 h-16 object-cover rounded-md border"
-                          />
-                        )}
+                      <div className="flex-shrink-0">
+                        <Icon className="w-5 h-5 text-primary" />
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(idx)}
-                        className="text-destructive hover:opacity-70"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{file.name}</p>
+                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          Type: {file.type || "Unknown"}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {/* Image preview button */}
+                        {file.type.startsWith("image") && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(URL.createObjectURL(file), '_blank');
+                            }}
+                            title="Preview image"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          </Button>
+                        )}
+
+                        {/* Remove button */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeAttachment(idx)}
+                          title="Remove file"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
+
+                {/* Add more files button at bottom */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={triggerFileInput}
+                  className="w-full flex items-center justify-center gap-2 border-dashed mt-2"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add More Files
+                </Button>
               </div>
             )}
           </div>
@@ -347,17 +478,29 @@ const CreateTaskDialog = ({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={loading}
             >
               Cancel
             </Button>
 
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Task"}
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="min-w-[100px]"
+            >
+              {loading ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Task"
+              )}
             </Button>
           </div>
         </form>

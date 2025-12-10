@@ -295,11 +295,11 @@ const DashboardAssistant = () => {
             icon={<AlertTriangle className="text-destructive" />} 
             color="text-destructive" 
           />
-          <StatCard 
+          {/* <StatCard 
             label="Total Earnings" 
             value={`$${estimatedEarnings}`} 
             icon={<CheckCircle2 className="text-accent" />} 
-          />
+          /> */}
         </div>
 
         {/* CURRENT TASK & PERFORMANCE */}
