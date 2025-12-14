@@ -21,6 +21,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Paperclip,
+  DollarSign,
 } from "lucide-react";
 
 import Logo from "@/components/Logo";
@@ -861,6 +863,169 @@ const DashboardExecutive = () => {
       )}
     </div>
   );
+
+
+
+
+
+/* ===========================================
+   ASSISTANCE PROMO CARD
+=========================================== */
+
+  const AssistancePromoCard = () => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
+
+    useEffect(() => {
+      // Trigger animation on mount
+      setIsAnimating(true);
+      const timer = setTimeout(() => setIsAnimating(false), 1000);
+      return () => clearTimeout(timer);
+    }, []);
+
+    return (
+      <div className="mb-6 sm:mb-8">
+        <div
+          className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 p-6 sm:p-8 cursor-pointer transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onClick={() => window.location.href = "/assistance-requests"}
+        >
+          {/* Animated background elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            {isAnimating && (
+              <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent animate-pulse" />
+            )}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full translate-y-48 -translate-x-48" />
+          </div>
+
+          {/* Sparkle animation */}
+          {isHovered && (
+            <div className="absolute inset-0">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 sm:w-2 sm:h-2 bg-white rounded-full animate-ping"
+                  style={{
+                    top: `${20 + i * 15}%`,
+                    left: `${10 + i * 20}%`,
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Left Content */}
+            <div className="flex-1">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 sm:px-4 py-1 sm:py-1.5 mb-4 animate-bounce">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                <span className="text-white text-xs sm:text-sm font-semibold">
+                  ✨ PREMIUM SERVICE
+                </span>
+              </div>
+
+              {/* Heading */}
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4 leading-tight">
+                Need Expert Help with Your Tasks?
+              </h3>
+
+              {/* Description */}
+              <p className="text-blue-100 text-sm sm:text-base lg:text-lg mb-4 sm:mb-6 max-w-2xl">
+                Let the Admiino team handle complex tasks, research, or specialized projects. 
+                Our experts deliver quality work with professional support and guaranteed results.
+              </p>
+
+              {/* Features List */}
+              <div className="flex flex-wrap gap-3 mb-6">
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 sm:px-4 py-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-green-300" />
+                  <span className="text-white text-xs sm:text-sm font-medium">Expert Assistance</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 sm:px-4 py-1.5">
+                  <Clock className="w-4 h-4 text-blue-300" />
+                  <span className="text-white text-xs sm:text-sm font-medium">Fast Turnaround</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 sm:px-4 py-1.5">
+                  <DollarSign className="w-4 h-4 text-yellow-300" />
+                  <span className="text-white text-xs sm:text-sm font-medium">Transparent Pricing</span>
+                </div>
+              </div>
+
+              {/* CTA Button */}
+              <Button 
+                size="lg" 
+                className="bg-white text-blue-600 hover:bg-blue-50 font-bold text-sm sm:text-base px-6 sm:px-8 py-5 sm:py-6 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-xl gap-3"
+              >
+                <div className="relative">
+                  <Paperclip className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 ${isHovered ? 'rotate-12' : ''}`} />
+                  {isHovered && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping" />
+                  )}
+                </div>
+                Request Admiino Assistance
+                <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`} />
+              </Button>
+            </div>
+
+            {/* Right Icon/Illustration */}
+            <div className="relative">
+              <div className="relative w-32 h-32 sm:w-48 sm:h-48 lg:w-56 lg:h-56">
+                {/* Animated rings */}
+                <div className="absolute inset-0 border-4 border-white/20 rounded-full animate-ping" />
+                <div className="absolute inset-4 border-4 border-white/30 rounded-full animate-pulse" />
+                
+                {/* Main icon */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative">
+                    <div className="w-20 h-20 sm:w-28 sm:h-28 lg:w-32 lg:h-32 bg-white rounded-2xl flex items-center justify-center shadow-2xl transform transition-all duration-500 hover:rotate-6">
+                      <Paperclip className="w-10 h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16 text-blue-600" />
+                    </div>
+                    
+                    {/* Floating elements */}
+                    <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 w-10 h-10 sm:w-12 sm:h-12 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce shadow-lg">
+                      <span className="text-blue-600 font-bold text-xs sm:text-sm">✓</span>
+                    </div>
+                    <div className="absolute -bottom-3 -left-3 sm:-bottom-4 sm:-left-4 w-8 h-8 sm:w-10 sm:h-10 bg-green-400 rounded-full flex items-center justify-center animate-bounce shadow-lg" style={{ animationDelay: '0.3s' }}>
+                      <span className="text-white font-bold text-xs">$</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Text */}
+          <div className="relative z-10 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-white/80 text-xs sm:text-sm">
+                🎯 <span className="font-semibold">Perfect for:</span> Complex research, Data analysis, 
+                Market reports, Content creation, Technical documentation
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center border-2 border-blue-600"
+                    >
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                    </div>
+                  ))}
+                </div>
+                <span className="text-white/80 text-xs sm:text-sm font-medium">
+                  Trusted by 100+ executives
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   /* -----------------------------------
    * Render
    * ----------------------------------*/
@@ -1020,6 +1185,9 @@ const DashboardExecutive = () => {
               : "Manage your company team, verification and structure."}
           </p>
         </div>
+        
+        <AssistancePromoCard />
+
 
         {/* Tabs */}
         <div className="mb-6">

@@ -350,6 +350,134 @@ export interface TaskComment {
   };
 }
 
+
+
+
+/* ============================
+   ASSISTANCE REQUEST TYPES
+============================ */
+
+export interface AssistanceRequestAttachment {
+  url: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  publicId: string;
+  uploadedAt: string;
+}
+
+export type AssistanceRequestPriority = "low" | "medium" | "high" | "urgent";
+export type AssistanceRequestStatus = 
+  | "pending"
+  | "under_review"
+  | "quoted"
+  | "accepted"
+  | "rejected"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
+export interface AssistanceRequest {
+  id: string;
+  userId: string;
+  companyId: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: AssistanceRequestPriority;
+  deadline?: string | null;
+  estimatedHours?: number | null;
+  attachments: AssistanceRequestAttachment[];
+  status: AssistanceRequestStatus;
+  adminNotes?: string | null;
+  quotedPrice?: number | string | null;
+  quotedHours?: number | null;
+  adminAssignedTo?: string | null;
+  taskId?: string | null;
+  acceptedAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Populated fields
+  requester?: User;
+  company?: Company;
+  assignedAdmin?: User;
+  convertedTask?: Task;
+}
+
+export interface AssistanceRequestStats {
+  total: number;
+  pending: number;
+  under_review: number;
+  quoted: number;
+  accepted: number;
+  in_progress: number;
+  completed: number;
+  rejected: number;
+  cancelled: number;
+  byPriority: {
+    low: number;
+    medium: number;
+    high: number;
+    urgent: number;
+  };
+  topCompanies?: Array<{
+    companyId: string;
+    total: number;
+    completed: number;
+    totalQuoted?: number;
+    company?: {
+      id: string;
+      name: string;
+      companyCode: string;
+    };
+  }>;
+  monthlyTrend?: Array<{
+    month: string;
+    count: number;
+  }>;
+}
+
+export interface CreateAssistanceRequestData {
+  title: string;
+  description: string;
+  category: string;
+  priority?: AssistanceRequestPriority;
+  deadline?: string;
+  estimatedHours?: number;
+  attachments?: File[];
+}
+
+export interface UpdateAssistanceRequestData {
+  status?: AssistanceRequestStatus;
+  adminNotes?: string;
+  quotedPrice?: number;
+  quotedHours?: number;
+  adminAssignedTo?: string;
+}
+
+export interface ConvertToTaskData {
+  assigneeId?: string;
+  estimatedHours?: number;
+  priority?: AssistanceRequestPriority;
+  deadline?: string;
+}
+
+export interface CostEstimation {
+  baseRate: number;
+  estimatedHours: number;
+  estimatedCost: number;
+  minCharge: number;
+  currency: string;
+}
+
+
+
+
+
+
+
 /* ============================
    API CLIENT
 ============================ */
@@ -1216,6 +1344,228 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
+
+
+
+
+  async createAssistanceRequest(
+    data: CreateAssistanceRequestData
+  ): Promise<{
+    status: string;
+    message: string;
+    data: { assistanceRequest: AssistanceRequest };
+  }> {
+    const formData = new FormData();
+    
+    // Append form fields
+    formData.append("title", data.title);
+    formData.append("description", data.description);
+    formData.append("category", data.category);
+    
+    if (data.priority) {
+      formData.append("priority", data.priority);
+    }
+    
+    if (data.deadline) {
+      formData.append("deadline", data.deadline);
+    }
+    
+    if (data.estimatedHours) {
+      formData.append("estimatedHours", data.estimatedHours.toString());
+    }
+    
+    // Append attachments if any
+    if (data.attachments && data.attachments.length > 0) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
+    // Get auth token manually for FormData request
+    const token = localStorage.getItem("auth_token");
+    const headers: HeadersInit = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    // Note: Don't set Content-Type for FormData, browser will set it with boundary
+
+    return this.request("/assistance", {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+  }
+
+  /**
+   * Get executive's assistance requests
+   */
+  async getMyAssistanceRequests(filters?: {
+    status?: AssistanceRequestStatus;
+    search?: string;
+    sort?: string;
+    order?: "ASC" | "DESC";
+  }): Promise<{
+    status: string;
+    results: number;
+    data: {
+      data: { requests: AssistanceRequest[]; }; requests: AssistanceRequest[] 
+};
+  }> {
+    const params = new URLSearchParams();
+    
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.sort) params.append("sort", filters.sort);
+    if (filters?.order) params.append("order", filters.order);
+
+    return this.request(`/assistance/my-requests?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /**
+   * Get assistance request details
+   */
+  async getAssistanceRequestDetails(
+    requestId: string
+  ): Promise<{
+    status: string;
+    data: { request: AssistanceRequest };
+  }> {
+    return this.request(`/assistance/${requestId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /**
+   * Cancel an assistance request (Executive only)
+   */
+  async cancelAssistanceRequest(
+    requestId: string
+  ): Promise<{
+    status: string;
+    message: string;
+  }> {
+    return this.request(`/assistance/${requestId}/cancel`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /**
+   * Get all assistance requests (Admin only)
+   */
+  async getAllAssistanceRequests(filters?: {
+    status?: AssistanceRequestStatus;
+    priority?: AssistanceRequestPriority;
+    companyId?: string;
+    search?: string;
+    sort?: string;
+    order?: "ASC" | "DESC";
+  }): Promise<{
+    status: string;
+    results: number;
+    data: {
+      // results: number;
+      results: number; 
+      requests: AssistanceRequest[] 
+};
+  }> {
+    const params = new URLSearchParams();
+    
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.priority) params.append("priority", filters.priority);
+    if (filters?.companyId) params.append("companyId", filters.companyId);
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.sort) params.append("sort", filters.sort);
+    if (filters?.order) params.append("order", filters.order);
+
+    return this.request(`/assistance/admin/all-requests?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /**
+   * Update assistance request (Admin only)
+   */
+  async updateAssistanceRequest(
+    requestId: string,
+    data: UpdateAssistanceRequestData
+  ): Promise<{
+    status: string;
+    message: string;
+    data: { request: AssistanceRequest };
+  }> {
+    return this.request(`/assistance/admin/${requestId}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Convert assistance request to task (Admin only)
+   */
+  async convertAssistanceRequestToTask(
+    requestId: string,
+    data?: ConvertToTaskData
+  ): Promise<{
+    status: string;
+    message: string;
+    data: {
+      task: Task;
+      request: {
+        id: string;
+        taskId: string;
+      };
+    };
+  }> {
+    return this.request(`/assistance/admin/${requestId}/convert-to-task`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  /**
+   * Get assistance request statistics
+   */
+  async getAssistanceRequestStats(): Promise<{
+    status: string;
+    data: { stats: AssistanceRequestStats };
+  }> {
+    return this.request("/assistance/stats/overview", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /**
+   * Estimate cost for assistance
+   */
+  async estimateAssistanceCost(
+    estimatedHours: number,
+    hourlyRate?: number
+  ): Promise<{
+    status: string;
+    data: { calculation: CostEstimation };
+  }> {
+    const params = new URLSearchParams();
+    params.append("estimatedHours", estimatedHours.toString());
+    
+    if (hourlyRate) {
+      params.append("hourlyRate", hourlyRate.toString());
+    }
+
+    return this.request(`/assistance/estimate-cost?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
 }
 
 

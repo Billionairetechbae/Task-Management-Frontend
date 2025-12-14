@@ -46,6 +46,9 @@ import ResetPassword from "./pages/ResetPassword";
 import { WebSocketStatus } from '@/components/WebSocketStatus';
 import TaskDetailsDebug from "./pages/TaskDetailsDebug";
 
+import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
+import AdminAssistanceRequests from "@/pages/admin/AdminAssistanceRequests";
+
 
 
 
@@ -279,6 +282,24 @@ const App = () => (
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <AdminDeletedCompanies />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/assistance-requests"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminAssistanceRequests />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/assistance-requests"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "admin"]}>
+            <ExecutiveAssistanceRequests />
           </ProtectedRoute>
         }
       />
