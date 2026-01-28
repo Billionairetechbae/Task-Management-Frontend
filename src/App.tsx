@@ -23,6 +23,7 @@ import TeamMemberProfile from "./pages/TeamMemberProfile";
 
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import Assistants from "./pages/Assistants";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -71,7 +72,15 @@ const App = () => (
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-
+      {/* Assistants Page */}
+      <Route
+        path="/assistants"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager"]}>
+            <Assistants />
+          </ProtectedRoute>
+        }
+      />
 
 
       <Route

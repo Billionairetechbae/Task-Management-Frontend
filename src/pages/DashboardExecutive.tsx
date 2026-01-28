@@ -200,11 +200,20 @@ const DashboardExecutive = () => {
         title={`Welcome back, ${user?.firstName}!`}
         description="Manage your team and track task progress"
         actions={
-          <Button onClick={() => setCreateTaskOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Delegate Task</span>
-            <span className="sm:hidden">New</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild className="gap-2">
+              <Link to="/assistants">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Request Assistance</span>
+                <span className="sm:hidden">Hire</span>
+              </Link>
+            </Button>
+            <Button onClick={() => setCreateTaskOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Delegate Task</span>
+              <span className="sm:hidden">New</span>
+            </Button>
+          </div>
         }
       />
 
