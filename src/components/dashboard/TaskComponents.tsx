@@ -1,0 +1,288 @@
+import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
+import { Task } from "@/lib/api";
+
+interface TaskTableProps {
+  tasks: Task[];
+  showAssignee?: boolean;
+  showExecutive?: boolean;
+}
+
+export const getStatusDisplay = (status: string) => {
+  const statusMap: Record<string, string> = {
+    pending: "Pending",
+    in_progress: "In Progress",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+  return statusMap[status] || status;
+};
+
+export const getPriorityDisplay = (priority: string) =>
+  priority.charAt(0).toUpperCase() + priority.slice(1);
+
+export const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case "completed":
+      return "bg-success/10 text-success border-success/20";
+    case "in_progress":
+      return "bg-primary/10 text-primary border-primary/20";
+    case "pending":
+      return "bg-warning/10 text-warning border-warning/20";
+    case "cancelled":
+      return "bg-muted text-muted-foreground";
+    default:
+      return "bg-secondary text-secondary-foreground";
+  }
+};
+
+export const getPriorityBadgeClass = (priority: string) => {
+  switch (priority) {
+    case "high":
+      return "bg-destructive/10 text-destructive border-destructive/20";
+    case "medium":
+      return "bg-warning/10 text-warning border-warning/20";
+    case "low":
+      return "bg-info/10 text-info border-info/20";
+    default:
+      return "bg-secondary text-secondary-foreground";
+  }
+};
+
+export const TaskTable = ({ tasks, showAssignee = true, showExecutive = false }: TaskTableProps) => (
+  <div className="bg-card border border-border rounded-xl overflow-hidden">
+    {/* Desktop Table Header */}
+    <div className="hidden lg:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,auto] gap-4 p-4 border-b border-border bg-muted/30">
+      <div className="font-semibold text-sm text-muted-foreground">Task</div>
+      {showAssignee && <div className="font-semibold text-sm text-muted-foreground">Assignee</div>}
+      {showExecutive && <div className="font-semibold text-sm text-muted-foreground">Executive</div>}
+      <div className="font-semibold text-sm text-muted-foreground">Priority</div>
+      <div className="font-semibold text-sm text-muted-foreground">Deadline</div>
+      <div className="font-semibold text-sm text-muted-foreground">Status</div>
+      <div className="font-semibold text-sm text-muted-foreground">Action</div>
+    </div>
+
+    {/* Mobile Cards */}
+    <div className="lg:hidden divide-y divide-border">
+      {tasks.map((task) => (
+        <div key={task.id} className="p-4 space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-sm truncate">{task.title}</h4>
+              {task.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                  {task.description}
+                </p>
+              )}
+            </div>
+            <Badge className={getStatusBadgeClass(task.status)}>
+              {getStatusDisplay(task.status)}
+            </Badge>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline" className={getPriorityBadgeClass(task.priority)}>
+              {getPriorityDisplay(task.priority)}
+            </Badge>
+            <span className="text-muted-foreground">
+              Due: {new Date(task.deadline).toLocaleDateString()}
+            </span>
+            {showAssignee && task.assignee && (
+              <span className="text-muted-foreground">
+                → {task.assignee.firstName} {task.assignee.lastName}
+              </span>
+            )}
+          </div>
+
+          <Button variant="outline" size="sm" className="w-full" asChild>
+            <Link to={`/task-details/${task.id}`}>View Details</Link>
+          </Button>
+        </div>
+      ))}
+    </div>
+
+    {/* Desktop Rows */}
+    <div className="hidden lg:block divide-y divide-border">
+      {tasks.map((task) => (
+        <div
+          key={task.id}
+          className="grid grid-cols-[2fr,1fr,1fr,1fr,1fr,auto] gap-4 p-4 items-center hover:bg-muted/30 transition-colors"
+        >
+          <div className="min-w-0">
+            <p className="font-medium truncate">{task.title}</p>
+            {task.description && (
+              <p className="text-sm text-muted-foreground truncate">{task.description}</p>
+            )}
+          </div>
+          {showAssignee && (
+            <div className="text-sm text-muted-foreground">
+              {task.assignee
+                ? `${task.assignee.firstName} ${task.assignee.lastName}`
+                : "Unassigned"}
+            </div>
+          )}
+          {showExecutive && (
+            <div className="text-sm text-muted-foreground">
+              {task.creator
+                ? `${task.creator.firstName} ${task.creator.lastName}`
+                : "—"}
+            </div>
+          )}
+          <div>
+            <Badge className={getPriorityBadgeClass(task.priority)}>
+              {getPriorityDisplay(task.priority)}
+            </Badge>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {new Date(task.deadline).toLocaleDateString()}
+          </div>
+          <div>
+            <Badge className={getStatusBadgeClass(task.status)}>
+              {getStatusDisplay(task.status)}
+            </Badge>
+          </div>
+          <div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/task-details/${task.id}`}>View</Link>
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  startIndex: number;
+  endIndex: number;
+  onPageChange: (page: number) => void;
+}
+
+export const Pagination = ({
+  currentPage,
+  totalPages,
+  totalItems,
+  startIndex,
+  endIndex,
+  onPageChange,
+}: PaginationProps) => {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
+      <p className="text-sm text-muted-foreground">
+        Showing <span className="font-medium">{startIndex + 1}-{Math.min(endIndex, totalItems)}</span> of{" "}
+        <span className="font-medium">{totalItems}</span> items
+      </p>
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <div className="flex items-center gap-1 mx-2">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onPageChange(pageNum)}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+interface TaskFiltersProps {
+  statusFilter: string;
+  onStatusChange: (status: string) => void;
+}
+
+export const TaskFilters = ({ statusFilter, onStatusChange }: TaskFiltersProps) => {
+  const statuses = [
+    { value: "", label: "All Tasks" },
+    { value: "pending", label: "Pending" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "completed", label: "Completed" },
+  ];
+
+  return (
+    <div className="flex gap-1 sm:gap-2 border-b border-border overflow-x-auto pb-px">
+      {statuses.map((status) => (
+        <button
+          key={status.value}
+          onClick={() => onStatusChange(status.value)}
+          className={`px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+            statusFilter === status.value
+              ? "border-b-2 border-primary text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {status.label}
+        </button>
+      ))}
+    </div>
+  );
+};
