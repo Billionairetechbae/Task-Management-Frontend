@@ -12,6 +12,7 @@ import {
   Building2
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const AdminSearch = () => {
   const { toast } = useToast();
@@ -53,12 +54,12 @@ const AdminSearch = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background p-6">
-
-      <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
-        <Search className="w-8 h-8 text-primary" />
-        Global Search
-      </h2>
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
+          <Search className="w-8 h-8 text-primary" />
+          Global Search
+        </h2>
 
       {/* Search Controls */}
       <div className="flex flex-col gap-4 md:flex-row mb-8">
@@ -156,9 +157,10 @@ const AdminSearch = () => {
             </Card>
           )}
 
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
   );
 };
 

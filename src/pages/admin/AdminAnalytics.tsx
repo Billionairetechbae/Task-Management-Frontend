@@ -11,6 +11,7 @@ import {
   Activity,
   TrendingUp
 } from "lucide-react";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const AdminAnalytics = () => {
   const { toast } = useToast();
@@ -40,17 +41,21 @@ const AdminAnalytics = () => {
 
   if (loading) {
     return (
-      <div className="p-6 text-muted-foreground">
-        Loading analytics...
-      </div>
+      <DashboardLayout>
+        <div className="text-muted-foreground">
+          Loading analytics...
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!analytics) {
     return (
-      <div className="p-6 text-destructive">
-        Unable to load analytics.
-      </div>
+      <DashboardLayout>
+        <div className="text-destructive">
+          Unable to load analytics.
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -88,15 +93,12 @@ const AdminAnalytics = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      {/* ===========================
-          SIDEBAR
-      =========================== */}
-
-      <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
-        <TrendingUp className="w-8 h-8 text-primary" />
-        Platform Analytics
-      </h2>
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
+          <TrendingUp className="w-8 h-8 text-primary" />
+          Platform Analytics
+        </h2>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -132,12 +134,13 @@ const AdminAnalytics = () => {
         )}
       </Card>
 
-      {/* Future charts */}
-      <Card className="p-6 border border-border">
-        <h3 className="text-xl font-bold mb-4">Platform Activity (Coming Soon)</h3>
-        <p className="text-muted-foreground">Charts and activity graphs will be added here.</p>
-      </Card>
-    </div>
+        {/* Future charts */}
+        <Card className="p-6 border border-border">
+          <h3 className="text-xl font-bold mb-4">Platform Activity (Coming Soon)</h3>
+          <p className="text-muted-foreground">Charts and activity graphs will be added here.</p>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 };
 

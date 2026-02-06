@@ -49,6 +49,7 @@ import TaskDetailsDebug from "./pages/TaskDetailsDebug";
 
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import AdminAssistanceRequests from "@/pages/admin/AdminAssistanceRequests";
+import OnboardingTour from "@/components/OnboardingTour";
 
 
 
@@ -59,7 +60,8 @@ const App = () => (
   <>
     <Toaster />
     <Sonner />
-    <WebSocketStatus /> {/* Add this line */}
+    <WebSocketStatus />
+    <OnboardingTour />
 
     <Routes>
       {/* PUBLIC ROUTES */}

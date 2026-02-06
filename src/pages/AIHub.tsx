@@ -1,7 +1,6 @@
+import { Bot, CheckCircle, Clock, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Bot, CheckCircle, Clock, TrendingUp } from "lucide-react";
-import { Link } from "react-router-dom";
-import Logo from "@/components/Logo";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const aiAgents = [
   {
@@ -38,20 +37,8 @@ const aiAgents = [
 
 const AIHub = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-center justify-between">
-          <Logo className="h-8" />
-          <Link
-            to="/dashboard"
-            className="text-foreground hover:text-primary font-medium flex items-center gap-2"
-          >
-            Back to Dashboard
-          </Link>
-        </div>
-      </header>
-
-      <main className="px-6 py-8">
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center">
@@ -140,8 +127,8 @@ const AIHub = () => {
             </div>
           ))}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

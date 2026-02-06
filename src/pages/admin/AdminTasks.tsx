@@ -10,6 +10,7 @@ import {
   User,
   Building2,
 } from "lucide-react";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const AdminTasks = () => {
   const { toast } = useToast();
@@ -63,11 +64,12 @@ const AdminTasks = () => {
   };
 
   return (
-    <div className="p-6 min-h-screen bg-background">
-      <h2 className="text-3xl font-bold flex items-center gap-2 mb-8">
-        <Briefcase className="w-8 h-8 text-primary" />
-        Manage Tasks
-      </h2>
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-3xl font-bold flex items-center gap-2 mb-8">
+          <Briefcase className="w-8 h-8 text-primary" />
+          Manage Tasks
+        </h2>
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -176,7 +178,8 @@ const AdminTasks = () => {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

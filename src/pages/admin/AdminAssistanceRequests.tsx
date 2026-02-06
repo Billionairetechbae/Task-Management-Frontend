@@ -64,6 +64,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const AdminAssistanceRequests = () => {
   const { toast } = useToast();
@@ -241,7 +242,7 @@ const AdminAssistanceRequests = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -1016,7 +1017,7 @@ const AdminAssistanceRequests = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

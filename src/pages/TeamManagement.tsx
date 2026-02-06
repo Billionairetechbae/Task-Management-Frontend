@@ -3,8 +3,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import {
-  Bell,
-  HelpCircle,
   User,
   Users,
   Search,
@@ -18,7 +16,6 @@ import {
   Activity,
 } from "lucide-react";
 
-import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -41,6 +38,7 @@ import { api, Assistant } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import InviteUserDialog from "@/components/InviteUserDialog";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 type Tab = "active" | "removed";
 
@@ -274,47 +272,8 @@ const TeamManagement = () => {
    * RENDER UI
    * --------------------------*/
   return (
-    <div className="min-h-screen bg-background">
-      {/* HEADER */}
-      <header className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-center justify-between">
-          <Logo className="h-8" />
-
-          <div className="flex items-center gap-4">
-            <Button variant="outline" asChild>
-              <Link
-                to={
-                  user?.role === "executive"
-                    ? "/dashboard-executive"
-                    : "/dashboard-assistant"
-                }
-              >
-                <Users className="w-4 h-4 mr-1" />
-                Dashboard
-              </Link>
-            </Button>
-
-            <HelpCircle className="w-6 h-6 text-muted-foreground" />
-            <Bell className="w-6 h-6 text-muted-foreground" />
-
-            <Button variant="outline" asChild>
-              <Link to="/team-directory">
-                <Users className="w-4 h-4 mr-1" /> Team Directory
-              </Link>
-            </Button>
-
-            <Button variant="outline" asChild>
-              <Link to="/profile">
-                <User className="w-5 h-5 mr-2" />
-                Profile
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* MAIN CONTENT */}
-      <main className="px-6 py-8 max-w-6xl mx-auto">
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto">
         {/* Title + Invite */}
         <div className="flex justify-between mb-8 gap-4 flex-wrap">
           <div>
@@ -603,7 +562,7 @@ const TeamManagement = () => {
           onOpenChange={setInviteOpen}
           onSuccess={loadAssistants}
         />
-      </main>
+      </div>
 
       {/* CONFIRM MODAL */}
       {confirmOpen && confirmType && selectedMember && (
@@ -664,7 +623,7 @@ const TeamManagement = () => {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 
