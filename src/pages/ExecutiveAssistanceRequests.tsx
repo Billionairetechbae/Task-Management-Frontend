@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import AssistanceRequestDialog from "@/components/AssistanceRequestDialog";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const ExecutiveAssistanceRequests = () => {
   const { toast } = useToast();
@@ -155,7 +156,7 @@ const ExecutiveAssistanceRequests = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -552,7 +553,7 @@ const ExecutiveAssistanceRequests = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

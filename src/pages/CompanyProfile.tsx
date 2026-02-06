@@ -18,21 +18,19 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Bell,
-  HelpCircle,
-  User,
   Building,
   Mail,
   Users,
   Copy,
   CheckCircle2,
   Save,
+  HelpCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import Logo from "@/components/Logo";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const CompanyProfile = () => {
   const { user, refreshUser } = useAuth();
@@ -104,33 +102,28 @@ const CompanyProfile = () => {
 
   if (!isExecutive) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="px-6 py-8">
-          <Card>
-            <CardContent className="p-8">
-              <div className="max-w-md mx-auto text-center">
-                <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Company Profile</h3>
-                <p className="text-muted-foreground mb-6">
-                  Company profile management is only available for executives.
-                </p>
-                <Button asChild>
-                  <Link to="/dashboard-assistant">Back to Dashboard</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+      <DashboardLayout>
+        <Card>
+          <CardContent className="p-8">
+            <div className="max-w-md mx-auto text-center">
+              <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Company Profile</h3>
+              <p className="text-muted-foreground mb-6">
+                Company profile management is only available for executives.
+              </p>
+              <Button asChild>
+                <Link to="/dashboard-assistant">Back to Dashboard</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main className="px-6 py-8">
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -415,49 +408,8 @@ const CompanyProfile = () => {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
-  );
-};
-
-const Header = () => {
-  const { user } = useAuth();
-
-  return (
-    <header className="border-b border-border bg-card px-6 py-4">
-      <div className="flex items-center justify-between">
-        <Logo className="h-8" />
-
-        <div className="flex items-center gap-4">
-          <Button variant="outline" className="gap-2" asChild>
-            <Link
-              to={
-                user?.role === "executive"
-                  ? "/dashboard-executive"
-                  : user?.role === "manager"
-                  ? "/dashboard-manager"
-                  : "/dashboard-assistant"
-              }
-            >
-              <Users className="w-5 h-5" />
-              Dashboard
-            </Link>
-          </Button>
-          <button className="relative">
-            <HelpCircle className="w-6 h-6 text-muted-foreground" />
-          </button>
-          <button className="relative">
-            <Bell className="w-6 h-6 text-muted-foreground" />
-          </button>
-          <Button variant="outline" asChild>
-            <Link to="/profile">
-              <User className="w-5 h-5 mr-2" />
-              Profile
-            </Link>
-          </Button>
-        </div>
       </div>
-    </header>
+    </DashboardLayout>
   );
 };
 

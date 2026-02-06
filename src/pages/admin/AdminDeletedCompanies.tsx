@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
-import { Building2, ArrowLeft, Trash2 } from "lucide-react";
+import { Building2, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const AdminDeletedCompanies = () => {
   const { toast } = useToast();
@@ -32,19 +33,12 @@ const AdminDeletedCompanies = () => {
   }, []);
 
   return (
-    <div className="min-h-screen p-6 bg-background">
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-8">
-        <Link to="/admin" className="flex items-center gap-2 text-primary hover:underline">
-          <ArrowLeft className="w-5 h-5" />
-          Back to Admin Dashboard
-        </Link>
-
-        <h2 className="text-3xl font-bold flex items-center gap-3">
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-3xl font-bold flex items-center gap-3 mb-8">
           <Trash2 className="w-8 h-8 text-destructive" />
           Deleted Companies
         </h2>
-      </div>
 
       {/* LIST */}
       <Card className="p-6 border border-border bg-card">
@@ -98,7 +92,8 @@ const AdminDeletedCompanies = () => {
           </ul>
         )}
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

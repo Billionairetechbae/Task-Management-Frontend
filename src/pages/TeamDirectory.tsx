@@ -7,10 +7,10 @@ import { api, User as AppUser } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const TeamDirectory = () => {
   const { user } = useAuth();
@@ -100,33 +100,8 @@ const TeamDirectory = () => {
   }, [team, roleFilter, search]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-center justify-between">
-          <Logo className="h-8" />
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => navigate(getDashboardRoute())}
-            >
-              <Users className="w-4 h-4" />
-              Back to Dashboard
-            </Button>
-
-            <Button variant="outline" asChild>
-              <Link to="/profile">
-                <User className="w-5 h-5 mr-2" /> Profile
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Page Content */}
-      <main className="px-6 py-8 max-w-6xl mx-auto">
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto">
         {/* Heading */}
         <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
@@ -252,8 +227,8 @@ const TeamDirectory = () => {
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

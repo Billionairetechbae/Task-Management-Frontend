@@ -12,6 +12,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const AdminCompanies = () => {
   const { toast } = useToast();
@@ -75,14 +76,15 @@ const AdminCompanies = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-bold flex items-center gap-2">
-          <Building2 className="w-8 h-8 text-primary" />
-          Manage Companies
-        </h2>
-      </div>
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold flex items-center gap-2">
+            <Building2 className="w-8 h-8 text-primary" />
+            Manage Companies
+          </h2>
+        </div>
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -201,7 +203,8 @@ const AdminCompanies = () => {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
