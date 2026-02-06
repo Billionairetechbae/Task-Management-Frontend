@@ -65,7 +65,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     if (role === "executive") {
       return [
         { label: "Dashboard", href: "/dashboard-executive", icon: <LayoutDashboard className="w-5 h-5" /> },
-        { label: "Tasks", href: "/dashboard-executive", icon: <ClipboardList className="w-5 h-5" /> },
+        { label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
         { label: "Team Management", href: "/team-management", icon: <Crown className="w-5 h-5" /> },
         { label: "Assistants", href: "/assistants", icon: <UserCircle className="w-5 h-5" /> },

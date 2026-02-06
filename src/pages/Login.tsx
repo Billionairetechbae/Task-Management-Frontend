@@ -99,8 +99,8 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background grid lg:grid-cols-2">
-      {/* LEFT SIDE INFO */}
-      <div className="flex flex-col justify-center px-8 lg:px-16 py-12">
+      {/* LEFT SIDE INFO - Hidden on mobile */}
+      <div className="hidden lg:flex flex-col justify-center px-8 lg:px-16 py-12">
         <div className="mb-12">
           <Logo className="h-8" />
         </div>
@@ -133,8 +133,13 @@ const Login = () => {
       </div>
 
       {/* RIGHT SIDE FORM */}
-      <div className="flex items-center justify-center px-8 py-12 bg-card">
+      <div className="flex items-center justify-center px-8 py-12 bg-card min-h-screen lg:min-h-0">
         <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden mb-8 flex justify-center">
+            <Logo className="h-10" />
+          </div>
+          
           <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
             <h2 className="text-3xl font-bold mb-2">Sign In</h2>
             <p className="text-muted-foreground mb-8">

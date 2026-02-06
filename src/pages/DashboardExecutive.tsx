@@ -203,12 +203,12 @@ const DashboardExecutive = () => {
           <div className="flex gap-3">
             <Button 
               asChild 
-              className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse hover:animate-none"
+              className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <Link to="/assistance-requests">
                 <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Request Assistance</span>
-                <span className="sm:hidden">Help</span>
+                <span className="hidden sm:inline">Hire Talent</span>
+                <span className="sm:hidden">Hire</span>
               </Link>
             </Button>
             <Button variant="outline" onClick={() => setCreateTaskOpen(true)} className="gap-2">
