@@ -24,6 +24,7 @@ import {
   TaskFilters,
   Pagination,
 } from "@/components/dashboard/TaskComponents";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Assistant, Task } from "@/lib/api";
@@ -41,6 +42,11 @@ const DashboardManager = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState("details");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -127,6 +133,20 @@ const DashboardManager = () => {
     setCurrentPage(1);
   };
 
+  const openDrawer = (task: Task, tab: string) => {
+    setDrawerTaskId(task.id);
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
+
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+  };
+
+  const handleTaskDeleted = (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -163,53 +183,18 @@ const DashboardManager = () => {
         className="mb-4"
       />
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <StatsCard
-          title="Assistants"
-          value={stats.totalAssistants}
-          icon={Users}
-          iconClassName="bg-primary/10"
-        />
-        <StatsCard
-          title="Verified Assistants"
-          value={stats.verifiedAssistants}
-          icon={CheckCircle2}
-          iconClassName="bg-success/10"
-        />
-        <StatsCard
-          title="Active Tasks"
-          value={stats.inProgress}
-          icon={Clock}
-          iconClassName="bg-info/10"
-        />
+        <StatsCard title="Assistants" value={stats.totalAssistants} icon={Users} iconClassName="bg-primary/10" />
+        <StatsCard title="Verified Assistants" value={stats.verifiedAssistants} icon={CheckCircle2} iconClassName="bg-success/10" />
+        <StatsCard title="Active Tasks" value={stats.inProgress} icon={Clock} iconClassName="bg-info/10" />
       </div>
 
       {/* Task Overview */}
       <SectionHeader title="Task Overview" className="mb-4" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard
-          title="Total Tasks"
-          value={stats.totalTasks}
-          icon={ClipboardList}
-          iconClassName="bg-primary/10"
-        />
-        <StatsCard
-          title="Completion Rate"
-          value={`${stats.completionRate}%`}
-          icon={TrendingUp}
-          iconClassName="bg-success/10"
-        />
-        <StatsCard
-          title="In Progress"
-          value={stats.inProgress}
-          icon={Clock}
-          iconClassName="bg-info/10"
-        />
-        <StatsCard
-          title="Overdue"
-          value={stats.overdue}
-          icon={AlertTriangle}
-          iconClassName="bg-destructive/10"
-        />
+        <StatsCard title="Total Tasks" value={stats.totalTasks} icon={ClipboardList} iconClassName="bg-primary/10" />
+        <StatsCard title="Completion Rate" value={`${stats.completionRate}%`} icon={TrendingUp} iconClassName="bg-success/10" />
+        <StatsCard title="In Progress" value={stats.inProgress} icon={Clock} iconClassName="bg-info/10" />
+        <StatsCard title="Overdue" value={stats.overdue} icon={AlertTriangle} iconClassName="bg-destructive/10" />
       </div>
 
       {/* Tasks Section */}
@@ -234,17 +219,19 @@ const DashboardManager = () => {
             icon={ClipboardList}
             title="No tasks available"
             description="Start by delegating a new task to your team"
-            action={
-              <Button onClick={() => setCreateTaskOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Task
-              </Button>
-            }
+            action={<Button onClick={() => setCreateTaskOpen(true)}><Plus className="w-4 h-4 mr-2" />Create Task</Button>}
           />
         </ContentCard>
       ) : (
         <>
-          <TaskTable tasks={currentTasks} showAssignee />
+          <TaskTable
+            tasks={currentTasks}
+            showAssignee
+            showActions
+            onEdit={(task) => openDrawer(task, "details")}
+            onAssign={(task) => openDrawer(task, "assignees")}
+            onDelete={(task) => openDrawer(task, "danger")}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -256,11 +243,15 @@ const DashboardManager = () => {
         </>
       )}
 
-      {/* Create Task Modal */}
-      <CreateTaskDialog
-        open={createTaskOpen}
-        onOpenChange={setCreateTaskOpen}
-        onSuccess={handleTaskCreated}
+      {/* Dialogs */}
+      <CreateTaskDialog open={createTaskOpen} onOpenChange={setCreateTaskOpen} onSuccess={handleTaskCreated} />
+      <TaskEditDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        taskId={drawerTaskId}
+        initialTab={drawerTab}
+        onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
       />
     </DashboardLayout>
   );

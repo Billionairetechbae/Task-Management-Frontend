@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   TrendingUp,
   ClipboardList,
-  Calendar,
 } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -28,6 +27,7 @@ import {
   getPriorityBadgeClass,
   getPriorityDisplay,
 } from "@/components/dashboard/TaskComponents";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task } from "@/lib/api";
@@ -79,6 +79,10 @@ const DashboardAssistant = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
 
+  // Drawer state (assistant: update progress)
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -129,6 +133,10 @@ const DashboardAssistant = () => {
     return "Executive";
   };
 
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -159,30 +167,10 @@ const DashboardAssistant = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard
-          title="Total Assigned"
-          value={dashboardData.overview.totalAssigned}
-          icon={ClipboardList}
-          iconClassName="bg-primary/10"
-        />
-        <StatsCard
-          title="Completion Rate"
-          value={`${dashboardData.overview.completionRate}%`}
-          icon={TrendingUp}
-          iconClassName="bg-success/10"
-        />
-        <StatsCard
-          title="In Progress"
-          value={dashboardData.currentTasks.inProgress}
-          icon={Clock}
-          iconClassName="bg-info/10"
-        />
-        <StatsCard
-          title="Overdue"
-          value={dashboardData.overview.overdue}
-          icon={AlertTriangle}
-          iconClassName="bg-destructive/10"
-        />
+        <StatsCard title="Total Assigned" value={dashboardData.overview.totalAssigned} icon={ClipboardList} iconClassName="bg-primary/10" />
+        <StatsCard title="Completion Rate" value={`${dashboardData.overview.completionRate}%`} icon={TrendingUp} iconClassName="bg-success/10" />
+        <StatsCard title="In Progress" value={dashboardData.currentTasks.inProgress} icon={Clock} iconClassName="bg-info/10" />
+        <StatsCard title="Overdue" value={dashboardData.overview.overdue} icon={AlertTriangle} iconClassName="bg-destructive/10" />
       </div>
 
       {/* Performance & Current Tasks */}
@@ -284,7 +272,15 @@ const DashboardAssistant = () => {
         </ContentCard>
       ) : (
         <>
-          <TaskTable tasks={currentTasks} showAssignee={false} showExecutive />
+          <TaskTable
+            tasks={currentTasks}
+            showAssignee={false}
+            showExecutive
+            onEdit={(task) => {
+              setDrawerTaskId(task.id);
+              setDrawerOpen(true);
+            }}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -295,6 +291,15 @@ const DashboardAssistant = () => {
           />
         </>
       )}
+
+      <TaskEditDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        taskId={drawerTaskId}
+        initialTab="details"
+        onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={() => {}}
+      />
     </DashboardLayout>
   );
 };

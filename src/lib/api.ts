@@ -179,7 +179,10 @@ export interface UpdateTaskData {
   priority?: TaskPriority;
   status?: TaskStatus;
   deadline?: string;
+  category?: string;
+  estimatedHours?: number;
   actualHours?: number;
+  assigneeId?: string | null;
 }
 
 export interface TaskFilters {
@@ -698,17 +701,42 @@ class ApiClient {
 
   async updateTask(
     taskId: string,
-    data: UpdateTaskData
+    data: UpdateTaskData | FormData
   ): Promise<{ status: string; message: string; data: { task: Task } }> {
-    return this.request<{
-      status: string;
-      message: string;
-      data: { task: Task };
-    }>(`/tasks/${taskId}`, {
+    const isFormData = data instanceof FormData;
+
+    const headers: HeadersInit = isFormData
+      ? (() => {
+          const token = localStorage.getItem("auth_token");
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        })()
+      : this.getAuthHeaders();
+
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
+      headers,
+      body: isFormData ? data : JSON.stringify(data),
     });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to update task");
+    }
+
+    return result;
+  }
+
+  async deleteTaskAttachment(
+    attachmentId: string
+  ): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      `/task-attachments/${attachmentId}`,
+      {
+        method: "DELETE",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
   async deleteTask(

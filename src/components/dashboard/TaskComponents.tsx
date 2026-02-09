@@ -6,6 +6,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Eye,
+  Pencil,
+  UserPlus,
+  Trash2,
 } from "lucide-react";
 import { Task } from "@/lib/api";
 
@@ -13,6 +17,10 @@ interface TaskTableProps {
   tasks: Task[];
   showAssignee?: boolean;
   showExecutive?: boolean;
+  showActions?: boolean;
+  onEdit?: (task: Task) => void;
+  onAssign?: (task: Task) => void;
+  onDelete?: (task: Task) => void;
 }
 
 export const getStatusDisplay = (status: string) => {
@@ -56,7 +64,15 @@ export const getPriorityBadgeClass = (priority: string) => {
   }
 };
 
-export const TaskTable = ({ tasks, showAssignee = true, showExecutive = false }: TaskTableProps) => (
+export const TaskTable = ({
+  tasks,
+  showAssignee = true,
+  showExecutive = false,
+  showActions = false,
+  onEdit,
+  onAssign,
+  onDelete,
+}: TaskTableProps) => (
   <div className="bg-card border border-border rounded-xl overflow-hidden">
     {/* Desktop Table Header */}
     <div className="hidden lg:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,auto] gap-4 p-4 border-b border-border bg-muted/30">
@@ -66,7 +82,7 @@ export const TaskTable = ({ tasks, showAssignee = true, showExecutive = false }:
       <div className="font-semibold text-sm text-muted-foreground">Priority</div>
       <div className="font-semibold text-sm text-muted-foreground">Deadline</div>
       <div className="font-semibold text-sm text-muted-foreground">Status</div>
-      <div className="font-semibold text-sm text-muted-foreground">Action</div>
+      <div className="font-semibold text-sm text-muted-foreground">Actions</div>
     </div>
 
     {/* Mobile Cards */}
@@ -101,9 +117,28 @@ export const TaskTable = ({ tasks, showAssignee = true, showExecutive = false }:
             )}
           </div>
 
-          <Button variant="outline" size="sm" className="w-full" asChild>
-            <Link to={`/task-details/${task.id}`}>View Details</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link to={`/task-details/${task.id}`}>
+                <Eye className="h-3.5 w-3.5 mr-1" /> View
+              </Link>
+            </Button>
+            {showActions && onEdit && (
+              <Button variant="outline" size="sm" onClick={() => onEdit(task)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {showActions && onAssign && (
+              <Button variant="outline" size="sm" onClick={() => onAssign(task)}>
+                <UserPlus className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {showActions && onDelete && (
+              <Button variant="outline" size="sm" className="text-destructive" onClick={() => onDelete(task)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -148,10 +183,27 @@ export const TaskTable = ({ tasks, showAssignee = true, showExecutive = false }:
               {getStatusDisplay(task.status)}
             </Badge>
           </div>
-          <div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to={`/task-details/${task.id}`}>View</Link>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+              <Link to={`/task-details/${task.id}`}>
+                <Eye className="h-4 w-4" />
+              </Link>
             </Button>
+            {showActions && onEdit && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(task)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {showActions && onAssign && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onAssign(task)}>
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            )}
+            {showActions && onDelete && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(task)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       ))}

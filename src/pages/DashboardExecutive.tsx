@@ -13,7 +13,6 @@ import {
   ClipboardList,
   TrendingUp,
   AlertTriangle,
-  Calendar,
 } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -30,6 +29,7 @@ import {
   TaskFilters,
   Pagination,
 } from "@/components/dashboard/TaskComponents";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, Assistant } from "@/lib/api";
@@ -47,6 +47,11 @@ const DashboardExecutive = () => {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [teamLoading, setTeamLoading] = useState(false);
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState("details");
 
   const [teamStats, setTeamStats] = useState({
     totalAssistants: 0,
@@ -92,21 +97,8 @@ const DashboardExecutive = () => {
 
       const {
         overview = {
-          team: {
-            totalAssistants: 0,
-            availableAssistants: 0,
-            pendingVerifications: 0,
-            totalExecutives: 0,
-          },
-          tasks: {
-            totalTasks: 0,
-            pendingTasks: 0,
-            inProgressTasks: 0,
-            completedTasks: 0,
-            overdueTasks: 0,
-            urgentTasks: 0,
-            completionRate: 0,
-          },
+          team: { totalAssistants: 0, availableAssistants: 0, pendingVerifications: 0, totalExecutives: 0 },
+          tasks: { totalTasks: 0, pendingTasks: 0, inProgressTasks: 0, completedTasks: 0, overdueTasks: 0, urgentTasks: 0, completionRate: 0 },
         },
         recentActivity = { tasks: [] as Task[] },
       } = response.data || {};
@@ -186,6 +178,20 @@ const DashboardExecutive = () => {
     }
   };
 
+  const openDrawer = (task: Task, tab: string) => {
+    setDrawerTaskId(task.id);
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
+
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+  };
+
+  const handleTaskDeleted = (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -201,8 +207,8 @@ const DashboardExecutive = () => {
         description="Manage your team and track task progress"
         actions={
           <div className="flex gap-3">
-            <Button 
-              asChild 
+            <Button
+              asChild
               className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <Link to="/assistance-requests">
@@ -222,35 +228,14 @@ const DashboardExecutive = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard
-          title="Total Tasks"
-          value={taskStats.totalTasks}
-          icon={ClipboardList}
-          iconClassName="bg-primary/10"
-        />
-        <StatsCard
-          title="Completion Rate"
-          value={`${taskStats.completionRate}%`}
-          icon={TrendingUp}
-          iconClassName="bg-success/10"
-        />
-        <StatsCard
-          title="In Progress"
-          value={taskStats.inProgressTasks}
-          icon={Clock}
-          iconClassName="bg-info/10"
-        />
-        <StatsCard
-          title="Overdue"
-          value={taskStats.overdueTasks}
-          icon={AlertTriangle}
-          iconClassName="bg-destructive/10"
-        />
+        <StatsCard title="Total Tasks" value={taskStats.totalTasks} icon={ClipboardList} iconClassName="bg-primary/10" />
+        <StatsCard title="Completion Rate" value={`${taskStats.completionRate}%`} icon={TrendingUp} iconClassName="bg-success/10" />
+        <StatsCard title="In Progress" value={taskStats.inProgressTasks} icon={Clock} iconClassName="bg-info/10" />
+        <StatsCard title="Overdue" value={taskStats.overdueTasks} icon={AlertTriangle} iconClassName="bg-destructive/10" />
       </div>
 
       {/* Team Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Team Stats */}
         <ContentCard className="lg:col-span-2">
           <SectionHeader
             title="Team Overview"
@@ -283,29 +268,18 @@ const DashboardExecutive = () => {
           </div>
         </ContentCard>
 
-        {/* Quick Actions */}
         <ContentCard>
           <SectionHeader title="Quick Actions" />
           <div className="space-y-2 mt-4">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3"
-              onClick={() => setInviteOpen(true)}
-            >
+            <Button variant="outline" className="w-full justify-start gap-3" onClick={() => setInviteOpen(true)}>
               <Mail className="w-4 h-4" />
               Invite Team Member
             </Button>
             <Button variant="outline" className="w-full justify-start gap-3" asChild>
-              <Link to="/team-management">
-                <Users className="w-4 h-4" />
-                Manage Team
-              </Link>
+              <Link to="/team-management"><Users className="w-4 h-4" />Manage Team</Link>
             </Button>
             <Button variant="outline" className="w-full justify-start gap-3" asChild>
-              <Link to="/company-profile">
-                <User className="w-4 h-4" />
-                Company Settings
-              </Link>
+              <Link to="/company-profile"><User className="w-4 h-4" />Company Settings</Link>
             </Button>
           </div>
         </ContentCard>
@@ -327,10 +301,7 @@ const DashboardExecutive = () => {
           ) : (
             <div className="space-y-3 mt-4">
               {pendingAssistants.map((assistant) => (
-                <div
-                  key={assistant.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4"
-                >
+                <div key={assistant.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                       <User className="w-5 h-5 text-primary" />
@@ -339,23 +310,16 @@ const DashboardExecutive = () => {
                       <p className="font-semibold">{assistant.firstName} {assistant.lastName}</p>
                       <p className="text-sm text-muted-foreground">{assistant.email}</p>
                       <div className="flex gap-2 mt-1">
-                        {assistant.specialization && (
-                          <Badge variant="outline" className="text-xs">{assistant.specialization}</Badge>
-                        )}
-                        {assistant.experience && (
-                          <Badge variant="outline" className="text-xs">{assistant.experience} yrs exp</Badge>
-                        )}
+                        {assistant.specialization && <Badge variant="outline" className="text-xs">{assistant.specialization}</Badge>}
+                        {assistant.experience && <Badge variant="outline" className="text-xs">{assistant.experience} yrs exp</Badge>}
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleVerifyAssistant(assistant.id)}>
-                      <CheckCircle2 className="w-4 h-4 mr-1" />
-                      Approve
+                      <CheckCircle2 className="w-4 h-4 mr-1" />Approve
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleRejectAssistant(assistant.id)}>
-                      Reject
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleRejectAssistant(assistant.id)}>Reject</Button>
                   </div>
                 </div>
               ))}
@@ -369,19 +333,12 @@ const DashboardExecutive = () => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h3 className="font-semibold mb-1">Your Company Code</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              Share this code with team members to join your workspace
-            </p>
+            <p className="text-sm text-muted-foreground mb-3">Share this code with team members to join your workspace</p>
             <div className="bg-primary/10 border border-primary/20 rounded-lg px-4 py-3 inline-block">
-              <code className="text-xl font-mono font-bold text-primary">
-                {user?.company?.companyCode || "Loading..."}
-              </code>
+              <code className="text-xl font-mono font-bold text-primary">{user?.company?.companyCode || "Loading..."}</code>
             </div>
           </div>
-          <Button variant="outline" className="gap-2">
-            <Mail className="w-4 h-4" />
-            Share Code
-          </Button>
+          <Button variant="outline" className="gap-2"><Mail className="w-4 h-4" />Share Code</Button>
         </div>
       </ContentCard>
 
@@ -391,8 +348,7 @@ const DashboardExecutive = () => {
         description={totalItems > 0 ? `${totalItems} total tasks` : undefined}
         actions={
           <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Task
+            <Plus className="w-4 h-4" />New Task
           </Button>
         }
       />
@@ -407,17 +363,19 @@ const DashboardExecutive = () => {
             icon={ClipboardList}
             title="No tasks found"
             description="Create your first task to get started with delegation"
-            action={
-              <Button onClick={() => setCreateTaskOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Task
-              </Button>
-            }
+            action={<Button onClick={() => setCreateTaskOpen(true)}><Plus className="w-4 h-4 mr-2" />Create Task</Button>}
           />
         </ContentCard>
       ) : (
         <>
-          <TaskTable tasks={currentTasks} showAssignee />
+          <TaskTable
+            tasks={currentTasks}
+            showAssignee
+            showActions
+            onEdit={(task) => openDrawer(task, "details")}
+            onAssign={(task) => openDrawer(task, "assignees")}
+            onDelete={(task) => openDrawer(task, "danger")}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -430,15 +388,15 @@ const DashboardExecutive = () => {
       )}
 
       {/* Dialogs */}
-      <CreateTaskDialog
-        open={createTaskOpen}
-        onOpenChange={setCreateTaskOpen}
-        onSuccess={handleTaskCreated}
-      />
-      <InviteUserDialog
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        onSuccess={fetchDashboard}
+      <CreateTaskDialog open={createTaskOpen} onOpenChange={setCreateTaskOpen} onSuccess={handleTaskCreated} />
+      <InviteUserDialog open={inviteOpen} onOpenChange={setInviteOpen} onSuccess={fetchDashboard} />
+      <TaskEditDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        taskId={drawerTaskId}
+        initialTab={drawerTab}
+        onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
       />
     </DashboardLayout>
   );
