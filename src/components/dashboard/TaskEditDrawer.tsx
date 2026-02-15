@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { api, Task, Assistant, TaskAttachment, UpdateTaskData } from "@/lib/api";
+import { api, Task, TeamMember, TaskAttachment, UpdateTaskData } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { getFileIcon } from "@/utils/fileIcons";
@@ -78,7 +78,7 @@ export default function TaskEditDrawer({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isManager = user?.role === "executive" || user?.role === "manager";
-  const isAssistant = user?.role === "assistant";
+  const isAssistant = user?.role === "team_member";
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,7 +96,7 @@ export default function TaskEditDrawer({
   const [actualHours, setActualHours] = useState<number>(0);
 
   // Assignee
-  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [team_members, setAssistants] = useState<TeamMember[]>([]);
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
   const [loadingAssistants, setLoadingAssistants] = useState(false);
 
@@ -147,7 +147,7 @@ export default function TaskEditDrawer({
     try {
       setLoadingAssistants(true);
       const res = await api.getCompanyAssistants();
-      setAssistants(res.data.assistants.filter((a) => a.role === "assistant"));
+      setAssistants(res.data.team_members.filter((a) => a.role === "team_member"));
     } catch {
       // silent
     } finally {
@@ -161,7 +161,7 @@ export default function TaskEditDrawer({
       setSaving(true);
 
       if (isAssistant) {
-        // Assistants can only update status + actualHours
+        // TeamMembers can only update status + actualHours
         const data: UpdateTaskData = { status: status as any, actualHours };
         const res = await api.updateTask(task.id, data);
         setTask(res.data.task);
@@ -356,7 +356,7 @@ export default function TaskEditDrawer({
                   </>
                 ) : (
                   <>
-                    {/* Assistant: read-only summary + editable status/hours */}
+                    {/* TeamMember: read-only summary + editable status/hours */}
                     <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
                       <h4 className="font-semibold">{task?.title}</h4>
                       {task?.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
@@ -394,7 +394,7 @@ export default function TaskEditDrawer({
               {isManager && (
                 <TabsContent value="assignees" className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Assigned Assistant</Label>
+                    <Label>Assigned TeamMember</Label>
                     {task?.assignee && (
                       <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/30">
                         <div>
@@ -417,7 +417,7 @@ export default function TaskEditDrawer({
                     <Label>{task?.assignee ? "Reassign to" : "Assign to"}</Label>
                     {loadingAssistants ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Loading assistants...
+                        <Loader2 className="h-4 w-4 animate-spin" /> Loading team_members...
                       </div>
                     ) : (
                       <Select
@@ -425,11 +425,11 @@ export default function TaskEditDrawer({
                         onValueChange={(v) => setSelectedAssigneeId(v === "unassigned" ? null : v)}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select an assistant" />
+                          <SelectValue placeholder="Select an team_member" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unassigned">Unassigned</SelectItem>
-                          {assistants.map((a) => (
+                          {team_members.map((a) => (
                             <SelectItem key={a.id} value={a.id}>
                               <span className="flex items-center gap-2">
                                 {a.firstName} {a.lastName}

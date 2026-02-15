@@ -1,8 +1,8 @@
 // src/lib/api.ts
 
 const API_BASE_URL =
-  // import.meta.env.VITE_API_BASE_URL || "https://admiino-backend.onrender.com/api/v1";
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+  import.meta.env.VITE_API_BASE_URL ;
+  // import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
 
 /* ============================
    SHARED TYPES
@@ -42,14 +42,14 @@ export interface User {
 
   isActive: boolean;
 
-  // Optional fields (assistants/managers)
+  // Optional fields (team_members/managers)
   specialization?: string | null;
   experience?: number | null;
   hourlyRate?: number | null;
   bio?: string | null;
   skills?: string[];
 
-  // Assistant availability & rating
+  // TeamMember availability & rating
   isAvailable?: boolean;
   rating?: number;
 
@@ -277,7 +277,7 @@ export interface AssistantDashboard {
    ASSISTANTS & TEAM
 ============================ */
 
-export interface Assistant {
+export interface TeamMember {
   id: string;
   firstName: string;
   lastName: string;
@@ -313,7 +313,7 @@ export interface TeamAssistantsResponse {
   status: string;
   results: number;
   data: {
-    assistants: Assistant[];
+    team_members: TeamMember[];
   };
 }
 
@@ -321,7 +321,7 @@ export interface PendingVerificationsResponse {
   status: string;
   results: number;
   data: {
-    pendingAssistants: Assistant[];
+    pendingAssistants: TeamMember[];
   };
 }
 
@@ -790,7 +790,7 @@ class ApiClient {
   ): Promise<{
     status: string;
     results: number;
-    data: { assistants: Assistant[] };
+    data: { team_members: TeamMember[] };
   }> {
     const queryParams = new URLSearchParams();
     if (filters?.specialization)
@@ -803,8 +803,8 @@ class ApiClient {
     return this.request<{
       status: string;
       results: number;
-      data: { assistants: Assistant[] };
-    }>(`/assistants?${queryParams.toString()}`, {
+      data: { team_members: TeamMember[] };
+    }>(`/team_members?${queryParams.toString()}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
@@ -812,9 +812,9 @@ class ApiClient {
 
   async getAssistantById(
     assistantId: string
-  ): Promise<{ status: string; data: { team_member: Assistant } }> {
-    return this.request<{ status: string; data: { team_member: Assistant } }>(
-      `/assistants/${assistantId}`,
+  ): Promise<{ status: string; data: { team_member: TeamMember } }> {
+    return this.request<{ status: string; data: { team_member: TeamMember } }>(
+      `/team_members/${assistantId}`,
       {
         method: "GET",
         headers: this.getAuthHeaders(),
@@ -832,13 +832,13 @@ class ApiClient {
   ): Promise<{
     status: string;
     message: string;
-    data: { team_member: Assistant };
+    data: { team_member: TeamMember };
   }> {
     return this.request<{
       status: string;
       message: string;
-      data: { team_member: Assistant };
-    }>(`/assistants/${assistantId}/availability`, {
+      data: { team_member: TeamMember };
+    }>(`/team_members/${assistantId}/availability`, {
       method: "PATCH",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
@@ -850,7 +850,7 @@ class ApiClient {
   ): Promise<{
     status: string;
     results: number;
-    data: { assistants: Assistant[] };
+    data: { team_members: TeamMember[] };
   }> {
     const queryParams = new URLSearchParams();
     if (filters?.specialization)
@@ -863,8 +863,8 @@ class ApiClient {
     return this.request<{
       status: string;
       results: number;
-      data: { assistants: Assistant[] };
-    }>(`/assistants/available?${queryParams.toString()}`, {
+      data: { team_members: TeamMember[] };
+    }>(`/team_members/available?${queryParams.toString()}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
@@ -875,7 +875,7 @@ class ApiClient {
   ============================ */
 
   async getCompanyAssistants(): Promise<TeamAssistantsResponse> {
-    return this.request<TeamAssistantsResponse>("/team/assistants", {
+    return this.request<TeamAssistantsResponse>("/team/team_members", {
       method: "GET",
       headers: this.getAuthHeaders(),
     });

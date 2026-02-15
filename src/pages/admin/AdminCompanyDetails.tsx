@@ -91,7 +91,7 @@ const AdminCompanyDetails = () => {
 
   const executives = users.filter((u: any) => u.role === "executive");
   const managers = users.filter((u: any) => u.role === "manager");
-  const assistants = users.filter((u: any) => u.role === "team_member");
+  const team_members = users.filter((u: any) => u.role === "team_member");
   const inactive = users.filter((u: any) => !u.isActive);
   const pending = users.filter((u: any) => u.invitationStatus === "pending");
 
@@ -207,13 +207,13 @@ const AdminCompanyDetails = () => {
       <div className="grid md:grid-cols-3 gap-6 mt-6">
         {/* TeamMembers */}
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-lg mb-3">TeamMembers ({assistants.length})</h3>
+          <h3 className="font-bold text-lg mb-3">TeamMembers ({team_members.length})</h3>
 
-          {assistants.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No assistants.</p>
+          {team_members.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No team_members.</p>
           ) : (
             <ul className="space-y-2">
-              {assistants.map((u: any) => (
+              {team_members.map((u: any) => (
                 <li key={u.id} className="border-b pb-2 border-border">
                   {u.firstName} {u.lastName}
                 </li>

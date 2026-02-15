@@ -229,7 +229,7 @@ const CompanyProfile = () => {
                     rows={4}
                   />
                   <p className="text-sm text-muted-foreground">
-                    This helps assistants understand your company culture and
+                    This helps team_members understand your company culture and
                     work environment.
                   </p>
                 </div>
@@ -244,16 +244,16 @@ const CompanyProfile = () => {
                   Team Management
                 </CardTitle>
                 <CardDescription>
-                  Manage your assistants and team settings
+                  Manage your team_members and team settings
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                     <div>
-                      <h4 className="font-semibold">Assistant Team</h4>
+                      <h4 className="font-semibold">TeamMember Team</h4>
                       <p className="text-sm text-muted-foreground">
-                        Manage your company assistants and verifications
+                        Manage your company team_members and verifications
                       </p>
                     </div>
                     <Button asChild>
@@ -267,7 +267,7 @@ const CompanyProfile = () => {
                         Invitation Settings
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        Control how assistants join your company
+                        Control how team_members join your company
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -281,7 +281,7 @@ const CompanyProfile = () => {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        All assistants require executive approval
+                        All team_members require executive approval
                       </p>
                     </div>
                   </div>
@@ -300,7 +300,7 @@ const CompanyProfile = () => {
                   Company Code
                 </CardTitle>
                 <CardDescription>
-                  Share this code with assistants to join your company
+                  Share this code with team_members to join your company
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -337,7 +337,7 @@ const CompanyProfile = () => {
                 <div className="space-y-2">
                   <h4 className="font-semibold text-sm">How to use:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Share this code with potential assistants</li>
+                    <li>• Share this code with potential team_members</li>
                     <li>• TeamMembers use it to join your company</li>
                     <li>• You'll need to approve their applications</li>
                     <li>• Keep this code secure</li>

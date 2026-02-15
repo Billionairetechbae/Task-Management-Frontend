@@ -66,9 +66,9 @@ const Plans = () => {
               </span>
             </div>
 
-            <h4 className="text-xl font-semibold mb-4">Dedicated Executive Assistant</h4>
+            <h4 className="text-xl font-semibold mb-4">Dedicated Executive TeamMember</h4>
             <p className="text-muted-foreground mb-8">
-              Instantly delegate tasks to a skilled Admiino Chief of Staff or Executive Assistant. Includes all delegation features plus full-service support.
+              Instantly delegate tasks to a skilled Admiino Chief of Staff or Executive TeamMember. Includes all delegation features plus full-service support.
             </p>
 
             <div className="space-y-4 mb-8">
@@ -105,7 +105,7 @@ const Plans = () => {
             </div>
 
             <Button className="w-full h-12 font-semibold" asChild>
-              <Link to="/assistants">Explore TeamMembers</Link>
+              <Link to="/team_members">Explore TeamMembers</Link>
             </Button>
           </div>
         </div>

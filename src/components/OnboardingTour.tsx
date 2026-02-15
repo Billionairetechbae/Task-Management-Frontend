@@ -60,11 +60,11 @@ const executiveTourSteps: TourStep[] = [
     title: "Team Management",
     description: "Invite new team members, verify pending requests, and manage your team_member pool. Keep your team organized and efficient.",
     icon: <Settings className="w-12 h-12 text-primary" />,
-    tip: "Use the company code to invite assistants to join your organization.",
+    tip: "Use the company code to invite team_members to join your organization.",
   },
   {
     title: "AI Hub",
-    description: "Leverage AI agents to automate routine tasks. Our AI assistants handle marketing, operations, and sales tasks automatically.",
+    description: "Leverage AI agents to automate routine tasks. Our AI team_members handle marketing, operations, and sales tasks automatically.",
     icon: <Bot className="w-12 h-12 text-primary" />,
     tip: "Coming soon: Custom AI agent configurations.",
   },
@@ -103,7 +103,7 @@ const assistantTourSteps: TourStep[] = [
   },
   {
     title: "Team Directory",
-    description: "Connect with your colleagues. Browse the team directory to find executives and other assistants in your organization.",
+    description: "Connect with your colleagues. Browse the team directory to find executives and other team_members in your organization.",
     icon: <Users className="w-12 h-12 text-primary" />,
     tip: "Use search to quickly find team members.",
   },
@@ -132,13 +132,13 @@ const managerTourSteps: TourStep[] = [
     title: "Team Directory",
     description: "View all team members, their roles, and current status. Perfect for finding the right person for each task.",
     icon: <Users className="w-12 h-12 text-primary" />,
-    tip: "Filter by role to see executives or assistants specifically.",
+    tip: "Filter by role to see executives or team_members specifically.",
   },
   {
     title: "TeamMembers Overview",
     description: "Monitor your team_member team. See who's available, their specializations, and current workload.",
     icon: <Users className="w-12 h-12 text-primary" />,
-    tip: "Available assistants are highlighted for easy identification.",
+    tip: "Available team_members are highlighted for easy identification.",
   },
   {
     title: "You're All Set! 🚀",

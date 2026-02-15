@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { api, Assistant } from "@/lib/api";
+import { api, TeamMember } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 import { User, Clock, X, Plus, Paperclip } from "lucide-react";
@@ -38,7 +38,7 @@ const CreateTaskDialog = ({
 
   const [loading, setLoading] = useState(false);
   const [assistantsLoading, setAssistantsLoading] = useState(false);
-  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [team_members, setAssistants] = useState<TeamMember[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [fileInputKey, setFileInputKey] = useState(Date.now()); // To reset file input
 
@@ -64,13 +64,13 @@ const CreateTaskDialog = ({
       setAssistantsLoading(true);
 
       const res = await api.getCompanyAssistants();
-      const list = res.data.assistants.filter((a) => a.isVerified);
+      const list = res.data.team_members.filter((a) => a.isVerified);
 
       setAssistants(list);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load assistants",
+        description: "Failed to load team_members",
         variant: "destructive",
       });
     } finally {
@@ -439,18 +439,18 @@ const CreateTaskDialog = ({
             </div>
           </div>
 
-          {/* Assistant Assignment */}
+          {/* TeamMember Assignment */}
           <div>
-            <Label>Assign to Assistant (Optional)</Label>
+            <Label>Assign to TeamMember (Optional)</Label>
 
             {assistantsLoading ? (
               <div className="text-sm flex items-center gap-2 opacity-70 mt-2">
                 <Clock className="w-4 h-4 animate-spin" /> Loading...
               </div>
-            ) : assistants.length === 0 ? (
+            ) : team_members.length === 0 ? (
               <div className="text-sm text-muted-foreground mt-2 border border-dashed rounded-lg p-4 text-center">
                 <User className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                No verified assistants available
+                No verified team_members available
               </div>
             ) : (
               <Select
@@ -467,7 +467,7 @@ const CreateTaskDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {assistants.map((a) => (
+                  {team_members.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.firstName} {a.lastName}
                     </SelectItem>

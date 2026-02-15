@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Star, Search, UserPlus } from "lucide-react";
 import { useState, useEffect } from "react";
-import { api, Assistant } from "@/lib/api";
+import { api, TeamMember } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/components/dashboard/DashboardComponents";
 
 const TeamMembers = () => {
-  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [team_members, setAssistants] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
@@ -27,12 +27,12 @@ const TeamMembers = () => {
     try {
       setLoading(true);
       const response = await api.getTeamMembers();
-      setAssistants(response.data.assistants);
+      setAssistants(response.data.team_members);
     } catch (error) {
-      console.error('Failed to fetch assistants:', error);
+      console.error('Failed to fetch team_members:', error);
       toast({
         title: "Error",
-        description: "Failed to load assistants",
+        description: "Failed to load team_members",
         variant: "destructive",
       });
     } finally {
@@ -40,7 +40,7 @@ const TeamMembers = () => {
     }
   };
 
-  const filteredAssistants = assistants.filter(
+  const filteredAssistants = team_members.filter(
     (team_member) =>
       team_member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       team_member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,7 +50,7 @@ const TeamMembers = () => {
   if (loading) {
     return (
       <DashboardLayout>
-        <LoadingState message="Loading assistants..." />
+        <LoadingState message="Loading team_members..." />
       </DashboardLayout>
     );
   }
@@ -79,8 +79,8 @@ const TeamMembers = () => {
         <ContentCard>
           <EmptyState
             icon={UserPlus}
-            title="No assistants found"
-            description="No assistants match your search criteria"
+            title="No team_members found"
+            description="No team_members match your search criteria"
           />
         </ContentCard>
       ) : (

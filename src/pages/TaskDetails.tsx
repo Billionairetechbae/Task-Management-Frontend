@@ -796,7 +796,7 @@ const TaskDetails = () => {
                   <p className="text-xs text-muted-foreground">
                     {user?.role === "team_member"
                       ? "Assigned By Executive"
-                      : "Assigned Assistant"}
+                      : "Assigned TeamMember"}
                   </p>
                   <div className="flex items-center gap-2 font-semibold text-sm sm:text-base">
                     <User2 className="w-4 h-4 text-primary" />

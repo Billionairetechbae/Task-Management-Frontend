@@ -76,7 +76,7 @@ const App = () => (
 
       {/* TeamMembers Page */}
       <Route
-        path="/assistants"
+        path="/team_members"
         element={
           <ProtectedRoute allowedRoles={["executive", "manager"]}>
             <TeamMembers />

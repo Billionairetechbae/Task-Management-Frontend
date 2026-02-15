@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { api, Assistant } from "@/lib/api";
+import { api, TeamMember } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -56,7 +56,7 @@ const TeamManagement = () => {
 
   const isExecutive = user?.role === "executive";
 
-  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [team_members, setAssistants] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,7 +73,7 @@ const TeamManagement = () => {
   const [confirmType, setConfirmType] = useState<"remove" | "restore" | null>(
     null
   );
-  const [selectedMember, setSelectedMember] = useState<Assistant | null>(null);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Activity log (frontend only)
@@ -91,7 +91,7 @@ const TeamManagement = () => {
       }
 
       const res = await api.getCompanyAssistants();
-      setAssistants(res.data.assistants || []);
+      setAssistants(res.data.team_members || []);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -110,10 +110,10 @@ const TeamManagement = () => {
   /* ---------------------------
    * HELPERS
    * --------------------------*/
-  const isRemoved = (a: Assistant) =>
+  const isRemoved = (a: TeamMember) =>
     a.isActive === false || a.invitationStatus === "removed";
 
-  const filteredAssistants = assistants.filter((a) => {
+  const filteredAssistants = team_members.filter((a) => {
     const isInTab =
       activeTab === "active" ? !isRemoved(a) : isRemoved(a);
 
@@ -136,17 +136,17 @@ const TeamManagement = () => {
     return matchesSearch && matchesStatus && matchesSpecialization;
   });
 
-  const pendingCount = assistants.filter(
+  const pendingCount = team_members.filter(
     (a) => !a.isVerified && !isRemoved(a)
   ).length;
 
-  const verifiedCount = assistants.filter(
+  const verifiedCount = team_members.filter(
     (a) => a.isVerified && !isRemoved(a)
   ).length;
 
-  const removedCount = assistants.filter((a) => isRemoved(a)).length;
+  const removedCount = team_members.filter((a) => isRemoved(a)).length;
 
-  const getStatusBadge = (a: Assistant) =>
+  const getStatusBadge = (a: TeamMember) =>
     isRemoved(a) ? (
       <Badge className="bg-destructive/10 text-destructive border border-destructive/30">
         Removed
@@ -176,7 +176,7 @@ const TeamManagement = () => {
 
   const pushActivity = (
     type: "removed" | "restored",
-    target: Assistant
+    target: TeamMember
   ) => {
     const event: ActivityEvent = {
       id: `${Date.now()}-${target.id}-${type}`,
@@ -194,7 +194,7 @@ const TeamManagement = () => {
   const handleVerify = async (id: string) => {
     try {
       await api.verifyAssistant(id);
-      toast({ title: "Assistant verified!" });
+      toast({ title: "TeamMember verified!" });
       loadAssistants();
     } catch (err: any) {
       toast({
@@ -208,7 +208,7 @@ const TeamManagement = () => {
   const handleReject = async (id: string) => {
     try {
       await api.rejectAssistant(id);
-      toast({ title: "Assistant rejected." });
+      toast({ title: "TeamMember rejected." });
       loadAssistants();
     } catch (err: any) {
       toast({
@@ -221,7 +221,7 @@ const TeamManagement = () => {
 
   const openConfirm = (
     type: "remove" | "restore",
-    member: Assistant
+    member: TeamMember
   ) => {
     setConfirmType(type);
     setSelectedMember(member);
@@ -279,7 +279,7 @@ const TeamManagement = () => {
           <div>
             <h2 className="text-3xl font-bold">Team Management</h2>
             <p className="text-muted-foreground">
-              Manage assistants, status, and removals.
+              Manage team_members, status, and removals.
             </p>
           </div>
 
@@ -303,7 +303,7 @@ const TeamManagement = () => {
           >
             Active Users
             <Badge variant="secondary" className="ml-2">
-              {assistants.filter((a) => !isRemoved(a)).length}
+              {team_members.filter((a) => !isRemoved(a)).length}
             </Badge>
           </button>
 
@@ -330,10 +330,10 @@ const TeamManagement = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Total Team Members</CardTitle>
-                <CardDescription>All assistants in company</CardDescription>
+                <CardDescription>All team_members in company</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{assistants.length}</p>
+                <p className="text-3xl font-bold">{team_members.length}</p>
               </CardContent>
             </Card>
 
@@ -432,7 +432,7 @@ const TeamManagement = () => {
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p className="font-semibold mb-2">
                 {activeTab === "active"
-                  ? "No active assistants"
+                  ? "No active team_members"
                   : "No removed users"}
               </p>
             </CardContent>

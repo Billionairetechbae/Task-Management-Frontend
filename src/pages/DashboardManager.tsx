@@ -27,7 +27,7 @@ import {
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { api, Assistant, Task } from "@/lib/api";
+import { api, TeamMember, Task } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +40,7 @@ const DashboardManager = () => {
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
 
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [assistants, setAssistants] = useState<Assistant[]>([]);
+  const [team_members, setAssistants] = useState<TeamMember[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
 
   // Drawer state
@@ -85,7 +85,7 @@ const DashboardManager = () => {
       const tasksRes = await api.getTasks();
       const assistantsRes = await api.getCompanyAssistants();
 
-      const assistantList = assistantsRes.data.assistants.filter(
+      const assistantList = assistantsRes.data.team_members.filter(
         (a) => a.role === "team_member"
       );
 
@@ -183,11 +183,6 @@ const DashboardManager = () => {
         className="mb-4"
       />
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-<<<<<<< HEAD
-        <StatsCard title="Assistants" value={stats.totalAssistants} icon={Users} iconClassName="bg-primary/10" />
-        <StatsCard title="Verified Assistants" value={stats.verifiedAssistants} icon={CheckCircle2} iconClassName="bg-success/10" />
-        <StatsCard title="Active Tasks" value={stats.inProgress} icon={Clock} iconClassName="bg-info/10" />
-=======
         <StatsCard
           title="TeamMembers"
           value={stats.totalAssistants}
@@ -206,7 +201,6 @@ const DashboardManager = () => {
           icon={Clock}
           iconClassName="bg-info/10"
         />
->>>>>>> f868f13 (feat: add team member pages with dashboard, signup, and listing)
       </div>
 
       {/* Task Overview */}

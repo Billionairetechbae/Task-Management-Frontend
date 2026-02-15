@@ -79,7 +79,7 @@ const DashboardTeamMember = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
 
-  // Drawer state (assistant: update progress)
+  // Drawer state (team_member: update progress)
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
 

@@ -148,7 +148,7 @@ const SignupTeamMember = () => {
           <div className="flex items-center justify-center gap-2 mb-4">
             <Users className="w-8 h-8 text-accent" />
           </div>
-          <h2 className="text-3xl font-bold mb-2">Join a Company as Assistant</h2>
+          <h2 className="text-3xl font-bold mb-2">Join a Company as TeamMember</h2>
           <p className="text-muted-foreground">Get verified and start working with executives</p>
         </div>
 
@@ -314,7 +314,7 @@ const SignupTeamMember = () => {
             </div>
 
             <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
-              {loading ? "Submitting Application..." : "Join Company as Assistant"}
+              {loading ? "Submitting Application..." : "Join Company as TeamMember"}
             </Button>
           </form>
 

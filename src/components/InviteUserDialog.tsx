@@ -103,7 +103,7 @@ const InviteUserDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="team_member">Assistant</SelectItem>
+                <SelectItem value="team_member">TeamMember</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="executive">Executive</SelectItem>
               </SelectContent>

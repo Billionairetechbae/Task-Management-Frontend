@@ -87,7 +87,7 @@ const Dashboard = () => {
                   className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
                   asChild
                 >
-                  <Link to="/assistants">Hire a Chief of Staff Now</Link>
+                  <Link to="/team_members">Hire a Chief of Staff Now</Link>
                 </Button>
               </div>
             </div>
