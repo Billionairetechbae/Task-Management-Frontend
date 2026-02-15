@@ -112,7 +112,9 @@ const ExecutiveAssistanceRequests = () => {
       in_progress: <Clock className="w-3 h-3 mr-1" />,
     };
 
-    const label = status.replace("_", " ");
+    // const label = status.replace("_", " ");
+    const label = status.split("_").join(" ");
+
 
     return (
       <Badge variant={variants[status] || "secondary"} className="capitalize">
