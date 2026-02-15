@@ -68,7 +68,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         { label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
         { label: "Team Management", href: "/team-management", icon: <Crown className="w-5 h-5" /> },
-        { label: "Assistants", href: "/assistants", icon: <UserCircle className="w-5 h-5" /> },
+        { label: "TeamMembers", href: "/assistants", icon: <UserCircle className="w-5 h-5" /> },
         { label: "Company Profile", href: "/company-profile", icon: <Building2 className="w-5 h-5" /> },
         { label: "AI Hub", href: "/ai-hub", icon: <Bot className="w-5 h-5" /> },
       ];
@@ -78,14 +78,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       return [
         { label: "Dashboard", href: "/dashboard-manager", icon: <LayoutDashboard className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
-        { label: "Assistants", href: "/assistants", icon: <UserCircle className="w-5 h-5" /> },
+        { label: "TeamMembers", href: "/assistants", icon: <UserCircle className="w-5 h-5" /> },
       ];
     }
 
     // Assistant
     return [
-      { label: "Dashboard", href: "/dashboard-assistant", icon: <LayoutDashboard className="w-5 h-5" /> },
-      { label: "My Tasks", href: "/dashboard-assistant", icon: <ClipboardList className="w-5 h-5" /> },
+      { label: "Dashboard", href: "/dashboard-team_member", icon: <LayoutDashboard className="w-5 h-5" /> },
+      { label: "My Tasks", href: "/dashboard-team_member", icon: <ClipboardList className="w-5 h-5" /> },
       { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
     ];
   };
@@ -101,7 +101,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       case "admin": return "Platform Admin";
       case "executive": return "Executive";
       case "manager": return "Manager";
-      case "assistant": return "Assistant";
+      case "team_member": return "Assistant";
       default: return "User";
     }
   };

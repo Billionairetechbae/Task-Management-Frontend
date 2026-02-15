@@ -10,7 +10,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
 
-const SignupAssistant = () => {
+const SignupTeamMember = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ const SignupAssistant = () => {
     setLoading(true);
 
     try {
-      await api.signupAssistant(formData);
+      await api.signupTeamMember(formData);
       toast({
         title: "Application submitted!",
         description: "Your account is pending verification from the company executive",
@@ -96,7 +96,7 @@ const SignupAssistant = () => {
                 <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="font-semibold">Profile Created</h4>
-                  <p className="text-sm text-muted-foreground">Your assistant profile has been created successfully</p>
+                  <p className="text-sm text-muted-foreground">Your team_member profile has been created successfully</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -329,4 +329,4 @@ const SignupAssistant = () => {
   );
 };
 
-export default SignupAssistant;
+export default SignupTeamMember;

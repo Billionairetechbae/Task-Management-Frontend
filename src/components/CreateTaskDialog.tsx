@@ -53,7 +53,7 @@ const CreateTaskDialog = ({
   });
 
   /* =======================
-     Load Assistants
+     Load TeamMembers
   ======================= */
   useEffect(() => {
     if (open) fetchAssistants();
@@ -463,7 +463,7 @@ const CreateTaskDialog = ({
                 }
               >
                 <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Select assistant" />
+                  <SelectValue placeholder="Select team_member" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>

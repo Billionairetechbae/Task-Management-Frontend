@@ -400,7 +400,7 @@ const TaskDetails = () => {
           firstName: user?.firstName || '',
           lastName: user?.lastName || '',
           email: user?.email || '',
-          role: user?.role || 'assistant',
+          role: user?.role || 'team_member',
           profilePictureUrl: user?.profilePictureUrl // Handle both fields
         }
       };
@@ -794,13 +794,13 @@ const TaskDetails = () => {
 
                 <div className="sm:col-span-2">
                   <p className="text-xs text-muted-foreground">
-                    {user?.role === "assistant"
+                    {user?.role === "team_member"
                       ? "Assigned By Executive"
                       : "Assigned Assistant"}
                   </p>
                   <div className="flex items-center gap-2 font-semibold text-sm sm:text-base">
                     <User2 className="w-4 h-4 text-primary" />
-                    {user?.role === "assistant"
+                    {user?.role === "team_member"
                       ? `${task.creator?.firstName} ${task.creator?.lastName}`
                       : task.assignee
                       ? `${task.assignee.firstName} ${task.assignee.lastName}`
@@ -879,7 +879,7 @@ const TaskDetails = () => {
               )}
 
               {/* STATUS UPDATE */}
-              {user?.role === "assistant" && (
+              {user?.role === "team_member" && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Update Status</p>
 

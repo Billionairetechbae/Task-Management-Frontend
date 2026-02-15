@@ -1,14 +1,14 @@
 // src/lib/api.ts
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://admiino-backend.onrender.com/api/v1";
+  // import.meta.env.VITE_API_BASE_URL || "https://admiino-backend.onrender.com/api/v1";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
 
 /* ============================
    SHARED TYPES
 ============================ */
 
-export type UserRole = "executive" | "manager" | "assistant" | "admin" ;
+export type UserRole = "executive" | "manager" | "team_member" | "admin" ;
 
 export interface Company {
   id: string;
@@ -32,7 +32,7 @@ export interface User {
   company?: Company | null;
 
   // Roles updated
-  role: "executive" | "manager" | "assistant" | "admin";
+  role: "executive" | "manager" | "team_member" | "admin";
 
   subscriptionTier: "free" | "premium";
 
@@ -535,8 +535,8 @@ class ApiClient {
     return result;
   }
 
-  async signupAssistant(data: SignupAssistantData): Promise<AuthResponse> {
-    const result = await this.request<AuthResponse>("/auth/signup/assistant", {
+  async signupTeamMember(data: SignupAssistantData): Promise<AuthResponse> {
+    const result = await this.request<AuthResponse>("/auth/signup/team_member", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -768,12 +768,12 @@ class ApiClient {
     );
   }
 
-  async getAssistantDashboard(): Promise<{
+  async getTeamMemberDashboard(): Promise<{
     status: string;
     data: AssistantDashboard;
   }> {
     return this.request<{ status: string; data: AssistantDashboard }>(
-      "/dashboard/assistant",
+      "/dashboard/team_member",
       {
         method: "GET",
         headers: this.getAuthHeaders(),
@@ -785,7 +785,7 @@ class ApiClient {
      ASSISTANTS (Public / Browsing)
   ============================ */
 
-  async getAssistants(
+  async getTeamMembers(
     filters?: AssistantFilters
   ): Promise<{
     status: string;
@@ -812,8 +812,8 @@ class ApiClient {
 
   async getAssistantById(
     assistantId: string
-  ): Promise<{ status: string; data: { assistant: Assistant } }> {
-    return this.request<{ status: string; data: { assistant: Assistant } }>(
+  ): Promise<{ status: string; data: { team_member: Assistant } }> {
+    return this.request<{ status: string; data: { team_member: Assistant } }>(
       `/assistants/${assistantId}`,
       {
         method: "GET",
@@ -832,12 +832,12 @@ class ApiClient {
   ): Promise<{
     status: string;
     message: string;
-    data: { assistant: Assistant };
+    data: { team_member: Assistant };
   }> {
     return this.request<{
       status: string;
       message: string;
-      data: { assistant: Assistant };
+      data: { team_member: Assistant };
     }>(`/assistants/${assistantId}/availability`, {
       method: "PATCH",
       headers: this.getAuthHeaders(),
@@ -942,7 +942,7 @@ class ApiClient {
     email: string;
     firstName?: string;
     lastName?: string;
-    invitedRole: "assistant" | "manager" | "executive";
+    invitedRole: "team_member" | "manager" | "executive";
   }): Promise<{ status: string; message: string }> {
     return this.request("/team/invite", {
       method: "POST",

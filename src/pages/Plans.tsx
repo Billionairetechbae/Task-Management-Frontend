@@ -105,7 +105,7 @@ const Plans = () => {
             </div>
 
             <Button className="w-full h-12 font-semibold" asChild>
-              <Link to="/assistants">Explore Assistants</Link>
+              <Link to="/assistants">Explore TeamMembers</Link>
             </Button>
           </div>
         </div>

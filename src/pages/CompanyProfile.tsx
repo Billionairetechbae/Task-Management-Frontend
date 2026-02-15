@@ -112,7 +112,7 @@ const CompanyProfile = () => {
                 Company profile management is only available for executives.
               </p>
               <Button asChild>
-                <Link to="/dashboard-assistant">Back to Dashboard</Link>
+                <Link to="/dashboard-team_member">Back to Dashboard</Link>
               </Button>
             </div>
           </CardContent>
@@ -338,7 +338,7 @@ const CompanyProfile = () => {
                   <h4 className="font-semibold text-sm">How to use:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
                     <li>• Share this code with potential assistants</li>
-                    <li>• Assistants use it to join your company</li>
+                    <li>• TeamMembers use it to join your company</li>
                     <li>• You'll need to approve their applications</li>
                     <li>• Keep this code secure</li>
                   </ul>

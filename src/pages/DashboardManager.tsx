@@ -86,7 +86,7 @@ const DashboardManager = () => {
       const assistantsRes = await api.getCompanyAssistants();
 
       const assistantList = assistantsRes.data.assistants.filter(
-        (a) => a.role === "assistant"
+        (a) => a.role === "team_member"
       );
 
       setTasks(tasksRes.data.tasks);
@@ -183,9 +183,30 @@ const DashboardManager = () => {
         className="mb-4"
       />
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+<<<<<<< HEAD
         <StatsCard title="Assistants" value={stats.totalAssistants} icon={Users} iconClassName="bg-primary/10" />
         <StatsCard title="Verified Assistants" value={stats.verifiedAssistants} icon={CheckCircle2} iconClassName="bg-success/10" />
         <StatsCard title="Active Tasks" value={stats.inProgress} icon={Clock} iconClassName="bg-info/10" />
+=======
+        <StatsCard
+          title="TeamMembers"
+          value={stats.totalAssistants}
+          icon={Users}
+          iconClassName="bg-primary/10"
+        />
+        <StatsCard
+          title="Verified TeamMembers"
+          value={stats.verifiedAssistants}
+          icon={CheckCircle2}
+          iconClassName="bg-success/10"
+        />
+        <StatsCard
+          title="Active Tasks"
+          value={stats.inProgress}
+          icon={Clock}
+          iconClassName="bg-info/10"
+        />
+>>>>>>> f868f13 (feat: add team member pages with dashboard, signup, and listing)
       </div>
 
       {/* Task Overview */}

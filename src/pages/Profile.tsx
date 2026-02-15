@@ -51,7 +51,7 @@ const Profile = () => {
     switch (user.role) {
       case "executive": return "/dashboard-executive";
       case "manager": return "/dashboard-manager";
-      case "assistant": return "/dashboard-assistant";
+      case "team_member": return "/dashboard-team_member";
       case "admin": return "/dashboard-admin";
       default: return "/";
     }
@@ -133,7 +133,7 @@ const Profile = () => {
   const roleBadgeColor = {
     executive: "bg-primary text-primary-foreground",
     manager: "bg-accent text-accent-foreground",
-    assistant: "bg-muted text-muted-foreground",
+    team_member: "bg-muted text-muted-foreground",
     admin: "bg-destructive text-destructive-foreground",
   }[user.role];
 

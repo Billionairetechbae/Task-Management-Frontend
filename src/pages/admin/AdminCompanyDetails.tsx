@@ -91,7 +91,7 @@ const AdminCompanyDetails = () => {
 
   const executives = users.filter((u: any) => u.role === "executive");
   const managers = users.filter((u: any) => u.role === "manager");
-  const assistants = users.filter((u: any) => u.role === "assistant");
+  const assistants = users.filter((u: any) => u.role === "team_member");
   const inactive = users.filter((u: any) => !u.isActive);
   const pending = users.filter((u: any) => u.invitationStatus === "pending");
 
@@ -203,11 +203,11 @@ const AdminCompanyDetails = () => {
         </div>
       </div>
 
-      {/* Assistants + Pending + Inactive */}
+      {/* TeamMembers + Pending + Inactive */}
       <div className="grid md:grid-cols-3 gap-6 mt-6">
-        {/* Assistants */}
+        {/* TeamMembers */}
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-lg mb-3">Assistants ({assistants.length})</h3>
+          <h3 className="font-bold text-lg mb-3">TeamMembers ({assistants.length})</h3>
 
           {assistants.length === 0 ? (
             <p className="text-muted-foreground text-sm">No assistants.</p>

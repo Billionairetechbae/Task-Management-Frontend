@@ -33,7 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api, Task } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-const DashboardAssistant = () => {
+const DashboardTeamMember = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -104,7 +104,7 @@ const DashboardAssistant = () => {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const res = await api.getAssistantDashboard();
+      const res = await api.getTeamMemberDashboard();
       setDashboardData(res.data);
 
       try {
@@ -304,4 +304,4 @@ const DashboardAssistant = () => {
   );
 };
 
-export default DashboardAssistant;
+export default DashboardTeamMember;

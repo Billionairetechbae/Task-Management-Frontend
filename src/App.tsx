@@ -4,14 +4,14 @@ import { Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
 import SignupExecutive from "./pages/SignupExecutive";
-import SignupAssistant from "./pages/SignupAssistant";
+import SignupTeamMember from "./pages/SignupTeamMember";
 import SignupManager from "./pages/SignupManager";
 import SignupExecutiveJoin from "./pages/SignupExecutiveJoin";
 
 import Profile from "./pages/Profile";
 import DashboardExecutive from "./pages/DashboardExecutive";
 import DashboardManager from "./pages/DashboardManager";
-import DashboardAssistant from "./pages/DashboardAssistant";
+import DashboardTeamMember from "./pages/DashboardTeamMember";
 import DashboardAdmin from "./pages/DashboardAdmin";
 
 import AIHub from "./pages/AIHub";
@@ -23,7 +23,7 @@ import TeamMemberProfile from "./pages/TeamMemberProfile";
 
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
-import Assistants from "./pages/Assistants";
+import TeamMembers from "./pages/TeamMembers";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -67,19 +67,19 @@ const App = () => (
       {/* PUBLIC ROUTES */}
       <Route path="/" element={<Login />} />
       <Route path="/signup-executive" element={<SignupExecutive />} />
-      <Route path="/signup-assistant" element={<SignupAssistant />} />
+      <Route path="/signup-team_member" element={<SignupTeamMember />} />
       <Route path="/signup-manager" element={<SignupManager />} />
       <Route path="/signup-executive-join" element={<SignupExecutiveJoin />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-      {/* Assistants Page */}
+      {/* TeamMembers Page */}
       <Route
         path="/assistants"
         element={
           <ProtectedRoute allowedRoles={["executive", "manager"]}>
-            <Assistants />
+            <TeamMembers />
           </ProtectedRoute>
         }
       />
@@ -122,10 +122,10 @@ const App = () => (
       />
 
       <Route
-        path="/dashboard-assistant"
+        path="/dashboard-team_member"
         element={
-          <ProtectedRoute allowedRoles={["assistant"]}>
-            <DashboardAssistant />
+          <ProtectedRoute allowedRoles={["team_member"]}>
+            <DashboardTeamMember />
           </ProtectedRoute>
         }
       />
@@ -142,7 +142,7 @@ const App = () => (
       <Route
         path="/ai-hub"
         element={
-          <ProtectedRoute allowedRoles={["executive", "manager", "assistant"]}>
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
             <AIHub />
           </ProtectedRoute>
         }

@@ -23,7 +23,7 @@ const InviteUserDialog = ({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
-  const [role, setRole] = useState<"assistant" | "manager" | "executive">("assistant");
+  const [role, setRole] = useState<"team_member" | "manager" | "executive">("team_member");
   const [loading, setLoading] = useState(false);
 
   const handleInvite = async () => {
@@ -57,7 +57,7 @@ const InviteUserDialog = ({
       setEmail("");
       setFirstName("");
       setLastName("");
-      setRole("assistant");
+      setRole("team_member");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -103,7 +103,7 @@ const InviteUserDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="assistant">Assistant</SelectItem>
+                <SelectItem value="team_member">Assistant</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="executive">Executive</SelectItem>
               </SelectContent>

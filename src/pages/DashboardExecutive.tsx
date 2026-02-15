@@ -159,7 +159,7 @@ const DashboardExecutive = () => {
   const handleVerifyAssistant = async (assistantId: string) => {
     try {
       await api.verifyAssistant(assistantId);
-      toast({ title: "Assistant verified!", description: "The assistant can now receive tasks" });
+      toast({ title: "Assistant verified!", description: "The team_member can now receive tasks" });
       fetchPendingAssistants();
       fetchDashboard();
     } catch (error: any) {
@@ -251,7 +251,7 @@ const DashboardExecutive = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <p className="text-2xl font-bold">{teamStats.totalAssistants}</p>
-              <p className="text-sm text-muted-foreground">Assistants</p>
+              <p className="text-sm text-muted-foreground">TeamMembers</p>
             </div>
             <div className="text-center p-4 bg-success/10 rounded-lg">
               <p className="text-2xl font-bold text-success">{teamStats.availableAssistants}</p>
@@ -300,24 +300,50 @@ const DashboardExecutive = () => {
             <LoadingState message="Loading verifications..." />
           ) : (
             <div className="space-y-3 mt-4">
+<<<<<<< HEAD
               {pendingAssistants.map((assistant) => (
                 <div key={assistant.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4">
+=======
+              {pendingAssistants.map((team_member) => (
+                <div
+                  key={team_member.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4"
+                >
+>>>>>>> f868f13 (feat: add team member pages with dashboard, signup, and listing)
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                       <User className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-semibold">{assistant.firstName} {assistant.lastName}</p>
-                      <p className="text-sm text-muted-foreground">{assistant.email}</p>
+                      <p className="font-semibold">{team_member.firstName} {team_member.lastName}</p>
+                      <p className="text-sm text-muted-foreground">{team_member.email}</p>
                       <div className="flex gap-2 mt-1">
+<<<<<<< HEAD
                         {assistant.specialization && <Badge variant="outline" className="text-xs">{assistant.specialization}</Badge>}
                         {assistant.experience && <Badge variant="outline" className="text-xs">{assistant.experience} yrs exp</Badge>}
+=======
+                        {team_member.specialization && (
+                          <Badge variant="outline" className="text-xs">{team_member.specialization}</Badge>
+                        )}
+                        {team_member.experience && (
+                          <Badge variant="outline" className="text-xs">{team_member.experience} yrs exp</Badge>
+                        )}
+>>>>>>> f868f13 (feat: add team member pages with dashboard, signup, and listing)
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
+<<<<<<< HEAD
                     <Button size="sm" onClick={() => handleVerifyAssistant(assistant.id)}>
                       <CheckCircle2 className="w-4 h-4 mr-1" />Approve
+=======
+                    <Button size="sm" onClick={() => handleVerifyAssistant(team_member.id)}>
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleRejectAssistant(team_member.id)}>
+                      Reject
+>>>>>>> f868f13 (feat: add team member pages with dashboard, signup, and listing)
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleRejectAssistant(assistant.id)}>Reject</Button>
                   </div>

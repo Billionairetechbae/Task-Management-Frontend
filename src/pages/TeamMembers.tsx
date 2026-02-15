@@ -13,7 +13,7 @@ import {
   EmptyState,
 } from "@/components/dashboard/DashboardComponents";
 
-const Assistants = () => {
+const TeamMembers = () => {
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,7 +26,7 @@ const Assistants = () => {
   const fetchAssistants = async () => {
     try {
       setLoading(true);
-      const response = await api.getAssistants();
+      const response = await api.getTeamMembers();
       setAssistants(response.data.assistants);
     } catch (error) {
       console.error('Failed to fetch assistants:', error);
@@ -41,10 +41,10 @@ const Assistants = () => {
   };
 
   const filteredAssistants = assistants.filter(
-    (assistant) =>
-      assistant.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assistant.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assistant.specialization.toLowerCase().includes(searchTerm.toLowerCase())
+    (team_member) =>
+      team_member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      team_member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      team_member.specialization.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -58,8 +58,8 @@ const Assistants = () => {
   return (
     <DashboardLayout>
       <PageHeader
-        title="Browse Assistants"
-        description="Find the perfect assistant for your tasks"
+        title="Browse TeamMembers"
+        description="Find the perfect team_member for your tasks"
       />
 
       {/* Search */}
@@ -85,63 +85,63 @@ const Assistants = () => {
         </ContentCard>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredAssistants.map((assistant) => (
-            <ContentCard key={assistant.id} className="p-6">
+          {filteredAssistants.map((team_member) => (
+            <ContentCard key={team_member.id} className="p-6">
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-primary font-bold text-lg">
-                    {assistant.firstName.charAt(0)}
-                    {assistant.lastName.charAt(0)}
+                    {team_member.firstName.charAt(0)}
+                    {team_member.lastName.charAt(0)}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-base truncate">
-                    {assistant.firstName} {assistant.lastName}
+                    {team_member.firstName} {team_member.lastName}
                   </h3>
                   <p className="text-sm text-muted-foreground capitalize">
-                    {assistant.specialization} Specialist
+                    {team_member.specialization} Specialist
                   </p>
                   <div className="flex items-center gap-1 mt-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
                         className={`w-3.5 h-3.5 ${
-                          star <= assistant.rating
+                          star <= team_member.rating
                             ? "fill-amber-400 text-amber-400"
                             : "text-muted"
                         }`}
                       />
                     ))}
                     <span className="text-xs text-muted-foreground ml-1">
-                      ({assistant.rating.toFixed(1)})
+                      ({team_member.rating.toFixed(1)})
                     </span>
                   </div>
                 </div>
                 <Badge
                   variant="secondary"
                   className={
-                    assistant.isAvailable
+                    team_member.isAvailable
                       ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                       : "bg-destructive/10 text-destructive border-destructive/20"
                   }
                 >
-                  {assistant.isAvailable ? "Available" : "Busy"}
+                  {team_member.isAvailable ? "Available" : "Busy"}
                 </Badge>
               </div>
 
               <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                {assistant.bio}
+                {team_member.bio}
               </p>
 
               <div className="flex flex-wrap gap-1.5 mb-4">
-                {assistant.skills.slice(0, 3).map((skill, index) => (
+                {team_member.skills.slice(0, 3).map((skill, index) => (
                   <Badge key={index} variant="outline" className="text-xs">
                     {skill}
                   </Badge>
                 ))}
-                {assistant.skills.length > 3 && (
+                {team_member.skills.length > 3 && (
                   <Badge variant="outline" className="text-xs">
-                    +{assistant.skills.length - 3}
+                    +{team_member.skills.length - 3}
                   </Badge>
                 )}
               </div>
@@ -149,10 +149,10 @@ const Assistants = () => {
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 <div>
                   <p className="text-xs text-muted-foreground">Hourly Rate</p>
-                  <p className="font-bold text-lg">${assistant.hourlyRate}/hr</p>
+                  <p className="font-bold text-lg">${team_member.hourlyRate}/hr</p>
                 </div>
-                <Button size="sm" disabled={!assistant.isAvailable}>
-                  {assistant.isAvailable ? "Hire Now" : "Not Available"}
+                <Button size="sm" disabled={!team_member.isAvailable}>
+                  {team_member.isAvailable ? "Hire Now" : "Not Available"}
                 </Button>
               </div>
             </ContentCard>
@@ -163,4 +163,4 @@ const Assistants = () => {
   );
 };
 
-export default Assistants;
+export default TeamMembers;

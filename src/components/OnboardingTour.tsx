@@ -58,7 +58,7 @@ const executiveTourSteps: TourStep[] = [
   },
   {
     title: "Team Management",
-    description: "Invite new team members, verify pending requests, and manage your assistant pool. Keep your team organized and efficient.",
+    description: "Invite new team members, verify pending requests, and manage your team_member pool. Keep your team organized and efficient.",
     icon: <Settings className="w-12 h-12 text-primary" />,
     tip: "Use the company code to invite assistants to join your organization.",
   },
@@ -135,8 +135,8 @@ const managerTourSteps: TourStep[] = [
     tip: "Filter by role to see executives or assistants specifically.",
   },
   {
-    title: "Assistants Overview",
-    description: "Monitor your assistant team. See who's available, their specializations, and current workload.",
+    title: "TeamMembers Overview",
+    description: "Monitor your team_member team. See who's available, their specializations, and current workload.",
     icon: <Users className="w-12 h-12 text-primary" />,
     tip: "Available assistants are highlighted for easy identification.",
   },
@@ -214,7 +214,7 @@ const OnboardingTour = () => {
     switch (user?.role) {
       case "executive":
         return executiveTourSteps;
-      case "assistant":
+      case "team_member":
         return assistantTourSteps;
       case "manager":
         return managerTourSteps;

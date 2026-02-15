@@ -28,8 +28,8 @@ const Login = () => {
           ? "/dashboard-executive"
           : user.role === "manager"
           ? "/dashboard-manager"
-          : user.role === "assistant"
-          ? "/dashboard-assistant"
+          : user.role === "team_member"
+          ? "/dashboard-team_member"
           : "/dashboard-admin";
 
       navigate(route);
@@ -112,7 +112,7 @@ const Login = () => {
           <p className="text-muted-foreground text-lg mb-12">
             The intelligent platform built for executives and their teams—
             enabling seamless task delegation, workflow automation, and
-            assistant collaboration.
+            team_member collaboration.
           </p>
 
           <div className="space-y-6">

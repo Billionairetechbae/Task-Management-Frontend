@@ -21,7 +21,7 @@ const TeamDirectory = () => {
   const [team, setTeam] = useState<AppUser[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<
-    "all" | "executive" | "manager" | "assistant"
+    "all" | "executive" | "manager" | "team_member"
   >("all");
 
   useEffect(() => {
@@ -50,7 +50,7 @@ const TeamDirectory = () => {
         return "bg-purple-100 text-purple-800";
       case "manager":
         return "bg-blue-100 text-blue-800";
-      case "assistant":
+      case "team_member":
         return "bg-green-100 text-green-800";
       case "admin":
         return "bg-red-100 text-red-800";
@@ -65,8 +65,8 @@ const TeamDirectory = () => {
         return "/dashboard-executive";
       case "manager":
         return "/dashboard-manager";
-      case "assistant":
-        return "/dashboard-assistant";
+      case "team_member":
+        return "/dashboard-team_member";
       case "admin":
         return "/dashboard-admin";
       default:
@@ -124,7 +124,7 @@ const TeamDirectory = () => {
               { key: "all", label: "All" },
               { key: "executive", label: "Executives" },
               { key: "manager", label: "Managers" },
-              { key: "assistant", label: "Team Members" },
+              { key: "team_member", label: "Team Members" },
             ].map((r) => (
               <button
                 key={r.key}

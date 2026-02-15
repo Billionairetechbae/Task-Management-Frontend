@@ -15,7 +15,7 @@ const Checkout = () => {
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold mb-4">Complete Your Subscription</h2>
           <p className="text-muted-foreground text-lg">
-            Start working with your dedicated executive assistant today
+            Start working with your dedicated executive team_member today
           </p>
         </div>
 
@@ -137,7 +137,7 @@ const Checkout = () => {
               <div className="space-y-3">
                 <div className="flex items-start gap-2">
                   <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">Dedicated executive assistant</span>
+                  <span className="text-sm">Dedicated executive team_member</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />

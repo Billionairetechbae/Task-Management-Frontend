@@ -123,7 +123,7 @@ const AdminUsers = () => {
           <option value="">All Roles</option>
           <option value="executive">Executives</option>
           <option value="manager">Managers</option>
-          <option value="assistant">Assistants</option>
+          <option value="team_member">TeamMembers</option>
           <option value="admin">Admins</option>
         </select>
 
