@@ -1,5 +1,7 @@
 // src/lib/api.ts
 
+import { JSX } from "react/jsx-runtime";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ;
   // import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -124,6 +126,7 @@ export type TaskPriority = "low" | "medium" | "high";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
 export interface Task {
+  assignees: any[];
   id: string;
   title: string;
   description: string;
@@ -153,6 +156,8 @@ export interface Task {
 
 
   assignee?: {
+    length: any;
+    map(arg0: (u: any) => JSX.Element): import("react").ReactNode;
     id: string;
     firstName: string;
     lastName: string;
