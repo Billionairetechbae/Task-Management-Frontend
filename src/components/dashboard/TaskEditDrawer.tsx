@@ -1,29 +1,15 @@
 // src/components/dashboard/TaskEditDrawer.tsx
+
 import { useState, useEffect, useRef } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import {
   AlertDialog,
@@ -35,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
 import {
   CalendarIcon,
   Loader2,
@@ -46,9 +33,10 @@ import {
   UserMinus,
   AlertTriangle,
 } from "lucide-react";
+
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { api, Task, TeamMember, TaskAttachment, UpdateTaskData } from "@/lib/api";
+import { api, Task, CompanyMember, TaskAttachment, UpdateTaskData } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -94,9 +82,11 @@ export default function TaskEditDrawer({
   const [estimatedHours, setEstimatedHours] = useState<number>(0);
   const [actualHours, setActualHours] = useState<number>(0);
 
-  // Assignees (multi)
-  const [team_members, setAssistants] = useState<TeamMember[]>([]);
-  const [loadingAssistants, setLoadingAssistants] = useState(false);
+  // Workspace members
+  const [members, setMembers] = useState<CompanyMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  // Assignees
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
   const [addAssigneePick, setAddAssigneePick] = useState<string>("select");
 
@@ -111,7 +101,7 @@ export default function TaskEditDrawer({
   useEffect(() => {
     if (open && taskId) {
       fetchTask();
-      if (isManager) fetchAssistants();
+      if (isManager) fetchMembers();
       setActiveTab(initialTab);
     }
     if (!open) {
@@ -126,8 +116,10 @@ export default function TaskEditDrawer({
     if (!taskId) return;
     try {
       setLoading(true);
+
       const res = await api.getTaskById(taskId);
       const t = res.data.task;
+
       setTask(t);
 
       setTitle(t.title);
@@ -139,9 +131,8 @@ export default function TaskEditDrawer({
       setEstimatedHours(t.estimatedHours || 0);
       setActualHours(t.actualHours || 0);
 
-      // Source of truth: multi-assignees if present, else fall back to primary assigneeId
       const multiIds = (t.assignees || []).map((u: any) => u.id).filter(Boolean);
-      const nextIds = multiIds.length ? multiIds : (t.assigneeId ? [t.assigneeId] : []);
+      const nextIds = multiIds.length ? multiIds : t.assigneeId ? [t.assigneeId] : [];
       setSelectedAssigneeIds(nextIds);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -150,15 +141,30 @@ export default function TaskEditDrawer({
     }
   };
 
-  const fetchAssistants = async () => {
+  const fetchMembers = async () => {
     try {
-      setLoadingAssistants(true);
+      setLoadingMembers(true);
+
       const res = await api.getCompanyAssistants();
-      setAssistants(res.data.team_members.filter((a: TeamMember) => a.role === "team_member"));
-    } catch {
-      // silent
+      const data = (res as any)?.data || {};
+
+      const list: CompanyMember[] = Array.isArray(data.members)
+        ? data.members
+        : Array.isArray(data.team_members)
+        ? data.team_members
+        : [];
+
+      // show active team members only (tune if you want managers too)
+      const usable = list.filter(
+        (m) => m.status !== "removed" && m.user?.role === "team_member"
+      );
+
+      setMembers(usable);
+    } catch (err: any) {
+      // keep silent but can log
+      console.error(err);
     } finally {
-      setLoadingAssistants(false);
+      setLoadingMembers(false);
     }
   };
 
@@ -169,19 +175,17 @@ export default function TaskEditDrawer({
       setSaving(true);
 
       if (isAssistant) {
-        // team_member can only update status + actualHours
         const data: UpdateTaskData = { status: status as any, actualHours };
         const res = await api.updateTask(task.id, data);
-
-        // your API shape seems: res.data.task
         const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
+
         setTask(updated);
         onTaskUpdated(updated);
         toast({ title: "Progress updated" });
         return;
       }
 
-      // manager/executive
+      // Manager/executive
       if (pendingFiles.length > 0) {
         const fd = new FormData();
         fd.append("title", title);
@@ -191,9 +195,6 @@ export default function TaskEditDrawer({
         if (deadline) fd.append("deadline", deadline.toISOString());
         fd.append("category", category);
         fd.append("estimatedHours", String(estimatedHours));
-
-        // IMPORTANT: don’t touch assignees on "Save Changes" (multi-assignees are managed separately)
-        // fd.append("assigneeId", ... )  <-- REMOVE THIS
 
         pendingFiles.forEach((f) => fd.append("files", f));
 
@@ -213,8 +214,6 @@ export default function TaskEditDrawer({
           deadline: deadline?.toISOString(),
           category,
           estimatedHours,
-          // IMPORTANT: don’t touch assignees here either
-          // assigneeId: ...
         };
 
         const res = await api.updateTask(task.id, data);
@@ -225,26 +224,17 @@ export default function TaskEditDrawer({
         toast({ title: "Task updated" });
       }
     } catch (err: any) {
-      if (err.message?.includes("403") || err.message?.includes("permission")) {
-        toast({
-          title: "Permission denied",
-          description: "You don't have permission to edit this task",
-          variant: "destructive",
-        });
-      } else {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
-      }
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  // ✅ Add assignee (append mode)
+  // Add assignee (append mode)
   const handleAddAssignee = async (userId: string) => {
     if (!task) return;
     if (!userId || userId === "select") return;
 
-    // prevent duplicates
     if (selectedAssigneeIds.includes(userId)) {
       setAddAssigneePick("select");
       return;
@@ -253,17 +243,17 @@ export default function TaskEditDrawer({
     try {
       setSaving(true);
 
-      const res = await api.updateTask(task.id, {
-        assigneeIds: [userId],
-        appendAssignees: true,
-      } as any);
+      const res = await api.updateTask(
+        task.id,
+        { assigneeIds: [userId], appendAssignees: true } as any
+      );
 
       const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
 
       setTask(updated);
 
       const updatedIds = (updated?.assignees || []).map((u: any) => u.id).filter(Boolean);
-      setSelectedAssigneeIds(updatedIds.length ? updatedIds : (updated?.assigneeId ? [updated.assigneeId] : []));
+      setSelectedAssigneeIds(updatedIds.length ? updatedIds : updated?.assigneeId ? [updated.assigneeId] : []);
 
       onTaskUpdated(updated);
       toast({ title: "Team member added" });
@@ -275,7 +265,7 @@ export default function TaskEditDrawer({
     }
   };
 
-  // ✅ Remove assignee (replace mode with remaining list)
+  // Remove assignee (replace mode)
   const handleRemoveAssignee = async (removeUserId: string) => {
     if (!task) return;
 
@@ -284,17 +274,17 @@ export default function TaskEditDrawer({
     try {
       setSaving(true);
 
-      const res = await api.updateTask(task.id, {
-        assigneeIds: nextIds,
-        appendAssignees: false, // replace mode, so backend removes missing users
-      } as any);
+      const res = await api.updateTask(
+        task.id,
+        { assigneeIds: nextIds, appendAssignees: false } as any
+      );
 
       const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
 
       setTask(updated);
 
       const updatedIds = (updated?.assignees || []).map((u: any) => u.id).filter(Boolean);
-      setSelectedAssigneeIds(updatedIds.length ? updatedIds : (updated?.assigneeId ? [updated.assigneeId] : []));
+      setSelectedAssigneeIds(updatedIds.length ? updatedIds : updated?.assigneeId ? [updated.assigneeId] : []);
 
       onTaskUpdated(updated);
       toast({ title: "Team member removed" });
@@ -368,20 +358,17 @@ export default function TaskEditDrawer({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Helpers for UI
   const assigneesFromTask = (task?.assignees || []) as any[];
   const assigneeIdSet = new Set(selectedAssigneeIds);
 
-  const availableToAdd = team_members.filter((tm) => !assigneeIdSet.has(tm.id));
+  const availableToAdd = members.filter((m) => !assigneeIdSet.has(m.userId));
 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="mb-4">
-            <SheetTitle className="truncate pr-8">
-              {loading ? "Loading..." : task?.title || "Task"}
-            </SheetTitle>
+            <SheetTitle className="truncate pr-8">{loading ? "Loading..." : task?.title || "Task"}</SheetTitle>
           </SheetHeader>
 
           {loading ? (
@@ -415,7 +402,7 @@ export default function TaskEditDrawer({
                 )}
               </TabsList>
 
-              {/* Details Tab */}
+              {/* Details */}
               <TabsContent value="details" className="space-y-4">
                 {isManager ? (
                   <>
@@ -466,23 +453,14 @@ export default function TaskEditDrawer({
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !deadline && "text-muted-foreground"
-                            )}
+                            className={cn("w-full justify-start text-left font-normal", !deadline && "text-muted-foreground")}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {deadline ? format(deadline, "PPP") : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={deadline}
-                            onSelect={setDeadline}
-                            initialFocus
-                            className="p-3 pointer-events-auto"
-                          />
+                          <Calendar mode="single" selected={deadline} onSelect={setDeadline} initialFocus className="p-3 pointer-events-auto" />
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -494,27 +472,19 @@ export default function TaskEditDrawer({
                       </div>
                       <div className="space-y-2">
                         <Label>Estimated Hours</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={estimatedHours}
-                          onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                        />
+                        <Input type="number" min={0} value={estimatedHours} onChange={(e) => setEstimatedHours(Number(e.target.value))} />
                       </div>
                     </div>
                   </>
                 ) : (
                   <>
-                    {/* TeamMember: read-only summary + editable status/hours */}
                     <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
                       <h4 className="font-semibold">{task?.title}</h4>
                       {task?.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
                       <div className="flex gap-2 flex-wrap">
                         <Badge variant="outline">{task?.priority}</Badge>
                         <Badge variant="outline">{task?.category}</Badge>
-                        {task?.deadline && (
-                          <Badge variant="outline">Due {new Date(task.deadline).toLocaleDateString()}</Badge>
-                        )}
+                        {task?.deadline && <Badge variant="outline">Due {new Date(task.deadline).toLocaleDateString()}</Badge>}
                       </div>
                     </div>
 
@@ -534,13 +504,7 @@ export default function TaskEditDrawer({
 
                     <div className="space-y-2">
                       <Label>Actual Hours</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.5}
-                        value={actualHours}
-                        onChange={(e) => setActualHours(Number(e.target.value))}
-                      />
+                      <Input type="number" min={0} step={0.5} value={actualHours} onChange={(e) => setActualHours(Number(e.target.value))} />
                     </div>
                   </>
                 )}
@@ -551,10 +515,9 @@ export default function TaskEditDrawer({
                 </Button>
               </TabsContent>
 
-              {/* Assignees Tab (MANAGER) */}
+              {/* Assignees */}
               {isManager && (
                 <TabsContent value="assignees" className="space-y-4">
-                  {/* Current assignees */}
                   <div className="space-y-2">
                     <Label>Assigned team members</Label>
 
@@ -569,9 +532,7 @@ export default function TaskEditDrawer({
                               <p className="font-medium text-sm truncate">
                                 {u.firstName} {u.lastName}
                               </p>
-                              {u.email && (
-                                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                              )}
+                              {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
                             </div>
 
                             <Button
@@ -592,11 +553,10 @@ export default function TaskEditDrawer({
                     )}
                   </div>
 
-                  {/* Add assignee */}
                   <div className="space-y-2">
                     <Label>Add team member</Label>
 
-                    {loadingAssistants ? (
+                    {loadingMembers ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                         <Loader2 className="h-4 w-4 animate-spin" /> Loading team members...
                       </div>
@@ -613,30 +573,20 @@ export default function TaskEditDrawer({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="select">Select...</SelectItem>
-                          {availableToAdd.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              <span className="flex items-center gap-2">
-                                {a.firstName} {a.lastName}
-                                {a.isAvailable && (
-                                  <span className="inline-block w-2 h-2 rounded-full bg-success" />
-                                )}
-                              </span>
+                          {availableToAdd.map((m) => (
+                            <SelectItem key={m.userId} value={m.userId}>
+                              {m.user.firstName} {m.user.lastName}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     )}
-
-                    <p className="text-xs text-muted-foreground">
-                      Tip: Add appends without removing. Remove uses the minus icon.
-                    </p>
                   </div>
                 </TabsContent>
               )}
 
-              {/* Attachments Tab */}
+              {/* Attachments */}
               <TabsContent value="attachments" className="space-y-4">
-                {/* Existing attachments */}
                 {task?.attachments && task.attachments.length > 0 && (
                   <div className="space-y-2">
                     <Label>Current Attachments</Label>
@@ -673,22 +623,11 @@ export default function TaskEditDrawer({
                   </div>
                 )}
 
-                {/* Upload new (managers only) */}
                 {isManager && (
                   <div className="space-y-2">
                     <Label>Upload New</Label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
+                    <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+                    <Button variant="outline" className="w-full gap-2" onClick={() => fileInputRef.current?.click()}>
                       <Upload className="h-4 w-4" />
                       Select Files
                     </Button>
@@ -702,12 +641,7 @@ export default function TaskEditDrawer({
                               <p className="text-sm truncate">{f.name}</p>
                               <p className="text-xs text-muted-foreground">{formatFileSize(f.size)}</p>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
-                            >
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}>
                               <X className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -726,7 +660,7 @@ export default function TaskEditDrawer({
                 )}
               </TabsContent>
 
-              {/* Danger Zone Tab */}
+              {/* Danger */}
               {isManager && (
                 <TabsContent value="danger" className="space-y-4">
                   <div className="border border-destructive/30 rounded-lg p-4 space-y-3">
@@ -737,11 +671,7 @@ export default function TaskEditDrawer({
                     <p className="text-sm text-muted-foreground">
                       Permanently delete this task and all its attachments. This action cannot be undone.
                     </p>
-                    <Button
-                      variant="destructive"
-                      className="w-full"
-                      onClick={() => setDeleteDialogOpen(true)}
-                    >
+                    <Button variant="destructive" className="w-full" onClick={() => setDeleteDialogOpen(true)}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Task
                     </Button>
@@ -753,7 +683,6 @@ export default function TaskEditDrawer({
         </SheetContent>
       </Sheet>
 
-      {/* Delete confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -762,11 +691,9 @@ export default function TaskEditDrawer({
               Type <strong>DELETE</strong> to confirm. This will permanently remove the task and all data.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Input
-            value={deleteConfirmText}
-            onChange={(e) => setDeleteConfirmText(e.target.value)}
-            placeholder="Type DELETE to confirm"
-          />
+
+          <Input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="Type DELETE to confirm" />
+
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction

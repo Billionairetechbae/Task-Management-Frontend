@@ -34,8 +34,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { api, TeamMember } from "@/lib/api";
+import { api, CompanyMember } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { canAdminWorkspace, canManageWorkspace } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -51,12 +52,14 @@ type ActivityEvent = {
 };
 
 const TeamManagement = () => {
-  const { user } = useAuth();
+  const { user, workspaceRole, activeCompanyId } = useAuth();
   const { toast } = useToast();
 
-  const isExecutive = user?.role === "executive";
+  const globalRole = user?.role ?? null;
+  const canManageTeam = canManageWorkspace(workspaceRole, globalRole);
+  const canAdminTeam = canAdminWorkspace(workspaceRole, globalRole);
 
-  const [team_members, setAssistants] = useState<TeamMember[]>([]);
+  const [teamMembers, setTeamMembers] = useState<CompanyMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -65,33 +68,29 @@ const TeamManagement = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>("active");
 
-  // Invite dialog
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  // Confirm modal
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmType, setConfirmType] = useState<"remove" | "restore" | null>(
     null
   );
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [selectedMember, setSelectedMember] = useState<CompanyMember | null>(
+    null
+  );
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Activity log (frontend only)
   const [activityLog, setActivityLog] = useState<ActivityEvent[]>([]);
 
-  /* ---------------------------
-   * LOAD TEAM DATA
-   * --------------------------*/
-  const loadAssistants = async () => {
+  const loadTeam = async () => {
     try {
       setLoading(true);
-      if (!isExecutive) {
-        setAssistants([]);
+      if (!canManageTeam) {
+        setTeamMembers([]);
         return;
       }
 
       const res = await api.getCompanyAssistants();
-      setAssistants(res.data.team_members || []);
+      setTeamMembers(res.data.members || []);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -104,54 +103,50 @@ const TeamManagement = () => {
   };
 
   useEffect(() => {
-    loadAssistants();
-  }, [isExecutive]);
+    loadTeam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageTeam, activeCompanyId]);
 
   /* ---------------------------
    * HELPERS
    * --------------------------*/
-  const isRemoved = (a: TeamMember) =>
-    a.isActive === false || a.invitationStatus === "removed";
+  const isRemoved = (m: CompanyMember) => m.status === "removed";
 
-  const filteredAssistants = team_members.filter((a) => {
-    const isInTab =
-      activeTab === "active" ? !isRemoved(a) : isRemoved(a);
+  const filtered = teamMembers.filter((m) => {
+    const inTab = activeTab === "active" ? !isRemoved(m) : isRemoved(m);
+    if (!inTab) return false;
 
-    if (!isInTab) return false;
-
+    const fullName = `${m.user.firstName} ${m.user.lastName}`.toLowerCase();
     const matchesSearch =
-      a.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.email.toLowerCase().includes(searchTerm.toLowerCase());
+      fullName.includes(searchTerm.toLowerCase()) ||
+      m.user.email.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" ||
-      (statusFilter === "verified" && a.isVerified && !isRemoved(a)) ||
-      (statusFilter === "pending" && !a.isVerified && !isRemoved(a));
+      (statusFilter === "verified" && m.isVerified && !isRemoved(m)) ||
+      (statusFilter === "pending" && !m.isVerified && !isRemoved(m));
 
     const matchesSpecialization =
       specializationFilter === "all" ||
-      a.specialization === specializationFilter;
+      (m.user.specialization || "general") === specializationFilter;
 
     return matchesSearch && matchesStatus && matchesSpecialization;
   });
 
-  const pendingCount = team_members.filter(
-    (a) => !a.isVerified && !isRemoved(a)
-  ).length;
+  const pendingCount = teamMembers.filter((m) => !m.isVerified && !isRemoved(m))
+    .length;
 
-  const verifiedCount = team_members.filter(
-    (a) => a.isVerified && !isRemoved(a)
-  ).length;
+  const verifiedCount = teamMembers.filter((m) => m.isVerified && !isRemoved(m))
+    .length;
 
-  const removedCount = team_members.filter((a) => isRemoved(a)).length;
+  const removedCount = teamMembers.filter((m) => isRemoved(m)).length;
 
-  const getStatusBadge = (a: TeamMember) =>
-    isRemoved(a) ? (
+  const getStatusBadge = (m: CompanyMember) =>
+    isRemoved(m) ? (
       <Badge className="bg-destructive/10 text-destructive border border-destructive/30">
         Removed
       </Badge>
-    ) : a.isVerified ? (
+    ) : m.isVerified ? (
       <Badge className="bg-success/20 text-success border border-success/30">
         <CheckCircle2 className="w-3 h-3 mr-1" />
         Verified
@@ -171,17 +166,14 @@ const TeamManagement = () => {
       general: "bg-gray-100 text-gray-800 border-gray-200",
       customer_support: "bg-orange-100 text-orange-800 border-orange-200",
     };
-    return map[spec || "general"] || "";
+    return map[spec || "general"] || map.general;
   };
 
-  const pushActivity = (
-    type: "removed" | "restored",
-    target: TeamMember
-  ) => {
+  const pushActivity = (type: "removed" | "restored", target: CompanyMember) => {
     const event: ActivityEvent = {
       id: `${Date.now()}-${target.id}-${type}`,
       type,
-      userName: `${target.firstName} ${target.lastName}`,
+      userName: `${target.user.firstName} ${target.user.lastName}`,
       role: target.role,
       at: new Date().toLocaleString(),
     };
@@ -191,11 +183,11 @@ const TeamManagement = () => {
   /* ---------------------------
    * ACTIONS
    * --------------------------*/
-  const handleVerify = async (id: string) => {
+  const handleVerify = async (userId: string) => {
     try {
-      await api.verifyAssistant(id);
-      toast({ title: "TeamMember verified!" });
-      loadAssistants();
+      await api.verifyAssistant(userId);
+      toast({ title: "Team member approved!" });
+      loadTeam();
     } catch (err: any) {
       toast({
         title: "Error",
@@ -205,11 +197,11 @@ const TeamManagement = () => {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (userId: string) => {
     try {
-      await api.rejectAssistant(id);
-      toast({ title: "TeamMember rejected." });
-      loadAssistants();
+      await api.rejectAssistant(userId);
+      toast({ title: "Team member rejected." });
+      loadTeam();
     } catch (err: any) {
       toast({
         title: "Error",
@@ -219,10 +211,7 @@ const TeamManagement = () => {
     }
   };
 
-  const openConfirm = (
-    type: "remove" | "restore",
-    member: TeamMember
-  ) => {
+  const openConfirm = (type: "remove" | "restore", member: CompanyMember) => {
     setConfirmType(type);
     setSelectedMember(member);
     setConfirmOpen(true);
@@ -235,24 +224,24 @@ const TeamManagement = () => {
       setActionLoading(true);
 
       if (confirmType === "remove") {
-        await api.removeTeamMember(selectedMember.id);
+        await api.removeTeamMember(selectedMember.userId);
         toast({
           title: "User removed",
-          description: `${selectedMember.firstName} ${selectedMember.lastName} has been deactivated.`,
+          description: `${selectedMember.user.firstName} ${selectedMember.user.lastName} has been deactivated.`,
         });
         pushActivity("removed", selectedMember);
       }
 
       if (confirmType === "restore") {
-        await api.restoreTeamMember(selectedMember.id);
+        await api.restoreTeamMember(selectedMember.userId);
         toast({
           title: "User restored",
-          description: `${selectedMember.firstName} ${selectedMember.lastName} is now active again.`,
+          description: `${selectedMember.user.firstName} ${selectedMember.user.lastName} is now active again.`,
         });
         pushActivity("restored", selectedMember);
       }
 
-      await loadAssistants();
+      await loadTeam();
 
       setConfirmOpen(false);
       setSelectedMember(null);
@@ -268,22 +257,18 @@ const TeamManagement = () => {
     }
   };
 
-  /* ---------------------------
-   * RENDER UI
-   * --------------------------*/
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
-        {/* Title + Invite */}
         <div className="flex justify-between mb-8 gap-4 flex-wrap">
           <div>
             <h2 className="text-3xl font-bold">Team Management</h2>
             <p className="text-muted-foreground">
-              Manage team_members, status, and removals.
+              Manage team members, status, and removals.
             </p>
           </div>
 
-          {isExecutive && (
+          {canAdminTeam && (
             <Button className="gap-2" onClick={() => setInviteOpen(true)}>
               <Mail className="w-5 h-5" />
               Invite Team Member
@@ -303,7 +288,7 @@ const TeamManagement = () => {
           >
             Active Users
             <Badge variant="secondary" className="ml-2">
-              {team_members.filter((a) => !isRemoved(a)).length}
+              {teamMembers.filter((m) => !isRemoved(m)).length}
             </Badge>
           </button>
 
@@ -324,16 +309,15 @@ const TeamManagement = () => {
           </button>
         </div>
 
-        {/* SUMMARY CARDS */}
-        {isExecutive && (
+        {canManageTeam && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card>
               <CardHeader>
                 <CardTitle>Total Team Members</CardTitle>
-                <CardDescription>All team_members in company</CardDescription>
+                <CardDescription>All members in workspace</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{team_members.length}</p>
+                <p className="text-3xl font-bold">{teamMembers.length}</p>
               </CardContent>
             </Card>
 
@@ -342,7 +326,9 @@ const TeamManagement = () => {
                 <CardTitle>Verified</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-success">{verifiedCount}</p>
+                <p className="text-3xl font-bold text-success">
+                  {verifiedCount}
+                </p>
               </CardContent>
             </Card>
 
@@ -383,11 +369,7 @@ const TeamManagement = () => {
                   />
                 </div>
 
-                {/* Status filter */}
-                <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                >
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[180px]">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Status" />
@@ -399,7 +381,6 @@ const TeamManagement = () => {
                   </SelectContent>
                 </Select>
 
-                {/* Specialization */}
                 <Select
                   value={specializationFilter}
                   onValueChange={setSpecializationFilter}
@@ -425,22 +406,22 @@ const TeamManagement = () => {
 
         {/* LIST */}
         {loading ? (
-          <Card><CardContent className="p-6">Loading…</CardContent></Card>
-        ) : filteredAssistants.length === 0 ? (
+          <Card>
+            <CardContent className="p-6">Loading…</CardContent>
+          </Card>
+        ) : filtered.length === 0 ? (
           <Card>
             <CardContent className="text-center p-8">
               <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p className="font-semibold mb-2">
-                {activeTab === "active"
-                  ? "No active team_members"
-                  : "No removed users"}
+                {activeTab === "active" ? "No active team members" : "No removed users"}
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4 mb-8">
-            {filteredAssistants.map((a) => (
-              <Card key={a.id}>
+            {filtered.map((m) => (
+              <Card key={m.id}>
                 <CardContent className="flex justify-between p-6 flex-wrap gap-4">
                   <div className="flex gap-4">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
@@ -448,14 +429,16 @@ const TeamManagement = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold">
-                        {a.firstName} {a.lastName}
+                        {m.user.firstName} {m.user.lastName}
                       </h3>
-                      <p className="text-sm text-muted-foreground">{a.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {m.user.email}
+                      </p>
 
                       <div className="flex gap-2 mt-2 flex-wrap">
-                        {getStatusBadge(a)}
-                        <Badge className={getSpecBadge(a.specialization)}>
-                          {a.specialization || "general"}
+                        {getStatusBadge(m)}
+                        <Badge className={getSpecBadge(m.user.specialization)}>
+                          {m.user.specialization || "general"}
                         </Badge>
                       </div>
                     </div>
@@ -463,33 +446,33 @@ const TeamManagement = () => {
 
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button variant="outline" size="sm" asChild>
-                      <Link to={`/team-member/${a.id}`}>View Profile</Link>
+                      <Link to={`/team-member/${m.userId}`}>View Profile</Link>
                     </Button>
 
-                    {/* Actions */}
-                    {activeTab === "active" && !isRemoved(a) && (
+                    {activeTab === "active" && !isRemoved(m) && canManageTeam && (
                       <>
-                        {!a.isVerified ? (
+                        {!m.isVerified && canAdminTeam && (
                           <>
-                            <Button size="sm" onClick={() => handleVerify(a.id)}>
+                            <Button size="sm" onClick={() => handleVerify(m.userId)}>
                               <CheckCircle2 className="w-4 h-4 mr-1" />
                               Approve
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleReject(a.id)}
+                              onClick={() => handleReject(m.userId)}
                             >
                               <X className="w-4 h-4 mr-1" />
                               Reject
                             </Button>
                           </>
-                        ) : (
+                        )}
+                        {m.isVerified && canAdminTeam && (
                           <Button
                             size="sm"
                             variant="destructive"
                             className="gap-1"
-                            onClick={() => openConfirm("remove", a)}
+                            onClick={() => openConfirm("remove", m)}
                           >
                             <Trash2 className="w-4 h-4" />
                             Remove
@@ -498,12 +481,12 @@ const TeamManagement = () => {
                       </>
                     )}
 
-                    {activeTab === "removed" && isRemoved(a) && (
+                    {activeTab === "removed" && isRemoved(m) && canAdminTeam && (
                       <Button
                         size="sm"
                         variant="outline"
                         className="gap-1"
-                        onClick={() => openConfirm("restore", a)}
+                        onClick={() => openConfirm("restore", m)}
                       >
                         <RotateCcw className="w-4 h-4" />
                         Restore
@@ -517,7 +500,7 @@ const TeamManagement = () => {
         )}
 
         {/* ACTIVITY LOG */}
-        {isExecutive && (
+        {canManageTeam && (
           <Card>
             <CardHeader className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -556,11 +539,10 @@ const TeamManagement = () => {
           </Card>
         )}
 
-        {/* INVITE USER DIALOG */}
         <InviteUserDialog
           open={inviteOpen}
           onOpenChange={setInviteOpen}
-          onSuccess={loadAssistants}
+          onSuccess={loadTeam}
         />
       </div>
 
@@ -579,7 +561,7 @@ const TeamManagement = () => {
                 <>
                   This will deactivate{" "}
                   <strong>
-                    {selectedMember.firstName} {selectedMember.lastName}
+                    {selectedMember.user.firstName} {selectedMember.user.lastName}
                   </strong>
                   . They will lose login access but remain in history.
                 </>
@@ -587,7 +569,7 @@ const TeamManagement = () => {
                 <>
                   This will re-activate{" "}
                   <strong>
-                    {selectedMember.firstName} {selectedMember.lastName}
+                    {selectedMember.user.firstName} {selectedMember.user.lastName}
                   </strong>
                   .
                 </>

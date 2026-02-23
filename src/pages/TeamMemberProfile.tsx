@@ -1,8 +1,8 @@
 // src/pages/TeamMemberProfile.tsx
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-import { api, User as AppUser } from "@/lib/api";
+import { api, CompanyMember } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -27,12 +27,13 @@ import {
 type ConfirmAction = "remove" | "restore" | null;
 
 const TeamMemberProfile = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  // NOTE: this is USER ID now
+  const { id: userId } = useParams();
 
-  const [member, setMember] = useState<AppUser | null>(null);
+  const { toast } = useToast();
+  const { user: currentUser, workspaceRole } = useAuth();
+
+  const [member, setMember] = useState<CompanyMember | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
@@ -42,33 +43,44 @@ const TeamMemberProfile = () => {
   useEffect(() => {
     loadMember();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [userId]);
 
   const loadMember = async () => {
+    if (!userId) return;
+
     try {
       setLoading(true);
-      const res = await api.getUserById(id!);
-      setMember(res.data.user);
+
+      // Pull from workspace membership (correct source of truth for status/verification)
+      const m = await api.getWorkspaceMemberByUserId(userId);
+      setMember(m);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to load team member.",
         variant: "destructive",
       });
+      setMember(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const isExecutive = currentUser?.role === "executive";
-  const canModify =
-    isExecutive &&
-    member &&
-    member.role !== "executive" &&
-    currentUser?.id !== member.id;
+  const isWorkspaceManager =
+    workspaceRole === "owner" ||
+    workspaceRole === "admin" ||
+    workspaceRole === "manager";
 
-  const isRemoved =
-    member && (member.isActive === false || member.invitationStatus === "removed");
+  const isGlobalAdmin = currentUser?.role === "admin";
+
+  const canModify =
+    (isWorkspaceManager || isGlobalAdmin) &&
+    member &&
+    member.user.role !== "executive" &&
+    currentUser?.id !== member.userId;
+
+  // IMPORTANT: removed status comes from CompanyMember.status
+  const isRemoved = member?.status === "removed";
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -97,18 +109,18 @@ const TeamMemberProfile = () => {
       setActionLoading(true);
 
       if (confirmAction === "remove") {
-        await api.removeTeamMember(member.id);
+        await api.removeTeamMember(member.userId);
         toast({
           title: "User removed",
-          description: `${member.firstName} has been deactivated.`,
+          description: `${member.user.firstName} has been deactivated.`,
         });
       }
 
       if (confirmAction === "restore") {
-        await api.restoreTeamMember(member.id);
+        await api.restoreTeamMember(member.userId);
         toast({
           title: "User restored",
-          description: `${member.firstName} has been reactivated.`,
+          description: `${member.user.firstName} has been reactivated.`,
         });
       }
 
@@ -133,6 +145,8 @@ const TeamMemberProfile = () => {
       </div>
     );
   }
+
+  const u = member.user;
 
   return (
     <div className="min-h-screen bg-background">
@@ -165,40 +179,46 @@ const TeamMemberProfile = () => {
         <div className="bg-card border border-border rounded-2xl p-8">
           {/* TOP SECTION */}
           <div className="flex flex-col items-center text-center mb-8">
-            {member.profilePictureUrl ? (
+            {u.profilePictureUrl ? (
               <img
-                src={member.profilePictureUrl}
+                src={u.profilePictureUrl}
                 alt="Profile"
                 className="w-32 h-32 rounded-full object-cover border mb-4"
               />
             ) : (
               <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center border text-4xl font-bold text-primary mb-4">
-                {member.firstName[0]}
-                {member.lastName[0]}
+                {(u.firstName?.[0] || "").toUpperCase()}
+                {(u.lastName?.[0] || "").toUpperCase()}
               </div>
             )}
 
             <h2 className="text-3xl font-bold mb-2">
-              {member.firstName} {member.lastName}
+              {u.firstName} {u.lastName}
             </h2>
 
             <div className="flex flex-wrap items-center gap-2 justify-center mb-2">
-              <Badge className={`${getRoleColor(member.role)} text-sm`}>
-                {member.role.toUpperCase()}
+              <Badge className={`${getRoleColor(u.role)} text-sm`}>
+                {u.role.toUpperCase()}
               </Badge>
 
               {isRemoved ? (
-                <Badge variant="outline" className="border-destructive/50 text-destructive">
+                <Badge
+                  variant="outline"
+                  className="border-destructive/50 text-destructive"
+                >
                   Removed / Inactive
                 </Badge>
               ) : (
-                <Badge variant="outline" className="border-emerald-500/40 text-emerald-500">
+                <Badge
+                  variant="outline"
+                  className="border-emerald-500/40 text-emerald-500"
+                >
                   Active
                 </Badge>
               )}
             </div>
 
-            {/* Verification */}
+            {/* Verification (use membership) */}
             <p className="text-xs mt-2 flex items-center gap-1 text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
               {member.isVerified ? "Verified Account" : "Not Verified"}
@@ -213,17 +233,19 @@ const TeamMemberProfile = () => {
                 <Mail className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{member.email}</p>
+                  <p className="font-medium">{u.email}</p>
                 </div>
               </div>
 
-              {member.company && (
+              {(u.company || member.company) && (
                 <>
                   <div className="flex items-center gap-3">
                     <Building2 className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Company</p>
-                      <p className="font-medium">{member.company.name}</p>
+                      <p className="font-medium">
+                        {(u.company || member.company)?.name}
+                      </p>
                     </div>
                   </div>
 
@@ -231,7 +253,9 @@ const TeamMemberProfile = () => {
                     <Award className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Industry</p>
-                      <p className="font-medium">{member.company.industry}</p>
+                      <p className="font-medium">
+                        {(u.company || member.company)?.industry || "—"}
+                      </p>
                     </div>
                   </div>
                 </>
@@ -242,7 +266,7 @@ const TeamMemberProfile = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Joined</p>
                   <p className="font-medium">
-                    {new Date(member.createdAt).toLocaleDateString()}
+                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
                   </p>
                 </div>
               </div>
@@ -250,53 +274,53 @@ const TeamMemberProfile = () => {
 
             {/* Column 2 */}
             <div className="space-y-4">
-              {member.specialization && (
+              {(u.specialization || "").trim() && (
                 <div className="flex items-center gap-3">
                   <Briefcase className="w-5 h-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Specialization</p>
-                    <p className="font-medium capitalize">{member.specialization}</p>
+                    <p className="font-medium capitalize">{u.specialization}</p>
                   </div>
                 </div>
               )}
 
-              {member.experience !== null && member.experience !== undefined && (
+              {u.experience !== null && u.experience !== undefined && (
                 <div>
                   <p className="text-sm text-muted-foreground">Experience</p>
-                  <p className="font-medium">{member.experience} years</p>
+                  <p className="font-medium">{u.experience} years</p>
                 </div>
               )}
 
-              {member.hourlyRate !== null && member.hourlyRate !== undefined && (
+              {u.hourlyRate !== null && u.hourlyRate !== undefined && (
                 <div>
                   <p className="text-sm text-muted-foreground">Hourly Rate</p>
-                  <p className="font-medium">${member.hourlyRate}/hour</p>
+                  <p className="font-medium">${u.hourlyRate}/hour</p>
                 </div>
               )}
 
-              {member.rating && member.rating > 0 && (
+              {typeof u.rating === "number" && u.rating > 0 && (
                 <div className="flex items-center gap-1">
                   <Star className="w-5 h-5 text-yellow-500" />
-                  <p className="font-medium">{member.rating} / 5.0</p>
+                  <p className="font-medium">{u.rating} / 5.0</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* BIO */}
-          {member.bio && (
+          {u.bio && (
             <div className="mt-10">
               <h3 className="text-xl font-bold mb-2">About</h3>
-              <p className="text-muted-foreground leading-relaxed">{member.bio}</p>
+              <p className="text-muted-foreground leading-relaxed">{u.bio}</p>
             </div>
           )}
 
           {/* SKILLS */}
-          {member.skills && member.skills.length > 0 && (
+          {u.skills && u.skills.length > 0 && (
             <div className="mt-10">
               <h3 className="text-xl font-bold mb-2">Skills</h3>
               <div className="flex flex-wrap gap-2">
-                {member.skills.map((skill) => (
+                {u.skills.map((skill) => (
                   <span
                     key={skill}
                     className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
@@ -314,7 +338,6 @@ const TeamMemberProfile = () => {
               <Link to="/team-directory">Back to Directory</Link>
             </Button>
 
-            {/* Executive management actions */}
             {canModify && !isRemoved && (
               <Button
                 variant="destructive"
@@ -352,13 +375,13 @@ const TeamMemberProfile = () => {
             <p className="text-sm text-muted-foreground mb-4">
               {confirmAction === "remove" ? (
                 <>
-                  This will deactivate <strong>{member.firstName}</strong>’s
-                  account. They won’t be able to log in again unless restored.
-                  Historical data will be preserved.
+                  This will deactivate <strong>{u.firstName}</strong>’s account.
+                  They won’t be able to log in again unless restored. Historical
+                  data will be preserved.
                 </>
               ) : (
                 <>
-                  This will reactivate <strong>{member.firstName}</strong>’s account
+                  This will reactivate <strong>{u.firstName}</strong>’s account
                   and allow them to log in again.
                 </>
               )}

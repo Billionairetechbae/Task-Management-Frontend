@@ -25,6 +25,7 @@ import {
   Crown,
   Briefcase,
 } from "lucide-react";
+import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 
 interface NavItem {
   label: string;
@@ -268,13 +269,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-              {/* Notifications */}
+              <WorkspaceSwitcher />
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
               </Button>
-
-              {/* Profile Quick Link */}
               <Button variant="outline" size="sm" asChild className="hidden sm:flex gap-2">
                 <Link to="/profile">
                   <User className="h-4 w-4" />

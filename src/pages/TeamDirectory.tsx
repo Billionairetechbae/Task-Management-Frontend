@@ -1,13 +1,11 @@
-// src/pages/TeamDirectory.tsx
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Users, User, Mail, Search } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Users, Mail, Search } from "lucide-react";
 
-import { api, User as AppUser } from "@/lib/api";
+import { api, CompanyMember } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -15,10 +13,9 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 const TeamDirectory = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [team, setTeam] = useState<AppUser[]>([]);
+  const [team, setTeam] = useState<CompanyMember[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<
     "all" | "executive" | "manager" | "team_member"
@@ -26,13 +23,50 @@ const TeamDirectory = () => {
 
   useEffect(() => {
     loadTeam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTeam = async () => {
     try {
       setLoading(true);
+
       const res = await api.getCompanyTeam();
-      setTeam(res.data.team || []);
+      const data: any = res.data || {};
+
+      let members: CompanyMember[] = [];
+
+      if (Array.isArray(data.members)) {
+        members = data.members as CompanyMember[];
+      } else if (Array.isArray(data.team)) {
+        // legacy shape fallback
+        members = (data.team as any[]).map((legacyUser) => {
+          const role =
+            legacyUser.role === "executive"
+              ? "owner"
+              : legacyUser.role === "manager"
+              ? "manager"
+              : "member";
+
+          const status =
+            legacyUser.invitationStatus === "removed" ? "removed" : "active";
+
+          const isVerified =
+            typeof legacyUser.isVerified === "boolean" ? legacyUser.isVerified : true;
+
+          return {
+            id: legacyUser.companyMemberId, // membership id
+            userId: legacyUser.id, // ✅ user id
+            companyId: legacyUser.companyId ?? null,
+            role,
+            status,
+            isVerified,
+            user: legacyUser,
+            company: legacyUser.company,
+          } as CompanyMember;
+        });
+      }
+
+      setTeam(members);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -59,40 +93,25 @@ const TeamDirectory = () => {
     }
   };
 
-  const getDashboardRoute = () => {
-    switch (user?.role) {
-      case "executive":
-        return "/dashboard-executive";
-      case "manager":
-        return "/dashboard-manager";
-      case "team_member":
-        return "/dashboard-team_member";
-      case "admin":
-        return "/dashboard-admin";
-      default:
-        return "/";
-    }
-  };
-
   const filteredTeam = useMemo(() => {
     return team.filter((member) => {
-      // EXCLUDE removed users from directory
-      if (member.isActive === false || member.invitationStatus === "removed")
+      // hide removed/inactive
+      if (
+        member.status === "removed" ||
+        member.user?.isActive === false ||
+        member.user?.invitationStatus === "removed"
+      ) {
         return false;
+      }
 
-      // Role filter
-      if (roleFilter !== "all" && member.role !== roleFilter) return false;
+      if (roleFilter !== "all" && member.user?.role !== roleFilter) return false;
 
-      // Search filter
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (
-          !member.firstName.toLowerCase().includes(q) &&
-          !member.lastName.toLowerCase().includes(q) &&
-          !member.email.toLowerCase().includes(q)
-        ) {
-          return false;
-        }
+        const first = member.user?.firstName?.toLowerCase() || "";
+        const last = member.user?.lastName?.toLowerCase() || "";
+        const email = member.user?.email?.toLowerCase() || "";
+        if (!first.includes(q) && !last.includes(q) && !email.includes(q)) return false;
       }
 
       return true;
@@ -175,52 +194,56 @@ const TeamDirectory = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTeam.map((member) => (
               <Link
-                key={member.id}
-                to={`/team-member/${member.id}`}
+                // ✅ best key is userId (stable)
+                key={member.userId}
+                // ✅ FIX: use userId in the route
+                to={`/team-member/${member.userId}`}
                 className="bg-card border border-border rounded-xl shadow-sm p-5 hover:shadow-md hover:border-primary/50 transition cursor-pointer flex flex-col items-center text-center"
               >
-                {/* Profile Avatar (BIGGER) */}
-                {member.profilePictureUrl ? (
+                {/* Avatar */}
+                {member.user?.profilePictureUrl ? (
                   <img
-                    src={member.profilePictureUrl}
+                    src={member.user.profilePictureUrl}
                     alt="Profile"
                     className="w-28 h-28 rounded-full object-cover mb-4 border shadow-sm"
                   />
                 ) : (
                   <div className="w-28 h-28 rounded-full bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary mb-4 border shadow-sm">
-                    {member.firstName.charAt(0)}
-                    {member.lastName.charAt(0)}
+                    {(member.user?.firstName?.charAt(0) || "?") +
+                      (member.user?.lastName?.charAt(0) || "?")}
                   </div>
                 )}
 
                 {/* Name */}
                 <h3 className="text-xl font-semibold">
-                  {member.firstName} {member.lastName}
+                  {member.user?.firstName} {member.user?.lastName}
                 </h3>
 
                 {/* Role Badge */}
-                <Badge className={`mt-2 ${getRoleColor(member.role)}`}>
-                  {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                <Badge className={`mt-2 ${getRoleColor(member.user?.role || "")}`}>
+                  {member.user?.role
+                    ? member.user.role.charAt(0).toUpperCase() + member.user.role.slice(1)
+                    : "Member"}
                 </Badge>
 
                 {/* Specialization */}
-                {member.specialization && (
+                {member.user?.specialization && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    {member.specialization}
+                    {member.user.specialization}
                   </p>
                 )}
 
                 {/* Email */}
                 <p className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
                   <Mail className="w-3 h-3" />
-                  {member.email}
+                  {member.user?.email}
                 </p>
 
-                {/* Joined date */}
+                {/* Joined */}
                 <p className="text-[11px] text-muted-foreground mt-2">
                   Joined{" "}
-                  {member.createdAt
-                    ? new Date(member.createdAt).toLocaleDateString()
+                  {member.user?.createdAt
+                    ? new Date(member.user.createdAt).toLocaleDateString()
                     : "—"}
                 </p>
               </Link>

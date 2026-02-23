@@ -1,16 +1,10 @@
 // src/lib/api.ts
 
-import { JSX } from "react/jsx-runtime";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ;
-  // import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
-
 /* ============================
    SHARED TYPES
 ============================ */
 
-export type UserRole = "executive" | "manager" | "team_member" | "admin" ;
+export type UserRole = "executive" | "manager" | "team_member" | "admin";
 
 export interface Company {
   id: string;
@@ -29,12 +23,10 @@ export interface User {
   lastName: string;
   email: string;
 
-  // NEW — backend now returns companyId + nested company object
   companyId: string | null;
   company?: Company | null;
 
-  // Roles updated
-  role: "executive" | "manager" | "team_member" | "admin";
+  role: UserRole;
 
   subscriptionTier: "free" | "premium";
 
@@ -44,24 +36,36 @@ export interface User {
 
   isActive: boolean;
 
-  // Optional fields (team_members/managers)
   specialization?: string | null;
   experience?: number | null;
   hourlyRate?: number | null;
   bio?: string | null;
   skills?: string[];
 
-  // TeamMember availability & rating
   isAvailable?: boolean;
   rating?: number;
 
-  // Profile picture
   profilePictureUrl?: string | null;
 
   createdAt: string;
   updatedAt: string;
 }
 
+export type WorkspaceRole = "owner" | "admin" | "manager" | "member";
+
+export interface CompanyMember {
+  id: string;              // membership id
+  userId: string;          // user id (THIS is what verify/reject expects)
+  companyId: string;
+  role: WorkspaceRole;
+  status: "active" | "removed" | string;
+  isVerified: boolean;
+  invitedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: User;
+  company?: Company;
+}
 
 export interface AuthResponse {
   status: string;
@@ -126,7 +130,6 @@ export type TaskPriority = "low" | "medium" | "high";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
 export interface Task {
-  assignees: any[];
   id: string;
   title: string;
   description: string;
@@ -138,9 +141,8 @@ export interface Task {
   actualHours: number | null;
   tier: string;
 
-  // Backend fields for relation scoping
   assignedAssistantId: string | null;
-  executiveId: string; // creator/owner on backend
+  executiveId: string;
   assigneeId: string | null;
 
   createdAt: string;
@@ -154,10 +156,7 @@ export interface Task {
     role?: string;
   };
 
-
   assignee?: {
-    length: any;
-    map(arg0: (u: any) => JSX.Element): import("react").ReactNode;
     id: string;
     firstName: string;
     lastName: string;
@@ -166,13 +165,16 @@ export interface Task {
   } | null;
 
   attachments?: TaskAttachment[];
+
+  // Some backends return this
+  assignees?: any[];
 }
 
 export interface CreateTaskData {
   title: string;
   description: string;
   priority: TaskPriority;
-  deadline: string; // ISO string
+  deadline: string;
   category: string;
   estimatedHours: number;
   assigneeId?: string;
@@ -279,11 +281,12 @@ export interface AssistantDashboard {
 }
 
 /* ============================
-   ASSISTANTS & TEAM
+   TEAM DIRECTORY CARD TYPE (UI)
+   - used by your TeamMembers page cards
 ============================ */
 
 export interface TeamMember {
-  id: string;
+  id: string; // user id
   firstName: string;
   lastName: string;
   email: string;
@@ -314,11 +317,16 @@ export interface AssistantFilters {
   maxHourlyRate?: number;
 }
 
+/* ============================
+   RESPONSES (TEAM)
+============================ */
+
 export interface TeamAssistantsResponse {
   status: string;
   results: number;
   data: {
-    team_members: TeamMember[];
+    team_members: any;
+    members?: CompanyMember[];
   };
 }
 
@@ -326,17 +334,13 @@ export interface PendingVerificationsResponse {
   status: string;
   results: number;
   data: {
-    pendingAssistants: TeamMember[];
+    pendingMembers: CompanyMember[];
   };
 }
 
-export interface InviteAssistantData {
-  email: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-
+/* ============================
+   COMMENTS
+============================ */
 
 export interface TaskComment {
   id: string;
@@ -358,9 +362,6 @@ export interface TaskComment {
   };
 }
 
-
-
-
 /* ============================
    ASSISTANCE REQUEST TYPES
 ============================ */
@@ -375,7 +376,7 @@ export interface AssistanceRequestAttachment {
 }
 
 export type AssistanceRequestPriority = "low" | "medium" | "high" | "urgent";
-export type AssistanceRequestStatus = 
+export type AssistanceRequestStatus =
   | "pending"
   | "under_review"
   | "quoted"
@@ -406,8 +407,7 @@ export interface AssistanceRequest {
   completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-  
-  // Populated fields
+
   requester?: User;
   company?: Company;
   assignedAdmin?: User;
@@ -480,43 +480,89 @@ export interface CostEstimation {
   currency: string;
 }
 
+/* ============================
+   API BASE URL
+============================ */
 
-
-
-
-
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
 
 /* ============================
    API CLIENT
 ============================ */
 
 class ApiClient {
-  /* -------- Auth header helper -------- */
-  private getAuthHeaders(): HeadersInit {
+  getUserById: any;
+  getTeamMembers: any;
+  private getAuthHeaders(includeWorkspace: boolean = true): HeadersInit {
     const token = localStorage.getItem("auth_token");
-    return {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
+    const activeCompanyId = localStorage.getItem("activeCompanyId");
+
+    const headers: HeadersInit = {};
+
+    // Content-Type should NOT be set when using FormData
+    // so we set it in request() for JSON calls only.
+    if (token) {
+      (headers as any).Authorization = `Bearer ${token}`;
+    }
+    if (includeWorkspace && activeCompanyId) {
+      (headers as any)["x-company-id"] = activeCompanyId;
+    }
+    return headers;
   }
 
-  /* -------- Generic request helper -------- */
-  async request<T>(
-    path: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${path}`;
-    const response = await fetch(url, options);
+
+    const headers = new Headers(options.headers || {});
+    const isFormData = options.body instanceof FormData;
+
+    // Ensure JSON calls always have Content-Type
+    if (!isFormData && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    const response = await fetch(url, { ...options, headers });
 
     let result: any;
     try {
       result = await response.json();
     } catch {
-      throw new Error("Unexpected server response");
+      result = {};
     }
 
     if (!response.ok) {
-      throw new Error(result?.message || "Request failed");
+      const message: string = result?.message || "Request failed";
+
+      // Workspace missing guard
+      if (
+        response.status === 400 &&
+        message.toLowerCase().includes("x-company-id")
+      ) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("workspace:missing", {
+              detail: { message: "Select a workspace to continue" },
+            })
+          );
+          window.dispatchEvent(new Event("workspace:switcher-open"));
+        }
+      }
+
+      if (
+        response.status === 403 &&
+        message.toLowerCase().includes("workspace")
+      ) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("workspace:missing", {
+              detail: { message },
+            })
+          );
+        }
+      }
+
+      throw new Error(message);
     }
 
     return result as T;
@@ -529,34 +575,21 @@ class ApiClient {
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-
-    if (result.token) {
-      localStorage.setItem("auth_token", result.token);
-    }
-
+    if (result.token) localStorage.setItem("auth_token", result.token);
     return result;
   }
 
   async signupTeamMember(data: SignupAssistantData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/team_member", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-
-    if (result.token) {
-      localStorage.setItem("auth_token", result.token);
-    }
-
+    if (result.token) localStorage.setItem("auth_token", result.token);
     return result;
   }
 
-  // ===============================
-  // EXECUTIVE JOIN EXISTING COMPANY
-  // ===============================
   async signupExecutiveJoin(data: {
     firstName: string;
     lastName: string;
@@ -564,28 +597,14 @@ class ApiClient {
     password: string;
     companyCode: string;
   }): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/signup/executive-join`, {
+    const result = await this.request<AuthResponse>("/auth/signup/executive-join", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Executive join failed");
-    }
-
-    if (result.token) {
-      localStorage.setItem("auth_token", result.token);
-    }
-
+    if (result.token) localStorage.setItem("auth_token", result.token);
     return result;
   }
 
-  // ===============================
-  // MANAGER SIGNUP (JOIN COMPANY)
-  // ===============================
   async signupManager(data: {
     firstName: string;
     lastName: string;
@@ -598,44 +617,27 @@ class ApiClient {
     bio?: string;
     skills?: string[];
   }): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/signup/manager`, {
+    const result = await this.request<AuthResponse>("/auth/signup/manager", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Manager signup failed");
-    }
-
-    if (result.token) {
-      localStorage.setItem("auth_token", result.token);
-    }
-
+    if (result.token) localStorage.setItem("auth_token", result.token);
     return result;
   }
-
 
   async login(data: LoginData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-
-    if (result.token) {
-      localStorage.setItem("auth_token", result.token);
-    }
-
+    if (result.token) localStorage.setItem("auth_token", result.token);
     return result;
   }
 
   async getCurrentUser(): Promise<{ status: string; data: { user: User } }> {
-    return this.request<{ status: string; data: { user: User } }>("/auth/me", {
+    return this.request("/auth/me", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -653,25 +655,14 @@ class ApiClient {
     const isFormData = data instanceof FormData;
 
     const headers: HeadersInit = isFormData
-      ? (() => {
-          const token = localStorage.getItem("auth_token");
-          return token ? { Authorization: `Bearer ${token}` } : {};
-        })()
-      : this.getAuthHeaders();
+      ? this.getAuthHeaders(true) // no JSON content-type
+      : { ...this.getAuthHeaders(true), "Content-Type": "application/json" };
 
-    const response = await fetch(`${API_BASE_URL}/tasks`, {
+    return this.request("/tasks", {
       method: "POST",
       headers,
       body: isFormData ? data : JSON.stringify(data),
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to create task");
-    }
-
-    return result;
   }
 
   async getTasks(
@@ -682,11 +673,7 @@ class ApiClient {
     if (filters?.priority) queryParams.append("priority", filters.priority);
     if (filters?.category) queryParams.append("category", filters.category);
 
-    return this.request<{
-      status: string;
-      results: number;
-      data: { tasks: Task[] };
-    }>(`/tasks?${queryParams.toString()}`, {
+    return this.request(`/tasks?${queryParams.toString()}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
@@ -695,13 +682,10 @@ class ApiClient {
   async getTaskById(
     taskId: string
   ): Promise<{ status: string; data: { task: Task } }> {
-    return this.request<{ status: string; data: { task: Task } }>(
-      `/tasks/${taskId}`,
-      {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      }
-    );
+    return this.request(`/tasks/${taskId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
   }
 
   async updateTask(
@@ -711,49 +695,32 @@ class ApiClient {
     const isFormData = data instanceof FormData;
 
     const headers: HeadersInit = isFormData
-      ? (() => {
-          const token = localStorage.getItem("auth_token");
-          return token ? { Authorization: `Bearer ${token}` } : {};
-        })()
-      : this.getAuthHeaders();
+      ? this.getAuthHeaders(true)
+      : { ...this.getAuthHeaders(true), "Content-Type": "application/json" };
 
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    return this.request(`/tasks/${taskId}`, {
       method: "PATCH",
       headers,
       body: isFormData ? data : JSON.stringify(data),
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to update task");
-    }
-
-    return result;
   }
 
   async deleteTaskAttachment(
     attachmentId: string
   ): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>(
-      `/task-attachments/${attachmentId}`,
-      {
-        method: "DELETE",
-        headers: this.getAuthHeaders(),
-      }
-    );
+    return this.request(`/task-attachments/${attachmentId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
   }
 
   async deleteTask(
     taskId: string
   ): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>(
-      `/tasks/${taskId}`,
-      {
-        method: "DELETE",
-        headers: this.getAuthHeaders(),
-      }
-    );
+    return this.request(`/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /* ============================
@@ -764,185 +731,87 @@ class ApiClient {
     status: string;
     data: ExecutiveDashboard;
   }> {
-    return this.request<{ status: string; data: ExecutiveDashboard }>(
-      "/dashboard/executive",
-      {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      }
-    );
+    return this.request("/dashboard/executive", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
   }
 
   async getTeamMemberDashboard(): Promise<{
     status: string;
     data: AssistantDashboard;
   }> {
-    return this.request<{ status: string; data: AssistantDashboard }>(
-      "/dashboard/team_member",
-      {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      }
-    );
-  }
-
-  /* ============================
-     ASSISTANTS (Public / Browsing)
-  ============================ */
-
-  async getTeamMembers(
-    filters?: AssistantFilters
-  ): Promise<{
-    status: string;
-    results: number;
-    data: { team_members: TeamMember[] };
-  }> {
-    const queryParams = new URLSearchParams();
-    if (filters?.specialization)
-      queryParams.append("specialization", filters.specialization);
-    if (filters?.minRating)
-      queryParams.append("minRating", filters.minRating.toString());
-    if (filters?.maxHourlyRate)
-      queryParams.append("maxHourlyRate", filters.maxHourlyRate.toString());
-
-    return this.request<{
-      status: string;
-      results: number;
-      data: { team_members: TeamMember[] };
-    }>(`/team_members?${queryParams.toString()}`, {
+    return this.request("/dashboard/team_member", {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
   }
 
-  async getAssistantById(
-    assistantId: string
-  ): Promise<{ status: string; data: { team_member: TeamMember } }> {
-    return this.request<{ status: string; data: { team_member: TeamMember } }>(
-      `/team_members/${assistantId}`,
-      {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      }
-    );
+  /* ============================
+     TEAM MANAGEMENT (Workspace scoped)
+  ============================ */
+
+  // GET /team/team_members
+  async getCompanyAssistants(): Promise<TeamAssistantsResponse> {
+    return this.request("/team/team_members", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
   }
 
-  async updateAssistantAvailability(
-    assistantId: string,
-    data: {
-      isAvailable?: boolean;
-      hourlyRate?: number;
-      specialization?: string;
-    }
-  ): Promise<{
+  // GET /team/members
+  async getCompanyTeam(): Promise<{
     status: string;
-    message: string;
-    data: { team_member: TeamMember };
+    results: number;
+    data: { members: CompanyMember[] };
   }> {
-    return this.request<{
-      status: string;
-      message: string;
-      data: { team_member: TeamMember };
-    }>(`/team_members/${assistantId}/availability`, {
+    return this.request("/team/members", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // GET /team/pending-verifications
+  async getPendingVerifications(): Promise<PendingVerificationsResponse> {
+    return this.request("/team/pending-verifications", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // PATCH /team/verify/:assistantId  (assistantId == USER ID)
+  async verifyAssistant(userId: string): Promise<{ status: string; message: string }> {
+    return this.request(`/team/verify/${userId}`, {
       method: "PATCH",
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(data),
     });
   }
 
-  async getAvailableAssistants(
-    filters?: AssistantFilters
-  ): Promise<{
-    status: string;
-    results: number;
-    data: { team_members: TeamMember[] };
-  }> {
-    const queryParams = new URLSearchParams();
-    if (filters?.specialization)
-      queryParams.append("specialization", filters.specialization);
-    if (filters?.minRating)
-      queryParams.append("minRating", filters.minRating.toString());
-    if (filters?.maxHourlyRate)
-      queryParams.append("maxHourlyRate", filters.maxHourlyRate.toString());
-
-    return this.request<{
-      status: string;
-      results: number;
-      data: { team_members: TeamMember[] };
-    }>(`/team_members/available?${queryParams.toString()}`, {
-      method: "GET",
+  // DELETE /team/reject/:assistantId  (assistantId == USER ID)
+  async rejectAssistant(userId: string): Promise<{ status: string; message: string }> {
+    return this.request(`/team/reject/${userId}`, {
+      method: "DELETE",
       headers: this.getAuthHeaders(),
     });
   }
 
-  /* ============================
-     TEAM MANAGEMENT (Company-scoped)
-  ============================ */
-
-  async getCompanyAssistants(): Promise<TeamAssistantsResponse> {
-    return this.request<TeamAssistantsResponse>("/team/team_members", {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-  }
-
-  async getPendingVerifications(): Promise<PendingVerificationsResponse> {
-    return this.request<PendingVerificationsResponse>(
-      "/team/pending-verifications",
-      {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      }
-    );
-  }
-
-  async verifyAssistant(
-    assistantId: string
-  ): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>(
-      `/team/verify/${assistantId}`,
-      {
-        method: "PATCH",
-        headers: this.getAuthHeaders(),
-      }
-    );
-  }
-
-  async rejectAssistant(
-    assistantId: string
-  ): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>(
-      `/team/reject/${assistantId}`,
-      {
-        method: "DELETE",
-        headers: this.getAuthHeaders(),
-      }
-    );
-  }
-
-  // async removeTeamMember(userId: string): Promise<{ status: string; message: string }> {
-  //   return this.request(`/team/remove/${userId}`, {
-  //     method: "DELETE",
-  //     headers: this.getAuthHeaders(),
-  //   });
-  // }
-
-  async removeTeamMember(userId: string) {
+  // DELETE /team/remove/:userId
+  async removeTeamMember(userId: string): Promise<{ status: string; message: string }> {
     return this.request(`/team/remove/${userId}`, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
     });
   }
 
-  async restoreTeamMember(userId: string) {
+  // PATCH /team/restore/:userId
+  async restoreTeamMember(userId: string): Promise<{ status: string; message: string }> {
     return this.request(`/team/restore/${userId}`, {
       method: "PATCH",
       headers: this.getAuthHeaders(),
     });
   }
 
-
-
+  // POST /team/invite
   async inviteAssistant(data: {
     email: string;
     firstName?: string;
@@ -951,47 +820,26 @@ class ApiClient {
   }): Promise<{ status: string; message: string }> {
     return this.request("/team/invite", {
       method: "POST",
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   }
 
-  async getCompanyTeam(): Promise<{
-    status: string;
-    results: number;
-    data: { team: User[] };
-  }> {
-    return this.request("/team/members", {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
+  /**
+   * Helper: get a workspace member by USER ID
+   * (Fixes your broken /users/:id dependency for team pages)
+   */
+  async getWorkspaceMemberByUserId(userId: string): Promise<CompanyMember> {
+    const res = await this.getCompanyTeam();
+    const member = res.data.members.find((m) => m.userId === userId);
+    if (!member) throw new Error("User not found in this workspace.");
+    return member;
   }
 
-  async getTeamDirectory(): Promise<{
-    status: string;
-    results: number;
-    data: { team: User[] };
-  }> {
-    return this.request("/team/directory", {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-  }
+  /* ============================
+    PROFILE
+  ============================ */
 
-  async getUserById(
-    userId: string
-  ): Promise<{ status: string; data: { user: User } }> {
-    return this.request<{ status: string; data: { user: User } }>(
-      `/users/${userId}`,
-      {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      }
-    );
-  }
-
-
-  // PATCH /profile/update
   async updateUserProfile(updates: {
     firstName?: string;
     lastName?: string;
@@ -1002,38 +850,26 @@ class ApiClient {
   }) {
     return this.request("/profile/update", {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     });
   }
-
-
 
   async uploadProfilePicture(file: File) {
     const form = new FormData();
     form.append("profilePicture", file);
 
-    const response = await fetch(`${API_BASE_URL}/profile/upload-picture`, {
+    return this.request("/profile/upload-picture", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
-      },
+      headers: this.getAuthHeaders(true), // no content-type
       body: form,
     });
-
-    const result = await response.json();
-
-    if (!response.ok) throw new Error(result.message || "Upload failed");
-
-    return result;
   }
-
 
   /* ============================
     ADMIN MODULE
   ============================ */
 
-  // GET ADMIN SUMMARY
   async getAdminSummary(): Promise<{
     status: string;
     data: {
@@ -1051,7 +887,6 @@ class ApiClient {
     });
   }
 
-  // GET ALL USERS
   async getAdminUsers(): Promise<{
     status: string;
     results: number;
@@ -1063,7 +898,6 @@ class ApiClient {
     });
   }
 
-  // GET ALL COMPANIES
   async getAdminCompanies(): Promise<{
     status: string;
     results: number;
@@ -1075,7 +909,6 @@ class ApiClient {
     });
   }
 
-  // GET ALL TASKS
   async getAdminTasks(): Promise<{
     status: string;
     results: number;
@@ -1086,10 +919,6 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
-
-  /* ============================
-    ADMIN — USERS
-  ============================ */
 
   async adminGetUsers(filters?: {
     role?: string;
@@ -1112,7 +941,6 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
-
 
   async adminDeactivateUser(userId: string) {
     return this.request(`/admin/users/${userId}/deactivate`, {
@@ -1141,12 +969,6 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
-
-
-
-  /* ============================
-    ADMIN — COMPANIES
-  ============================ */
 
   async adminGetCompanies(filters?: {
     search?: string;
@@ -1197,8 +1019,6 @@ class ApiClient {
     });
   }
 
-
-
   async adminGetTasks(filters?: {
     status?: string;
     priority?: string;
@@ -1228,7 +1048,6 @@ class ApiClient {
     });
   }
 
-
   async adminGetUserById(userId: string): Promise<{
     status: string;
     data: { user: any };
@@ -1238,7 +1057,6 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
-
 
   async adminGetSystemLogs() {
     return this.request("/admin/logs", {
@@ -1264,7 +1082,6 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
-
 
   async adminGetDeletedUsers(): Promise<{
     status: string;
@@ -1294,13 +1111,14 @@ class ApiClient {
   }> {
     return this.request("/auth/resend-verification", {
       method: "POST",
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(false), "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
   }
 
-
-
+  /* ============================
+    TASK COMMENTS
+  ============================ */
 
   async getTaskComments(
     taskId: string,
@@ -1316,15 +1134,15 @@ class ApiClient {
     };
   }> {
     const queryParams = new URLSearchParams();
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.offset) queryParams.append("offset", params.offset.toString());
 
     const url = `/task-comments/task/${taskId}/comments${
-      queryParams.toString() ? `?${queryParams.toString()}` : ''
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
 
     return this.request(url, {
-      method: 'GET',
+      method: "GET",
       headers: this.getAuthHeaders(),
     });
   }
@@ -1338,8 +1156,8 @@ class ApiClient {
     involvedUsers: string[];
   }> {
     return this.request(`/task-comments/task/${taskId}/comments`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
     });
   }
@@ -1352,8 +1170,8 @@ class ApiClient {
     comment: TaskComment;
   }> {
     return this.request(`/task-comments/${commentId}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
+      method: "PUT",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
     });
   }
@@ -1365,21 +1183,21 @@ class ApiClient {
     message: string;
   }> {
     return this.request(`/task-comments/${commentId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: this.getAuthHeaders(),
     });
   }
 
-  // WebSocket token endpoint (optional, for secure WebSocket connections)
   async getWebSocketToken(): Promise<{ token: string }> {
-    return this.request('/auth/websocket-token', {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
+    return this.request("/auth/websocket-token", {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
     });
   }
 
-
-
+  /* ============================
+    ASSISTANCE REQUESTS
+  ============================ */
 
   async createAssistanceRequest(
     data: CreateAssistanceRequestData
@@ -1389,49 +1207,26 @@ class ApiClient {
     data: { assistanceRequest: AssistanceRequest };
   }> {
     const formData = new FormData();
-    
-    // Append form fields
     formData.append("title", data.title);
     formData.append("description", data.description);
     formData.append("category", data.category);
-    
-    if (data.priority) {
-      formData.append("priority", data.priority);
-    }
-    
-    if (data.deadline) {
-      formData.append("deadline", data.deadline);
-    }
-    
-    if (data.estimatedHours) {
-      formData.append("estimatedHours", data.estimatedHours.toString());
-    }
-    
-    // Append attachments if any
-    if (data.attachments && data.attachments.length > 0) {
-      data.attachments.forEach((file) => {
-        formData.append("attachments", file);
-      });
-    }
 
-    // Get auth token manually for FormData request
-    const token = localStorage.getItem("auth_token");
-    const headers: HeadersInit = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    if (data.priority) formData.append("priority", data.priority);
+    if (data.deadline) formData.append("deadline", data.deadline);
+    if (data.estimatedHours !== undefined)
+      formData.append("estimatedHours", String(data.estimatedHours));
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => formData.append("attachments", file));
     }
-    // Note: Don't set Content-Type for FormData, browser will set it with boundary
 
     return this.request("/assistance", {
       method: "POST",
-      headers,
+      headers: this.getAuthHeaders(true),
       body: formData,
     });
   }
 
-  /**
-   * Get executive's assistance requests
-   */
   async getMyAssistanceRequests(filters?: {
     status?: AssistanceRequestStatus;
     search?: string;
@@ -1440,12 +1235,9 @@ class ApiClient {
   }): Promise<{
     status: string;
     results: number;
-    data: {
-      data: { requests: AssistanceRequest[]; }; requests: AssistanceRequest[] 
-};
+    data: { requests: AssistanceRequest[] };
   }> {
     const params = new URLSearchParams();
-    
     if (filters?.status) params.append("status", filters.status);
     if (filters?.search) params.append("search", filters.search);
     if (filters?.sort) params.append("sort", filters.sort);
@@ -1457,9 +1249,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * Get assistance request details
-   */
   async getAssistanceRequestDetails(
     requestId: string
   ): Promise<{
@@ -1472,9 +1261,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * Cancel an assistance request (Executive only)
-   */
   async cancelAssistanceRequest(
     requestId: string
   ): Promise<{
@@ -1487,9 +1273,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * Get all assistance requests (Admin only)
-   */
   async getAllAssistanceRequests(filters?: {
     status?: AssistanceRequestStatus;
     priority?: AssistanceRequestPriority;
@@ -1500,14 +1283,9 @@ class ApiClient {
   }): Promise<{
     status: string;
     results: number;
-    data: {
-      // results: number;
-      results: number; 
-      requests: AssistanceRequest[] 
-};
+    data: { requests: AssistanceRequest[] };
   }> {
     const params = new URLSearchParams();
-    
     if (filters?.status) params.append("status", filters.status);
     if (filters?.priority) params.append("priority", filters.priority);
     if (filters?.companyId) params.append("companyId", filters.companyId);
@@ -1521,9 +1299,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * Update assistance request (Admin only)
-   */
   async updateAssistanceRequest(
     requestId: string,
     data: UpdateAssistanceRequestData
@@ -1534,14 +1309,11 @@ class ApiClient {
   }> {
     return this.request(`/assistance/admin/${requestId}`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   }
 
-  /**
-   * Convert assistance request to task (Admin only)
-   */
   async convertAssistanceRequestToTask(
     requestId: string,
     data?: ConvertToTaskData
@@ -1550,22 +1322,16 @@ class ApiClient {
     message: string;
     data: {
       task: Task;
-      request: {
-        id: string;
-        taskId: string;
-      };
+      request: { id: string; taskId: string };
     };
   }> {
     return this.request(`/assistance/admin/${requestId}/convert-to-task`, {
       method: "POST",
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  /**
-   * Get assistance request statistics
-   */
   async getAssistanceRequestStats(): Promise<{
     status: string;
     data: { stats: AssistanceRequestStats };
@@ -1576,9 +1342,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * Estimate cost for assistance
-   */
   async estimateAssistanceCost(
     estimatedHours: number,
     hourlyRate?: number
@@ -1587,19 +1350,14 @@ class ApiClient {
     data: { calculation: CostEstimation };
   }> {
     const params = new URLSearchParams();
-    params.append("estimatedHours", estimatedHours.toString());
-    
-    if (hourlyRate) {
-      params.append("hourlyRate", hourlyRate.toString());
-    }
+    params.append("estimatedHours", String(estimatedHours));
+    if (hourlyRate !== undefined) params.append("hourlyRate", String(hourlyRate));
 
     return this.request(`/assistance/estimate-cost?${params.toString()}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
   }
-
 }
-
 
 export const api = new ApiClient();
