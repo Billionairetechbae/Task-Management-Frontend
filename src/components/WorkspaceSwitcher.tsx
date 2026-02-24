@@ -13,7 +13,7 @@ import {
 import CreateWorkspaceDialog from "@/components/CreateWorkspaceDialog";
 
 const WorkspaceSwitcher = () => {
-  const { workspaces, activeCompanyId, setActiveCompanyId, user, workspaceRole } = useAuth();
+  const { workspaces, activeCompanyId, setActiveCompanyId, user, workspaceRole, activeWorkspace } = useAuth();
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -23,13 +23,7 @@ const WorkspaceSwitcher = () => {
     return () => window.removeEventListener("workspace:switcher-open", handler);
   }, []);
 
-  const currentWorkspace = useMemo(() => {
-    if (!workspaces || workspaces.length === 0) return null;
-    if (!activeCompanyId) return workspaces[0];
-    return workspaces.find((w) => w.id === activeCompanyId) || workspaces[0];
-  }, [workspaces, activeCompanyId]);
-
-  const label = currentWorkspace?.name || user?.company?.name || "Select workspace";
+  const label = activeWorkspace?.name || "Select workspace";
 
   const subtitle = workspaceRole ? workspaceRole.toUpperCase() : user?.role?.toUpperCase();
 
@@ -74,7 +68,7 @@ const WorkspaceSwitcher = () => {
               className={workspace.id === activeCompanyId ? "font-semibold" : ""}
             >
               <div className="flex flex-col">
-                <span>{workspace.name}</span>
+                <span>{workspace.name || "Workspace"}</span>
                 <span className="text-[11px] text-muted-foreground">
                   {workspace.role.toUpperCase()}
                 </span>

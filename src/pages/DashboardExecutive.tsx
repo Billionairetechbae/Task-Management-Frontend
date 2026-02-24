@@ -38,7 +38,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 
 const DashboardExecutive = () => {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const { toast } = useToast();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -346,7 +346,7 @@ const DashboardExecutive = () => {
             <h3 className="font-semibold mb-1">Your Company Code</h3>
             <p className="text-sm text-muted-foreground mb-3">Share this code with team members to join your workspace</p>
             <div className="bg-primary/10 border border-primary/20 rounded-lg px-4 py-3 inline-block">
-              <code className="text-xl font-mono font-bold text-primary">{user?.company?.companyCode || "Loading..."}</code>
+              <code className="text-xl font-mono font-bold text-primary">{activeWorkspace?.company?.companyCode || "Loading..."}</code>
             </div>
           </div>
           <Button variant="outline" className="gap-2"><Mail className="w-4 h-4" />Share Code</Button>

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const TeamDirectory = () => {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -128,7 +128,7 @@ const TeamDirectory = () => {
             <p className="text-muted-foreground">
               Browse executives, managers, and team members in{" "}
               <span className="font-semibold">
-                {user?.company?.name || "your company"}
+                {activeWorkspace?.name || "your company"}
               </span>
               .
             </p>

@@ -31,39 +31,66 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { api } from "@/lib/api";
 
 const CompanyProfile = () => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, activeCompanyId, activeWorkspace } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
-    company: "",
-    companySize: "",
+    name: "",
+    size: "",
     industry: "",
     bio: "",
   });
 
   const isExecutive = user?.role === "executive";
 
-  useEffect(() => {
-    if (user) {
+  const fetchCompany = async () => {
+    if (!activeCompanyId) return;
+    try {
+      setLoading(true);
+      const res = await api.getActiveCompany();
+      const company = res.data.company;
       setFormData({
-        company: user.company?.name || "",
-        companySize: user.company?.size || "",
-        industry: user.company?.industry || "",
-        bio: user.bio || "",
+        name: company.name || "",
+        size: company.size || "",
+        industry: company.industry || "",
+        bio: company.bio || "", // assuming bio might be on company or we use user.bio as fallback
       });
+    } catch (error) {
+      console.error("Failed to fetch company details:", error);
+      // Fallback to activeWorkspace data if API fails
+      if (activeWorkspace?.company) {
+        setFormData({
+          name: activeWorkspace.company.name || "",
+          size: (activeWorkspace.company as any).size || "",
+          industry: activeWorkspace.company.industry || "",
+          bio: "",
+        });
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [user]);
+  };
+
+  useEffect(() => {
+    fetchCompany();
+  }, [activeCompanyId]);
 
   const handleSave = async () => {
     if (!isExecutive) return;
 
     try {
       setSaving(true);
-      // TODO: call backend PATCH /company or similar when available
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.updateActiveCompany({
+        name: formData.name,
+        size: formData.size,
+        industry: formData.industry,
+        bio: formData.bio,
+      });
 
       toast({
         title: "Profile updated!",
@@ -84,7 +111,7 @@ const CompanyProfile = () => {
   };
 
   const copyCompanyCode = () => {
-    const code = user?.company?.companyCode;
+    const code = activeWorkspace?.company?.companyCode;
     if (code) {
       navigator.clipboard.writeText(code);
       setCopied(true);
@@ -99,6 +126,16 @@ const CompanyProfile = () => {
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!isExecutive) {
     return (
@@ -167,9 +204,9 @@ const CompanyProfile = () => {
                     <Label htmlFor="company">Company Name</Label>
                     <Input
                       id="company"
-                      value={formData.company}
+                      value={formData.name}
                       onChange={(e) =>
-                        handleChange("company", e.target.value)
+                        handleChange("name", e.target.value)
                       }
                       placeholder="Your company name"
                     />
@@ -178,9 +215,9 @@ const CompanyProfile = () => {
                   <div className="space-y-2">
                     <Label htmlFor="companySize">Company Size</Label>
                     <Select
-                      value={formData.companySize}
+                      value={formData.size}
                       onValueChange={(value) =>
-                        handleChange("companySize", value)
+                        handleChange("size", value)
                       }
                     >
                       <SelectTrigger>
@@ -307,7 +344,7 @@ const CompanyProfile = () => {
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                   <div className="text-center">
                     <div className="text-2xl font-mono font-bold text-primary mb-2">
-                      {user?.company?.companyCode || "Loading..."}
+                      {activeWorkspace?.company?.companyCode || "Loading..."}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Unique company identifier
@@ -319,7 +356,7 @@ const CompanyProfile = () => {
                   onClick={copyCompanyCode}
                   variant="outline"
                   className="w-full gap-2"
-                  disabled={!user?.company?.companyCode}
+                  disabled={!activeWorkspace?.company?.companyCode}
                 >
                   {copied ? (
                     <>

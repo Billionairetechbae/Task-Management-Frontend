@@ -105,6 +105,7 @@ const DashboardTeamMember = () => {
     try {
       setLoading(true);
       const res = await api.getTeamMemberDashboard();
+      console.log("TEAM MEMBER DASHBOARD RAW:", res);
       setDashboardData(res.data);
 
       try {
@@ -132,6 +133,22 @@ const DashboardTeamMember = () => {
     }
     return "Executive";
   };
+
+  // Safe fallbacks to prevent blank screens if API shape changes/fields missing
+  const safe: any = (dashboardData as any)?.data ?? (dashboardData as any) ?? {};
+  const overview: any = safe.overview ?? {};
+  const tasksAgg: any = overview.tasks ?? overview;
+  const inProgress: number =
+    tasksAgg.inProgress ?? tasksAgg.inProgressTasks ?? dashboardData?.currentTasks?.inProgress ?? 0;
+  const pendingCount: number =
+    tasksAgg.pending ?? tasksAgg.pendingTasks ?? dashboardData?.currentTasks?.pending ?? 0;
+  const completedCount: number = tasksAgg.completed ?? tasksAgg.completedTasks ?? 0;
+  const overdueCount: number = overview.overdue ?? tasksAgg.overdue ?? 0;
+  const totalAssigned: number = overview.totalAssigned ?? 0;
+  const completionRate: number = overview.completionRate ?? tasksAgg.completionRate ?? 0;
+  const onTimeCompletionRate: number = overview.onTimeCompletionRate ?? 0;
+  const averageHours: number = overview.averageHours ?? 0;
+  const totalHours: number = overview.totalHours ?? 0;
 
   const handleTaskUpdated = (updatedTask: Task) => {
     setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
@@ -167,10 +184,10 @@ const DashboardTeamMember = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard title="Total Assigned" value={dashboardData.overview.totalAssigned} icon={ClipboardList} iconClassName="bg-primary/10" />
-        <StatsCard title="Completion Rate" value={`${dashboardData.overview.completionRate}%`} icon={TrendingUp} iconClassName="bg-success/10" />
-        <StatsCard title="In Progress" value={dashboardData.currentTasks.inProgress} icon={Clock} iconClassName="bg-info/10" />
-        <StatsCard title="Overdue" value={dashboardData.overview.overdue} icon={AlertTriangle} iconClassName="bg-destructive/10" />
+        <StatsCard title="Total Assigned" value={totalAssigned} icon={ClipboardList} iconClassName="bg-primary/10" />
+        <StatsCard title="Completion Rate" value={`${completionRate}%`} icon={TrendingUp} iconClassName="bg-success/10" />
+        <StatsCard title="In Progress" value={inProgress} icon={Clock} iconClassName="bg-info/10" />
+        <StatsCard title="Overdue" value={overdueCount} icon={AlertTriangle} iconClassName="bg-destructive/10" />
       </div>
 
       {/* Performance & Current Tasks */}
@@ -179,11 +196,11 @@ const DashboardTeamMember = () => {
           <SectionHeader title="Current Tasks" />
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="text-center p-4 bg-info/10 rounded-lg">
-              <p className="text-2xl font-bold text-info">{dashboardData.currentTasks.inProgress}</p>
+              <p className="text-2xl font-bold text-info">{inProgress}</p>
               <p className="text-sm text-muted-foreground">In Progress</p>
             </div>
             <div className="text-center p-4 bg-warning/10 rounded-lg">
-              <p className="text-2xl font-bold text-warning">{dashboardData.currentTasks.pending}</p>
+              <p className="text-2xl font-bold text-warning">{pendingCount}</p>
               <p className="text-sm text-muted-foreground">Pending</p>
             </div>
           </div>
@@ -194,15 +211,15 @@ const DashboardTeamMember = () => {
           <div className="space-y-4 mt-4">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">On-Time Completion</span>
-              <Badge variant="secondary">{dashboardData.overview.onTimeCompletionRate}%</Badge>
+              <Badge variant="secondary">{onTimeCompletionRate}%</Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Avg. Hours per Task</span>
-              <Badge variant="secondary">{dashboardData.overview.averageHours}h</Badge>
+              <Badge variant="secondary">{averageHours}h</Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Total Hours Logged</span>
-              <Badge variant="secondary">{dashboardData.overview.totalHours}h</Badge>
+              <Badge variant="secondary">{totalHours}h</Badge>
             </div>
           </div>
         </ContentCard>

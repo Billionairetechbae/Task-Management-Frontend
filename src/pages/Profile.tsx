@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
 const Profile = () => {
-  const { user, refreshUser, logout, setUser } = useAuth();
+  const { user, refreshUser, logout, setUser, activeWorkspace } = useAuth();
   const { toast } = useToast();
 
   if (!user) return null;
@@ -77,8 +77,8 @@ const Profile = () => {
 
       const result = await api.uploadProfilePicture(file);
 
-      if (result?.data?.user) {
-        setUser(result.data.user);
+      if (result && typeof result === 'object' && 'data' in result && result.data && typeof result.data === 'object' && 'user' in result.data && result.data.user) {
+        setUser(result.data.user as any);
       }
 
       toast({ title: "Profile picture updated!" });
@@ -220,16 +220,16 @@ const Profile = () => {
               </div>
 
               {/* COMPANY INFO */}
-              {user.company && (
+              {activeWorkspace && (
                 <div className="mb-6 p-4 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-2 mb-3">
                     <Building2 className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold">Company</h3>
                   </div>
                   <div className="space-y-2 text-sm">
-                    <p className="font-medium">{user.company.name}</p>
-                    <p className="text-muted-foreground">{user.company.industry}</p>
-                    <p className="text-muted-foreground">{user.company.size}</p>
+                    <p className="font-medium">{activeWorkspace.name}</p>
+                    <p className="text-muted-foreground">{activeWorkspace.company?.industry}</p>
+                    <p className="text-muted-foreground">{(activeWorkspace.company as any)?.size}</p>
                   </div>
                 </div>
               )}

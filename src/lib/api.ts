@@ -7,6 +7,7 @@
 export type UserRole = "executive" | "manager" | "team_member" | "admin";
 
 export interface Company {
+  bio: string;
   id: string;
   name: string;
   companyCode: string;
@@ -67,12 +68,26 @@ export interface CompanyMember {
   company?: Company;
 }
 
+export interface WorkspaceItem {
+  companyId: string;
+  role: WorkspaceRole;
+  status: string;
+  isVerified: boolean;
+  company: {
+    id: string;
+    name: string;
+    companyCode: string;
+    industry?: string | null;
+  };
+}
+
 export interface AuthResponse {
   status: string;
   message: string;
   token: string;
   data: {
     user: User;
+    workspaces?: WorkspaceItem[];
   };
 }
 
@@ -341,6 +356,7 @@ export interface PendingVerificationsResponse {
   status: string;
   results: number;
   data: {
+    pendingAssistants: any[];
     pendingMembers: CompanyMember[];
   };
 }
@@ -530,6 +546,19 @@ class ApiClient {
       headers.set("Content-Type", "application/json");
     }
 
+    try {
+      if (
+        typeof path === "string" &&
+        path.startsWith("/tasks") &&
+        (options.method || "GET") === "GET"
+      ) {
+        const hdrObj: Record<string, string> = {};
+        headers.forEach((v, k) => (hdrObj[k] = v));
+        // TEMP DEBUG: verify x-company-id header is present on GET /tasks
+        console.log("API DEBUG /tasks headers:", hdrObj);
+      }
+    } catch {}
+
     const response = await fetch(url, { ...options, headers });
 
     let result: any;
@@ -657,7 +686,9 @@ class ApiClient {
     return result;
   }
 
-  async getCurrentUser(): Promise<{ status: string; data: { user: User } }> {
+  async getCurrentUser(): Promise<{ status: string; data: {
+    workspaces: any[]; user: User 
+} }> {
     return this.request("/auth/me", {
       method: "GET",
       headers: this.getAuthHeaders(false),
@@ -1017,6 +1048,33 @@ class ApiClient {
     return this.request(`/admin/companies?${params.toString()}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getActiveCompany(): Promise<{
+    status: string;
+    data: { company: Company };
+  }> {
+    return this.request("/companies/active", {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async updateActiveCompany(data: {
+    name?: string;
+    size?: string;
+    industry?: string;
+    bio?: string;
+  }): Promise<{
+    status: string;
+    message: string;
+    data: { company: Company };
+  }> {
+    return this.request("/companies/active", {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify(data),
     });
   }
 
