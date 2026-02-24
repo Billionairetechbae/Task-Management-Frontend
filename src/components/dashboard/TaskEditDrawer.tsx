@@ -1,6 +1,6 @@
 // src/components/dashboard/TaskEditDrawer.tsx
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,9 @@ interface TaskEditDrawerProps {
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+
+// Helper: unique list, preserves order
+const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
 
 export default function TaskEditDrawer({
   open,
@@ -131,8 +134,11 @@ export default function TaskEditDrawer({
       setEstimatedHours(t.estimatedHours || 0);
       setActualHours(t.actualHours || 0);
 
-      const multiIds = (t.assignees || []).map((u: any) => u.id).filter(Boolean);
-      const nextIds = multiIds.length ? multiIds : t.assigneeId ? [t.assigneeId] : [];
+      // ✅ FIX: UNION primary assigneeId + assignees[]
+      const multiIds = (t.assignees || []).map((u: any) => u?.id).filter(Boolean);
+      const primaryId = t.assigneeId ? [t.assigneeId] : [];
+      const nextIds = uniq([...primaryId, ...multiIds]);
+
       setSelectedAssigneeIds(nextIds);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -154,14 +160,13 @@ export default function TaskEditDrawer({
         ? data.team_members
         : [];
 
-      // show active team members only (tune if you want managers too)
+      // active team members only (you can include managers if needed)
       const usable = list.filter(
         (m) => m.status !== "removed" && m.user?.role === "team_member"
       );
 
       setMembers(usable);
-    } catch (err: any) {
-      // keep silent but can log
+    } catch (err) {
       console.error(err);
     } finally {
       setLoadingMembers(false);
@@ -252,8 +257,10 @@ export default function TaskEditDrawer({
 
       setTask(updated);
 
-      const updatedIds = (updated?.assignees || []).map((u: any) => u.id).filter(Boolean);
-      setSelectedAssigneeIds(updatedIds.length ? updatedIds : updated?.assigneeId ? [updated.assigneeId] : []);
+      // ✅ FIX: UNION primary assigneeId + assignees[] after save too
+      const multiIds = (updated?.assignees || []).map((u: any) => u?.id).filter(Boolean);
+      const primaryId = updated?.assigneeId ? [updated.assigneeId] : [];
+      setSelectedAssigneeIds(uniq([...primaryId, ...multiIds]));
 
       onTaskUpdated(updated);
       toast({ title: "Team member added" });
@@ -269,6 +276,7 @@ export default function TaskEditDrawer({
   const handleRemoveAssignee = async (removeUserId: string) => {
     if (!task) return;
 
+    // remove from selected list, but keep primary if backend forces it
     const nextIds = selectedAssigneeIds.filter((id) => id !== removeUserId);
 
     try {
@@ -283,8 +291,10 @@ export default function TaskEditDrawer({
 
       setTask(updated);
 
-      const updatedIds = (updated?.assignees || []).map((u: any) => u.id).filter(Boolean);
-      setSelectedAssigneeIds(updatedIds.length ? updatedIds : updated?.assigneeId ? [updated.assigneeId] : []);
+      // ✅ FIX: UNION primary assigneeId + assignees[] after save too
+      const multiIds = (updated?.assignees || []).map((u: any) => u?.id).filter(Boolean);
+      const primaryId = updated?.assigneeId ? [updated.assigneeId] : [];
+      setSelectedAssigneeIds(uniq([...primaryId, ...multiIds]));
 
       onTaskUpdated(updated);
       toast({ title: "Team member removed" });
@@ -358,17 +368,42 @@ export default function TaskEditDrawer({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const assigneesFromTask = (task?.assignees || []) as any[];
-  const assigneeIdSet = new Set(selectedAssigneeIds);
+  // ---------- ✅ ASSIGNEE DISPLAY FIX ----------
+  // Backend might return "assignees" without the primary assignee.
+  // So we show: (task.assignees) + (primary user resolved from members) if missing.
+  const assigneesForUI = useMemo(() => {
+    const list = (task?.assignees || []) as any[];
+    const primaryId = task?.assigneeId;
 
-  const availableToAdd = members.filter((m) => !assigneeIdSet.has(m.userId));
+    if (!primaryId) return list;
+
+    const alreadyInList = list.some((u) => u?.id === primaryId);
+    if (alreadyInList) return list;
+
+    // try resolve primary from members list
+    const primaryMember = members.find((m) => m.userId === primaryId);
+    if (primaryMember?.user) {
+      return [{ ...primaryMember.user, id: primaryId }, ...list];
+    }
+
+    // fallback: show a minimal placeholder so user sees something
+    return [{ id: primaryId, firstName: "Primary", lastName: "Assignee" }, ...list];
+  }, [task?.assignees, task?.assigneeId, members]);
+
+  const assigneeIdSet = useMemo(() => new Set(selectedAssigneeIds), [selectedAssigneeIds]);
+
+  const availableToAdd = useMemo(() => {
+    return members.filter((m) => !assigneeIdSet.has(m.userId));
+  }, [members, assigneeIdSet]);
 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="mb-4">
-            <SheetTitle className="truncate pr-8">{loading ? "Loading..." : task?.title || "Task"}</SheetTitle>
+            <SheetTitle className="truncate pr-8">
+              {loading ? "Loading..." : task?.title || "Task"}
+            </SheetTitle>
           </SheetHeader>
 
           {loading ? (
@@ -453,14 +488,23 @@ export default function TaskEditDrawer({
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !deadline && "text-muted-foreground")}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !deadline && "text-muted-foreground"
+                            )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {deadline ? format(deadline, "PPP") : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={deadline} onSelect={setDeadline} initialFocus className="p-3 pointer-events-auto" />
+                          <Calendar
+                            mode="single"
+                            selected={deadline}
+                            onSelect={setDeadline}
+                            initialFocus
+                            className="p-3 pointer-events-auto"
+                          />
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -472,7 +516,12 @@ export default function TaskEditDrawer({
                       </div>
                       <div className="space-y-2">
                         <Label>Estimated Hours</Label>
-                        <Input type="number" min={0} value={estimatedHours} onChange={(e) => setEstimatedHours(Number(e.target.value))} />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={estimatedHours}
+                          onChange={(e) => setEstimatedHours(Number(e.target.value))}
+                        />
                       </div>
                     </div>
                   </>
@@ -484,7 +533,9 @@ export default function TaskEditDrawer({
                       <div className="flex gap-2 flex-wrap">
                         <Badge variant="outline">{task?.priority}</Badge>
                         <Badge variant="outline">{task?.category}</Badge>
-                        {task?.deadline && <Badge variant="outline">Due {new Date(task.deadline).toLocaleDateString()}</Badge>}
+                        {task?.deadline && (
+                          <Badge variant="outline">Due {new Date(task.deadline).toLocaleDateString()}</Badge>
+                        )}
                       </div>
                     </div>
 
@@ -504,7 +555,13 @@ export default function TaskEditDrawer({
 
                     <div className="space-y-2">
                       <Label>Actual Hours</Label>
-                      <Input type="number" min={0} step={0.5} value={actualHours} onChange={(e) => setActualHours(Number(e.target.value))} />
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={actualHours}
+                        onChange={(e) => setActualHours(Number(e.target.value))}
+                      />
                     </div>
                   </>
                 )}
@@ -521,9 +578,9 @@ export default function TaskEditDrawer({
                   <div className="space-y-2">
                     <Label>Assigned team members</Label>
 
-                    {assigneesFromTask.length > 0 ? (
+                    {assigneesForUI.length > 0 ? (
                       <div className="space-y-2">
-                        {assigneesFromTask.map((u) => (
+                        {assigneesForUI.map((u) => (
                           <div
                             key={u.id}
                             className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/30"
@@ -533,6 +590,11 @@ export default function TaskEditDrawer({
                                 {u.firstName} {u.lastName}
                               </p>
                               {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
+                              {task?.assigneeId === u.id && (
+                                <p className="text-[11px] text-muted-foreground mt-1">
+                                  Primary assignee
+                                </p>
+                              )}
                             </div>
 
                             <Button
@@ -592,7 +654,10 @@ export default function TaskEditDrawer({
                     <Label>Current Attachments</Label>
                     <div className="space-y-2">
                       {task.attachments.map((att) => (
-                        <div key={att.id} className="flex items-center justify-between p-2 border border-border rounded-lg">
+                        <div
+                          key={att.id}
+                          className="flex items-center justify-between p-2 border border-border rounded-lg"
+                        >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                             <div className="min-w-0">
@@ -626,8 +691,18 @@ export default function TaskEditDrawer({
                 {isManager && (
                   <div className="space-y-2">
                     <Label>Upload New</Label>
-                    <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-                    <Button variant="outline" className="w-full gap-2" onClick={() => fileInputRef.current?.click()}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
                       <Upload className="h-4 w-4" />
                       Select Files
                     </Button>
@@ -641,7 +716,12 @@ export default function TaskEditDrawer({
                               <p className="text-sm truncate">{f.name}</p>
                               <p className="text-xs text-muted-foreground">{formatFileSize(f.size)}</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
+                            >
                               <X className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -671,7 +751,11 @@ export default function TaskEditDrawer({
                     <p className="text-sm text-muted-foreground">
                       Permanently delete this task and all its attachments. This action cannot be undone.
                     </p>
-                    <Button variant="destructive" className="w-full" onClick={() => setDeleteDialogOpen(true)}>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Task
                     </Button>
@@ -692,7 +776,11 @@ export default function TaskEditDrawer({
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <Input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="Type DELETE to confirm" />
+          <Input
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="Type DELETE to confirm"
+          />
 
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
