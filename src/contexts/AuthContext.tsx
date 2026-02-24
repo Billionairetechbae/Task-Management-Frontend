@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return stored || null;
   });
   const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | null>(null);
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>(loadCachedWorkspaces);
 
   const activeWorkspace = useMemo(() => {
     if (!activeCompanyId) return workspaces[0] || null;
@@ -156,13 +156,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await api.getCurrentUser();
       console.log("ME raw response:", response);
       const fetchedUser = response.data?.user;
-      const rawWs =
-        (response.data as any)?.workspaces ??
-        (response as any)?.workspaces ??
-        loadCachedWorkspaces();
-      const ws: Workspace[] = (Array.isArray(rawWs) ? rawWs : []).map((w: any) => ({
-        id: w.companyId || w.company?.id,
-        name: w.company?.name ?? "Workspace",
+      const apiWs = (response.data as any)?.workspaces ?? (response as any)?.workspaces ?? [];
+      const cachedWs = loadCachedWorkspaces();
+
+      // Merge workspaces to handle potential lag in /auth/me after creation
+      const mergedWs = [...apiWs];
+      cachedWs.forEach((c: any) => {
+        const cId = c.id || c.companyId || c.company?.id;
+        if (!mergedWs.find((m: any) => (m.companyId || m.company?.id || m.id) === cId)) {
+          mergedWs.push(c);
+        }
+      });
+
+      const ws: Workspace[] = mergedWs.map((w: any) => ({
+        id: w.companyId || w.company?.id || w.id,
+        name: w.company?.name ?? w.name ?? "Workspace",
         role: (w.role || "member") as WorkspaceRole,
         status: w.status || "active",
         isVerified: !!w.isVerified,
@@ -173,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               companyCode: w.company.companyCode,
               industry: w.company.industry ?? null,
             }
-          : null,
+          : w.id ? { id: w.id, name: w.name } : null,
       })).filter((w: Workspace) => !!w.id);
       console.log("ME normalized workspaces:", ws);
       saveCachedWorkspaces(ws);

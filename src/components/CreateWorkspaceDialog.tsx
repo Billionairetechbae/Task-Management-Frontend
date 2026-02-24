@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   open: boolean;
@@ -13,6 +14,7 @@ interface Props {
 
 export default function CreateWorkspaceDialog({ open, onOpenChange }: Props) {
   const { toast } = useToast();
+  const { setActiveCompanyId, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState<string | undefined>(undefined);
@@ -30,12 +32,33 @@ export default function CreateWorkspaceDialog({ open, onOpenChange }: Props) {
       const newCompany =
         res?.data?.company || res?.company || res?.data || res;
       const newId = newCompany?.id;
-      toast({ title: "Workspace created" });
+      
       if (newId) {
-        localStorage.setItem("activeCompanyId", newId);
+        // Manually update cache before reload/refresh so it's immediate
+        const WS_STORAGE_KEY = "workspaces_cache";
+        const raw = localStorage.getItem(WS_STORAGE_KEY);
+        const cached = raw ? JSON.parse(raw) : [];
+        const newWs = {
+          id: newId,
+          name: newCompany.name,
+          role: "owner",
+          status: "active",
+          company: newCompany
+        };
+        localStorage.setItem(WS_STORAGE_KEY, JSON.stringify([...cached, newWs]));
+        
+        setActiveCompanyId(newId);
+        toast({ title: "Workspace created successfully!" });
+        
+        // Refresh state
+        await refreshUser();
+        onOpenChange(false);
+        
+        // Force reload to ensure all dashboard stats and state are reset for the new workspace
+        window.location.reload();
+      } else {
+        throw new Error("Failed to get new workspace ID");
       }
-      onOpenChange(false);
-      window.location.reload();
     } catch (err: any) {
       toast({
         title: "Failed to create workspace",
