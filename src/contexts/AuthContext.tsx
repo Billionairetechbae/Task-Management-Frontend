@@ -87,7 +87,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshUser = async () => {
-    const token = localStorage.getItem('auth_token');
+    const token =
+      localStorage.getItem('auth_token') || localStorage.getItem('token');
     if (!token) {
       setLoading(false);
       return;
@@ -101,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Failed to fetch user:', error);
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
       setUser(null);
       initializeWorkspaceState(null);
     } finally {

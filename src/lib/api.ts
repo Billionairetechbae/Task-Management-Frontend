@@ -148,6 +148,13 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
 
+  company?: {
+    id: string;
+    name: string;
+    companyCode?: string;
+    industry?: string;
+  };
+
   creator?: {
     id: string;
     firstName: string;
@@ -495,7 +502,8 @@ class ApiClient {
   getUserById: any;
   getTeamMembers: any;
   private getAuthHeaders(includeWorkspace: boolean = true): HeadersInit {
-    const token = localStorage.getItem("auth_token");
+    const token =
+      localStorage.getItem("auth_token") || localStorage.getItem("token");
     const activeCompanyId = localStorage.getItem("activeCompanyId");
 
     const headers: HeadersInit = {};
@@ -577,7 +585,10 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    if (result.token) localStorage.setItem("auth_token", result.token);
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("token", result.token);
+    }
     return result;
   }
 
@@ -586,7 +597,10 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    if (result.token) localStorage.setItem("auth_token", result.token);
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("token", result.token);
+    }
     return result;
   }
 
@@ -601,7 +615,10 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    if (result.token) localStorage.setItem("auth_token", result.token);
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("token", result.token);
+    }
     return result;
   }
 
@@ -621,7 +638,10 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    if (result.token) localStorage.setItem("auth_token", result.token);
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("token", result.token);
+    }
     return result;
   }
 
@@ -630,7 +650,10 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    if (result.token) localStorage.setItem("auth_token", result.token);
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("token", result.token);
+    }
     return result;
   }
 
@@ -643,6 +666,7 @@ class ApiClient {
 
   logout(): void {
     localStorage.removeItem("auth_token");
+    localStorage.removeItem("token");
   }
 
   /* ============================
@@ -744,6 +768,14 @@ class ApiClient {
     return this.request("/dashboard/team_member", {
       method: "GET",
       headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createWorkspace(data: { name: string; industry?: string; size?: string }) {
+    return this.request("/companies", {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+      body: JSON.stringify(data),
     });
   }
 

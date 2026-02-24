@@ -29,7 +29,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     // Get token from localStorage
-    const token = localStorage.getItem('auth_token');
+    const token =
+      localStorage.getItem('auth_token') || localStorage.getItem('token');
     
     if (!user || !token) {
       // Disconnect if no user or token

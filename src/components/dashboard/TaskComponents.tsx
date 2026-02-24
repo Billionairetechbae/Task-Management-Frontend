@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Task } from "@/lib/api";
+import CompanyBadge from "@/components/CompanyBadge";
 
 interface TaskTableProps {
   tasks: Task[];
@@ -91,7 +92,10 @@ export const TaskTable = ({
         <div key={task.id} className="p-4 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-sm truncate">{task.title}</h4>
+              <div className="flex items-center gap-2">
+                <CompanyBadge company={task.company} />
+                <h4 className="font-semibold text-sm truncate">{task.title}</h4>
+              </div>
               {task.description && (
                 <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                   {task.description}
@@ -151,7 +155,10 @@ export const TaskTable = ({
           className="grid grid-cols-[2fr,1fr,1fr,1fr,1fr,auto] gap-4 p-4 items-center hover:bg-muted/30 transition-colors"
         >
           <div className="min-w-0">
-            <p className="font-medium truncate">{task.title}</p>
+            <div className="flex items-center gap-2">
+              <CompanyBadge company={task.company} />
+              <p className="font-medium truncate">{task.title}</p>
+            </div>
             {task.description && (
               <p className="text-sm text-muted-foreground truncate">{task.description}</p>
             )}

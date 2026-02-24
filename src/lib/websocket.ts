@@ -140,7 +140,8 @@ class WebSocketService {
 
   private handleOnline(): void {
     console.log('🌐 Network online, attempting reconnect...');
-    const token = localStorage.getItem('auth_token');
+  const token =
+    localStorage.getItem('auth_token') || localStorage.getItem('token');
     if (token) {
       this.connect(token).catch(console.error);
     }

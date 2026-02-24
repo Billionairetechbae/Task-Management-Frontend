@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { api, Task, CompanyMember, TaskAttachment, UpdateTaskData } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import CompanyBadge from "@/components/CompanyBadge";
 
 interface TaskEditDrawerProps {
   open: boolean;
@@ -401,8 +402,11 @@ export default function TaskEditDrawer({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="mb-4">
-            <SheetTitle className="truncate pr-8">
-              {loading ? "Loading..." : task?.title || "Task"}
+            <SheetTitle className="pr-8">
+              <div className="flex items-center gap-2 truncate">
+                <CompanyBadge company={task?.company} />
+                <span className="truncate">{loading ? "Loading..." : task?.title || "Task"}</span>
+              </div>
             </SheetTitle>
           </SheetHeader>
 

@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 
 import { getFileIcon } from "@/utils/fileIcons";
+import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
 
 // Define the correct User type based on your database schema
@@ -747,7 +748,10 @@ const TaskDetails = () => {
           {/* HEADER */}
           <div className="p-4 sm:p-6 border-b flex justify-between items-start">
             <div className="space-y-2 sm:space-y-3 pr-2">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{task.title}</h1>
+              <div className="flex items-center gap-2">
+                <CompanyBadge company={task.company} />
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{task.title}</h1>
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 <Badge className={`px-2 sm:px-3 py-1 text-xs sm:text-sm ${PRIORITY_COLORS[task.priority]}`}>
