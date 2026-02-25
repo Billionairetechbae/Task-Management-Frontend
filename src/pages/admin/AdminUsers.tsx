@@ -24,6 +24,8 @@ const AdminUsers = () => {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [workspaceFilter, setWorkspaceFilter] = useState("");
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
 
   const loadUsers = async () => {
     try {
@@ -32,6 +34,7 @@ const AdminUsers = () => {
         search,
         role: roleFilter,
         status: statusFilter,
+        companyId: workspaceFilter || undefined,
       });
       setUsers(response.data.users);
     } catch (err: any) {
@@ -47,6 +50,10 @@ const AdminUsers = () => {
 
   useEffect(() => {
     loadUsers();
+    // Load workspaces for filter
+    api.adminGetCompanies({}).then((res) => {
+      setWorkspaces(res.data?.companies || []);
+    }).catch(() => {});
   }, []);
 
   const handleDeactivate = async (id: string) => {
@@ -136,6 +143,18 @@ const AdminUsers = () => {
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
+        </select>
+
+        {/* Workspace Filter */}
+        <select
+          value={workspaceFilter}
+          onChange={(e) => setWorkspaceFilter(e.target.value)}
+          className="border rounded-lg px-3 py-2 bg-card"
+        >
+          <option value="">All Workspaces</option>
+          {workspaces.map((w) => (
+            <option key={w.id} value={w.id}>{w.name || w.company?.name || w.id}</option>
+          ))}
         </select>
 
         <Button onClick={loadUsers} className="md:ml-auto">

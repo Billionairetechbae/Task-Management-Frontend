@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const { login, user, activeCompanyId, setActiveCompanyId, workspaces } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
@@ -20,21 +20,37 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
 
-  // Redirect based on role AFTER verified login
   useEffect(() => {
-    if (user) {
-      const route =
-        user.role === "executive"
-          ? "/dashboard-executive"
-          : user.role === "manager"
-          ? "/dashboard-manager"
-          : user.role === "team_member"
-          ? "/dashboard-team_member"
-          : "/dashboard-admin";
-
-      navigate(route);
+    if (!user) return;
+    // Admins do not require workspaces or activeCompanyId
+    if (user.role === "admin") {
+      navigate("/dashboard-admin");
+      return;
     }
-  }, [user, navigate]);
+    const ws = Array.isArray(workspaces) ? workspaces : [];
+    if (ws.length === 0) {
+      navigate("/onboarding/workspace");
+      return;
+    }
+    const validIds = ws.map((w: any) => w.id);
+    if (!activeCompanyId || (validIds.length > 0 && !validIds.includes(activeCompanyId))) {
+      const resolved = ws[0]?.id;
+      if (resolved) {
+        setActiveCompanyId(resolved);
+        window.location.reload();
+        return;
+      }
+    }
+    const route =
+      user.role === "executive"
+        ? "/dashboard-executive"
+        : user.role === "manager"
+        ? "/dashboard-manager"
+        : user.role === "team_member"
+        ? "/dashboard-team_member"
+        : "/dashboard-admin";
+    navigate(route);
+  }, [user, workspaces, activeCompanyId, setActiveCompanyId, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,12 +220,12 @@ const Login = () => {
             <div className="mt-10 space-y-6">
               <Divider text="New to Admiino?" />
 
-              {/* Executive Create Company */}
               <Button className="w-full h-12 font-semibold" asChild>
-                <Link to="/signup-executive">
-                  Register Your Company (Executive)
-                </Link>
+                <Link to="/signup">Create your account</Link>
               </Button>
+              <div className="text-xs text-center">
+                <Link to="/signup-executive" className="underline text-muted-foreground">Legacy signup options</Link>
+              </div>
             </div>
           </div>
         </div>

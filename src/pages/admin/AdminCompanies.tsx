@@ -82,7 +82,7 @@ const AdminCompanies = () => {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold flex items-center gap-2">
             <Building2 className="w-8 h-8 text-primary" />
-            Manage Companies
+            Workspaces
           </h2>
         </div>
 
@@ -92,7 +92,7 @@ const AdminCompanies = () => {
         <div className="relative w-full md:w-1/3">
           <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
           <Input
-            placeholder="Search companies..."
+            placeholder="Search workspaces..."
             className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

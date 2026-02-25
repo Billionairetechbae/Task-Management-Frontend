@@ -340,7 +340,7 @@ const DashboardExecutive = () => {
       )}
 
       {/* Company Code */}
-      <ContentCard className="mb-8 bg-primary/5 border-primary/20">
+      {/* <ContentCard className="mb-8 bg-primary/5 border-primary/20">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h3 className="font-semibold mb-1">Your Company Code</h3>
@@ -351,7 +351,7 @@ const DashboardExecutive = () => {
           </div>
           <Button variant="outline" className="gap-2"><Mail className="w-4 h-4" />Share Code</Button>
         </div>
-      </ContentCard>
+      </ContentCard> */}
 
       {/* Tasks Section */}
       <SectionHeader

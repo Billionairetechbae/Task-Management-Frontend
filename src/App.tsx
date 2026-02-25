@@ -44,6 +44,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import AdminInvites from "./pages/admin/AdminInvites";
 
 import { WebSocketStatus } from '@/components/WebSocketStatus';
 import TaskDetailsDebug from "./pages/TaskDetailsDebug";
@@ -53,6 +54,9 @@ import AdminAssistanceRequests from "@/pages/admin/AdminAssistanceRequests";
 import OnboardingTour from "@/components/OnboardingTour";
 
 import Harmony from "./pages/Harmony";
+import Signup from "./pages/Signup";
+import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
+import Invite from "./pages/Invite";
 
 
 
@@ -72,6 +76,8 @@ const App = () => (
       <Route path="/signup-team_member" element={<SignupTeamMember />} />
       <Route path="/signup-manager" element={<SignupManager />} />
       <Route path="/signup-executive-join" element={<SignupExecutiveJoin />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/invite/:token" element={<Invite />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -137,6 +143,15 @@ const App = () => (
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <DashboardAdmin />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/onboarding/workspace"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <WorkspaceOnboarding />
           </ProtectedRoute>
         }
       />
@@ -268,6 +283,15 @@ const App = () => (
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <AdminTasks />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/invites"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminInvites />
           </ProtectedRoute>
         }
       />

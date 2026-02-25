@@ -20,6 +20,9 @@ const AdminTasks = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatus] = useState("");
   const [priorityFilter, setPriority] = useState("");
+  const [workspaceFilter, setWorkspaceFilter] = useState("");
+  const [assigneeIdInput, setAssigneeIdInput] = useState<string>("");
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
 
   const loadTasks = async () => {
     try {
@@ -27,6 +30,7 @@ const AdminTasks = () => {
       const response = await api.adminGetTasks({
         status: statusFilter,
         priority: priorityFilter,
+        companyId: workspaceFilter || undefined,
       });
 
       // client-side search improvement
@@ -50,6 +54,9 @@ const AdminTasks = () => {
 
   useEffect(() => {
     loadTasks();
+    api.adminGetCompanies({}).then((res) => {
+      setWorkspaces(res.data?.companies || []);
+    }).catch(() => {});
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -105,6 +112,17 @@ const AdminTasks = () => {
           <option value="medium">Medium</option>
           <option value="high">High</option>
           <option value="urgent">Urgent</option>
+        </select>
+
+        <select
+          value={workspaceFilter}
+          onChange={(e) => setWorkspaceFilter(e.target.value)}
+          className="border px-3 py-2 rounded-lg bg-card"
+        >
+          <option value="">All Workspaces</option>
+          {workspaces.map((w) => (
+            <option key={w.id} value={w.id}>{w.name || w.company?.name || w.id}</option>
+          ))}
         </select>
 
         <Button onClick={loadTasks}>Apply Filters</Button>
@@ -171,6 +189,29 @@ const AdminTasks = () => {
                       <Trash2 className="w-4 h-4 mr-1" />
                       Delete
                     </Button>
+                    <div className="mt-2 flex gap-2">
+                      <Input
+                        placeholder="New assigneeId"
+                        value={assigneeIdInput}
+                        onChange={(e) => setAssigneeIdInput(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          if (!assigneeIdInput) return;
+                          try {
+                            await api.adminReassignTask(task.id, assigneeIdInput);
+                            toast({ title: "Task reassigned" });
+                            loadTasks();
+                          } catch (err: any) {
+                            toast({ title: "Reassign failed", description: err?.message || "Try again", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Reassign
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))

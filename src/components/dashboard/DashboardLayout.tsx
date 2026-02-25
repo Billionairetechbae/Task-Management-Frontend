@@ -51,16 +51,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
     if (role === "admin") {
       return [
-        { label: "Dashboard", href: "/dashboard-admin", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: "Overview", href: "/dashboard-admin", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: "Workspaces", href: "/admin/companies", icon: <Building2 className="w-5 h-5" /> },
         { label: "Users", href: "/admin/users", icon: <Users className="w-5 h-5" /> },
-        { label: "Companies", href: "/admin/companies", icon: <Building2 className="w-5 h-5" /> },
         { label: "Assistance Requests", href: "/admin/assistance-requests", icon: <Paperclip className="w-5 h-5" /> },
-        { label: "All Tasks", href: "/admin/tasks", icon: <Briefcase className="w-5 h-5" /> },
+        { label: "Invites", href: "/admin/invites", icon: <Paperclip className="w-5 h-5" /> },
+        { label: "Tasks", href: "/admin/tasks", icon: <Briefcase className="w-5 h-5" /> },
         { label: "Analytics", href: "/admin/analytics", icon: <TrendingUp className="w-5 h-5" /> },
-        { label: "Global Search", href: "/admin/search", icon: <Search className="w-5 h-5" /> },
-        { label: "Deleted Users", href: "/admin/deleted/users", icon: <Users className="w-5 h-5" /> },
-        { label: "Deleted Companies", href: "/admin/deleted/companies", icon: <Building2 className="w-5 h-5" /> },
-        { label: "System Logs", href: "/admin/logs", icon: <Settings className="w-5 h-5" /> },
+        { label: "Search", href: "/admin/search", icon: <Search className="w-5 h-5" /> },
+        { label: "Logs", href: "/admin/logs", icon: <Settings className="w-5 h-5" /> },
       ];
     }
 
@@ -71,7 +70,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         { label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
         { label: "Team Management", href: "/team-management", icon: <Crown className="w-5 h-5" /> },
-        { label: "TeamMembers", href: "/team_members", icon: <UserCircle className="w-5 h-5" /> },
+        { label: "Team Members", href: "/team_members", icon: <UserCircle className="w-5 h-5" /> },
         { label: "Harmony", href: "/harmony", icon: <Users className="w-5 h-5" /> },
         { label: "Company Profile", href: "/company-profile", icon: <Building2 className="w-5 h-5" /> },
         { label: "AI Hub", href: "/ai-hub", icon: <Bot className="w-5 h-5" /> },

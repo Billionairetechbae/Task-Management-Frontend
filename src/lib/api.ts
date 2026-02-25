@@ -698,6 +698,56 @@ class ApiClient {
     return result;
   }
 
+  async signupUser(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  }): Promise<{ status: string; message: string; token?: string }> {
+    const result = await this.request("/auth/signup", {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+      body: JSON.stringify(data),
+    });
+    const t = (result as any)?.token;
+    if (t) {
+      localStorage.setItem("auth_token", t);
+      localStorage.setItem("token", t);
+    }
+    return result as any;
+  }
+
+  async signupWithInvite(data: {
+    token: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  }): Promise<{ status: string; message: string; token?: string }> {
+    const result = await this.request("/auth/signup-with-invite", {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+      body: JSON.stringify(data),
+    });
+    const t = (result as any)?.token;
+    if (t) {
+      localStorage.setItem("auth_token", t);
+      localStorage.setItem("token", t);
+    }
+    return result as any;
+  }
+
+  async acceptWorkspaceInvite(token: string): Promise<{
+    status: string;
+    message?: string;
+    data?: { company?: Company; companyId?: string };
+  }> {
+    return this.request(`/companies/invites/${token}/accept`, {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
   async login(data: LoginData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/login", {
       method: "POST",
@@ -722,6 +772,13 @@ class ApiClient {
   logout(): void {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("token");
+  }
+
+  async getWorkspaces(): Promise<{ status: string; data: { workspaces: any[] } }> {
+    return this.request("/auth/workspaces", {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
+    });
   }
 
   /* ============================
@@ -988,7 +1045,7 @@ class ApiClient {
   }> {
     return this.request("/admin/analytics/summary", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -999,7 +1056,7 @@ class ApiClient {
   }> {
     return this.request("/admin/users", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1010,7 +1067,7 @@ class ApiClient {
   }> {
     return this.request("/admin/companies", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1021,7 +1078,7 @@ class ApiClient {
   }> {
     return this.request("/admin/tasks", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1043,35 +1100,35 @@ class ApiClient {
 
     return this.request(`/admin/users?${params.toString()}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
   async adminDeactivateUser(userId: string) {
     return this.request(`/admin/users/${userId}/deactivate`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
   async adminReactivateUser(userId: string) {
     return this.request(`/admin/users/${userId}/reactivate`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
   async adminDeleteUser(userId: string) {
     return this.request(`/admin/users/${userId}`, {
       method: "DELETE",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
   async adminResetUserPassword(userId: string) {
     return this.request(`/admin/users/${userId}/reset-password`, {
       method: "POST",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1089,7 +1146,7 @@ class ApiClient {
 
     return this.request(`/admin/companies?${params.toString()}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1123,21 +1180,21 @@ class ApiClient {
   async adminVerifyCompany(companyId: string) {
     return this.request(`/admin/companies/${companyId}/verify`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
   async adminSuspendCompany(companyId: string) {
     return this.request(`/admin/companies/${companyId}/suspend`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
   async adminReactivateCompany(companyId: string) {
     return this.request(`/admin/companies/${companyId}/reactivate`, {
       method: "PATCH",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1147,7 +1204,7 @@ class ApiClient {
   }> {
     return this.request(`/admin/companies/${companyId}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1169,14 +1226,22 @@ class ApiClient {
 
     return this.request(`/admin/tasks?${params.toString()}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async adminReassignTask(taskId: string, assigneeId: string) {
+    return this.request(`/admin/tasks/${taskId}/reassign`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(false), "Content-Type": "application/json" },
+      body: JSON.stringify({ assigneeId }),
     });
   }
 
   async adminDeleteTask(taskId: string) {
     return this.request(`/admin/tasks/${taskId}`, {
       method: "DELETE",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1186,14 +1251,14 @@ class ApiClient {
   }> {
     return this.request(`/admin/users/${userId}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
   async adminGetSystemLogs() {
     return this.request("/admin/logs", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1211,7 +1276,7 @@ class ApiClient {
 
     return this.request(`/admin/search?${params.toString()}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1222,7 +1287,7 @@ class ApiClient {
   }> {
     return this.request("/admin/deleted/users", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1233,7 +1298,83 @@ class ApiClient {
   }> {
     return this.request("/admin/deleted/companies", {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  /* ============================
+     ADMIN (Workspaces & Invites)
+  ============================ */
+  async adminGetSummaryKPIs() {
+    return this.getAdminSummary();
+  }
+
+  async adminGetWorkspaces(filters?: { search?: string; status?: string }) {
+    return this.adminGetCompanies(filters);
+  }
+
+  async adminGetWorkspaceDetails(companyId: string) {
+    return this.adminGetCompany(companyId);
+  }
+
+  async adminGetWorkspaceMembers(companyId: string, filters?: { role?: string; status?: string; search?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.role) params.append("role", filters.role);
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.search) params.append("search", filters.search);
+    return this.request(`/admin/companies/${companyId}/members?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async adminUpdateMemberRole(companyId: string, membershipId: string, role: string) {
+    return this.request(`/admin/companies/${companyId}/members/${membershipId}/role`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(false), "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async adminUpdateMemberStatus(companyId: string, membershipId: string, status: string) {
+    return this.request(`/admin/companies/${companyId}/members/${membershipId}/status`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(false), "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async adminGetInvitesGlobal(filters?: { workspaceId?: string; status?: string; search?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.workspaceId) params.append("workspaceId", filters.workspaceId);
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.search) params.append("search", filters.search);
+    return this.request(`/admin/invites?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async adminGetWorkspaceInvites(companyId: string, filters?: { status?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append("status", filters.status);
+    return this.request(`/admin/companies/${companyId}/invites?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async adminRevokeInvite(inviteId: string) {
+    return this.request(`/admin/invites/${inviteId}/revoke`, {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async adminResendInvite(inviteId: string) {
+    return this.request(`/admin/invites/${inviteId}/resend`, {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
     });
   }
 

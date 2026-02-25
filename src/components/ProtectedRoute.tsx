@@ -24,6 +24,14 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/" replace />;
   }
 
+  // Admins bypass workspace-related assumptions; only enforce role gating
+  if (user.role === "admin") {
+    if (allowedRoles && !allowedRoles.includes("admin")) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+    return <>{children}</>;
+    }
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
