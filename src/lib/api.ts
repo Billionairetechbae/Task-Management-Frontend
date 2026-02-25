@@ -220,6 +220,30 @@ export interface TaskFilters {
   category?: string;
 }
 
+export interface AllTasksFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  priority?: string;
+  companyId?: string;
+}
+
+export interface AllTasksResponse {
+  status: string;
+  results: number;
+  data: {
+    tasks: Task[];
+  };
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalResults: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
 /* ============================
    DASHBOARDS
 ============================ */
@@ -731,6 +755,24 @@ class ApiClient {
     return this.request(`/tasks?${queryParams.toString()}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getAllTasksCrossWorkspace(
+    filters?: AllTasksFilters
+  ): Promise<AllTasksResponse> {
+    const queryParams = new URLSearchParams();
+    queryParams.append("scope", "assigned_all");
+    if (filters?.page) queryParams.append("page", filters.page.toString());
+    if (filters?.limit) queryParams.append("limit", filters.limit.toString());
+    if (filters?.search) queryParams.append("search", filters.search);
+    if (filters?.status) queryParams.append("status", filters.status);
+    if (filters?.priority) queryParams.append("priority", filters.priority);
+    if (filters?.companyId) queryParams.append("companyId", filters.companyId);
+
+    return this.request(`/tasks?${queryParams.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
     });
   }
 
@@ -1444,6 +1486,94 @@ class ApiClient {
     if (hourlyRate !== undefined) params.append("hourlyRate", String(hourlyRate));
 
     return this.request(`/assistance/estimate-cost?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /* ============================
+     HARMONY (Team Compatibility)
+  ============================ */
+
+  async getHarmonyAssessment(): Promise<{
+    status: string;
+    data: {
+      assessment: {
+        id: string;
+        title: string;
+        questions: Array<{
+          id: string;
+          text: string;
+          options: Array<{
+            id: string;
+            label: string;
+          }>;
+        }>;
+      };
+    };
+  }> {
+    return this.request("/harmony/assessment", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async submitHarmonyAssessment(answers: Array<{ questionId: string; optionId: string }>): Promise<{
+    status: string;
+    message?: string;
+    data?: {
+      submissionId: string;
+    };
+  }> {
+    return this.request("/harmony/submissions", {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ answers }),
+    });
+  }
+
+  async getMyHarmonyLatest(): Promise<{
+    status: string;
+    data?: {
+      report: {
+        id: string;
+        userId: string;
+        companyId: string;
+        archetype: string;
+        summary: string;
+        do: string[];
+        dont: string[];
+        createdAt: string;
+        updatedAt: string;
+        user?: {
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+        };
+      };
+    };
+  }> {
+    return this.request("/harmony/me/latest", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getHarmonyScoreboard(): Promise<{
+    status: string;
+    data?: {
+      cohesionScore: number;
+      label: "Strong" | "Moderate" | "Needs attention" | string;
+      categories: Array<{
+        key: string;
+        label: string;
+        percent: number;
+      }>;
+      note?: string;
+      totalSubmissions?: number;
+    };
+  }> {
+    return this.request("/harmony/scoreboard", {
       method: "GET",
       headers: this.getAuthHeaders(),
     });

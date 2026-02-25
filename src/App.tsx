@@ -15,6 +15,7 @@ import DashboardTeamMember from "./pages/DashboardTeamMember";
 import DashboardAdmin from "./pages/DashboardAdmin";
 
 import AIHub from "./pages/AIHub";
+import AllTasks from "./pages/AllTasks";
 import TaskDetails from "./pages/TaskDetails";
 import TeamManagement from "./pages/TeamManagement";
 import CompanyProfile from "./pages/CompanyProfile";
@@ -51,6 +52,7 @@ import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import AdminAssistanceRequests from "@/pages/admin/AdminAssistanceRequests";
 import OnboardingTour from "@/components/OnboardingTour";
 
+import Harmony from "./pages/Harmony";
 
 
 
@@ -144,6 +146,24 @@ const App = () => (
         element={
           <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
             <AIHub />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/harmony"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <Harmony />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks/all"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <AllTasks />
+            <AllTasks />
           </ProtectedRoute>
         }
       />
