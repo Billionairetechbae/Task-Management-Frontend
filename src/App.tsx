@@ -72,7 +72,7 @@ const App = () => (
     <Routes>
       {/* PUBLIC ROUTES */}
       <Route path="/" element={<Login />} />
-      {/* <Route path="/signup-executive" element={<SignupExecutive />} /> */}
+      <Route path="/signup-executive" element={<SignupExecutive />} /> 
       <Route path="/signup-team_member" element={<SignupTeamMember />} />
       <Route path="/signup-manager" element={<SignupManager />} />
       <Route path="/signup-executive-join" element={<SignupExecutiveJoin />} />
@@ -111,14 +111,14 @@ const App = () => (
         }
       />
 
-      {/* <Route
+      <Route
         path="/dashboard-executive"
         element={
           <ProtectedRoute allowedRoles={["executive"]}>
             <DashboardExecutive />
           </ProtectedRoute>
         }
-      /> */}
+      />
 
       <Route
         path="/dashboard-manager"
