@@ -528,6 +528,48 @@ export interface CostEstimation {
 }
 
 /* ============================
+   NOTIFICATIONS
+============================ */
+
+export type NotificationType =
+  | "task_created"
+  | "task_updated"
+  | "task_progress"
+  | "invite_sent"
+  | "invite_accepted"
+  | "welcome"
+  | string;
+
+export interface Notification {
+  id: string;
+  userId: string;
+  companyId?: string | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, any> | null;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsListResponse {
+  status: string;
+  results?: number;
+  data: {
+    notifications: Notification[];
+  };
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalResults: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+/* ============================
    API BASE URL
 ============================ */
 
@@ -1716,6 +1758,70 @@ class ApiClient {
   }> {
     return this.request("/harmony/scoreboard", {
       method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /* ============================
+     NOTIFICATIONS
+  ============================ */
+
+  async getNotifications(params?: {
+    unreadOnly?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<NotificationsListResponse> {
+    const search = new URLSearchParams();
+    if (params?.unreadOnly !== undefined) {
+      search.append("unreadOnly", String(params.unreadOnly));
+    }
+    if (params?.limit !== undefined) search.append("limit", String(params.limit));
+    if (params?.offset !== undefined) search.append("offset", String(params.offset));
+    const q = search.toString();
+    return this.request(`/notifications${q ? `?${q}` : ""}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getUnreadNotificationsCount(): Promise<{
+    status: string;
+    data: { count: number };
+  }> {
+    return this.request(`/notifications/unread-count`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async markNotificationRead(id: string): Promise<{
+    status: string;
+    message?: string;
+    data?: { notification: Notification };
+  }> {
+    return this.request(`/notifications/${id}/read`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async markAllNotificationsRead(): Promise<{
+    status: string;
+    message?: string;
+    data?: { updated: number };
+  }> {
+    return this.request(`/notifications/read-all`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async deleteNotification(id: string): Promise<{
+    status: string;
+    message?: string;
+  }> {
+    return this.request(`/notifications/${id}`, {
+      method: "DELETE",
       headers: this.getAuthHeaders(),
     });
   }

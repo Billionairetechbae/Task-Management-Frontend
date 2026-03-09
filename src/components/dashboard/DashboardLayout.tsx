@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Building2,
   Settings,
-  Bell,
   User,
   LogOut,
   Menu,
@@ -27,6 +26,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
+import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
 
 interface NavItem {
   label: string;
@@ -276,10 +276,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
             <div className="flex items-center gap-2 sm:gap-4">
               <WorkspaceSwitcher />
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-              </Button>
+              <NotificationsDropdown />
               <Button variant="outline" size="sm" asChild className="hidden sm:flex gap-2">
                 <Link to="/profile">
                   <User className="h-4 w-4" />

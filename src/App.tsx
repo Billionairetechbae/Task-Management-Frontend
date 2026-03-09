@@ -57,6 +57,7 @@ import Harmony from "./pages/Harmony";
 import Signup from "./pages/Signup";
 import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
+import NotificationsPage from "./pages/Notifications";
 
 
 
@@ -107,6 +108,15 @@ const App = () => (
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <NotificationsPage />
           </ProtectedRoute>
         }
       />
