@@ -106,25 +106,12 @@ const TaskDetails = () => {
             return newMap;
           });
           
-          // Remove the optimistic comment and add the real one
+          // Remove the optimistic comment by messageId and add the real one
+          removeOptimisticComment(message.messageId);
           setComments(prev => {
-            // Check if we already have this comment
             const alreadyExists = prev.some(c => c.id === fixedComment.id);
-            if (alreadyExists) {
-              return prev;
-            }
-            
-            // Filter out optimistic comment with matching content
-            const filtered = prev.filter(comment => {
-              if (comment.id.startsWith('optimistic-') && comment.userId === user?.id) {
-                // Check if content matches
-                return comment.content !== fixedComment.content;
-              }
-              return true;
-            });
-            
-            // Add the fixed comment
-            return [...filtered, fixedComment];
+            if (alreadyExists) return prev;
+            return [...prev, fixedComment];
           });
         } else {
           // Comment from another user
@@ -377,7 +364,8 @@ const TaskDetails = () => {
     if (!id || !newComment.trim() || sendingComment) return;
     
     const content = newComment.trim();
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // messageId will be determined by WebSocket send (preferred) or local fallback
+    let messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     try {
       setSendingComment(true);
@@ -422,8 +410,32 @@ const TaskDetails = () => {
       // Try WebSocket first if connected
       if (isConnected) {
         try {
+          // Ensure we are in the room; backend also auto-joins, but this keeps UX consistent
+          joinTaskRoom(id);
           // Send via WebSocket with messageId
-          sendComment(id, content);
+          const wsMsgId = sendComment(id, content);
+          if (wsMsgId) {
+            // Align optimistic messageId with the one the server will echo back
+            if (wsMsgId !== messageId) {
+              // Update maps to use wsMsgId
+              setPendingComments(prev => {
+                const next = new Map(prev);
+                const pending = next.get(messageId);
+                if (pending) {
+                  next.delete(messageId);
+                  next.set(wsMsgId, pending);
+                }
+                return next;
+              });
+              const optimistic = optimisticCommentRef.current.get(messageId);
+              if (optimistic) {
+                optimistic.metadata = { ...optimistic.metadata, messageId: wsMsgId };
+                optimisticCommentRef.current.delete(messageId);
+                optimisticCommentRef.current.set(wsMsgId, optimistic);
+              }
+              messageId = wsMsgId;
+            }
+          }
           console.log('Comment sent via WebSocket with messageId:', messageId);
         } catch (wsError) {
           console.error('WebSocket send failed, falling back to HTTP:', wsError);

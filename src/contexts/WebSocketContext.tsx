@@ -7,7 +7,7 @@ interface WebSocketContextType {
   isConnected: boolean;
   joinTaskRoom: (taskId: string) => void;
   leaveTaskRoom: (taskId: string) => void;
-  sendComment: (taskId: string, content: string) => void;
+  sendComment: (taskId: string, content: string) => string | undefined;
   sendTypingIndicator: (taskId: string, isTyping: boolean) => void;
   on: (eventType: string, handler: (message: any) => void) => void;
   off: (eventType: string, handler: (message: any) => void) => void;
@@ -87,9 +87,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     sendComment: (taskId: string, content: string) => {
       if (!isConnected) {
         console.warn('⚠️ WebSocket not connected, falling back to HTTP');
-        return;
+        return undefined;
       }
-      websocketService.sendComment(taskId, content);
+      return websocketService.sendComment(taskId, content);
     },
     sendTypingIndicator: (taskId: string, isTyping: boolean) => {
       if (!isConnected) {
