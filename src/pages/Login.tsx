@@ -22,11 +22,6 @@ const Login = () => {
 
   useEffect(() => {
     if (!user) return;
-    // Admins do not require workspaces or activeCompanyId
-    if (user.role === "admin") {
-      navigate("/dashboard-admin");
-      return;
-    }
     const ws = Array.isArray(workspaces) ? workspaces : [];
     if (ws.length === 0) {
       navigate("/onboarding/workspace");
@@ -41,15 +36,7 @@ const Login = () => {
         return;
       }
     }
-    const route =
-      user.role === "executive"
-        ? "/dashboard-executive"
-        : user.role === "manager"
-        ? "/dashboard-manager"
-        : user.role === "team_member"
-        ? "/dashboard-team_member"
-        : "/dashboard-admin";
-    navigate(route);
+    navigate("/dashboard");
   }, [user, workspaces, activeCompanyId, setActiveCompanyId, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

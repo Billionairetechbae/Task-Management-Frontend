@@ -38,7 +38,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 
 const DashboardExecutive = () => {
-  const { user, activeWorkspace } = useAuth();
+  const { user, activeWorkspace, workspaceRole } = useAuth();
   const { toast } = useToast();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -93,6 +93,41 @@ const DashboardExecutive = () => {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
+      // For workspace members, show a limited dashboard focused on assigned tasks
+      if (workspaceRole === "member") {
+        const res = await api.getTasks();
+        const wsTasks = (res as any)?.data?.tasks || [];
+        const mine = wsTasks.filter((t: any) => {
+          if (t.assigneeId && t.assigneeId === user?.id) return true;
+          if (Array.isArray(t.assignees) && t.assignees.some((a: any) => a?.id === user?.id)) return true;
+          return false;
+        });
+        setTasks(mine);
+        const counts = {
+          total: mine.length,
+          pending: mine.filter((t: any) => t.status === "pending").length,
+          inProgress: mine.filter((t: any) => t.status === "in_progress").length,
+          completed: mine.filter((t: any) => t.status === "completed").length,
+          overdue: mine.filter((t: any) => {
+            if (!t.deadline) return false;
+            return t.status !== "completed" && new Date(t.deadline).getTime() < Date.now();
+          }).length,
+          urgent: mine.filter((t: any) => t.priority === "urgent").length,
+        };
+        const completionRate = counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0;
+        setTeamStats({ totalAssistants: 0, availableAssistants: 0, pendingVerifications: 0, totalExecutives: 0 });
+        setTaskStats({
+          totalTasks: counts.total,
+          pendingTasks: counts.pending,
+          inProgressTasks: counts.inProgress,
+          completedTasks: counts.completed,
+          overdueTasks: counts.overdue,
+          urgentTasks: counts.urgent,
+          completionRate,
+        });
+        return;
+      }
+      // Owner/Admin/Manager: full executive dashboard
       const response = await api.getExecutiveDashboard();
 
       const {
@@ -204,34 +239,38 @@ const DashboardExecutive = () => {
     <DashboardLayout>
       <PageHeader
         title={`Welcome back, ${user?.firstName}!`}
-        description="Manage your team and track task progress"
+        description={workspaceRole === "member"
+          ? "Your workspace access is limited to your assigned tasks and progress"
+          : "Manage your team and track task progress"}
         actions={
-          <div className="flex gap-3">
-            <Button
-              asChild
-              className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Link to="/assistance-requests">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Hire Talent</span>
-                <span className="sm:hidden">Hire</span>
-              </Link>
-            </Button>
-            <Button variant="outline" onClick={() => setCreateTaskOpen(true)} className="gap-2">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Delegate Task</span>
-              <span className="sm:hidden">New</span>
-            </Button>
-          </div>
+          workspaceRole === "member" ? undefined : (
+            <div className="flex gap-3">
+              <Button
+                asChild
+                className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Link to="/assistance-requests">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Hire Talent</span>
+                  <span className="sm:hidden">Hire</span>
+                </Link>
+              </Button>
+              <Button variant="outline" onClick={() => setCreateTaskOpen(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Delegate Task</span>
+                <span className="sm:hidden">New</span>
+              </Button>
+            </div>
+          )
         }
       />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard title="Total Tasks" value={taskStats.totalTasks} icon={ClipboardList} iconClassName="bg-primary/10" />
+        <StatsCard title={workspaceRole === "member" ? "My Tasks" : "Total Tasks"} value={taskStats.totalTasks} icon={ClipboardList} iconClassName="bg-primary/10" />
         <StatsCard title="Completion Rate" value={`${taskStats.completionRate}%`} icon={TrendingUp} iconClassName="bg-success/10" />
-        <StatsCard title="In Progress" value={taskStats.inProgressTasks} icon={Clock} iconClassName="bg-info/10" />
-        <StatsCard title="Overdue" value={taskStats.overdueTasks} icon={AlertTriangle} iconClassName="bg-destructive/10" />
+        <StatsCard title={workspaceRole === "member" ? "My In Progress" : "In Progress"} value={taskStats.inProgressTasks} icon={Clock} iconClassName="bg-info/10" />
+        <StatsCard title={workspaceRole === "member" ? "My Overdue" : "Overdue"} value={taskStats.overdueTasks} icon={AlertTriangle} iconClassName="bg-destructive/10" />
       </div>
 
       {/* Team Overview */}
@@ -355,12 +394,14 @@ const DashboardExecutive = () => {
 
       {/* Tasks Section */}
       <SectionHeader
-        title="Recent Tasks"
-        description={totalItems > 0 ? `${totalItems} total tasks` : undefined}
+        title={workspaceRole === "member" ? "My Tasks" : "Recent Tasks"}
+        description={totalItems > 0 ? `${totalItems} ${workspaceRole === "member" ? "assigned tasks" : "total tasks"}` : undefined}
         actions={
-          <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2">
-            <Plus className="w-4 h-4" />New Task
-          </Button>
+          workspaceRole === "member" ? undefined : (
+            <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2">
+              <Plus className="w-4 h-4" />New Task
+            </Button>
+          )
         }
       />
 
@@ -381,11 +422,12 @@ const DashboardExecutive = () => {
         <>
           <TaskTable
             tasks={currentTasks}
-            showAssignee
-            showActions
-            onEdit={(task) => openDrawer(task, "details")}
-            onAssign={(task) => openDrawer(task, "assignees")}
-            onDelete={(task) => openDrawer(task, "danger")}
+            showAssignee={workspaceRole !== "member"}
+            showExecutive={true}
+            showActions={workspaceRole !== "member"}
+            onEdit={workspaceRole !== "member" ? (task) => openDrawer(task, "details") : undefined}
+            onAssign={workspaceRole !== "member" ? (task) => openDrawer(task, "assignees") : undefined}
+            onDelete={workspaceRole !== "member" ? (task) => openDrawer(task, "danger") : undefined}
           />
           <Pagination
             currentPage={currentPage}

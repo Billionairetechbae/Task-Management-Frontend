@@ -10,8 +10,6 @@ import SignupExecutiveJoin from "./pages/SignupExecutiveJoin";
 
 import Profile from "./pages/Profile";
 import DashboardExecutive from "./pages/DashboardExecutive";
-import DashboardManager from "./pages/DashboardManager";
-import DashboardTeamMember from "./pages/DashboardTeamMember";
 import DashboardAdmin from "./pages/DashboardAdmin";
 
 import AIHub from "./pages/AIHub";
@@ -122,28 +120,34 @@ const App = () => (
       />
 
       <Route
-        path="/dashboard-executive"
+        path="/dashboard"
         element={
-          <ProtectedRoute allowedRoles={["executive"]}>
+          <ProtectedRoute>
             <DashboardExecutive />
           </ProtectedRoute>
         }
       />
-
       <Route
-        path="/dashboard-manager"
+        path="/dashboard-executive"
         element={
-          <ProtectedRoute allowedRoles={["manager"]}>
-            <DashboardManager />
+          <ProtectedRoute>
+            <DashboardExecutive />
           </ProtectedRoute>
         }
       />
-
+      <Route
+        path="/dashboard-manager"
+        element={
+          <ProtectedRoute>
+            <DashboardExecutive />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard-team_member"
         element={
-          <ProtectedRoute allowedRoles={["team_member"]}>
-            <DashboardTeamMember />
+          <ProtectedRoute>
+            <DashboardExecutive />
           </ProtectedRoute>
         }
       />
@@ -186,8 +190,16 @@ const App = () => (
       <Route
         path="/tasks/all"
         element={
-          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+          <ProtectedRoute>
             <AllTasks />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tasks/my"
+        element={
+          <ProtectedRoute>
             <AllTasks />
           </ProtectedRoute>
         }

@@ -48,13 +48,7 @@ const Profile = () => {
      GET DASHBOARD ROUTE
   ========================================================= */
   const getDashboardRoute = () => {
-    switch (user.role) {
-      case "executive": return "/dashboard-executive";
-      case "manager": return "/dashboard-manager";
-      case "team_member": return "/dashboard-team_member";
-      case "admin": return "/dashboard-admin";
-      default: return "/";
-    }
+    return "/dashboard";
   };
 
   /* ========================================================

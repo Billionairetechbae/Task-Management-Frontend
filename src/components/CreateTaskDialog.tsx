@@ -60,15 +60,12 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
         ? data.team_members
         : [];
 
-      // you can tune this rule:
-      const verifiedTeamMembers = list.filter(
-        (m) =>
-          m.isVerified === true &&
-          m.status !== "removed" &&
-          m.user?.role === "team_member"
-      );
+      const usable = list
+        .filter((m) => m.status !== "removed")
+        .filter((m) => m.isVerified === true)
+        .filter((m) => m.user && m.user.id);
 
-      setMembers(verifiedTeamMembers);
+      setMembers(usable);
     } catch (error: any) {
       toast({
         title: "Error",

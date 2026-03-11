@@ -64,12 +64,17 @@ export default function TaskEditDrawer({
   onTaskUpdated,
   onTaskDeleted,
 }: TaskEditDrawerProps) {
-  const { user } = useAuth();
+  const { user, workspaceRole } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isManager = user?.role === "executive" || user?.role === "manager";
-  const isAssistant = user?.role === "team_member";
+  const isManager =
+    user?.role === "admin" ||
+    workspaceRole === "owner" ||
+    workspaceRole === "admin" ||
+    workspaceRole === "manager";
+  const isAssistant =
+    !isManager;
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

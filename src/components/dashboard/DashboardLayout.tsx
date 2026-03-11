@@ -40,7 +40,7 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const { user, logout } = useAuth();
+  const { user, logout, workspaceRole } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -63,9 +63,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       ];
     }
 
-    if (role === "executive") {
+    // Workspace-scoped navigation by workspaceRole
+    if (workspaceRole === "owner" || workspaceRole === "admin") {
       return [
-        { label: "Dashboard", href: "/dashboard-executive", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
         { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
         { label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
@@ -77,9 +78,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       ];
     }
 
-    if (role === "manager") {
+    if (workspaceRole === "manager") {
       return [
-        { label: "Dashboard", href: "/dashboard-manager", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
         { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
         { label: "TeamMembers", href: "/team_members", icon: <UserCircle className="w-5 h-5" /> },
@@ -89,9 +90,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
     // TeamMember
     return [
-      { label: "Dashboard", href: "/dashboard-team_member", icon: <LayoutDashboard className="w-5 h-5" /> },
+      { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
       { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
-      { label: "My Tasks", href: "/dashboard-team_member", icon: <ClipboardList className="w-5 h-5" /> },
+      { label: "My Tasks", href: "/tasks/my", icon: <ClipboardList className="w-5 h-5" /> },
       { label: "Harmony", href: "/harmony", icon: <Users className="w-5 h-5" /> },
       // { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
     ];
@@ -104,11 +105,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   };
 
   const getRoleLabel = () => {
-    switch (user?.role) {
-      case "admin": return "Platform Admin";
-      case "executive": return "Executive";
-      case "manager": return "Manager";
-      case "team_member": return "TeamMember";
+    if (user?.role === "admin") return "Platform Admin";
+    switch (workspaceRole) {
+      case "owner": return "Workspace Owner";
+      case "admin": return "Workspace Admin";
+      case "manager": return "Workspace Manager";
+      case "member": return "Workspace Member";
       default: return "User";
     }
   };

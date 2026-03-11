@@ -42,7 +42,6 @@ const TeamMemberProfile = () => {
 
   useEffect(() => {
     loadMember();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const loadMember = async () => {
@@ -51,9 +50,9 @@ const TeamMemberProfile = () => {
     try {
       setLoading(true);
 
-      // Pull from workspace membership (correct source of truth for status/verification)
-      const m = await api.getWorkspaceMemberByUserId(userId);
-      setMember(m);
+      // Pull from workspace membership API
+      const res = await api.getWorkspaceMember(userId);
+      setMember(res.data.member);
     } catch (error: any) {
       toast({
         title: "Error",

@@ -154,36 +154,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const response = await api.getCurrentUser();
-      console.log("ME raw response:", response);
       const fetchedUser = response.data?.user;
-      const apiWs = (response.data as any)?.workspaces ?? (response as any)?.workspaces ?? [];
-      const cachedWs = loadCachedWorkspaces();
 
-      // Merge workspaces to handle potential lag in /auth/me after creation
-      const mergedWs = [...apiWs];
-      cachedWs.forEach((c: any) => {
-        const cId = c.id || c.companyId || c.company?.id;
-        if (!mergedWs.find((m: any) => (m.companyId || m.company?.id || m.id) === cId)) {
-          mergedWs.push(c);
-        }
-      });
+      // Primary source: /me/workspaces
+      let wsRaw: any[] = [];
+      try {
+        const wsRes = await api.getMyWorkspaces();
+        const payload = (wsRes as any)?.data ?? {};
+        wsRaw = (payload.workspaces ?? (wsRes as any)?.workspaces ?? []) as any[];
+      } catch {}
 
-      const ws: Workspace[] = mergedWs.map((w: any) => ({
-        id: w.companyId || w.company?.id || w.id,
-        name: w.company?.name ?? w.name ?? "Workspace",
-        role: (w.role || "member") as WorkspaceRole,
-        status: w.status || "active",
-        isVerified: !!w.isVerified,
-        company: w.company
-          ? {
-              id: w.company.id,
-              name: w.company.name,
-              companyCode: w.company.companyCode,
-              industry: w.company.industry ?? null,
-            }
-          : w.id ? { id: w.id, name: w.name } : null,
-      })).filter((w: Workspace) => !!w.id);
-      console.log("ME normalized workspaces:", ws);
+      // Fallback: workspaces embedded in /auth/me or cached
+      if (!Array.isArray(wsRaw) || wsRaw.length === 0) {
+        const meWs = (response.data as any)?.workspaces ?? (response as any)?.workspaces ?? [];
+        const cachedWs = loadCachedWorkspaces();
+        const merged = [...meWs];
+        cachedWs.forEach((c: any) => {
+          const cId = c.id || c.companyId || c.company?.id;
+          if (!merged.find((m: any) => (m.companyId || m.company?.id || m.id) === cId)) {
+            merged.push(c);
+          }
+        });
+        wsRaw = merged;
+      }
+
+      const ws: Workspace[] = (wsRaw || [])
+        .map((w: any) => ({
+          id: w.companyId || w.company?.id || w.id,
+          name: w.company?.name ?? w.name ?? "Workspace",
+          role: (w.role || "member") as WorkspaceRole,
+          status: w.status || "active",
+          isVerified: !!w.isVerified,
+          company: w.company
+            ? {
+                id: w.company.id,
+                name: w.company.name,
+                companyCode: w.company.companyCode,
+                industry: w.company.industry ?? null,
+              }
+            : w.id
+            ? { id: w.id, name: w.name }
+            : null,
+        }))
+        .filter((w: Workspace) => !!w.id);
+
       saveCachedWorkspaces(ws);
       setUser(fetchedUser);
       initializeWorkspaceState(fetchedUser, ws);
@@ -204,29 +218,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     const response = await api.login({ email, password });
-    console.log("LOGIN raw response:", response);
-
     const loggedInUser = response?.data?.user;
-    const wsRaw = (response?.data as any)?.workspaces || (response as any)?.workspaces || [];
-    const ws: Workspace[] = (Array.isArray(wsRaw) ? wsRaw : []).map((w: any) => ({
-      id: w.companyId || w.company?.id,
-      name: w.company?.name ?? "Workspace",
-      role: (w.role || "member") as WorkspaceRole,
-      status: w.status || "active",
-      isVerified: !!w.isVerified,
-      company: w.company
-        ? {
-            id: w.company.id,
-            name: w.company.name,
-            companyCode: w.company.companyCode,
-            industry: w.company.industry ?? null,
-          }
-        : null,
-    })).filter((w: Workspace) => !!w.id);
+    let ws: Workspace[] = [];
+    try {
+      const wsRes = await api.getMyWorkspaces();
+      const payload = (wsRes as any)?.data ?? {};
+      const wsRaw = (payload.workspaces ?? (wsRes as any)?.workspaces ?? []) as any[];
+      ws = (Array.isArray(wsRaw) ? wsRaw : []).map((w: any) => ({
+        id: w.companyId || w.company?.id || w.id,
+        name: w.company?.name ?? w.name ?? "Workspace",
+        role: (w.role || "member") as WorkspaceRole,
+        status: w.status || "active",
+        isVerified: !!w.isVerified,
+        company: w.company
+          ? {
+              id: w.company.id,
+              name: w.company.name,
+              companyCode: w.company.companyCode,
+              industry: w.company.industry ?? null,
+            }
+          : w.id
+          ? { id: w.id, name: w.name }
+          : null,
+      })).filter((w: Workspace) => !!w.id);
+    } catch {}
 
-    console.log("LOGIN normalized workspaces:", ws);
+    if (ws.length === 0) {
+      const wsRaw = (response?.data as any)?.workspaces || (response as any)?.workspaces || [];
+      ws = (Array.isArray(wsRaw) ? wsRaw : []).map((w: any) => ({
+        id: w.companyId || w.company?.id,
+        name: w.company?.name ?? "Workspace",
+        role: (w.role || "member") as WorkspaceRole,
+        status: w.status || "active",
+        isVerified: !!w.isVerified,
+        company: w.company ? { id: w.company.id, name: w.company.name } : null,
+      })).filter((w: Workspace) => !!w.id);
+    }
+
     saveCachedWorkspaces(ws);
-
     setUser(loggedInUser);
     initializeWorkspaceState(loggedInUser, ws);
   };
@@ -245,6 +274,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       localStorage.removeItem('activeCompanyId');
     }
+    const active = id ? workspaces.find((w) => w.id === id) : workspaces[0] || null;
+    setWorkspaceRole(active?.role || null);
   };
 
   return (

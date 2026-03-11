@@ -23,8 +23,7 @@ const TeamDirectory = () => {
 
   useEffect(() => {
     loadTeam();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeWorkspace?.id]);
 
   const loadTeam = async () => {
     try {

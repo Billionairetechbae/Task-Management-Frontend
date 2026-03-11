@@ -816,6 +816,16 @@ class ApiClient {
     localStorage.removeItem("token");
   }
 
+  async getMyWorkspaces(): Promise<{
+    status: string;
+    data: { workspaces: WorkspaceItem[] } | { workspaces: any[] } | any;
+  }> {
+    return this.request("/me/workspaces", {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
   async getWorkspaces(): Promise<{ status: string; data: { workspaces: any[] } }> {
     return this.request("/auth/workspaces", {
       method: "GET",
@@ -1825,6 +1835,62 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
+
+  /* ============================
+     INVITES (Workspace tokens)
+  ============================ */
+
+  async createWorkspaceInvite(
+    companyId: string,
+    payload: { email: string; role: "owner" | "admin" | "manager" | "member" }
+  ): Promise<{ status: string; message: string; data?: any }> {
+    return this.request(`/companies/${companyId}/invites`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async acceptInvite(token: string): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/invites/${token}/accept`, {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async rejectInvite(token: string): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/invites/${token}/reject`, {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  /* ============================
+     DASHBOARD (workspace-scoped)
+  ============================ */
+  async getDashboard(): Promise<{
+    status: string;
+    data: any;
+  }> {
+    return this.request("/dashboard", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /* ============================
+     TEAM MEMBERS (workspace-scoped)
+  ============================ */
+  async getWorkspaceMember(userId: string): Promise<{
+    status: string;
+    data: { member: CompanyMember };
+  }> {
+    return this.request(`/team/members/${userId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
 }
 
 export const api = new ApiClient();
