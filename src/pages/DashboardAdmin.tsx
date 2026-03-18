@@ -47,10 +47,10 @@ const DashboardAdmin = () => {
       // Load assistance requests stats
       try {
         const pendingResponse = await api.getAllAssistanceRequests({ status: "pending" });
-        setPendingRequests(pendingResponse.data.results || 0);
+        setPendingRequests((pendingResponse.data as any).results ?? pendingResponse.data.requests?.length ?? 0);
 
         const totalResponse = await api.getAllAssistanceRequests();
-        setTotalRequests(totalResponse.data.results || 0);
+        setTotalRequests((totalResponse.data as any).results ?? totalResponse.data.requests?.length ?? 0);
       } catch (_) {}
     } catch (err: any) {
       toast({
