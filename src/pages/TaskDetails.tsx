@@ -70,7 +70,7 @@ const TaskDetails = () => {
   const [showChatSheet, setShowChatSheet] = useState(false);
   
   const commentsEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const optimisticCommentRef = useRef<Map<string, any>>(new Map());
 
   // Fetch task and comments

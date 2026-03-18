@@ -24,7 +24,7 @@ export const StatsCard = ({
   iconClassName,
 }: StatsCardProps) => (
   <div className={cn(
-    "bg-card border border-border rounded-xl p-4 sm:p-6 transition-all hover:shadow-md",
+    "bg-card border border-border rounded-lg p-4 sm:p-5 transition-all duration-200 hover:shadow-elevated hover:border-primary/20 group",
     className
   )}>
     <div className="flex items-start justify-between">
@@ -46,10 +46,10 @@ export const StatsCard = ({
         )}
       </div>
       <div className={cn(
-        "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center bg-primary/10",
+        "w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center bg-primary/10 transition-transform duration-200 group-hover:scale-110",
         iconClassName
       )}>
-        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+        <Icon className="w-5 h-5 sm:w-5 sm:h-5 text-primary" />
       </div>
     </div>
   </div>
@@ -62,7 +62,7 @@ interface PageHeaderProps {
 }
 
 export const PageHeader = ({ title, description, actions }: PageHeaderProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8 animate-fade-in">
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
       {description && (
@@ -100,7 +100,7 @@ interface ContentCardProps {
 
 export const ContentCard = ({ children, className, noPadding }: ContentCardProps) => (
   <div className={cn(
-    "bg-card border border-border rounded-xl",
+    "bg-card border border-border rounded-lg transition-shadow duration-200 hover:shadow-soft",
     !noPadding && "p-4 sm:p-6",
     className
   )}>
@@ -116,9 +116,9 @@ interface EmptyStateProps {
 }
 
 export const EmptyState = ({ icon: Icon, title, description, action }: EmptyStateProps) => (
-  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-      <Icon className="w-8 h-8 text-muted-foreground" />
+  <div className="flex flex-col items-center justify-center py-12 px-4 text-center animate-fade-in">
+    <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-4">
+      <Icon className="w-7 h-7 text-muted-foreground" />
     </div>
     <h3 className="text-lg font-semibold mb-2">{title}</h3>
     <p className="text-muted-foreground text-sm max-w-sm mb-4">{description}</p>
@@ -146,31 +146,23 @@ export const QuickActionCard = ({
   const content = (
     <>
       <div className={cn(
-        "w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 mb-4",
+        "w-10 h-10 rounded-lg flex items-center justify-center bg-primary/10 mb-3 transition-transform duration-200 group-hover:scale-110",
         iconClassName
       )}>
-        <Icon className="w-6 h-6 text-primary" />
+        <Icon className="w-5 h-5 text-primary" />
       </div>
-      <h3 className="font-semibold mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
+      <h3 className="font-semibold text-sm mb-0.5">{title}</h3>
+      <p className="text-xs text-muted-foreground">{description}</p>
     </>
   );
 
-  const className = "bg-card border border-border rounded-xl p-6 hover:shadow-md hover:border-primary/20 transition-all cursor-pointer text-left w-full";
+  const className = "group bg-card border border-border rounded-lg p-4 hover:shadow-elevated hover:border-primary/20 transition-all duration-200 cursor-pointer text-left w-full";
 
   if (href) {
-    return (
-      <a href={href} className={className}>
-        {content}
-      </a>
-    );
+    return <a href={href} className={className}>{content}</a>;
   }
 
-  return (
-    <button onClick={onClick} className={className}>
-      {content}
-    </button>
-  );
+  return <button onClick={onClick} className={className}>{content}</button>;
 };
 
 interface LoadingSpinnerProps {
@@ -181,8 +173,8 @@ interface LoadingSpinnerProps {
 export const LoadingSpinner = ({ className, size = "md" }: LoadingSpinnerProps) => {
   const sizeClasses = {
     sm: "w-4 h-4 border-2",
-    md: "w-8 h-8 border-3",
-    lg: "w-12 h-12 border-4",
+    md: "w-6 h-6 border-2",
+    lg: "w-10 h-10 border-[3px]",
   };
 
   return (
@@ -196,8 +188,8 @@ export const LoadingSpinner = ({ className, size = "md" }: LoadingSpinnerProps) 
 };
 
 export const LoadingState = ({ message = "Loading..." }: { message?: string }) => (
-  <div className="flex flex-col items-center justify-center py-12">
+  <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
     <LoadingSpinner size="lg" />
-    <p className="text-muted-foreground mt-4">{message}</p>
+    <p className="text-muted-foreground mt-4 text-sm">{message}</p>
   </div>
 );
