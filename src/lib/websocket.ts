@@ -17,8 +17,8 @@ class WebSocketService {
   private reconnectDelay = 1000;
   private handlers: Map<string, WebSocketHandler[]> = new Map();
   private taskRooms: Set<string> = new Set();
-  private isTypingTimeout: NodeJS.Timeout | null = null;
-  private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private isTypingTimeout: ReturnType<typeof setTimeout> | null = null;
+  private connectionCheckInterval: ReturnType<typeof setInterval> | null = null;
   private lastPingTime: number = 0;
 
   constructor() {
