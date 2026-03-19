@@ -409,6 +409,56 @@ export interface TaskComment {
   };
 }
 
+export interface ProjectMemberSummary {
+  id: string;
+  userId: string;
+  role: "owner" | "admin" | "manager" | "member" | "viewer";
+  status: string;
+  user?: User;
+}
+
+export interface Project {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string | null;
+  status: "active" | "archived";
+  visibility: "private" | "workspace";
+  createdBy: string;
+  leadId?: string | null;
+  color?: string | null;
+  dueDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  members?: ProjectMemberSummary[];
+  tasks?: Task[];
+}
+
+export interface Folder {
+  id: string;
+  scope: "workspace" | "personal";
+  companyId?: string | null;
+  ownerUserId?: string | null;
+  name: string;
+  description?: string | null;
+  parentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FolderFile {
+  id: string;
+  folderId: string;
+  fileUrl: string;
+  publicId: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /* ============================
    ASSISTANCE REQUEST TYPES
 ============================ */
@@ -1887,6 +1937,142 @@ class ApiClient {
   }> {
     return this.request(`/team/members/${userId}`, {
       method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createProject(data: {
+    name: string;
+    description?: string;
+    visibility?: "private" | "workspace";
+    leadId?: string;
+    color?: string;
+    dueDate?: string;
+    memberIds?: string[];
+  }): Promise<{ status: string; message?: string; data: { project: Project } }> {
+    return this.request(`/projects`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProjects(): Promise<{
+    status: string;
+    results?: number;
+    data: { projects: Project[] } | { items?: Project[] } | any;
+  }> {
+    return this.request(`/projects`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getProjectById(id: string): Promise<{
+    status: string;
+    data: { project: Project };
+  }> {
+    return this.request(`/projects/${id}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async updateProject(id: string, data: Partial<{
+    name: string;
+    description: string;
+    visibility: "private" | "workspace";
+    status: "active" | "archived";
+    leadId?: string | null;
+    color?: string | null;
+    dueDate?: string | null;
+  }>): Promise<{ status: string; message?: string; data: { project: Project } }> {
+    return this.request(`/projects/${id}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addProjectMember(projectId: string, userId: string, role: "owner" | "admin" | "manager" | "member" | "viewer" = "member"): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/projects/${projectId}/members`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, role }),
+    });
+  }
+
+  async removeProjectMember(projectId: string, userId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${projectId}/members/${userId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async attachTaskToProject(projectId: string, taskId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${projectId}/tasks/${taskId}`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async detachTaskFromProject(projectId: string, taskId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${projectId}/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async listWorkspaceFolders(): Promise<{ status: string; data: { folders: Folder[] } | any }> {
+    return this.request(`/drive/folders`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createWorkspaceFolder(data: { name: string; description?: string; parentId?: string | null }): Promise<{ status: string; message?: string; data: { folder: Folder } }> {
+    return this.request(`/drive/folders`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listPersonalFolders(): Promise<{ status: string; data: { folders: Folder[] } | any }> {
+    return this.request(`/drive/personal/folders`, {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async createPersonalFolder(data: { name: string; description?: string; parentId?: string | null }): Promise<{ status: string; message?: string; data: { folder: Folder } }> {
+    return this.request(`/drive/personal/folders`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(false), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listFilesInFolder(folderId: string): Promise<{ status: string; data: { files: FolderFile[] } | any }> {
+    return this.request(`/drive/folders/${folderId}/files`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async uploadFilesToFolder(folderId: string, files: File[]): Promise<{ status: string; message?: string; data?: any }> {
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f));
+    return this.request(`/drive/folders/${folderId}/files`, {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: form,
+    });
+  }
+
+  async deleteFile(fileId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/drive/files/${fileId}`, {
+      method: "DELETE",
       headers: this.getAuthHeaders(),
     });
   }

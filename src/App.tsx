@@ -46,6 +46,7 @@ import AdminInvites from "./pages/admin/AdminInvites";
 
 import { WebSocketStatus } from '@/components/WebSocketStatus';
 import TaskDetailsDebug from "./pages/TaskDetailsDebug";
+// import DashboardEntry from "./pages/DashboardEntry";
 
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import AdminAssistanceRequests from "@/pages/admin/AdminAssistanceRequests";
@@ -57,12 +58,14 @@ import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
 import NotificationsPage from "./pages/Notifications";
 
-
-
-
+import Projects from "./pages/Projects";
+import ProjectDetails from "./pages/ProjectDetails";
+import Drive from "./pages/Drive";
+// import DashboardEntry from "./pages/DashboardEntry";
 
 const App = () => (
   <>
+    <Toaster />
     <Toaster />
     <Sonner />
     <WebSocketStatus />
@@ -250,6 +253,30 @@ const App = () => (
         }
       />
 
+      <Route
+        path="/projects"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <Projects />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/projects/:id"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <ProjectDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/drive"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <Drive />
+          </ProtectedRoute>
+        }
+      />
 
 
 
