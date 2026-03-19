@@ -459,6 +459,15 @@ export interface FolderFile {
   updatedAt: string;
 }
 
+export interface ProjectInvite {
+  id: string;
+  email: string;
+  role: "owner" | "admin" | "member" | "viewer";
+  status: "pending" | "accepted" | "pending_workspace" | "rejected" | "expired" | "revoked";
+  expiresAt: string | null;
+  createdAt: string;
+}
+
 /* ============================
    ASSISTANCE REQUEST TYPES
 ============================ */
@@ -2023,6 +2032,37 @@ class ApiClient {
     });
   }
 
+  async inviteProjectMembersByEmails(projectId: string, emails: string[], defaultRole?: "owner" | "admin" | "member" | "viewer"): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/projects/${projectId}/members/emails`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify({ emails, defaultRole }),
+    });
+  }
+
+  async getProjectCandidates(projectId: string, includeExternal?: boolean): Promise<{ status: string; data: { candidates: any[] } | any }> {
+    const params = new URLSearchParams();
+    if (includeExternal) params.append("includeExternal", "1");
+    return this.request(`/projects/${projectId}/candidates?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async acceptProjectInvite(token: string): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/projects/invites/${token}/accept`, {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
+  async rejectProjectInvite(token: string): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/projects/invites/${token}/reject`, {
+      method: "POST",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
   async listWorkspaceFolders(): Promise<{ status: string; data: { folders: Folder[] } | any }> {
     return this.request(`/drive/folders`, {
       method: "GET",
@@ -2073,6 +2113,30 @@ class ApiClient {
   async deleteFile(fileId: string): Promise<{ status: string; message?: string }> {
     return this.request(`/drive/files/${fileId}`, {
       method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getProjectMembers(projectId: string): Promise<{
+    status: string;
+    data: { members: Array<{ id: string; role: string; status: string; firstName: string; lastName: string; email: string }>; invites: ProjectInvite[] };
+  }> {
+    return this.request(`/projects/${projectId}/members`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async revokeProjectInvite(projectId: string, inviteId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${projectId}/invites/${inviteId}/revoke`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async resendProjectInvite(projectId: string, inviteId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${projectId}/invites/${inviteId}/resend`, {
+      method: "PATCH",
       headers: this.getAuthHeaders(),
     });
   }

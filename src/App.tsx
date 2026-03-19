@@ -61,6 +61,7 @@ import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
 import Drive from "./pages/Drive";
+import ProjectInvite from "./pages/ProjectInvite";
 // import DashboardEntry from "./pages/DashboardEntry";
 
 const App = () => (
@@ -83,6 +84,7 @@ const App = () => (
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/project-invite/:token" element={<ProjectInvite />} />
 
       {/* TeamMembers Page */}
       <Route
