@@ -15,110 +15,122 @@ interface ProjectSettingsTabProps {
 
 const ProjectSettingsTab = ({ project, onRefresh }: ProjectSettingsTabProps) => {
   const { toast } = useToast();
-  const settings = project.settings || {};
-  const [form, setForm] = useState({
-    color: (settings.color as string) || "#7c3aed",
-    notes: (settings.notes as string) || "",
-    labels: (settings.labels as string) || "",
-    custom: (settings.custom as string) || "",
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: project.name,
+    description: project.description || "",
+    startDate: project.startDate ? project.startDate.split("T")[0] : "",
+    endDate: project.endDate ? project.endDate.split("T")[0] : "",
+    status: project.status,
   });
-  const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await api.updateProjectSettings(project.id, {
-        color: form.color,
-        notes: form.notes,
-        labels: form.labels.split(",").map(l => l.trim()).filter(Boolean).join(", "),
-        custom: form.custom,
+      setLoading(true);
+      
+      // Update basic details
+      await api.updateProject(project.id, {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status as any,
       });
-      toast({ title: "Settings saved" });
+
+      // Update settings/dates if needed (the backend might support this in updateProject too, 
+      // but let's use updateProjectSettings for metadata if that's the pattern)
+      await api.updateProjectSettings(project.id, {
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+      });
+
+      toast({ title: "Project updated successfully" });
       onRefresh();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: "Update failed",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-2xl">
-      <Card className="shadow-soft">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-sm font-medium">Appearance</CardTitle>
+    <div className="max-w-2xl mx-auto animate-fade-in">
+      <Card className="border border-border shadow-soft">
+        <CardHeader>
+          <CardTitle className="text-lg">General Settings</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-xs">Project Color</Label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={form.color}
-                onChange={e => setForm(prev => ({ ...prev, color: e.target.value }))}
-                className="w-10 h-10 rounded-lg border border-border cursor-pointer"
-              />
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">Project Name</Label>
               <Input
-                value={form.color}
-                onChange={e => setForm(prev => ({ ...prev, color: e.target.value }))}
-                className="w-32 h-9 text-sm font-mono"
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
               />
             </div>
-          </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={4}
+                placeholder="What is this project about?"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="planning">Planning</option>
+                <option value="active">Active</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <div className="pt-4 flex justify-end">
+              <Button type="submit" disabled={loading} className="gap-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Changes
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
-
-      <Card className="shadow-soft">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-sm font-medium">Project Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            placeholder="Add internal notes about this project..."
-            value={form.notes}
-            onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
-            rows={4}
-            className="text-sm"
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-soft">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-sm font-medium">Labels</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Input
-            placeholder="design, frontend, urgent (comma-separated)"
-            value={form.labels}
-            onChange={e => setForm(prev => ({ ...prev, labels: e.target.value }))}
-            className="text-sm"
-          />
-          <p className="text-xs text-muted-foreground mt-1.5">Separate labels with commas</p>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-soft">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-sm font-medium">Custom Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            placeholder="Any additional project configuration..."
-            value={form.custom}
-            onChange={e => setForm(prev => ({ ...prev, custom: e.target.value }))}
-            rows={3}
-            className="text-sm"
-          />
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          Save Settings
-        </Button>
-      </div>
     </div>
   );
 };

@@ -44,9 +44,13 @@ export const getStatusBadgeClass = (status: string) => {
     case "completed":
       return "bg-success/10 text-success border-success/20";
     case "in_progress":
+    case "active":
       return "bg-primary/10 text-primary border-primary/20";
     case "pending":
+    case "planning":
       return "bg-warning/10 text-warning border-warning/20";
+    case "on_hold":
+      return "bg-info/10 text-info border-info/20";
     case "cancelled":
       return "bg-muted text-muted-foreground";
     default:

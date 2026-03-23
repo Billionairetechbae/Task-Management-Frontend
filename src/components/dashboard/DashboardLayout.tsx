@@ -25,6 +25,7 @@ import {
   ListChecks,
   Paperclip,
   Folder,
+  FolderKanban,
 } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
@@ -69,7 +70,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
         { label: "Projects", href: "/projects", icon: <FolderKanban className="w-5 h-5" /> },
         { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
-        { label: "Projects", href: "/projects", icon: <ClipboardList className="w-5 h-5" /> },
         { label: "Drive", href: "/drive", icon: <Folder className="w-5 h-5" /> },
         { label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
@@ -86,7 +86,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
         { label: "Projects", href: "/projects", icon: <FolderKanban className="w-5 h-5" /> },
         { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
-        { label: "Projects", href: "/projects", icon: <ClipboardList className="w-5 h-5" /> },
         { label: "Drive", href: "/drive", icon: <Folder className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
         { label: "Team Members", href: "/team_members", icon: <UserCircle className="w-5 h-5" /> },
@@ -98,7 +97,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
       { label: "Projects", href: "/projects", icon: <FolderKanban className="w-5 h-5" /> },
       { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
-      { label: "Projects", href: "/projects", icon: <ClipboardList className="w-5 h-5" /> },
       { label: "Drive", href: "/drive", icon: <Folder className="w-5 h-5" /> },
       { label: "My Tasks", href: "/tasks/my", icon: <ClipboardList className="w-5 h-5" /> },
       { label: "Harmony", href: "/harmony", icon: <Users className="w-5 h-5" /> },

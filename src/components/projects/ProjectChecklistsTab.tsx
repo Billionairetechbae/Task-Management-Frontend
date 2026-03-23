@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProjectChecklist, ChecklistItem, api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -10,63 +10,110 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Check, ListChecks, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/DashboardComponents";
 
 interface ProjectChecklistsTabProps {
   projectId: string;
-  checklists: ProjectChecklist[];
-  loading: boolean;
-  onAddChecklist: () => void;
-  onRefresh: () => void;
 }
 
-const ProjectChecklistsTab = ({ projectId, checklists, loading, onAddChecklist, onRefresh }: ProjectChecklistsTabProps) => {
+const ProjectChecklistsTab = ({ projectId }: ProjectChecklistsTabProps) => {
   const { toast } = useToast();
+  const [checklists, setChecklists] = useState<ProjectChecklist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newChecklistTitle, setNewChecklistTitle] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const fetchChecklists = async () => {
+    try {
+      setLoading(true);
+      const res = await api.getProjectChecklists(projectId);
+      setChecklists(res.data.checklists || []);
+    } catch (err) {
+      console.error("Failed to fetch checklists", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChecklists();
+  }, [projectId]);
+
+  const handleCreateChecklist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newChecklistTitle.trim()) return;
+    try {
+      setCreating(true);
+      await api.createProjectChecklist(projectId, newChecklistTitle);
+      setNewChecklistTitle("");
+      fetchChecklists();
+      toast({ title: "Checklist created" });
+    } catch (err: any) {
+      toast({ title: "Failed to create checklist", description: err.message, variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDeleteChecklist = async (checklistId: string) => {
+    if (!confirm("Are you sure you want to delete this checklist?")) return;
+    try {
+      await api.deleteProjectChecklist(projectId, checklistId);
+      setChecklists(checklists.filter(c => c.id !== checklistId));
+      toast({ title: "Checklist deleted" });
+    } catch (err: any) {
+      toast({ title: "Failed to delete checklist", description: err.message, variant: "destructive" });
+    }
+  };
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-fade-in">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="h-32 bg-muted/50 rounded-lg animate-pulse" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <div key={i} className="h-48 bg-muted animate-pulse rounded-xl" />
         ))}
       </div>
     );
   }
 
-  if (checklists.length === 0) {
-    return (
-      <Card className="shadow-soft animate-fade-in">
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
-            <ListChecks className="w-6 h-6 text-muted-foreground" />
-          </div>
-          <h3 className="text-base font-semibold text-foreground mb-1">No checklists yet</h3>
-          <p className="text-sm text-muted-foreground mb-5 max-w-xs">Break your project down into checklists to track detailed progress.</p>
-          <Button onClick={onAddChecklist} size="sm">
-            <Plus className="w-4 h-4 mr-1.5" /> Add Checklist
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{checklists.length} checklist{checklists.length !== 1 ? "s" : ""}</p>
-        <Button size="sm" variant="secondary" onClick={onAddChecklist}>
-          <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Checklist
-        </Button>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Project Checklists ({checklists.length})
+        </h3>
+        <form onSubmit={handleCreateChecklist} className="flex items-center gap-2">
+          <Input
+            value={newChecklistTitle}
+            onChange={(e) => setNewChecklistTitle(e.target.value)}
+            placeholder="New checklist title..."
+            className="h-9 w-48 sm:w-64"
+          />
+          <Button type="submit" size="sm" disabled={creating || !newChecklistTitle.trim()}>
+            {creating ? "Creating..." : "Add Checklist"}
+          </Button>
+        </form>
       </div>
 
-      {checklists.map((checklist, idx) => (
-        <ChecklistCard
-          key={checklist.id}
-          projectId={projectId}
-          checklist={checklist}
-          onRefresh={onRefresh}
-          index={idx}
+      {checklists.length === 0 ? (
+        <EmptyState
+          icon={ListChecks}
+          title="No checklists"
+          description="Checklists help you break down complex projects into small, manageable steps."
         />
-      ))}
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {checklists.map((checklist) => (
+            <ChecklistCard
+              key={checklist.id}
+              projectId={projectId}
+              checklist={checklist}
+              onDelete={() => handleDeleteChecklist(checklist.id)}
+              onRefresh={fetchChecklists}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -74,179 +121,159 @@ const ProjectChecklistsTab = ({ projectId, checklists, loading, onAddChecklist, 
 const ChecklistCard = ({
   projectId,
   checklist,
-  onRefresh,
-  index,
+  onDelete,
+  onRefresh
 }: {
   projectId: string;
   checklist: ProjectChecklist;
+  onDelete: () => void;
   onRefresh: () => void;
-  index: number;
 }) => {
   const { toast } = useToast();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [title, setTitle] = useState(checklist.title);
   const [newItemTitle, setNewItemTitle] = useState("");
-  const [addingItem, setAddingItem] = useState(false);
-  const [showInput, setShowInput] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleDraft, setTitleDraft] = useState(checklist.title);
-  const [togglingItems, setTogglingItems] = useState<Set<string>>(new Set());
+  const [items, setItems] = useState<ChecklistItem[]>(checklist.items || []);
 
-  const items = checklist.items || [];
-  const completed = items.filter(i => i.isCompleted).length;
-  const total = items.length;
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const completedCount = items.filter(i => i.isCompleted).length;
+  const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
 
-  const handleToggleItem = async (item: ChecklistItem) => {
-    setTogglingItems(prev => new Set(prev).add(item.id));
+  const handleUpdateTitle = async () => {
+    if (title === checklist.title) return setIsEditingTitle(false);
     try {
-      await api.updateChecklistItem(projectId, checklist.id, item.id, { isCompleted: !item.isCompleted });
+      await api.updateProjectChecklist(projectId, checklist.id, title);
+      setIsEditingTitle(false);
       onRefresh();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setTogglingItems(prev => { const s = new Set(prev); s.delete(item.id); return s; });
+      toast({ title: "Failed to update title", description: err.message, variant: "destructive" });
     }
   };
 
-  const handleAddItem = async () => {
+  const handleAddItem = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!newItemTitle.trim()) return;
-    setAddingItem(true);
     try {
-      await api.createChecklistItem(projectId, checklist.id, { title: newItemTitle.trim() });
+      const res = await api.createChecklistItem(projectId, checklist.id, newItemTitle);
+      setItems([...items, res.data.item]);
       setNewItemTitle("");
-      setShowInput(false);
-      onRefresh();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setAddingItem(false);
+      toast({ title: "Failed to add item", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleToggleItem = async (itemId: string, isCompleted: boolean) => {
+    // Optimistic update
+    const oldItems = [...items];
+    setItems(items.map(i => i.id === itemId ? { ...i, isCompleted } : i));
+
+    try {
+      await api.updateChecklistItem(projectId, checklist.id, itemId, { isCompleted });
+    } catch (err: any) {
+      setItems(oldItems);
+      toast({ title: "Failed to update item", description: err.message, variant: "destructive" });
     }
   };
 
   const handleDeleteItem = async (itemId: string) => {
     try {
       await api.deleteChecklistItem(projectId, checklist.id, itemId);
-      onRefresh();
+      setItems(items.filter(i => i.id !== itemId));
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    }
-  };
-
-  const handleRename = async () => {
-    if (!titleDraft.trim() || titleDraft.trim() === checklist.title) {
-      setEditingTitle(false);
-      return;
-    }
-    try {
-      await api.updateProjectChecklist(projectId, checklist.id, { title: titleDraft.trim() });
-      setEditingTitle(false);
-      onRefresh();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await api.deleteProjectChecklist(projectId, checklist.id);
-      toast({ title: "Checklist deleted" });
-      onRefresh();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to delete item", description: err.message, variant: "destructive" });
     }
   };
 
   return (
-    <Card className="shadow-soft hover:shadow-elevated transition-shadow duration-200" style={{ animationDelay: `${index * 60}ms` }}>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          {editingTitle ? (
-            <div className="flex items-center gap-2">
+    <Card className="border border-border shadow-soft overflow-hidden group">
+      <CardHeader className="p-4 pb-2">
+        <div className="flex items-center justify-between gap-2">
+          {isEditingTitle ? (
+            <div className="flex items-center gap-1 flex-1">
               <Input
-                value={titleDraft}
-                onChange={e => setTitleDraft(e.target.value)}
-                className="h-8 text-sm"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={handleUpdateTitle}
+                onKeyDown={(e) => e.key === "Enter" && handleUpdateTitle()}
+                className="h-8 py-0"
                 autoFocus
-                onKeyDown={e => e.key === "Enter" && handleRename()}
               />
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleRename}><Check className="w-3.5 h-3.5" /></Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingTitle(false); setTitleDraft(checklist.title); }}><X className="w-3.5 h-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingTitle(false)}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm text-foreground truncate">{checklist.title}</h3>
-              <span className="text-xs text-muted-foreground">{completed}/{total}</span>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h4 className="font-semibold text-base truncate">{checklist.title}</h4>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
             </div>
           )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>Rename</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="w-4 h-4" /></Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setEditingTitle(true)}>
-              <Pencil className="w-3.5 h-3.5 mr-2" /> Rename
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
-              <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+
+        <div className="mt-2 space-y-1.5">
+          <div className="flex justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            <span>Progress</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <Progress value={progress} className="h-1.5" />
+        </div>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {total > 0 && <Progress value={pct} className="h-1.5 mb-3" />}
 
-        {items.map(item => (
-          <div key={item.id} className="flex items-center gap-2.5 group py-1 rounded-md hover:bg-muted/50 px-1 transition-colors">
-            <Checkbox
-              checked={item.isCompleted}
-              disabled={togglingItems.has(item.id)}
-              onCheckedChange={() => handleToggleItem(item)}
-              className="transition-all duration-200"
-            />
-            <span className={cn(
-              "flex-1 text-sm transition-all duration-200",
-              item.isCompleted && "line-through text-muted-foreground"
-            )}>
-              {item.title}
-            </span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                  onClick={() => handleDeleteItem(item.id)}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Remove item</TooltipContent>
-            </Tooltip>
-          </div>
-        ))}
+      <CardContent className="p-4 pt-2 space-y-3">
+        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 py-1 group/item">
+              <Checkbox
+                checked={item.isCompleted}
+                onCheckedChange={(checked) => handleToggleItem(item.id, !!checked)}
+              />
+              <span className={cn(
+                "text-sm flex-1 transition-all",
+                item.isCompleted && "text-muted-foreground line-through"
+              )}>
+                {item.title}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-item-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                onClick={() => handleDeleteItem(item.id)}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
 
-        {showInput ? (
-          <div className="flex items-center gap-2 mt-2">
-            <Input
-              placeholder="Item title..."
-              value={newItemTitle}
-              onChange={e => setNewItemTitle(e.target.value)}
-              className="h-8 text-sm"
-              autoFocus
-              onKeyDown={e => e.key === "Enter" && handleAddItem()}
-            />
-            <Button size="sm" onClick={handleAddItem} disabled={addingItem || !newItemTitle.trim()}>
-              {addingItem ? "..." : "Add"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setShowInput(false); setNewItemTitle(""); }}>
-              <X className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground mt-1" onClick={() => setShowInput(true)}>
-            <Plus className="w-3 h-3 mr-1" /> Add item
+        <form onSubmit={handleAddItem} className="flex items-center gap-2 pt-2 border-t border-border">
+          <Input
+            value={newItemTitle}
+            onChange={(e) => setNewItemTitle(e.target.value)}
+            placeholder="Add an item..."
+            className="h-8 text-sm"
+          />
+          <Button type="submit" size="icon" variant="ghost" className="h-8 w-8" disabled={!newItemTitle.trim()}>
+            <Plus className="w-4 h-4" />
           </Button>
-        )}
+        </form>
       </CardContent>
     </Card>
   );

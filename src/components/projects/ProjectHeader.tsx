@@ -5,22 +5,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Calendar, Edit, ImagePlus, ListChecks, Plus, Settings, FolderOpen } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { getStatusBadgeClass } from "@/components/dashboard/TaskComponents";
 
 interface ProjectHeaderProps {
   project: Project;
-  onEdit: () => void;
-  onAddTask: () => void;
-  onAddChecklist: () => void;
-  onUploadLogo: () => void;
+  onEdit?: () => void;
+  onAddTask?: () => void;
+  onAddChecklist?: () => void;
+  onUploadLogo?: () => void;
 }
-
-const statusColors: Record<string, string> = {
-  planning: "bg-info/15 text-info border-info/30",
-  active: "bg-success/15 text-success border-success/30",
-  on_hold: "bg-warning/15 text-warning border-warning/30",
-  completed: "bg-success/15 text-success border-success/30",
-  cancelled: "bg-destructive/15 text-destructive border-destructive/30",
-};
 
 const ProjectHeader = ({ project, onEdit, onAddTask, onAddChecklist, onUploadLogo }: ProjectHeaderProps) => {
   return (
@@ -51,62 +44,71 @@ const ProjectHeader = ({ project, onEdit, onAddTask, onAddChecklist, onUploadLog
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">{project.name}</h1>
-              {project.description && (
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{project.description}</p>
-              )}
-            </div>
-            <Badge variant="outline" className={cn("text-xs shrink-0 border", statusColors[project.status] || "")}>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{project.name}</h1>
+            <Badge className={cn("text-[10px] uppercase tracking-wider px-2 py-0", getStatusBadgeClass(project.status))}>
               {project.status.replace("_", " ")}
             </Badge>
           </div>
+          
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-3 max-w-2xl">
+            {project.description || "No description provided for this project."}
+          </p>
 
-          {/* Dates + Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-4 gap-3">
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              {project.startDate && (
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {format(new Date(project.startDate), "MMM d, yyyy")}
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            {(project.startDate || project.endDate) && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>
+                  {project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "TBD"}
+                  {" — "}
+                  {project.endDate ? format(new Date(project.endDate), "MMM d, yyyy") : "TBD"}
                 </span>
-              )}
-              {project.startDate && project.endDate && <span>→</span>}
-              {project.endDate && (
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {format(new Date(project.endDate), "MMM d, yyyy")}
-                </span>
-              )}
+              </div>
+            )}
+            
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-foreground">{project._count?.tasks || 0}</span>
+                <span>Tasks</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-semibold text-foreground">{project._count?.checklists || 0}</span>
+                <span>Checklists</span>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant="outline" onClick={onEdit}>
-                    <Edit className="w-3.5 h-3.5 mr-1.5" /> Edit
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Edit project details</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="sm" onClick={onAddTask}>
-                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Task
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Create a new task</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant="secondary" onClick={onAddChecklist}>
-                    <ListChecks className="w-3.5 h-3.5 mr-1.5" /> Checklist
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Add a checklist</TooltipContent>
-              </Tooltip>
-            </div>
+        {/* Actions */}
+        <div className="flex sm:flex-col items-center sm:items-end justify-start gap-2">
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9" onClick={onEdit}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit Project</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9" onClick={onAddTask}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>New Task</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9" onClick={onAddChecklist}>
+                  <ListChecks className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>New Checklist</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

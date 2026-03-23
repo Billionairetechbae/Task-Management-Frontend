@@ -7,99 +7,148 @@ import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 
 interface ProjectLogoUploaderProps {
   projectId: string;
-  currentLogo: string | null | undefined;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  currentLogoUrl?: string | null;
+  onLogoUpdated: (newUrl: string | null) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const ProjectLogoUploader = ({ projectId, currentLogo, open, onOpenChange, onSuccess }: ProjectLogoUploaderProps) => {
+const ProjectLogoUploader = ({
+  projectId,
+  currentLogoUrl,
+  onLogoUpdated,
+  isOpen,
+  onClose,
+}: ProjectLogoUploaderProps) => {
   const { toast } = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [removing, setRemoving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Max 5MB", variant: "destructive" });
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file.",
+        variant: "destructive",
+      });
       return;
     }
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-  };
 
-  const handleUpload = async () => {
-    if (!file) return;
-    setUploading(true);
+    // Validate file size (e.g., 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum size is 2MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      await api.uploadProjectLogo(projectId, file);
-      toast({ title: "Logo updated" });
-      setFile(null);
-      setPreview(null);
-      onSuccess();
-      onOpenChange(false);
+      setUploading(true);
+      const res = await api.uploadProjectLogo(projectId, file);
+      onLogoUpdated(res.data.logoUrl);
+      toast({ title: "Logo updated successfully" });
+      onClose();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: "Upload failed",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleRemove = async () => {
-    setRemoving(true);
+  const handleDelete = async () => {
     try {
+      setDeleting(true);
       await api.deleteProjectLogo(projectId);
+      onLogoUpdated(null);
       toast({ title: "Logo removed" });
-      onSuccess();
-      onOpenChange(false);
+      onClose();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: "Delete failed",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
-      setRemoving(false);
+      setDeleting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Project Logo</DialogTitle>
-          <DialogDescription>Upload or change the project logo.</DialogDescription>
+          <DialogDescription>
+            Upload a custom logo for your project to make it easily identifiable.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-4 py-4">
-          <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/50">
-            {(preview || currentLogo) ? (
-              <img src={preview || currentLogo!} alt="Logo preview" className="w-full h-full object-cover" />
+        <div className="flex flex-col items-center justify-center py-6 space-y-4">
+          <div className="relative group w-32 h-32 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/30">
+            {currentLogoUrl ? (
+              <img
+                src={currentLogoUrl}
+                alt="Project Logo"
+                className="w-full h-full object-cover"
+              />
             ) : (
-              <ImagePlus className="w-8 h-8 text-muted-foreground" />
+              <ImagePlus className="w-10 h-10 text-muted-foreground" />
+            )}
+            
+            {uploading && (
+              <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-[2px]">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
             )}
           </div>
 
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-              <Upload className="w-3.5 h-3.5 mr-1.5" /> Choose File
+          <div className="flex flex-col w-full gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+            
+            <Button
+              variant="default"
+              className="w-full gap-2"
+              disabled={uploading || deleting}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {currentLogoUrl ? "Change Logo" : "Upload Logo"}
             </Button>
-            {currentLogo && (
-              <Button variant="outline" size="sm" onClick={handleRemove} disabled={removing} className="text-destructive hover:text-destructive">
-                {removing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1.5" />}
-                Remove
+
+            {currentLogoUrl && (
+              <Button
+                variant="outline"
+                className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                disabled={uploading || deleting}
+                onClick={handleDelete}
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Remove Logo
               </Button>
             )}
           </div>
-
-          {file && (
-            <Button onClick={handleUpload} disabled={uploading} className="w-full">
-              {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-              Upload Logo
-            </Button>
-          )}
+          
+          <p className="text-[11px] text-muted-foreground text-center">
+            Recommended: Square image, max 2MB (JPG, PNG)
+          </p>
         </div>
       </DialogContent>
     </Dialog>

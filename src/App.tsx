@@ -59,9 +59,6 @@ import Invite from "./pages/Invite";
 import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
-
-import Projects from "./pages/Projects";
-import ProjectDetails from "./pages/ProjectDetails";
 import Drive from "./pages/Drive";
 import ProjectInvite from "./pages/ProjectInvite";
 // import DashboardEntry from "./pages/DashboardEntry";
