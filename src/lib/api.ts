@@ -1891,6 +1891,149 @@ class ApiClient {
     });
   }
 
+  /* ============================
+     PROJECTS
+  ============================ */
+
+  async getProjects(filters?: {
+    status?: string;
+    search?: string;
+  }): Promise<{ status: string; results?: number; data: { projects: Project[] } }> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.search) params.append("search", filters.search);
+    return this.request(`/projects?${params.toString()}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getProjectById(projectId: string): Promise<{ status: string; data: { project: Project } }> {
+    return this.request(`/projects/${projectId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createProject(data: CreateProjectData): Promise<{ status: string; message: string; data: { project: Project } }> {
+    return this.request("/projects", {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProject(projectId: string, data: Partial<CreateProjectData>): Promise<{ status: string; message: string; data: { project: Project } }> {
+    return this.request(`/projects/${projectId}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProject(projectId: string): Promise<{ status: string; message: string }> {
+    return this.request(`/projects/${projectId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async uploadProjectLogo(projectId: string, file: File): Promise<{ status: string; data: { project: Project } }> {
+    const form = new FormData();
+    form.append("logo", file);
+    return this.request(`/projects/${projectId}/logo`, {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: form,
+    });
+  }
+
+  async deleteProjectLogo(projectId: string): Promise<{ status: string; message: string }> {
+    return this.request(`/projects/${projectId}/logo`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getProjectTasks(projectId: string): Promise<{ status: string; data: { tasks: Task[] } }> {
+    return this.request(`/projects/${projectId}/tasks`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createProjectTask(projectId: string, data: FormData | CreateTaskData): Promise<{ status: string; data: { task: Task } }> {
+    const isFormData = data instanceof FormData;
+    const headers: HeadersInit = isFormData
+      ? this.getAuthHeaders(true)
+      : { ...this.getAuthHeaders(true), "Content-Type": "application/json" };
+    return this.request(`/projects/${projectId}/tasks`, {
+      method: "POST",
+      headers,
+      body: isFormData ? data : JSON.stringify(data),
+    });
+  }
+
+  async updateProjectSettings(projectId: string, settings: Record<string, any>): Promise<{ status: string; data: { project: Project } }> {
+    return this.request(`/projects/${projectId}/settings`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getProjectChecklists(projectId: string): Promise<{ status: string; data: { checklists: ProjectChecklist[] } }> {
+    return this.request(`/projects/${projectId}/checklists`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createProjectChecklist(projectId: string, data: { title: string }): Promise<{ status: string; data: { checklist: ProjectChecklist } }> {
+    return this.request(`/projects/${projectId}/checklists`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProjectChecklist(projectId: string, checklistId: string, data: { title: string }): Promise<{ status: string; data: { checklist: ProjectChecklist } }> {
+    return this.request(`/projects/${projectId}/checklists/${checklistId}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProjectChecklist(projectId: string, checklistId: string): Promise<{ status: string; message: string }> {
+    return this.request(`/projects/${projectId}/checklists/${checklistId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createChecklistItem(projectId: string, checklistId: string, data: { title: string }): Promise<{ status: string; data: { item: ChecklistItem } }> {
+    return this.request(`/projects/${projectId}/checklists/${checklistId}/items`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateChecklistItem(projectId: string, checklistId: string, itemId: string, data: { title?: string; isCompleted?: boolean }): Promise<{ status: string; data: { item: ChecklistItem } }> {
+    return this.request(`/projects/${projectId}/checklists/${checklistId}/items/${itemId}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteChecklistItem(projectId: string, checklistId: string, itemId: string): Promise<{ status: string; message: string }> {
+    return this.request(`/projects/${projectId}/checklists/${checklistId}/items/${itemId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
 }
 
 export const api = new ApiClient();
