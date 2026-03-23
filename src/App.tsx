@@ -252,6 +252,23 @@ const App = () => (
         }
       />
 
+      <Route
+        path="/projects"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <Projects />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/projects/:projectId"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <ProjectDetails />
+          </ProtectedRoute>
+        }
+      />
 
 
 
