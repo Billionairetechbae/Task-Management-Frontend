@@ -56,6 +56,8 @@ import Signup from "./pages/Signup";
 import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
 import NotificationsPage from "./pages/Notifications";
+import Projects from "./pages/Projects";
+import ProjectDetails from "./pages/ProjectDetails";
 
 
 
@@ -250,6 +252,23 @@ const App = () => (
         }
       />
 
+      <Route
+        path="/projects"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <Projects />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/projects/:projectId"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <ProjectDetails />
+          </ProtectedRoute>
+        }
+      />
 
 
 
