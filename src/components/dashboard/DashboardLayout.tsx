@@ -24,6 +24,7 @@ import {
   Crown,
   ListChecks,
   Paperclip,
+  FolderKanban,
 } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
