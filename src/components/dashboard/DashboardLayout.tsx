@@ -82,6 +82,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     if (workspaceRole === "manager") {
       return [
         { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: "Projects", href: "/projects", icon: <FolderKanban className="w-5 h-5" /> },
         { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
         { label: "Team Directory", href: "/team-directory", icon: <Users className="w-5 h-5" /> },
         { label: "Team Members", href: "/team_members", icon: <UserCircle className="w-5 h-5" /> },
