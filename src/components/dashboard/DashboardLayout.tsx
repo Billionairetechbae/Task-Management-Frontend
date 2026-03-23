@@ -92,6 +92,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
     return [
       { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+      { label: "Projects", href: "/projects", icon: <FolderKanban className="w-5 h-5" /> },
       { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-5 h-5" /> },
       { label: "My Tasks", href: "/tasks/my", icon: <ClipboardList className="w-5 h-5" /> },
       { label: "Harmony", href: "/harmony", icon: <Users className="w-5 h-5" /> },
