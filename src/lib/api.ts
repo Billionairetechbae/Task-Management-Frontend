@@ -587,6 +587,57 @@ export interface CostEstimation {
 }
 
 /* ============================
+   PROJECTS
+============================ */
+
+export type ProjectStatus = "planning" | "active" | "on_hold" | "completed" | "cancelled";
+
+export interface ChecklistItem {
+  id: string;
+  checklistId: string;
+  title: string;
+  isCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectChecklist {
+  id: string;
+  projectId: string;
+  title: string;
+  items?: ChecklistItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  logoUrl?: string | null;
+  status: ProjectStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+  settings?: Record<string, any> | null;
+  companyId: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  tasks?: Task[];
+  checklists?: ProjectChecklist[];
+  _count?: { tasks?: number; checklists?: number };
+}
+
+export interface CreateProjectData {
+  name: string;
+  description?: string;
+  status?: ProjectStatus;
+  startDate?: string;
+  endDate?: string;
+  settings?: Record<string, any>;
+}
+
+/* ============================
    NOTIFICATIONS
 ============================ */
 
