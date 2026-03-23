@@ -46,6 +46,7 @@ import AdminInvites from "./pages/admin/AdminInvites";
 
 import { WebSocketStatus } from '@/components/WebSocketStatus';
 import TaskDetailsDebug from "./pages/TaskDetailsDebug";
+// import DashboardEntry from "./pages/DashboardEntry";
 
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import AdminAssistanceRequests from "@/pages/admin/AdminAssistanceRequests";
@@ -59,12 +60,15 @@ import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
 
-
-
-
+import Projects from "./pages/Projects";
+import ProjectDetails from "./pages/ProjectDetails";
+import Drive from "./pages/Drive";
+import ProjectInvite from "./pages/ProjectInvite";
+// import DashboardEntry from "./pages/DashboardEntry";
 
 const App = () => (
   <>
+    <Toaster />
     <Toaster />
     <Sonner />
     <WebSocketStatus />
@@ -82,6 +86,7 @@ const App = () => (
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/project-invite/:token" element={<ProjectInvite />} />
 
       {/* TeamMembers Page */}
       <Route
@@ -260,12 +265,19 @@ const App = () => (
           </ProtectedRoute>
         }
       />
-
       <Route
-        path="/projects/:projectId"
+        path="/projects/:id"
         element={
           <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
             <ProjectDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/drive"
+        element={
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+            <Drive />
           </ProtectedRoute>
         }
       />

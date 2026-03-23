@@ -1,194 +1,281 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, Project, Task, ProjectChecklist } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ClipboardList, LayoutGrid, ListChecks, Settings } from "lucide-react";
+import { api, Project, Task, ProjectInvite } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 
-import ProjectHeader from "@/components/projects/ProjectHeader";
-import ProjectOverviewTab from "@/components/projects/ProjectOverviewTab";
-import ProjectTasksTab from "@/components/projects/ProjectTasksTab";
-import ProjectChecklistsTab from "@/components/projects/ProjectChecklistsTab";
-import ProjectSettingsTab from "@/components/projects/ProjectSettingsTab";
-import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
-import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDialog";
-import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
-import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
-
-const ProjectDetails = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+export default function ProjectDetails() {
+  const { id } = useParams();
   const { toast } = useToast();
-
+  const [loading, setLoading] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [checklists, setChecklists] = useState<ProjectChecklist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [checklistsLoading, setChecklistsLoading] = useState(true);
+  const [memberUserId, setMemberUserId] = useState("");
+  const [memberAdding, setMemberAdding] = useState(false);
+  const [emailList, setEmailList] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [includeExternal, setIncludeExternal] = useState(true);
+  const [membersList, setMembersList] = useState<Array<{ id: string; role: string; status: string; firstName: string; lastName: string; email: string }>>([]);
+  const [invitesList, setInvitesList] = useState<ProjectInvite[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [createTaskOpen, setCreateTaskOpen] = useState(false);
-  const [createChecklistOpen, setCreateChecklistOpen] = useState(false);
-  const [logoOpen, setLogoOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
-
-  const fetchProject = useCallback(async () => {
-    if (!projectId) return;
+  const load = async () => {
+    if (!id) return;
     try {
-      const res = await api.getProjectById(projectId);
-      setProject(res.data.project);
+      setLoading(true);
+      const res = await api.getProjectById(id);
+      const p = (res as any)?.data?.project || (res as any)?.project;
+      setProject(p || null);
     } catch (err: any) {
-      toast({ title: "Error loading project", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to load project", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  };
 
-  const fetchTasks = useCallback(async () => {
-    if (!projectId) return;
-    setTasksLoading(true);
+  const loadMembers = async () => {
+    if (!id) return;
     try {
-      const res = await api.getProjectTasks(projectId);
-      setTasks(res.data.tasks || []);
-    } catch {
-      setTasks([]);
+      setLoadingMembers(true);
+      const res = await api.getProjectMembers(id);
+      const data = (res as any)?.data || {};
+      setMembersList(Array.isArray(data.members) ? data.members : []);
+      setInvitesList(Array.isArray(data.invites) ? data.invites : []);
+    } catch (err: any) {
+      toast({ title: "Failed to load members", description: err.message, variant: "destructive" });
     } finally {
-      setTasksLoading(false);
+      setLoadingMembers(false);
     }
-  }, [projectId]);
+  };
 
-  const fetchChecklists = useCallback(async () => {
-    if (!projectId) return;
-    setChecklistsLoading(true);
+  const addMember = async () => {
+    if (!id || !memberUserId.trim()) return;
     try {
-      const res = await api.getProjectChecklists(projectId);
-      setChecklists(res.data.checklists || []);
-    } catch {
-      setChecklists([]);
+      setMemberAdding(true);
+      await api.addProjectMember(id, memberUserId, "member");
+      setMemberUserId("");
+      await Promise.all([load(), loadMembers()]);
+      toast({ title: "Member added" });
+    } catch (err: any) {
+      toast({ title: "Add failed", description: err.message, variant: "destructive" });
     } finally {
-      setChecklistsLoading(false);
+      setMemberAdding(false);
     }
-  }, [projectId]);
+  };
+
+  const inviteByEmails = async () => {
+    if (!id) return;
+    const emails = emailList.split(",").map(e => e.trim()).filter(Boolean);
+    if (emails.length === 0) return;
+    try {
+      setInviting(true);
+      await api.inviteProjectMembersByEmails(id, emails, "member");
+      setEmailList("");
+      await Promise.all([load(), loadMembers()]);
+      toast({ title: "Invites sent" });
+    } catch (err: any) {
+      toast({ title: "Invite failed", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const loadCandidates = async () => {
+    if (!id) return;
+    try {
+      const res = await api.getProjectCandidates(id, includeExternal);
+      const items = (res as any)?.data?.candidates || (res as any)?.candidates || [];
+      setCandidates(Array.isArray(items) ? items : []);
+    } catch (err: any) {
+      toast({ title: "Failed to load candidates", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const addCandidate = async (candidate: any) => {
+    if (!id) return;
+    try {
+      if (candidate.isExternal && candidate.email) {
+        await api.inviteProjectMembersByEmails(id, [candidate.email], "member");
+      } else if (candidate.userId) {
+        await api.addProjectMember(id, candidate.userId, "member");
+      } else if (candidate.email) {
+        await api.inviteProjectMembersByEmails(id, [candidate.email], "member");
+      }
+      await Promise.all([load(), loadMembers(), loadCandidates()]);
+      toast({ title: "Added" });
+    } catch (err: any) {
+      toast({ title: "Action failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const removeMember = async (userId: string) => {
+    if (!id) return;
+    try {
+      await api.removeProjectMember(id, userId);
+      await loadMembers();
+      toast({ title: "Member removed" });
+    } catch (err: any) {
+      toast({ title: "Remove failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const revokeInvite = async (inviteId: string) => {
+    if (!id) return;
+    try {
+      await api.revokeProjectInvite(id, inviteId);
+      await loadMembers();
+      toast({ title: "Invite revoked" });
+    } catch (err: any) {
+      toast({ title: "Action failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const resendInvite = async (inviteId: string) => {
+    if (!id) return;
+    try {
+      await api.resendProjectInvite(id, inviteId);
+      await loadMembers();
+      toast({ title: "Invite resent" });
+    } catch (err: any) {
+      toast({ title: "Action failed", description: err.message, variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
-    fetchProject();
-    fetchTasks();
-    fetchChecklists();
-  }, [fetchProject, fetchTasks, fetchChecklists]);
+    Promise.all([load(), loadMembers()]);
+  }, [id]);
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="space-y-6 animate-fade-in">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-10 w-64" />
-          <div className="grid md:grid-cols-2 gap-4">
-            <Skeleton className="h-40" />
-            <Skeleton className="h-40" />
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!project) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center py-20">
-          <p className="text-muted-foreground">Project not found.</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  useEffect(() => {
+    loadCandidates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, includeExternal]);
 
   return (
     <DashboardLayout>
-      <TooltipProvider delayDuration={200}>
-        <div className="max-w-5xl mx-auto space-y-6">
-          <ProjectHeader
-            project={project}
-            onEdit={() => setEditOpen(true)}
-            onAddTask={() => setCreateTaskOpen(true)}
-            onAddChecklist={() => setCreateChecklistOpen(true)}
-            onUploadLogo={() => setLogoOpen(true)}
-          />
+      <div className="max-w-6xl mx-auto">
+        {loading && <p className="text-muted-foreground">Loading...</p>}
+        {!loading && !project && <p className="text-muted-foreground">Project not found</p>}
+        {!loading && project && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">{project.name}</h1>
+                <p className="text-sm text-muted-foreground capitalize">{project.status}</p>
+              </div>
+            </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
-            <TabsList className="bg-muted/60 p-1">
-              <TabsTrigger value="overview" className="text-xs gap-1.5">
-                <LayoutGrid className="w-3.5 h-3.5" /> Overview
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="text-xs gap-1.5">
-                <ClipboardList className="w-3.5 h-3.5" /> Tasks
-              </TabsTrigger>
-              <TabsTrigger value="checklists" className="text-xs gap-1.5">
-                <ListChecks className="w-3.5 h-3.5" /> Checklists
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="text-xs gap-1.5">
-                <Settings className="w-3.5 h-3.5" /> Settings
-              </TabsTrigger>
-            </TabsList>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-4 border border-border md:col-span-2">
+                <h2 className="font-semibold mb-3">Tasks</h2>
+                {project.tasks && project.tasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {project.tasks.map((t: Task) => (
+                      <div key={t.id} className="flex items-center justify-between border rounded-lg p-3">
+                        <div>
+                          <p className="font-medium">{t.title}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{t.status}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No tasks linked</p>
+                )}
+              </Card>
 
-            <TabsContent value="overview" className="mt-6">
-              <ProjectOverviewTab project={project} tasks={tasks} checklists={checklists} />
-            </TabsContent>
+              <Card className="p-4 border border-border">
+                <h2 className="font-semibold mb-3">Members</h2>
+                {loadingMembers ? (
+                  <p className="text-sm text-muted-foreground">Loading members...</p>
+                ) : membersList.length > 0 ? (
+                  <ul className="space-y-2">
+                    {membersList.map((m) => (
+                      <li key={m.id} className="flex items-center justify-between">
+                        <div className="text-sm">
+                          <span className="font-medium">{m.firstName} {m.lastName}</span>
+                          <span className="text-muted-foreground ml-2 capitalize">{m.role}</span>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => removeMember(m.id)}>Remove</Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No members</p>
+                )}
 
-            <TabsContent value="tasks" className="mt-6">
-              <ProjectTasksTab tasks={tasks} loading={tasksLoading} onAddTask={() => setCreateTaskOpen(true)} />
-            </TabsContent>
+                <div className="mt-4 flex gap-2">
+                  <Input value={memberUserId} onChange={(e) => setMemberUserId(e.target.value)} placeholder="User ID to add" />
+                  <Button onClick={addMember} disabled={memberAdding || !memberUserId.trim()}>Add</Button>
+                </div>
 
-            <TabsContent value="checklists" className="mt-6">
-              <ProjectChecklistsTab
-                projectId={project.id}
-                checklists={checklists}
-                loading={checklistsLoading}
-                onAddChecklist={() => setCreateChecklistOpen(true)}
-                onRefresh={fetchChecklists}
-              />
-            </TabsContent>
+                <div className="mt-4">
+                  <h3 className="font-semibold mb-2 text-sm">Invite by email</h3>
+                  <div className="flex gap-2">
+                    <Input value={emailList} onChange={(e) => setEmailList(e.target.value)} placeholder="Comma-separated emails" />
+                    <Button onClick={inviteByEmails} disabled={inviting || !emailList.trim()}>Invite</Button>
+                  </div>
+                </div>
 
-            <TabsContent value="settings" className="mt-6">
-              <ProjectSettingsTab project={project} onRefresh={fetchProject} />
-            </TabsContent>
-          </Tabs>
-        </div>
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-sm">Suggested people</h3>
+                    <label className="text-xs flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={includeExternal}
+                        onChange={(e) => setIncludeExternal(e.target.checked)}
+                      />
+                      Include external
+                    </label>
+                  </div>
+                  {candidates.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No suggestions</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {candidates.map((c, idx) => (
+                        <li key={idx} className="flex items-center justify-between border rounded-lg p-2">
+                          <div className="text-sm">
+                            <span className="font-medium">{c.name || c.user?.firstName ? `${c.user?.firstName} ${c.user?.lastName}` : c.email}</span>
+                            {c.email && <span className="text-muted-foreground ml-2">{c.email}</span>}
+                            {c.isExternal && <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded">external</span>}
+                          </div>
+                          <Button size="sm" onClick={() => addCandidate(c)}>Add</Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-        {/* Modals / Drawers */}
-        <EditProjectDrawer
-          project={project}
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          onSuccess={() => { fetchProject(); }}
-          mode="edit"
-        />
-
-        <CreateProjectTaskDialog
-          projectId={project.id}
-          open={createTaskOpen}
-          onOpenChange={setCreateTaskOpen}
-          onSuccess={fetchTasks}
-        />
-
-        <CreateChecklistDialog
-          projectId={project.id}
-          open={createChecklistOpen}
-          onOpenChange={setCreateChecklistOpen}
-          onSuccess={fetchChecklists}
-        />
-
-        <ProjectLogoUploader
-          projectId={project.id}
-          currentLogo={project.logoUrl}
-          open={logoOpen}
-          onOpenChange={setLogoOpen}
-          onSuccess={fetchProject}
-        />
-      </TooltipProvider>
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-2 text-sm">Pending invites</h3>
+                  {invitesList.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No pending invites</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {invitesList.map((inv) => (
+                        <li key={inv.id} className="flex items-center justify-between border rounded-lg p-2">
+                          <div className="text-sm">
+                            <span className="font-medium">{inv.email}</span>
+                            <span className="text-muted-foreground ml-2 capitalize">{inv.role}</span>
+                            <span className="ml-2 text-xs">{inv.status}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => revokeInvite(inv.id)}>Revoke</Button>
+                            <Button size="sm" onClick={() => resendInvite(inv.id)}>Resend</Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
     </DashboardLayout>
   );
-};
-
-export default ProjectDetails;
+}

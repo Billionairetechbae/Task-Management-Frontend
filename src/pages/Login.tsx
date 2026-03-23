@@ -20,11 +20,18 @@ const Login = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    if (user.role === "admin") {
+      navigate("/dashboard-admin");
+      return;
+    }
+
     const ws = Array.isArray(workspaces) ? workspaces : [];
     if (ws.length === 0) {
       navigate("/onboarding/workspace");
       return;
     }
+
     const validIds = ws.map((w: any) => w.id);
     if (!activeCompanyId || (validIds.length > 0 && !validIds.includes(activeCompanyId))) {
       const resolved = ws[0]?.id;
@@ -34,6 +41,7 @@ const Login = () => {
         return;
       }
     }
+
     navigate("/dashboard");
   }, [user, workspaces, activeCompanyId, setActiveCompanyId, navigate]);
 
