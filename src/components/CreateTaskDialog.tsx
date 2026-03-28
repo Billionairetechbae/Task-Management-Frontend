@@ -18,9 +18,10 @@ interface CreateTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  projectId?: string;
 }
 
-const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogProps) => {
+const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTaskDialogProps) => {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
@@ -141,7 +142,11 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDialogPro
       // backend usually expects "files" (match your backend)
       files.forEach((file) => form.append("files", file));
 
-      await api.createTask(form);
+      if (projectId) {
+        await api.createProjectTask(projectId, form);
+      } else {
+        await api.createTask(form);
+      }
 
       toast({ title: "Task Created", description: "Your task was created successfully." });
 

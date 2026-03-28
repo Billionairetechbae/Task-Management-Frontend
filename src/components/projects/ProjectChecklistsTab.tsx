@@ -14,9 +14,10 @@ import { EmptyState } from "@/components/dashboard/DashboardComponents";
 
 interface ProjectChecklistsTabProps {
   projectId: string;
+  onRefresh?: () => void;
 }
 
-const ProjectChecklistsTab = ({ projectId }: ProjectChecklistsTabProps) => {
+const ProjectChecklistsTab = ({ projectId, onRefresh }: ProjectChecklistsTabProps) => {
   const { toast } = useToast();
   const [checklists, setChecklists] = useState<ProjectChecklist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,9 @@ const ProjectChecklistsTab = ({ projectId }: ProjectChecklistsTabProps) => {
     try {
       setLoading(true);
       const res = await api.getProjectChecklists(projectId);
-      setChecklists(res.data.checklists || []);
+      const data = res.data;
+      const list = Array.isArray(data) ? data : (data as any).checklists || [];
+      setChecklists(list);
     } catch (err) {
       console.error("Failed to fetch checklists", err);
     } finally {
@@ -47,6 +50,7 @@ const ProjectChecklistsTab = ({ projectId }: ProjectChecklistsTabProps) => {
       await api.createProjectChecklist(projectId, newChecklistTitle);
       setNewChecklistTitle("");
       fetchChecklists();
+      if (onRefresh) onRefresh();
       toast({ title: "Checklist created" });
     } catch (err: any) {
       toast({ title: "Failed to create checklist", description: err.message, variant: "destructive" });
@@ -60,6 +64,7 @@ const ProjectChecklistsTab = ({ projectId }: ProjectChecklistsTabProps) => {
     try {
       await api.deleteProjectChecklist(projectId, checklistId);
       setChecklists(checklists.filter(c => c.id !== checklistId));
+      if (onRefresh) onRefresh();
       toast({ title: "Checklist deleted" });
     } catch (err: any) {
       toast({ title: "Failed to delete checklist", description: err.message, variant: "destructive" });
@@ -154,7 +159,9 @@ const ChecklistCard = ({
     if (!newItemTitle.trim()) return;
     try {
       const res = await api.createChecklistItem(projectId, checklist.id, newItemTitle);
-      setItems([...items, res.data.item]);
+      const data = res.data;
+      const newItem = (data as any).item || data;
+      setItems([...items, newItem]);
       setNewItemTitle("");
     } catch (err: any) {
       toast({ title: "Failed to add item", description: err.message, variant: "destructive" });

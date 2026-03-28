@@ -10,26 +10,36 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { TaskTable, getStatusBadgeClass } from "@/components/dashboard/TaskComponents";
 import { EmptyState } from "@/components/dashboard/DashboardComponents";
+import CreateTaskDialog from "@/components/CreateTaskDialog";
 
 interface ProjectTasksTabProps {
   projectId: string;
+  onRefresh?: () => void;
 }
 
-const ProjectTasksTab = ({ projectId }: ProjectTasksTabProps) => {
+const ProjectTasksTab = ({ projectId, onRefresh }: ProjectTasksTabProps) => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateCreateDialogOpen] = useState(false);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
       const res = await api.getProjectTasks(projectId);
-      setTasks(res.data.tasks || []);
+      const data = res.data;
+      const list = Array.isArray(data) ? data : (data as any).tasks || [];
+      setTasks(list);
     } catch (err) {
       console.error("Failed to fetch project tasks", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTaskCreated = () => {
+    fetchTasks();
+    if (onRefresh) onRefresh();
   };
 
   useEffect(() => {
@@ -48,17 +58,25 @@ const ProjectTasksTab = ({ projectId }: ProjectTasksTabProps) => {
 
   if (tasks.length === 0) {
     return (
-      <EmptyState
-        icon={ClipboardList}
-        title="No tasks yet"
-        description="Get started by creating your first task for this project."
-        action={
-          <Button onClick={() => navigate(`/tasks/create?projectId=${projectId}`)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Task
-          </Button>
-        }
-      />
+      <>
+        <EmptyState
+          icon={ClipboardList}
+          title="No tasks yet"
+          description="Get started by creating your first task for this project."
+          action={
+            <Button onClick={() => setIsCreateCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Task
+            </Button>
+          }
+        />
+        <CreateTaskDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateCreateDialogOpen}
+          onSuccess={handleTaskCreated}
+          projectId={projectId}
+        />
+      </>
     );
   }
 
@@ -68,7 +86,7 @@ const ProjectTasksTab = ({ projectId }: ProjectTasksTabProps) => {
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Recent Tasks
         </h3>
-        <Button size="sm" variant="ghost" className="text-primary" onClick={() => navigate(`/tasks/create?projectId=${projectId}`)}>
+        <Button size="sm" variant="ghost" className="text-primary" onClick={() => setIsCreateCreateDialogOpen(true)}>
           <Plus className="w-3.5 h-3.5 mr-1" />
           Add Task
         </Button>
@@ -78,6 +96,13 @@ const ProjectTasksTab = ({ projectId }: ProjectTasksTabProps) => {
         tasks={tasks}
         showActions={true}
         onEdit={(task) => navigate(`/task-details/${task.id}`)}
+      />
+
+      <CreateTaskDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateCreateDialogOpen}
+        onSuccess={handleTaskCreated}
+        projectId={projectId}
       />
     </div>
   );

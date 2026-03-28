@@ -2030,7 +2030,7 @@ class ApiClient {
 
   async getProjectById(id: string): Promise<{
     status: string;
-    data: { project: Project };
+    data: { project: Project } | any;
   }> {
     return this.request(`/projects/${id}`, {
       method: "GET",
@@ -2042,11 +2042,14 @@ class ApiClient {
     name: string;
     description: string;
     visibility: "private" | "workspace";
-    status: "active" | "archived";
+    status: ProjectStatus;
     leadId?: string | null;
     color?: string | null;
     dueDate?: string | null;
-  }>): Promise<{ status: string; message?: string; data: { project: Project } }> {
+    startDate?: string | null;
+    endDate?: string | null;
+    settings?: Record<string, any> | null;
+  }>): Promise<{ status: string; message?: string; data: { project: Project } | any }> {
     return this.request(`/projects/${id}`, {
       method: "PATCH",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
@@ -2054,11 +2057,11 @@ class ApiClient {
     });
   }
 
-  async addProjectMember(projectId: string, userId: string, role: "owner" | "admin" | "manager" | "member" | "viewer" = "member"): Promise<{ status: string; message?: string; data?: any }> {
+  async addProjectMembers(projectId: string, emails: string[], defaultRole: "owner" | "admin" | "member" | "viewer" = "member"): Promise<{ status: string; message?: string; data?: any }> {
     return this.request(`/projects/${projectId}/members`, {
       method: "POST",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, role }),
+      body: JSON.stringify({ emails, defaultRole }),
     });
   }
 
@@ -2083,7 +2086,7 @@ class ApiClient {
     });
   }
 
-  async inviteProjectMembersByEmails(projectId: string, emails: string[], defaultRole?: "owner" | "admin" | "member" | "viewer"): Promise<{ status: string; message?: string; data?: any }> {
+  async inviteMembersByEmail(projectId: string, emails: string[], defaultRole: "owner" | "admin" | "member" | "viewer" = "member"): Promise<{ status: string; message?: string; data?: any }> {
     return this.request(`/projects/${projectId}/members/emails`, {
       method: "POST",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
@@ -2192,14 +2195,6 @@ class ApiClient {
     });
   }
 
-  async inviteProjectMember(projectId: string, email: string, role: "owner" | "admin" | "member" | "viewer" = "member"): Promise<{ status: string; message?: string; data?: any }> {
-    return this.request(`/projects/${projectId}/members/emails`, {
-      method: "POST",
-      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
-      body: JSON.stringify({ emails: [email], defaultRole: role }),
-    });
-  }
-
   /* ============================
      PROJECT MODULE EXTENSIONS
   ============================ */
@@ -2221,18 +2216,23 @@ class ApiClient {
     });
   }
 
-  async getProjectTasks(projectId: string): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
+  async getProjectTasks(projectId: string): Promise<{ status: string; results: number; data: { tasks: Task[] } | Task[] | any }> {
     return this.request(`/projects/${projectId}/tasks`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
   }
 
-  async createProjectTask(projectId: string, data: CreateTaskData): Promise<{ status: string; data: { task: Task } }> {
+  async createProjectTask(projectId: string, data: CreateTaskData | FormData): Promise<{ status: string; data: { task: Task } | Task | any }> {
+    const isFormData = data instanceof FormData;
+    const headers: HeadersInit = isFormData
+      ? this.getAuthHeaders(true)
+      : { ...this.getAuthHeaders(true), "Content-Type": "application/json" };
+
     return this.request(`/projects/${projectId}/tasks`, {
       method: "POST",
-      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      headers,
+      body: isFormData ? data : JSON.stringify(data),
     });
   }
 
@@ -2244,14 +2244,14 @@ class ApiClient {
     });
   }
 
-  async getProjectChecklists(projectId: string): Promise<{ status: string; data: { checklists: ProjectChecklist[] } }> {
+  async getProjectChecklists(projectId: string): Promise<{ status: string; data: { checklists: ProjectChecklist[] } | ProjectChecklist[] | any }> {
     return this.request(`/projects/${projectId}/checklists`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
   }
 
-  async createProjectChecklist(projectId: string, title: string): Promise<{ status: string; data: { checklist: ProjectChecklist } }> {
+  async createProjectChecklist(projectId: string, title: string): Promise<{ status: string; data: { checklist: ProjectChecklist } | ProjectChecklist | any }> {
     return this.request(`/projects/${projectId}/checklists`, {
       method: "POST",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
@@ -2274,15 +2274,15 @@ class ApiClient {
     });
   }
 
-  async createChecklistItem(projectId: string, checklistId: string, title: string): Promise<{ status: string; data: { item: ChecklistItem } }> {
+  async createChecklistItem(projectId: string, checklistId: string, title: string, sortOrder?: number): Promise<{ status: string; data: { item: ChecklistItem } }> {
     return this.request(`/projects/${projectId}/checklists/${checklistId}/items`, {
       method: "POST",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, sortOrder }),
     });
   }
 
-  async updateChecklistItem(projectId: string, checklistId: string, itemId: string, data: Partial<{ title: string; isCompleted: boolean }>): Promise<{ status: string; data: { item: ChecklistItem } }> {
+  async updateChecklistItem(projectId: string, checklistId: string, itemId: string, data: Partial<{ title: string; isCompleted: boolean; sortOrder: number }>): Promise<{ status: string; data: { item: ChecklistItem } }> {
     return this.request(`/projects/${projectId}/checklists/${checklistId}/items/${itemId}`, {
       method: "PATCH",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },

@@ -40,9 +40,9 @@ export default function ProjectDetails() {
   const loadProject = async () => {
     if (!id) return;
     try {
-      setLoading(true);
       const res = await api.getProjectById(id);
-      const p = (res as any)?.data?.project || (res as any)?.project;
+      const data = res.data;
+      const p = (data as any)?.project || data;
       setProject(p || null);
     } catch (err: any) {
       toast({ title: "Failed to load project", description: err.message, variant: "destructive" });
@@ -110,7 +110,7 @@ export default function ProjectDetails() {
 
     try {
       setInviting(true);
-      await api.inviteProjectMember(id, email);
+      await api.inviteMembersByEmail(id, [email]);
       setMemberEmail("");
       await loadMembers();
       toast({ title: "Invitation sent", description: `An invitation has been sent to ${email}.` });
@@ -214,11 +214,11 @@ export default function ProjectDetails() {
           </TabsContent>
 
           <TabsContent value="tasks">
-            <ProjectTasksTab projectId={project.id} />
+            <ProjectTasksTab projectId={project.id} onRefresh={loadProject} />
           </TabsContent>
 
           <TabsContent value="checklists">
-            <ProjectChecklistsTab projectId={project.id} />
+            <ProjectChecklistsTab projectId={project.id} onRefresh={loadProject} />
           </TabsContent>
 
           <TabsContent value="team">

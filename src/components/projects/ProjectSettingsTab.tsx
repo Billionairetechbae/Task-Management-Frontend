@@ -29,18 +29,13 @@ const ProjectSettingsTab = ({ project, onRefresh }: ProjectSettingsTabProps) => 
     try {
       setLoading(true);
       
-      // Update basic details
+      // Update project details including basic info, dates, and status
       await api.updateProject(project.id, {
         name: formData.name,
         description: formData.description,
         status: formData.status as any,
-      });
-
-      // Update settings/dates if needed (the backend might support this in updateProject too, 
-      // but let's use updateProjectSettings for metadata if that's the pattern)
-      await api.updateProjectSettings(project.id, {
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+        startDate: formData.startDate || null,
+        endDate: formData.endDate || null,
       });
 
       toast({ title: "Project updated successfully" });
