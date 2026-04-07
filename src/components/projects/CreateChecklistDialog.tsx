@@ -23,7 +23,7 @@ const CreateChecklistDialog = ({ projectId, open, onOpenChange, onSuccess }: Cre
     if (!title.trim()) return;
     setLoading(true);
     try {
-      await api.createProjectChecklist(projectId, { title: title.trim() });
+      await api.createProjectChecklist(projectId, title.trim());
       toast({ title: "Checklist created" });
       setTitle("");
       onSuccess();
