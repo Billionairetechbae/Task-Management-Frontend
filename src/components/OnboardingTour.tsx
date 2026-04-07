@@ -57,10 +57,16 @@ const executiveTourSteps: TourStep[] = [
     tip: "Great for finding the right person to assign tasks to.",
   },
   {
+    title: "Project Workspace",
+    description: "Our new multi-column project view puts everything you need on one screen. Manage tasks, checklists, team members, and settings without constant clicking.",
+    icon: <ClipboardList className="w-12 h-12 text-primary" />,
+    tip: "Use the mini sidebar on the left to quickly switch between projects.",
+  },
+  {
     title: "Team Management",
-    description: "Invite new team members, verify pending requests, and manage your team_member pool. Keep your team organized and efficient.",
+    description: "Invite new team members, verify pending requests, and manage your team pool. Keep your organization organized and efficient.",
     icon: <Settings className="w-12 h-12 text-primary" />,
-    tip: "Use the company code to invite team_members to join your organization.",
+    tip: "Use the company code to invite members to join your organization.",
   },
   {
     title: "AI Hub",
@@ -94,6 +100,12 @@ const assistantTourSteps: TourStep[] = [
     description: "This is your home base. See all tasks assigned to you, track your progress, and stay on top of deadlines.",
     icon: <LayoutDashboard className="w-12 h-12 text-primary" />,
     tip: "Use the status filters to focus on pending or in-progress tasks.",
+  },
+  {
+    title: "Project Workspace",
+    description: "Access everything about a project on a single, efficient screen. Switch between projects instantly using the mini sidebar.",
+    icon: <ClipboardList className="w-12 h-12 text-primary" />,
+    tip: "Tasks are now more compact to show more information at once.",
   },
   {
     title: "My Tasks",

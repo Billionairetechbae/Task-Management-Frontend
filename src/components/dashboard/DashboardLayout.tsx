@@ -40,9 +40,11 @@ interface NavItem {
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  fullWidth?: boolean;
+  hidePadding?: boolean;
 }
 
-const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children, fullWidth = false, hidePadding = false }: DashboardLayoutProps) => {
   const { user, logout, workspaceRole } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -77,7 +79,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         { label: "Team Members", href: "/team_members", icon: <UserCircle className="w-5 h-5" /> },
         { label: "Harmony", href: "/harmony", icon: <Users className="w-5 h-5" /> },
         { label: "Company Profile", href: "/company-profile", icon: <Building2 className="w-5 h-5" /> },
-        { label: "AI Hub", href: "/ai-hub", icon: <Bot className="w-5 h-5" /> },
+        { label: "AI Hub (Coming Soon)", href: "/ai-hub", icon: <Bot className="w-5 h-5" /> },
       ];
     }
 
@@ -342,7 +344,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in">
+          <main className={cn(
+            "flex-1 animate-fade-in",
+            !hidePadding && "p-4 sm:p-6 lg:p-8",
+            !fullWidth && "max-w-7xl mx-auto w-full"
+          )}>
             {children}
           </main>
         </div>

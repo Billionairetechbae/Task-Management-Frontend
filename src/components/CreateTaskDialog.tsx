@@ -128,23 +128,31 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     try {
       setLoading(true);
 
-      const form = new FormData();
-      form.append("title", formData.title);
-      form.append("description", formData.description);
-      form.append("priority", formData.priority);
-      form.append("deadline", new Date(formData.deadline).toISOString());
-      form.append("category", formData.category);
-      form.append("estimatedHours", String(formData.estimatedHours));
-
-      // IMPORTANT: assigneeId should be USER ID
-      if (formData.assigneeId) form.append("assigneeId", formData.assigneeId);
-
-      // backend usually expects "files" (match your backend)
-      files.forEach((file) => form.append("files", file));
-
       if (projectId) {
-        await api.createProjectTask(projectId, form);
+        // Project task endpoint expects JSON
+        const payload = {
+          title: formData.title,
+          description: formData.description,
+          priority: formData.priority,
+          deadline: new Date(formData.deadline).toISOString(),
+          category: formData.category,
+          estimatedHours: formData.estimatedHours,
+          assigneeId: formData.assigneeId || undefined,
+        };
+        await api.createProjectTask(projectId, payload);
       } else {
+        // General task endpoint expects FormData (supports files)
+        const form = new FormData();
+        form.append("title", formData.title);
+        form.append("description", formData.description);
+        form.append("priority", formData.priority);
+        form.append("deadline", new Date(formData.deadline).toISOString());
+        form.append("category", formData.category);
+        form.append("estimatedHours", String(formData.estimatedHours));
+
+        if (formData.assigneeId) form.append("assigneeId", formData.assigneeId);
+        files.forEach((file) => form.append("files", file));
+
         await api.createTask(form);
       }
 
@@ -208,91 +216,93 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
             />
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Attachments (Optional)</Label>
-              {files.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllAttachments}
-                  className="text-xs text-destructive hover:text-destructive"
-                >
-                  Clear All
-                </Button>
-              )}
-            </div>
+          {!projectId && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Attachments (Optional)</Label>
+                {files.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllAttachments}
+                    className="text-xs text-destructive hover:text-destructive"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </div>
 
-            <Input id="file-input" key={fileInputKey} type="file" multiple onChange={handleFileChange} className="hidden" />
+              <Input id="file-input" key={fileInputKey} type="file" multiple onChange={handleFileChange} className="hidden" />
 
-            <div className="mb-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={triggerFileInput}
-                className="w-full flex items-center justify-center gap-2 border-dashed hover:bg-muted/50"
-              >
-                <Plus className="w-4 h-4" />
-                Add Files
-                <span className="text-xs text-muted-foreground ml-auto">{files.length} file(s) selected</span>
-              </Button>
-              <p className="text-xs text-muted-foreground mt-1">Click to browse or drag and drop files</p>
-            </div>
-
-            {files.length > 0 && (
-              <div className="space-y-3 max-h-60 overflow-y-auto border rounded-lg p-3 bg-muted/20">
-                {files.map((file, idx) => {
-                  const Icon = getFileIcon(file.type, file.name);
-
-                  return (
-                    <div
-                      key={`${file.name}-${file.size}-${idx}`}
-                      className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="flex-shrink-0">
-                        <Icon className="w-5 h-5 text-primary" />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
-                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            {(file.size / 1024).toFixed(1)} KB
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">Type: {file.type || "Unknown"}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeAttachment(idx)}
-                          title="Remove file"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-
+              <div className="mb-3">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
                   onClick={triggerFileInput}
-                  className="w-full flex items-center justify-center gap-2 border-dashed mt-2"
+                  className="w-full flex items-center justify-center gap-2 border-dashed hover:bg-muted/50"
                 >
-                  <Plus className="w-3 h-3" />
-                  Add More Files
+                  <Plus className="w-4 h-4" />
+                  Add Files
+                  <span className="text-xs text-muted-foreground ml-auto">{files.length} file(s) selected</span>
                 </Button>
+                <p className="text-xs text-muted-foreground mt-1">Click to browse or drag and drop files</p>
               </div>
-            )}
-          </div>
+
+              {files.length > 0 && (
+                <div className="space-y-3 max-h-60 overflow-y-auto border rounded-lg p-3 bg-muted/20">
+                  {files.map((file, idx) => {
+                    const Icon = getFileIcon(file.type, file.name);
+
+                    return (
+                      <div
+                        key={`${file.name}-${file.size}-${idx}`}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex-shrink-0">
+                          <Icon className="w-5 h-5 text-primary" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{file.name}</p>
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">Type: {file.type || "Unknown"}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => removeAttachment(idx)}
+                            title="Remove file"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={triggerFileInput}
+                    className="w-full flex items-center justify-center gap-2 border-dashed mt-2"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add More Files
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

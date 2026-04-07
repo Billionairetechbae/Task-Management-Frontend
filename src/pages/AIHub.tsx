@@ -38,14 +38,14 @@ const aiAgents = [
 const AIHub = () => {
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
+      {/* <div className="max-w-6xl mx-auto"> */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center">
               <Bot className="w-7 h-7 text-primary-foreground" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold">Admiino AI Hub</h2>
+              <h2 className="text-3xl font-bold">Admiino AI Hub: Coming Soon</h2>
             </div>
           </div>
           <p className="text-muted-foreground text-lg">
@@ -53,7 +53,7 @@ const AIHub = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        {/* <div className="grid md:grid-cols-3 gap-6 mb-12">
           <div className="bg-card border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-muted-foreground">Active Tasks</h3>
@@ -127,7 +127,7 @@ const AIHub = () => {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </DashboardLayout>
   );
 };

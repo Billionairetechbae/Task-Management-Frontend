@@ -151,13 +151,13 @@ export const TaskTable = ({
                 </Link>
               </Button>
               {showActions && onEdit && (
-                <ActionButton icon={Pencil} label="Edit" onClick={() => onEdit(task)} variant="outline" />
+                <ActionButton icon={Pencil} label="Edit Task" onClick={() => onEdit(task)} variant="outline" />
               )}
               {showActions && onAssign && (
-                <ActionButton icon={UserPlus} label="Assign" onClick={() => onAssign(task)} variant="outline" />
+                <ActionButton icon={UserPlus} label="Assign Member" onClick={() => onAssign(task)} variant="outline" />
               )}
               {showActions && onDelete && (
-                <ActionButton icon={Trash2} label="Delete" onClick={() => onDelete(task)} variant="outline" className="text-destructive hover:text-destructive" />
+                <ActionButton icon={Trash2} label="Delete Task" onClick={() => onDelete(task)} variant="outline" className="text-destructive hover:text-destructive" />
               )}
             </div>
           </div>
@@ -217,21 +217,87 @@ export const TaskTable = ({
                     </Link>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">View</TooltipContent>
+                <TooltipContent side="top" className="text-xs">View Details</TooltipContent>
               </Tooltip>
               {showActions && onEdit && (
-                <ActionButton icon={Pencil} label="Edit" onClick={() => onEdit(task)} />
+                <ActionButton icon={Pencil} label="Edit Task" onClick={() => onEdit(task)} />
               )}
               {showActions && onAssign && (
-                <ActionButton icon={UserPlus} label="Assign" onClick={() => onAssign(task)} />
+                <ActionButton icon={UserPlus} label="Assign Member" onClick={() => onAssign(task)} />
               )}
               {showActions && onDelete && (
-                <ActionButton icon={Trash2} label="Delete" onClick={() => onDelete(task)} className="text-destructive hover:text-destructive" />
+                <ActionButton icon={Trash2} label="Delete Task" onClick={() => onDelete(task)} className="text-destructive hover:text-destructive" />
               )}
             </div>
           </div>
         ))}
       </div>
+    </div>
+  </TooltipProvider>
+);
+
+export const CompactTaskTable = ({
+  tasks,
+  onEdit,
+}: {
+  tasks: Task[];
+  onEdit?: (task: Task) => void;
+}) => (
+  <TooltipProvider delayDuration={150}>
+    <div className="space-y-1.5">
+      {tasks.map((task) => (
+        <div
+          key={task.id}
+          className="group flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/30 transition-all text-xs"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn("w-2 h-2 rounded-full shrink-0 shadow-sm", 
+                  task.status === "completed" ? "bg-success" : 
+                  task.status === "in_progress" ? "bg-primary" : "bg-warning"
+                )} />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-[10px]">{getStatusDisplay(task.status)}</TooltipContent>
+            </Tooltip>
+            <div className="min-w-0 flex flex-col">
+              <span className="font-semibold truncate text-foreground leading-tight">{task.title}</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <Badge variant="outline" className={cn("text-[8px] px-1 h-3.5 uppercase font-bold", getPriorityBadgeClass(task.priority))}>
+                  {task.priority}
+                </Badge>
+                {task.deadline && (
+                  <span className="text-[9px] text-muted-foreground font-medium">
+                    Due {new Date(task.deadline).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
+                  <Link to={`/task-details/${task.id}`}>
+                    <Eye className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-[10px]">Quick View</TooltipContent>
+            </Tooltip>
+            {onEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(task)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[10px]">Edit Task</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   </TooltipProvider>
 );

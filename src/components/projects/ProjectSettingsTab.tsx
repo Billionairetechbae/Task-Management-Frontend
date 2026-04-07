@@ -11,9 +11,10 @@ import { Loader2, Save } from "lucide-react";
 interface ProjectSettingsTabProps {
   project: Project;
   onRefresh: () => void;
+  isCompact?: boolean;
 }
 
-const ProjectSettingsTab = ({ project, onRefresh }: ProjectSettingsTabProps) => {
+const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSettingsTabProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -29,7 +30,6 @@ const ProjectSettingsTab = ({ project, onRefresh }: ProjectSettingsTabProps) => 
     try {
       setLoading(true);
       
-      // Update project details including basic info, dates, and status
       await api.updateProject(project.id, {
         name: formData.name,
         description: formData.description,
@@ -50,6 +50,78 @@ const ProjectSettingsTab = ({ project, onRefresh }: ProjectSettingsTabProps) => 
       setLoading(false);
     }
   };
+
+  if (isCompact) {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
+        <div className="space-y-1">
+          <Label htmlFor="name" className="text-[10px] uppercase font-bold text-muted-foreground">Project Name</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="h-8 text-xs"
+            required
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="description" className="text-[10px] uppercase font-bold text-muted-foreground">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            rows={3}
+            className="text-xs min-h-[60px]"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="startDate" className="text-[10px] uppercase font-bold text-muted-foreground">Start</Label>
+            <Input
+              id="startDate"
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              className="h-8 text-xs px-2"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="endDate" className="text-[10px] uppercase font-bold text-muted-foreground">End</Label>
+            <Input
+              id="endDate"
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              className="h-8 text-xs px-2"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="status" className="text-[10px] uppercase font-bold text-muted-foreground">Status</Label>
+          <select
+            id="status"
+            value={formData.status}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
+          >
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="on_hold">On Hold</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <Button type="submit" disabled={loading} className="w-full h-8 text-xs gap-2">
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+          Save Changes
+        </Button>
+      </form>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">

@@ -163,6 +163,7 @@ const ChecklistCard = ({
       const newItem = (data as any).item || data;
       setItems([...items, newItem]);
       setNewItemTitle("");
+      if (onRefresh) onRefresh();
     } catch (err: any) {
       toast({ title: "Failed to add item", description: err.message, variant: "destructive" });
     }
@@ -175,6 +176,7 @@ const ChecklistCard = ({
 
     try {
       await api.updateChecklistItem(projectId, checklist.id, itemId, { isCompleted });
+      if (onRefresh) onRefresh();
     } catch (err: any) {
       setItems(oldItems);
       toast({ title: "Failed to update item", description: err.message, variant: "destructive" });
@@ -185,6 +187,7 @@ const ChecklistCard = ({
     try {
       await api.deleteChecklistItem(projectId, checklist.id, itemId);
       setItems(items.filter(i => i.id !== itemId));
+      if (onRefresh) onRefresh();
     } catch (err: any) {
       toast({ title: "Failed to delete item", description: err.message, variant: "destructive" });
     }
@@ -223,11 +226,16 @@ const ChecklistCard = ({
           )}
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="top">Checklist Options</TooltipContent>
+            </Tooltip>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>Rename</DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete</DropdownMenuItem>
@@ -277,9 +285,14 @@ const ChecklistCard = ({
             placeholder="Add an item..."
             className="h-8 text-sm"
           />
-          <Button type="submit" size="icon" variant="ghost" className="h-8 w-8" disabled={!newItemTitle.trim()}>
-            <Plus className="w-4 h-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="submit" size="icon" variant="ghost" className="h-8 w-8" disabled={!newItemTitle.trim()}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Add Item</TooltipContent>
+          </Tooltip>
         </form>
       </CardContent>
     </Card>

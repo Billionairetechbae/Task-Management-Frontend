@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { api, Project } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Loader2, Plus, Info } from "lucide-react";
 
 export default function Projects() {
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -19,7 +21,18 @@ export default function Projects() {
       setLoading(true);
       const res = await api.getProjects();
       const arr = (res as any)?.data?.projects || (res as any)?.projects || (res as any)?.data || [];
-      setProjects(Array.isArray(arr) ? arr : []);
+      const list = Array.isArray(arr) ? arr : [];
+      setProjects(list);
+      
+      // Only redirect if there are projects AND we are not explicitly on the projects page to create one
+      // We can check if the URL has a hash or query param if we wanted to be specific, 
+      // but for now let's just only redirect if it's the very first load and we aren't "creating"
+      const searchParams = new URLSearchParams(window.location.search);
+      const isCreating = searchParams.get("create") === "true";
+
+      if (list.length > 0 && !isCreating) {
+        navigate(`/projects/${list[0].id}`);
+      }
     } catch (err: any) {
       toast({ title: "Failed to load projects", description: err.message, variant: "destructive" });
     } finally {
@@ -48,34 +61,51 @@ export default function Projects() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Projects</h1>
+      <div className="max-w-4xl mx-auto py-12">
+        <div className="text-center mb-10 animate-fade-in">
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Plus className="w-8 h-8 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2">Create Your First Project</h1>
+          <p className="text-muted-foreground">Get started by giving your project a name and description.</p>
         </div>
 
-        <div className="flex gap-2 mb-6">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New project name" />
-          <Button onClick={create} disabled={creating || !name.trim()}>Create</Button>
-        </div>
+        <Card className="p-6 border-border shadow-soft max-w-md mx-auto animate-slide-up">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Project Name</label>
+              <Input 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                placeholder="e.g. Website Redesign" 
+                className="h-11"
+                onKeyDown={(e) => e.key === "Enter" && create()}
+              />
+            </div>
+            <Button 
+              className="w-full h-11 text-base font-bold gap-2" 
+              onClick={create} 
+              disabled={creating || !name.trim()}
+            >
+              {creating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5" />
+                  Create Project
+                </>
+              )}
+            </Button>
+          </div>
+        </Card>
 
-        {loading ? (
-          <p className="text-muted-foreground">Loading...</p>
-        ) : projects.length === 0 ? (
-          <p className="text-muted-foreground">No projects yet</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((p) => (
-              <Card key={p.id} className="p-4 border border-border">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">{p.name}</h3>
-                    <p className="text-xs text-muted-foreground capitalize">{p.status}</p>
-                  </div>
-                  <Link to={`/projects/${p.id}`} className="text-primary hover:underline">Open</Link>
-                </div>
-                {p.description && <p className="text-sm mt-2 line-clamp-2">{p.description}</p>}
-              </Card>
-            ))}
+        {loading && (
+          <div className="flex flex-col items-center justify-center mt-12 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground animate-pulse font-medium">Setting up your workspace...</p>
           </div>
         )}
       </div>

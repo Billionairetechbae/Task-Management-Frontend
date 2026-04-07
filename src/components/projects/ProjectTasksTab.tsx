@@ -8,16 +8,17 @@ import { cn } from "@/lib/utils";
 import { Calendar, ClipboardList, Eye, Plus, User } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { TaskTable, getStatusBadgeClass } from "@/components/dashboard/TaskComponents";
+import { TaskTable, getStatusBadgeClass, CompactTaskTable } from "@/components/dashboard/TaskComponents";
 import { EmptyState } from "@/components/dashboard/DashboardComponents";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 
 interface ProjectTasksTabProps {
   projectId: string;
   onRefresh?: () => void;
+  isCompact?: boolean;
 }
 
-const ProjectTasksTab = ({ projectId, onRefresh }: ProjectTasksTabProps) => {
+const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false }: ProjectTasksTabProps) => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +51,7 @@ const ProjectTasksTab = ({ projectId, onRefresh }: ProjectTasksTabProps) => {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+          <div key={i} className={cn("bg-muted animate-pulse rounded-lg", isCompact ? "h-14" : "h-20")} />
         ))}
       </div>
     );
@@ -58,13 +59,13 @@ const ProjectTasksTab = ({ projectId, onRefresh }: ProjectTasksTabProps) => {
 
   if (tasks.length === 0) {
     return (
-      <>
+      <div className={cn(isCompact && "py-4")}>
         <EmptyState
           icon={ClipboardList}
           title="No tasks yet"
-          description="Get started by creating your first task for this project."
+          description={isCompact ? "" : "Get started by creating your first task for this project."}
           action={
-            <Button onClick={() => setIsCreateCreateDialogOpen(true)}>
+            <Button size={isCompact ? "sm" : "default"} onClick={() => setIsCreateCreateDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Create Task
             </Button>
@@ -76,27 +77,36 @@ const ProjectTasksTab = ({ projectId, onRefresh }: ProjectTasksTabProps) => {
           onSuccess={handleTaskCreated}
           projectId={projectId}
         />
-      </>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Recent Tasks
-        </h3>
-        <Button size="sm" variant="ghost" className="text-primary" onClick={() => setIsCreateCreateDialogOpen(true)}>
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add Task
-        </Button>
-      </div>
+      {!isCompact && (
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Recent Tasks
+          </h3>
+          <Button size="sm" variant="ghost" className="text-primary" onClick={() => setIsCreateCreateDialogOpen(true)}>
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Add Task
+          </Button>
+        </div>
+      )}
 
-      <TaskTable
-        tasks={tasks}
-        showActions={true}
-        onEdit={(task) => navigate(`/task-details/${task.id}`)}
-      />
+      {isCompact ? (
+        <CompactTaskTable
+          tasks={tasks}
+          onEdit={(task) => navigate(`/task-details/${task.id}`)}
+        />
+      ) : (
+        <TaskTable
+          tasks={tasks}
+          showActions={true}
+          onEdit={(task) => navigate(`/task-details/${task.id}`)}
+        />
+      )}
 
       <CreateTaskDialog
         open={isCreateDialogOpen}

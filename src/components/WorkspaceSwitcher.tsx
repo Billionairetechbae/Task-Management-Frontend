@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Building2, ChevronDown, Check, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,31 +31,36 @@ const WorkspaceSwitcher = () => {
   return (
     <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex items-center gap-2 px-2 sm:px-3 h-8 border border-border hover:border-primary/30 bg-background"
-          >
-            <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Building2 className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div className="flex flex-col items-start">
-              <span className="text-xs font-medium leading-tight max-w-[100px] truncate sm:max-w-[140px] text-foreground">
-                {label}
-              </span>
-              {subtitle && (
-                <span className="text-[10px] text-muted-foreground leading-tight">
-                  {subtitle}
-                </span>
-              )}
-            </div>
-            <ChevronDown className={cn(
-              "h-3 w-3 ml-0.5 text-muted-foreground transition-transform duration-200",
-              open && "rotate-180"
-            )} />
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 px-2 sm:px-3 h-8 border border-border hover:border-primary/30 bg-background"
+              >
+                <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-xs font-medium leading-tight max-w-[100px] truncate sm:max-w-[140px] text-foreground">
+                    {label}
+                  </span>
+                  {subtitle && (
+                    <span className="text-[10px] text-muted-foreground leading-tight">
+                      {subtitle}
+                    </span>
+                  )}
+                </div>
+                <ChevronDown className={cn(
+                  "h-3 w-3 ml-0.5 text-muted-foreground transition-transform duration-200",
+                  open && "rotate-180"
+                )} />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Switch Workspace</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end" className="w-64 animate-scale-in">
           <DropdownMenuLabel className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
             Workspaces

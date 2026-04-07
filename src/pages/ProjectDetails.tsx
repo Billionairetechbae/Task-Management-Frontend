@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { api, Project, ProjectInvite } from "@/lib/api";
+import { api, Project, ProjectStatus } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Loader2, Users, ClipboardList, ListChecks, Settings, Info } from "lucide-react";
+import { Loader2, Users, ClipboardList, ListChecks, Settings, Info, Plus, Pencil, Trash2, Calendar, TrendingUp, FolderOpen, ImagePlus, UserPlus, Save, X, ShieldAlert } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-import ProjectHeader from "@/components/projects/ProjectHeader";
-import ProjectOverviewTab from "@/components/projects/ProjectOverviewTab";
 import ProjectTasksTab from "@/components/projects/ProjectTasksTab";
 import ProjectChecklistsTab from "@/components/projects/ProjectChecklistsTab";
-import ProjectSettingsTab from "@/components/projects/ProjectSettingsTab";
 import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
+import ProjectMiniSidebar from "@/components/projects/ProjectMiniSidebar";
+import CreateTaskDialog from "@/components/CreateTaskDialog";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -23,19 +25,31 @@ export default function ProjectDetails() {
   
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ 
+    name: "", 
+    description: "", 
+    status: "active" as ProjectStatus 
+  });
 
-  // Members state (from original implementation)
+  // Members state
   const [memberEmail, setMemberEmail] = useState("");
-  const [memberAdding, setMemberAdding] = useState(false);
-  const [emailList, setEmailList] = useState("");
   const [inviting, setInviting] = useState(false);
-  const [candidates, setCandidates] = useState<any[]>([]);
-  const [includeExternal, setIncludeExternal] = useState(true);
   const [membersList, setMembersList] = useState<Array<{ id: string; role: string; status: string; firstName: string; lastName: string; email: string }>>([]);
-  const [invitesList, setInvitesList] = useState<ProjectInvite[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+
+  const loadProjects = async () => {
+    try {
+      const res = await api.getProjects();
+      const arr = (res as any)?.data?.projects || (res as any)?.projects || (res as any)?.data || [];
+      setProjects(Array.isArray(arr) ? arr : []);
+    } catch (err: any) {
+      console.error("Failed to load projects list", err);
+    }
+  };
 
   const loadProject = async () => {
     if (!id) return;
@@ -44,11 +58,46 @@ export default function ProjectDetails() {
       const data = res.data;
       const p = (data as any)?.project || data;
       setProject(p || null);
+      if (p) {
+        setEditForm({ 
+          name: p.name, 
+          description: p.description || "", 
+          status: p.status as ProjectStatus
+        });
+      }
     } catch (err: any) {
       toast({ title: "Failed to load project", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateProject = async () => {
+    if (!id || !project) return;
+    try {
+      await api.updateProject(id, editForm);
+      toast({ title: "Project updated" });
+      setIsEditing(false);
+      loadProject();
+    } catch (err: any) {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleArchiveProject = async () => {
+    if (!id || !project) return;
+    if (!confirm("Are you sure you want to archive this project?")) return;
+    try {
+      await api.updateProject(id, { status: "completed" as ProjectStatus });
+      toast({ title: "Project marked as completed" });
+      navigate("/projects");
+    } catch (err: any) {
+      toast({ title: "Operation failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleManagePermissions = () => {
+    toast({ title: "Permissions Management", description: "This feature is coming soon in the next update!" });
   };
 
   const loadMembers = async () => {
@@ -58,7 +107,6 @@ export default function ProjectDetails() {
       const res = await api.getProjectMembers(id);
       const data = (res as any)?.data || {};
       setMembersList(Array.isArray(data.members) ? data.members : []);
-      setInvitesList(Array.isArray(data.invites) ? data.invites : []);
     } catch (err: any) {
       toast({ title: "Failed to load members", description: err.message, variant: "destructive" });
     } finally {
@@ -66,26 +114,14 @@ export default function ProjectDetails() {
     }
   };
 
-  const loadCandidates = async () => {
-    if (!id) return;
-    try {
-      const res = await api.getProjectCandidates(id, includeExternal);
-      const items = (res as any)?.data?.candidates || (res as any)?.candidates || [];
-      setCandidates(Array.isArray(items) ? items : []);
-    } catch (err: any) {
-      toast({ title: "Failed to load candidates", description: err.message, variant: "destructive" });
-    }
-  };
+  useEffect(() => {
+    loadProjects();
+  }, []);
 
   useEffect(() => {
     loadProject();
     loadMembers();
   }, [id]);
-
-  useEffect(() => {
-    loadCandidates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, includeExternal]);
 
   const handleLogoUpdated = (newUrl: string | null) => {
     if (project) {
@@ -126,7 +162,7 @@ export default function ProjectDetails() {
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground animate-pulse">Loading project details...</p>
+          <p className="text-muted-foreground animate-pulse font-medium">Loading workspace environment...</p>
         </div>
       </DashboardLayout>
     );
@@ -136,7 +172,7 @@ export default function ProjectDetails() {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 shadow-inner">
             <Info className="w-8 h-8 text-muted-foreground" />
           </div>
           <h1 className="text-2xl font-bold mb-2">Project Not Found</h1>
@@ -148,171 +184,293 @@ export default function ProjectDetails() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
-        <ProjectHeader
-          project={project}
-          onEdit={() => setActiveTab("settings")}
-          onAddTask={() => setActiveTab("tasks")}
-          onAddChecklist={() => setActiveTab("checklists")}
-          onUploadLogo={() => setIsLogoModalOpen(true)}
-        />
+    <DashboardLayout fullWidth hidePadding>
+      <TooltipProvider delayDuration={150}>
+        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-background">
+          {/* Mini Sidebar */}
+          <ProjectMiniSidebar 
+            projects={projects} 
+            currentProjectId={project.id} 
+            onAddProject={() => navigate("/projects?create=true")}
+          />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center justify-between border-b border-border pb-px overflow-x-auto">
-            <TabsList className="bg-transparent h-auto p-0 gap-6">
-              <TabsTrigger
-                value="overview"
-                className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-1 pb-3 pt-0 h-auto font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4" />
-                  Overview
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="tasks"
-                className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-1 pb-3 pt-0 h-auto font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4" />
-                  Tasks
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="checklists"
-                className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-1 pb-3 pt-0 h-auto font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <ListChecks className="w-4 h-4" />
-                  Checklists
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="team"
-                className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-1 pb-3 pt-0 h-auto font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Team
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                className="bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-1 pb-3 pt-0 h-auto font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <Settings className="w-4 h-4" />
-                  Settings
-                </div>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="overview">
-            <ProjectOverviewTab project={project} />
-          </TabsContent>
-
-          <TabsContent value="tasks">
-            <ProjectTasksTab projectId={project.id} onRefresh={loadProject} />
-          </TabsContent>
-
-          <TabsContent value="checklists">
-            <ProjectChecklistsTab projectId={project.id} onRefresh={loadProject} />
-          </TabsContent>
-
-          <TabsContent value="team">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
-              <Card className="p-4 border border-border md:col-span-2 shadow-soft">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-semibold text-lg flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary" />
-                    Project Members
-                  </h2>
-                </div>
+          {/* Main Busy Screen */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full flex flex-col md:flex-row p-4 gap-4 overflow-x-auto scrollbar-thin">
+              
+              {/* Column 1: Overview & Team (380px fixed) */}
+              <div className="w-[380px] flex flex-col gap-4 flex-shrink-0 h-full overflow-y-auto pr-1 pb-4 custom-scrollbar">
                 
-                {loadingMembers ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : membersList.length > 0 ? (
-                  <div className="space-y-3">
-                    {membersList.map((m) => (
-                      <div key={m.id} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/30 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                            {m.firstName?.[0]}{m.lastName?.[0]}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold">{m.firstName} {m.lastName}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
+                {/* Header Section with Inline Editing */}
+                <Card className="p-5 border-border shadow-soft shrink-0 relative overflow-hidden bg-gradient-to-br from-card to-muted/10">
+                  <div className="flex items-start gap-4 mb-4">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setIsLogoModalOpen(true)}
+                          className="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 overflow-hidden hover:border-primary/50 transition-all relative"
+                        >
+                          {project.logoUrl ? (
+                            <>
+                              <img src={project.logoUrl} alt={project.name} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                <ImagePlus className="w-5 h-5 text-white" />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                              <FolderOpen className="w-6 h-6" />
+                              <span className="text-[9px] font-bold uppercase tracking-widest">LOGO</span>
+                            </div>
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Update Project Logo</TooltipContent>
+                    </Tooltip>
+                    
+                    <div className="min-w-0 pt-1 flex-1">
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <Input 
+                            value={editForm.name} 
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            className="h-8 text-sm font-bold px-2"
+                            placeholder="Project Name"
+                          />
+                          <div className="flex gap-1">
+                            <Button size="sm" className="h-7 px-2 text-[10px] gap-1" onClick={handleUpdateProject}>
+                              <Save className="w-3 h-3" /> Save
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1" onClick={() => setIsEditing(false)}>
+                              <X className="w-3 h-3" /> Cancel
+                            </Button>
                           </div>
                         </div>
-                        <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => removeMember(m.id)}>
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
+                      ) : (
+                        <div className="group flex items-center gap-1.5 mb-1">
+                          <h2 className="font-black text-xl truncate tracking-tight text-foreground">{project.name}</h2>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button 
+                                onClick={() => setIsEditing(true)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit Project Info</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
+                      
+                      {!isEditing && (
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest",
+                            project.status === "active" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          )}>
+                            {project.status}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-12 border-2 border-dashed border-border rounded-xl">
-                    <p className="text-muted-foreground text-sm">No members assigned to this project yet.</p>
-                  </div>
-                )}
-              </Card>
 
-              <div className="space-y-6">
-                <Card className="p-4 border border-border shadow-soft">
-                  <h2 className="font-semibold mb-3 text-sm">Invite Team Member by Email</h2>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">
+                        Description
+                      </h4>
+                      {isEditing ? (
+                        <Textarea 
+                          value={editForm.description}
+                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                          className="text-xs min-h-[80px] leading-relaxed"
+                          placeholder="Project scope and goals..."
+                        />
+                      ) : (
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 bg-muted/40 p-3 rounded-xl border border-border/50 italic">
+                          {project.description || "No project description provided yet."}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 py-3 border-y border-border/50">
+                      <div className="space-y-1">
+                        <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3 text-primary" /> Start
+                        </h4>
+                        <p className="text-[11px] font-bold text-foreground">{project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "TBD"}</p>
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 justify-end text-destructive">
+                          <Calendar className="w-3 h-3" /> Due
+                        </h4>
+                        <p className="text-[11px] font-bold text-foreground">{project.endDate ? format(new Date(project.endDate), "MMM d, yyyy") : "TBD"}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-card border border-border p-3 rounded-xl text-center shadow-sm">
+                        <p className="text-xl font-black text-primary leading-none mb-1">{project._count?.tasks || 0}</p>
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Tasks</p>
+                      </div>
+                      <div className="bg-card border border-border p-3 rounded-xl text-center shadow-sm">
+                        <p className="text-xl font-black text-success leading-none mb-1">{project._count?.checklists || 0}</p>
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Checklists</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Team Management Card */}
+                <Card className="p-5 border-border shadow-soft flex-shrink-0 overflow-hidden flex flex-col bg-card">
+                  <div className="flex items-center justify-between mb-4 shrink-0">
+                    <h3 className="font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                      <Users className="w-4 h-4 text-info" /> Team Members
+                    </h3>
+                  </div>
+                  
+                  <div className="flex gap-1.5 mb-4">
                     <Input
                       type="email"
                       value={memberEmail}
                       onChange={(e) => setMemberEmail(e.target.value)}
                       placeholder="user@example.com"
-                      className="h-9"
+                      className="h-8 text-xs font-medium bg-muted/30 border-none shadow-inner"
+                      onKeyDown={(e) => e.key === "Enter" && addMember()}
                     />
-                    <Button className="w-full" onClick={() => addMember()} disabled={inviting || !memberEmail.trim()}>
-                      {inviting ? "Sending Invite..." : "Send Invite"}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" className="h-8 w-8 rounded-lg shadow-sm" onClick={() => addMember()} disabled={inviting || !memberEmail.trim()}>
+                          {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Invite Member</TooltipContent>
+                    </Tooltip>
                   </div>
-                </Card>
 
-                <Card className="p-4 border border-border shadow-soft">
-                  <h2 className="font-semibold mb-3 text-sm">Suggested People</h2>
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                    {candidates.length === 0 ? (
-                      <p className="text-muted-foreground text-xs text-center py-4">No suggestions available</p>
-                    ) : (
-                      candidates.map((c, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 border border-border rounded-lg text-xs">
-                          <div className="min-w-0 mr-2">
-                            <p className="font-medium truncate">{c.user?.firstName ? `${c.user?.firstName} ${c.user?.lastName}` : c.email}</p>
-                            <p className="text-muted-foreground truncate">{c.email}</p>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                    {loadingMembers ? (
+                      <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary/30" /></div>
+                    ) : membersList.length > 0 ? (
+                      membersList.map((m) => (
+                        <div key={m.id} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 hover:bg-muted/40 transition-all text-xs group">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-[10px] shrink-0 border border-primary/20">
+                              {m.firstName?.[0]}{m.lastName?.[0]}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold truncate text-foreground leading-tight">{m.firstName} {m.lastName}</p>
+                              <p className="text-[9px] text-muted-foreground uppercase font-black tracking-tighter opacity-60">{m.role}</p>
+                            </div>
                           </div>
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={() => addMember(c.email)} disabled={inviting}>Add</Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity rounded-lg" onClick={() => removeMember(m.id)}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">Remove Member</TooltipContent>
+                          </Tooltip>
                         </div>
                       ))
+                    ) : (
+                      <p className="text-center text-[10px] text-muted-foreground py-8 italic">No active members yet.</p>
                     )}
+                  </div>
+
+                  <div className="mt-6 pt-5 border-t border-border space-y-3">
+                    <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Workspace Controls</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-9 text-[10px] font-black uppercase tracking-tighter gap-2 rounded-xl"
+                        onClick={handleManagePermissions}
+                      >
+                        <ShieldAlert className="w-3.5 h-3.5 text-info" /> Permissions
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-9 text-[10px] font-black uppercase tracking-tighter gap-2 rounded-xl text-destructive hover:bg-destructive/5"
+                        onClick={handleArchiveProject}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Archive
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               </div>
+
+              {/* Column 2: Tasks Board (450px fixed) */}
+              <div className="w-[450px] flex flex-col flex-shrink-0 h-full overflow-hidden pb-4">
+                <Card className="flex flex-col h-full border-border shadow-soft overflow-hidden bg-card">
+                  <div className="p-4 border-b border-border flex items-center justify-between shrink-0 bg-muted/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
+                        <ClipboardList className="w-4.5 h-4.5" />
+                      </div>
+                      <div>
+                        <h3 className="font-black text-sm leading-tight tracking-tight">Project Board</h3>
+                        <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Active Tasks</p>
+                      </div>
+                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" variant="default" className="h-8 w-8 rounded-lg shadow-md" onClick={() => setIsCreateTaskOpen(true)}>
+                          <Plus className="w-4.5 h-4.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>New Task</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-muted/5 custom-scrollbar">
+                    <ProjectTasksTab projectId={project.id} onRefresh={loadProject} isCompact />
+                  </div>
+                </Card>
+              </div>
+
+              {/* Column 3: Checklists Flow (400px fixed) */}
+              <div className="w-[400px] flex flex-col flex-shrink-0 h-full overflow-hidden pb-4">
+                <Card className="flex flex-col h-full border-border shadow-soft overflow-hidden bg-card">
+                  <div className="p-4 border-b border-border flex items-center justify-between shrink-0 bg-muted/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-success text-success-foreground flex items-center justify-center shadow-sm">
+                        <ListChecks className="w-4.5 h-4.5" />
+                      </div>
+                      <div>
+                        <h3 className="font-black text-sm leading-tight tracking-tight">Milestones</h3>
+                        <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Flow & Progress</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/5 custom-scrollbar">
+                    <ProjectChecklistsTab projectId={project.id} onRefresh={loadProject} />
+                  </div>
+                </Card>
+              </div>
+
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="settings">
-            <ProjectSettingsTab project={project} onRefresh={loadProject} />
-          </TabsContent>
-        </Tabs>
+          <ProjectLogoUploader
+            projectId={project.id}
+            currentLogoUrl={project.logoUrl}
+            onLogoUpdated={handleLogoUpdated}
+            isOpen={isLogoModalOpen}
+            onClose={() => setIsLogoModalOpen(false)}
+          />
 
-        <ProjectLogoUploader
-          projectId={project.id}
-          currentLogoUrl={project.logoUrl}
-          onLogoUpdated={handleLogoUpdated}
-          isOpen={isLogoModalOpen}
-          onClose={() => setIsLogoModalOpen(false)}
-        />
-      </div>
+          <CreateTaskDialog 
+            open={isCreateTaskOpen}
+            onOpenChange={setIsCreateTaskOpen}
+            onSuccess={loadProject}
+            projectId={project.id}
+          />
+        </div>
+      </TooltipProvider>
     </DashboardLayout>
   );
 }
