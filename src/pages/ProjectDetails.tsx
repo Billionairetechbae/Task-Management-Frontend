@@ -414,7 +414,7 @@ export default function ProjectDetails() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-0">
               
               {/* Left column: Overview + Members */}
-              <div className="lg:col-span-3 border-r border-border bg-card/50 overflow-y-auto lg:h-[calc(100vh-56px-57px)]">
+              <div className="lg:col-span-3 border-r border-border bg-card/50 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
                 {/* Overview panel */}
                 <CollapsiblePanel
                   title="Overview"
@@ -587,7 +587,7 @@ export default function ProjectDetails() {
               </div>
 
               {/* Center column: Tasks */}
-              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-57px)]">
+              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
                 <CollapsiblePanel
                   title={`Tasks (${tasks.length})`}
                   icon={<ClipboardList className="w-3.5 h-3.5" />}
@@ -677,7 +677,7 @@ export default function ProjectDetails() {
               </div>
 
               {/* Right column: Checklists */}
-              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-57px)]">
+              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
                 <CollapsiblePanel
                   title={`Checklists (${checklists.length})`}
                   icon={<ListChecks className="w-3.5 h-3.5" />}
