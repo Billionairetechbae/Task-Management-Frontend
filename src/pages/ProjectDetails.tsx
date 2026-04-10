@@ -336,58 +336,76 @@ export default function ProjectDetails() {
               </button>
             </div>
 
-            {/* Project header bar */}
-            <div className="border-b border-border bg-card px-4 md:px-6 py-3">
-              <div className="flex items-center gap-3">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => setIsLogoOpen(true)}
-                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center shrink-0 overflow-hidden hover:border-primary/40 transition-all group"
-                    >
-                      {project.logoUrl ? (
-                        <img src={project.logoUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <FolderOpen className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Change Logo</TooltipContent>
-                </Tooltip>
+            {/* Project header banner */}
+            <div className="relative border-b border-border bg-card overflow-hidden">
+              {/* Background banner with logo */}
+              <div className="relative h-28 md:h-36 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10">
+                {project.logoUrl && (
+                  <img
+                    src={project.logoUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-15 blur-sm"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+              </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h1 className="font-bold text-base md:text-lg truncate">{project.name}</h1>
-                    <Badge variant="outline" className={cn(
-                      "text-[9px] uppercase tracking-wider shrink-0",
-                      project.status === "active" && "border-primary/30 text-primary bg-primary/5"
-                    )}>
-                      {project.status}
-                    </Badge>
+              {/* Content overlay */}
+              <div className="absolute bottom-0 left-0 right-0 px-4 md:px-6 pb-4">
+                <div className="flex items-end gap-4">
+                  {/* Logo avatar */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setIsLogoOpen(true)}
+                        className="w-14 h-14 md:w-16 md:h-16 rounded-xl border-2 border-background bg-card shadow-elevated flex items-center justify-center shrink-0 overflow-hidden hover:border-primary/40 transition-all group -mb-0"
+                      >
+                        {project.logoUrl ? (
+                          <img src={project.logoUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Change Logo</TooltipContent>
+                  </Tooltip>
+
+                  {/* Project info */}
+                  <div className="flex-1 min-w-0 pb-0.5">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h1 className="font-bold text-lg md:text-xl truncate">{project.name}</h1>
+                      <Badge variant="outline" className={cn(
+                        "text-[9px] uppercase tracking-wider shrink-0",
+                        project.status === "active" && "border-primary/30 text-primary bg-primary/5"
+                      )}>
+                        {project.status}
+                      </Badge>
+                    </div>
+                    {project.description && (
+                      <p className="text-xs text-muted-foreground truncate max-w-lg">{project.description}</p>
+                    )}
                   </div>
-                  {project.description && (
-                    <p className="text-xs text-muted-foreground truncate max-w-lg">{project.description}</p>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Tooltip><TooltipTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditOpen(true)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                  </TooltipTrigger><TooltipContent>Edit Project</TooltipContent></Tooltip>
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
+                    <Tooltip><TooltipTrigger asChild>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsEditOpen(true)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger><TooltipContent>Edit Project</TooltipContent></Tooltip>
 
-                  <Tooltip><TooltipTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsCreateTaskOpen(true)}>
-                      <Plus className="w-3.5 h-3.5" />
-                    </Button>
-                  </TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateTaskOpen(true)}>
+                        <Plus className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
 
-                  <Tooltip><TooltipTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsCreateChecklistOpen(true)}>
-                      <ListChecks className="w-3.5 h-3.5" />
-                    </Button>
-                  </TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateChecklistOpen(true)}>
+                        <ListChecks className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>
+                  </div>
                 </div>
               </div>
             </div>
@@ -396,7 +414,7 @@ export default function ProjectDetails() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-0">
               
               {/* Left column: Overview + Members */}
-              <div className="lg:col-span-3 border-r border-border bg-card/50 overflow-y-auto lg:h-[calc(100vh-56px-57px)]">
+              <div className="lg:col-span-3 border-r border-border bg-card/50 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
                 {/* Overview panel */}
                 <CollapsiblePanel
                   title="Overview"
@@ -569,7 +587,7 @@ export default function ProjectDetails() {
               </div>
 
               {/* Center column: Tasks */}
-              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-57px)]">
+              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
                 <CollapsiblePanel
                   title={`Tasks (${tasks.length})`}
                   icon={<ClipboardList className="w-3.5 h-3.5" />}
@@ -659,7 +677,7 @@ export default function ProjectDetails() {
               </div>
 
               {/* Right column: Checklists */}
-              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-57px)]">
+              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
                 <CollapsiblePanel
                   title={`Checklists (${checklists.length})`}
                   icon={<ListChecks className="w-3.5 h-3.5" />}
