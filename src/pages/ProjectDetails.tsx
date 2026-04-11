@@ -13,18 +13,20 @@ import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProjectMiniSidebar from "@/components/projects/ProjectMiniSidebar";
 import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
 import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDialog";
 import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
+import { getStatusBadgeClass, getPriorityBadgeClass, getStatusDisplay, getPriorityDisplay } from "@/components/dashboard/TaskComponents";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
   Loader2, Info, Plus, Pencil, Trash2, Calendar, FolderOpen, ImagePlus,
   UserPlus, Save, X, Users, ClipboardList, ListChecks, Settings,
   ChevronDown, ChevronRight, MoreHorizontal, Eye, Mail, RefreshCw,
-  XCircle, Check, Link2
+  XCircle, Check, Link2, ChevronLeft, ChevronsLeft, ChevronsRight
 } from "lucide-react";
 
 type MemberRow = { id: string; userId: string; role: string; status: string; firstName: string; lastName: string; email: string };
@@ -51,6 +53,10 @@ export default function ProjectDetails() {
   const [memberEmail, setMemberEmail] = useState("");
   const [inviting, setInviting] = useState(false);
 
+  // Task pagination
+  const [taskPage, setTaskPage] = useState(1);
+  const tasksPerPage = 10;
+
   // Collapsible panels
   const [openPanels, setOpenPanels] = useState({
     overview: true,
@@ -68,7 +74,6 @@ export default function ProjectDetails() {
     setOpenPanels(p => ({ ...p, [key]: !p[key] }));
   };
 
-  // Save last visited project
   useEffect(() => {
     if (id) localStorage.setItem("lastProjectId", id);
   }, [id]);
@@ -151,6 +156,7 @@ export default function ProjectDetails() {
   useEffect(() => { loadProjects(); }, []);
   useEffect(() => {
     setLoading(true);
+    setTaskPage(1);
     refreshAll();
   }, [id]);
 
@@ -297,6 +303,10 @@ export default function ProjectDetails() {
     pending: tasks.filter(t => t.status === "pending").length,
   };
 
+  // Task pagination
+  const totalTaskPages = Math.ceil(tasks.length / tasksPerPage);
+  const paginatedTasks = tasks.slice((taskPage - 1) * tasksPerPage, taskPage * tasksPerPage);
+
   return (
     <DashboardLayout fullWidth hidePadding>
       <TooltipProvider delayDuration={100}>
@@ -310,7 +320,7 @@ export default function ProjectDetails() {
             />
           </div>
 
-          {/* Main content: scrollable columns */}
+          {/* Main content */}
           <div className="flex-1 overflow-y-auto">
             {/* Mobile project switcher */}
             <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-card overflow-x-auto scrollbar-none">
@@ -339,7 +349,7 @@ export default function ProjectDetails() {
             {/* Project header banner */}
             <div className="relative border-b border-border bg-card overflow-hidden">
               {/* Background banner with logo */}
-              <div className="relative h-28 md:h-36 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10">
+              <div className="relative h-32 md:h-40 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10">
                 {project.logoUrl && (
                   <img
                     src={project.logoUrl}
@@ -358,12 +368,12 @@ export default function ProjectDetails() {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => setIsLogoOpen(true)}
-                        className="w-14 h-14 md:w-16 md:h-16 rounded-xl border-2 border-background bg-card shadow-elevated flex items-center justify-center shrink-0 overflow-hidden hover:border-primary/40 transition-all group -mb-0"
+                        className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-background bg-card shadow-elevated flex items-center justify-center shrink-0 overflow-hidden hover:border-primary/40 transition-all group"
                       >
                         {project.logoUrl ? (
                           <img src={project.logoUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <FolderOpen className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
                         )}
                       </button>
                     </TooltipTrigger>
@@ -372,18 +382,65 @@ export default function ProjectDetails() {
 
                   {/* Project info */}
                   <div className="flex-1 min-w-0 pb-0.5">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="flex items-center gap-2 mb-1">
                       <h1 className="font-bold text-lg md:text-xl truncate">{project.name}</h1>
                       <Badge variant="outline" className={cn(
                         "text-[9px] uppercase tracking-wider shrink-0",
-                        project.status === "active" && "border-primary/30 text-primary bg-primary/5"
+                        getStatusBadgeClass(project.status)
                       )}>
                         {project.status}
                       </Badge>
                     </div>
                     {project.description && (
-                      <p className="text-xs text-muted-foreground truncate max-w-lg">{project.description}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-lg mb-1.5">{project.description}</p>
                     )}
+
+                    {/* Date range + member avatars row */}
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {(project.startDate || project.endDate) && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <Calendar className="w-3 h-3 shrink-0" />
+                          <span>
+                            {project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "TBD"}
+                            {" — "}
+                            {project.endDate ? format(new Date(project.endDate), "MMM d, yyyy") : "TBD"}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Member avatars */}
+                      {members.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex -space-x-1.5">
+                            {members.slice(0, 5).map(m => (
+                              <Tooltip key={m.id}>
+                                <TooltipTrigger>
+                                  <Avatar className="w-5 h-5 border border-background">
+                                    <AvatarFallback className="text-[7px] font-bold bg-primary/10 text-primary">
+                                      {m.firstName?.[0]}{m.lastName?.[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">{m.firstName} {m.lastName}</TooltipContent>
+                              </Tooltip>
+                            ))}
+                            {members.length > 5 && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Avatar className="w-5 h-5 border border-background">
+                                    <AvatarFallback className="text-[7px] font-bold bg-muted text-muted-foreground">
+                                      +{members.length - 5}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">{members.length - 5} more members</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                          <span className="text-[9px] text-muted-foreground font-medium">{members.length} member{members.length !== 1 ? "s" : ""}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Action buttons */}
@@ -414,7 +471,7 @@ export default function ProjectDetails() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-0">
               
               {/* Left column: Overview + Members */}
-              <div className="lg:col-span-3 border-r border-border bg-card/50 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
+              <div className="lg:col-span-3 border-r border-border bg-card/50 overflow-y-auto lg:h-[calc(100vh-56px-160px)]">
                 {/* Overview panel */}
                 <CollapsiblePanel
                   title="Overview"
@@ -586,8 +643,8 @@ export default function ProjectDetails() {
                 </CollapsiblePanel>
               </div>
 
-              {/* Center column: Tasks */}
-              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
+              {/* Center column: Tasks as Table */}
+              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-160px)]">
                 <CollapsiblePanel
                   title={`Tasks (${tasks.length})`}
                   icon={<ClipboardList className="w-3.5 h-3.5" />}
@@ -604,80 +661,124 @@ export default function ProjectDetails() {
                     </Tooltip>
                   }
                 >
-                  <div className="divide-y divide-border">
-                    {tasks.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
-                        <ClipboardList className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                        <p className="text-xs text-muted-foreground">No tasks yet</p>
-                        <Button size="sm" variant="outline" className="mt-3 h-7 text-[10px] gap-1" onClick={() => setIsCreateTaskOpen(true)}>
-                          <Plus className="w-3 h-3" /> Add Task
-                        </Button>
+                  {tasks.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <ClipboardList className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">No tasks yet</p>
+                      <Button size="sm" variant="outline" className="mt-3 h-7 text-[10px] gap-1" onClick={() => setIsCreateTaskOpen(true)}>
+                        <Plus className="w-3 h-3" /> Add Task
+                      </Button>
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Table header */}
+                      <div className="hidden sm:grid grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-1.5 border-b border-border bg-muted/30 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <div>Task</div>
+                        <div>Priority</div>
+                        <div>Status</div>
+                        <div>Due</div>
+                        <div>Actions</div>
                       </div>
-                    ) : (
-                      tasks.map(task => (
-                        <div
-                          key={task.id}
-                          className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 transition-colors cursor-pointer group"
-                          onClick={() => navigate(`/task-details/${task.id}`)}
-                        >
-                          <div className={cn(
-                            "w-1.5 h-1.5 rounded-full shrink-0",
-                            task.status === "completed" ? "bg-success" :
-                            task.status === "in_progress" ? "bg-info" :
-                            task.status === "cancelled" ? "bg-destructive" :
-                            "bg-warning"
-                          )} />
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              "text-xs font-medium truncate leading-tight",
-                              task.status === "completed" && "line-through text-muted-foreground"
-                            )}>
-                              {task.title}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {task.priority && (
-                                <span className={cn(
-                                  "text-[8px] font-bold uppercase tracking-wider",
-                                  task.priority === "high" || task.priority === "urgent" ? "text-destructive" :
-                                  task.priority === "medium" ? "text-warning" : "text-muted-foreground"
-                                )}>
-                                  {task.priority}
-                                </span>
-                              )}
-                              {task.deadline && (
-                                <span className="text-[9px] text-muted-foreground">
-                                  {format(new Date(task.deadline), "MMM d")}
-                                </span>
+                      {/* Task rows */}
+                      <div className="divide-y divide-border">
+                        {paginatedTasks.map(task => (
+                          <div
+                            key={task.id}
+                            className="grid grid-cols-1 sm:grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-2 items-center hover:bg-muted/30 transition-colors group text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={cn(
+                                "w-1.5 h-1.5 rounded-full shrink-0",
+                                task.status === "completed" ? "bg-success" :
+                                task.status === "in_progress" ? "bg-info" :
+                                task.status === "cancelled" ? "bg-destructive" :
+                                "bg-warning"
+                              )} />
+                              <p className={cn(
+                                "font-medium truncate text-[11px]",
+                                task.status === "completed" && "line-through text-muted-foreground"
+                              )}>
+                                {task.title}
+                              </p>
+                              {task.assignee && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Avatar className="w-4 h-4 shrink-0">
+                                      <AvatarFallback className="text-[6px] font-bold bg-primary/10 text-primary">
+                                        {task.assignee.firstName?.[0]}{task.assignee.lastName?.[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="text-[10px]">{task.assignee.firstName} {task.assignee.lastName}</TooltipContent>
+                                </Tooltip>
                               )}
                             </div>
+                            <div>
+                              {task.priority && (
+                                <Badge variant="outline" className={cn("text-[8px] px-1.5 h-4", getPriorityBadgeClass(task.priority))}>
+                                  {getPriorityDisplay(task.priority)}
+                                </Badge>
+                              )}
+                            </div>
+                            <div>
+                              <Badge variant="outline" className={cn("text-[8px] px-1.5 h-4", getStatusBadgeClass(task.status))}>
+                                {getStatusDisplay(task.status)}
+                              </Badge>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {task.deadline ? format(new Date(task.deadline), "MMM d") : "—"}
+                            </div>
+                            <div className="flex items-center gap-0.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => navigate(`/task-details/${task.id}`)}>
+                                    <Eye className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">View</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => navigate(`/task-details/${task.id}`)}>
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">Edit</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </div>
-                          {task.assignee && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary shrink-0">
-                                  {task.assignee.firstName?.[0]}{task.assignee.lastName?.[0]}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>{task.assignee.firstName} {task.assignee.lastName}</TooltipContent>
-                            </Tooltip>
-                          )}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-5 w-5 opacity-0 group-hover:opacity-100 shrink-0" onClick={(e) => { e.stopPropagation(); navigate(`/task-details/${task.id}`); }}>
-                                <Eye className="w-3 h-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>View Details</TooltipContent>
-                          </Tooltip>
+                        ))}
+                      </div>
+                      {/* Pagination */}
+                      {totalTaskPages > 1 && (
+                        <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/20">
+                          <span className="text-[9px] text-muted-foreground">
+                            {(taskPage - 1) * tasksPerPage + 1}–{Math.min(taskPage * tasksPerPage, tasks.length)} of {tasks.length}
+                          </span>
+                          <div className="flex items-center gap-0.5">
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(1)} disabled={taskPage === 1}>
+                              <ChevronsLeft className="w-3 h-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(p => p - 1)} disabled={taskPage === 1}>
+                              <ChevronLeft className="w-3 h-3" />
+                            </Button>
+                            <span className="text-[10px] px-2 font-medium">{taskPage}/{totalTaskPages}</span>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(p => p + 1)} disabled={taskPage === totalTaskPages}>
+                              <ChevronRight className="w-3 h-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(totalTaskPages)} disabled={taskPage === totalTaskPages}>
+                              <ChevronsRight className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </CollapsiblePanel>
               </div>
 
               {/* Right column: Checklists */}
-              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
+              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-160px)]">
                 <CollapsiblePanel
                   title={`Checklists (${checklists.length})`}
                   icon={<ListChecks className="w-3.5 h-3.5" />}
