@@ -2,24 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ClickUp-inspired design system. All colors HSL. */
+/* Premium SaaS design system — refined ClickUp-inspired tokens */
 
 @layer base {
   :root {
     --background: 220 14% 96%;
-    --foreground: 220 13% 13%;
+    --foreground: 222 14% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 13% 13%;
+    --card-foreground: 222 14% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 13% 13%;
+    --popover-foreground: 222 14% 12%;
 
     --primary: 262 72% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 94%;
-    --secondary-foreground: 220 13% 13%;
+    --secondary-foreground: 222 14% 12%;
 
     --muted: 220 14% 94%;
     --muted-foreground: 220 8% 46%;
@@ -34,7 +34,7 @@
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 220 13% 13%;
+    --warning-foreground: 222 14% 12%;
 
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
@@ -43,36 +43,36 @@
     --input: 220 13% 91%;
     --ring: 262 72% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 220 16% 14%;
+    --sidebar-background: 222 16% 13%;
     --sidebar-foreground: 220 10% 72%;
     --sidebar-primary: 262 72% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 20%;
+    --sidebar-accent: 222 14% 19%;
     --sidebar-accent-foreground: 220 10% 92%;
-    --sidebar-border: 220 14% 20%;
+    --sidebar-border: 222 14% 19%;
     --sidebar-ring: 262 72% 58%;
     --sidebar-muted: 220 10% 40%;
   }
 
   .dark {
-    --background: 220 16% 8%;
+    --background: 222 16% 7%;
     --foreground: 0 0% 95%;
 
-    --card: 220 16% 12%;
+    --card: 222 16% 11%;
     --card-foreground: 0 0% 95%;
 
-    --popover: 220 16% 12%;
+    --popover: 222 16% 11%;
     --popover-foreground: 0 0% 95%;
 
     --primary: 262 80% 62%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 18%;
+    --secondary: 222 14% 17%;
     --secondary-foreground: 0 0% 95%;
 
-    --muted: 220 14% 18%;
+    --muted: 222 14% 17%;
     --muted-foreground: 220 8% 58%;
 
     --accent: 262 60% 20%;
@@ -85,22 +85,22 @@
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 220 13% 13%;
+    --warning-foreground: 222 14% 12%;
 
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
-    --border: 220 14% 20%;
-    --input: 220 14% 20%;
+    --border: 222 14% 19%;
+    --input: 222 14% 19%;
     --ring: 262 80% 62%;
 
-    --sidebar-background: 220 18% 6%;
+    --sidebar-background: 222 18% 5%;
     --sidebar-foreground: 220 10% 65%;
     --sidebar-primary: 262 80% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 16% 14%;
+    --sidebar-accent: 222 16% 13%;
     --sidebar-accent-foreground: 0 0% 92%;
-    --sidebar-border: 220 16% 14%;
+    --sidebar-border: 222 16% 13%;
     --sidebar-ring: 262 80% 62%;
     --sidebar-muted: 220 10% 36%;
   }
@@ -113,11 +113,47 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Smoother scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.35);
   }
 }
 
 @layer utilities {
   .glass {
     @apply bg-card/80 backdrop-blur-xl;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Reduced-motion: disable non-essential animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
