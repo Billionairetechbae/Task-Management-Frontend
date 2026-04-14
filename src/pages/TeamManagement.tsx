@@ -75,6 +75,7 @@ const TeamManagement = () => {
   };
 
   useEffect(() => { loadTeam(); }, [canManageTeam, activeCompanyId]);
+  useEffect(() => { loadSettings(); }, [activeCompanyId]);
 
   const isRemoved = (m: CompanyMember) => m.status === "removed";
 
@@ -155,7 +156,7 @@ const TeamManagement = () => {
             title="Team Management"
             description="Manage team members, approvals, and access control"
             actions={
-              canAdminTeam ? (
+              canInviteTeam ? (
                 <Button className="gap-2" onClick={() => setInviteOpen(true)}>
                   <UserPlus className="w-4 h-4" /> Invite Member
                 </Button>
