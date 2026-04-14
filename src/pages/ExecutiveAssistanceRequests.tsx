@@ -32,10 +32,14 @@ import {
 import { format } from "date-fns";
 import AssistanceRequestDialog from "@/components/AssistanceRequestDialog";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { canManageWorkspace } from "@/lib/permissions";
 
 const ExecutiveAssistanceRequests = () => {
   const { toast } = useToast();
+  const { activeCompanyId, workspaceRole, user } = useAuth();
   const [requests, setRequests] = useState<AssistanceRequest[]>([]);
+  const [assistancePermissionMode, setAssistancePermissionMode] = useState<"restricted" | "free">("restricted");
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<AssistanceRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -45,6 +49,22 @@ const ExecutiveAssistanceRequests = () => {
     status?: AssistanceRequestStatus;
     search: string;
   }>({ search: "" });
+
+  const canCreateRequest = useMemo(() => {
+    if (user?.role === "admin") return true;
+    if (assistancePermissionMode === "free") return !!workspaceRole;
+    return canManageWorkspace(workspaceRole, user?.role || null);
+  }, [assistancePermissionMode, workspaceRole, user?.role]);
+
+  const loadSettings = async () => {
+    if (!activeCompanyId) return;
+    try {
+      const response = await api.getWorkspaceSettings(activeCompanyId);
+      setAssistancePermissionMode(response.data.assistancePermissionMode || "restricted");
+    } catch {
+      setAssistancePermissionMode("restricted");
+    }
+  };
 
   const loadRequests = async () => {
     try {
@@ -66,9 +86,10 @@ const ExecutiveAssistanceRequests = () => {
   };
 
   useEffect(() => {
+    loadSettings();
     loadRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeCompanyId]);
 
   const handleCancelRequest = async (requestId: string) => {
     if (!confirm("Are you sure you want to cancel this request?")) return;
@@ -226,16 +247,18 @@ const ExecutiveAssistanceRequests = () => {
                   <div className="flex flex-col items-stretch gap-3 lg:min-w-[260px]">
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                       <DialogTrigger asChild>
-                        <Button className="gap-2 h-11">
+                        <Button className="gap-2 h-11" disabled={!canCreateRequest}>
                           <Plus className="w-4 h-4" />
                           New request
                         </Button>
                       </DialogTrigger>
-                      <AssistanceRequestDialog
-                        open={isCreateOpen}
-                        onOpenChange={setIsCreateOpen}
-                        onSuccess={loadRequests}
-                      />
+                      {canCreateRequest && (
+                        <AssistanceRequestDialog
+                          open={isCreateOpen}
+                          onOpenChange={setIsCreateOpen}
+                          onSuccess={loadRequests}
+                        />
+                      )}
                     </Dialog>
 
                     <div className="rounded-lg border bg-background/70 p-4">
@@ -244,6 +267,11 @@ const ExecutiveAssistanceRequests = () => {
                         Create a request, attach context, and we’ll respond with a quote and timeline.
                       </p>
                     </div>
+                    {!canCreateRequest && (
+                      <p className="text-xs text-muted-foreground">
+                        Only owner/admin/manager can invite or hire talent in restricted mode.
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>

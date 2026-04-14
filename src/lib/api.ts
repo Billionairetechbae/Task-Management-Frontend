@@ -81,6 +81,13 @@ export interface WorkspaceItem {
   };
 }
 
+export type PermissionMode = "restricted" | "free";
+
+export interface WorkspaceSettings {
+  invitePermissionMode: PermissionMode;
+  assistancePermissionMode: PermissionMode;
+}
+
 export interface AuthResponse {
   status: string;
   message: string;
@@ -141,6 +148,49 @@ export interface TaskAttachment {
   fileSize: number;
 }
 
+export interface TaskSubtask {
+  id: string;
+  taskId: string;
+  title: string;
+  status: "pending" | "in_progress" | "completed" | "cancelled" | string;
+  sortOrder?: number;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskActivity {
+  id: string;
+  taskId: string;
+  actionType: string;
+  oldValue?: string | number | boolean | null | Record<string, any>;
+  newValue?: string | number | boolean | null | Record<string, any>;
+  metadata?: Record<string, any>;
+  createdBy?: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    profilePictureUrl?: string | null;
+  } | null;
+}
+
+export interface TaskWatcher {
+  id?: string;
+  taskId?: string;
+  userId: string;
+  createdAt?: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    profilePictureUrl?: string | null;
+  };
+}
+
 export type TaskPriority = "low" | "medium" | "high";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
@@ -159,6 +209,7 @@ export interface Task {
   assignedAssistantId: string | null;
   executiveId: string;
   assigneeId: string | null;
+  parentTaskId?: string | null;
 
   createdAt: string;
   updatedAt: string;
@@ -187,6 +238,12 @@ export interface Task {
   } | null;
 
   attachments?: TaskAttachment[];
+  parentTask?: Task | null;
+  subtasks?: TaskSubtask[];
+  activities?: TaskActivity[];
+  watcherCount?: number;
+  isWatching?: boolean;
+  recentWatchers?: TaskWatcher[];
 
   // Some backends return this
   assignees?: any[];
@@ -894,7 +951,7 @@ class ApiClient {
     message?: string;
     data?: { company?: Company; companyId?: string };
   }> {
-    return this.request(`/companies/invites/${token}/accept`, {
+    return this.request(`/invites/${token}/accept`, {
       method: "POST",
       headers: this.getAuthHeaders(false),
     });
@@ -1000,6 +1057,101 @@ class ApiClient {
   ): Promise<{ status: string; data: { task: Task } }> {
     return this.request(`/tasks/${taskId}`, {
       method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getTaskSubtasks(
+    taskId: string
+  ): Promise<{ status: string; results?: number; data: { subtasks: TaskSubtask[] } | TaskSubtask[] }> {
+    return this.request(`/tasks/${taskId}/subtasks`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createTaskSubtask(
+    taskId: string,
+    data: { title: string; status?: TaskSubtask["status"]; sortOrder?: number }
+  ): Promise<{ status: string; message?: string; data: { subtask: TaskSubtask } | TaskSubtask }> {
+    return this.request(`/tasks/${taskId}/subtasks`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTaskSubtask(
+    taskId: string,
+    subtaskId: string,
+    data: Partial<{ title: string; status: TaskSubtask["status"]; sortOrder: number }>
+  ): Promise<{ status: string; message?: string; data: { subtask: TaskSubtask } | TaskSubtask }> {
+    return this.request(`/tasks/${taskId}/subtasks/${subtaskId}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTaskSubtask(
+    taskId: string,
+    subtaskId: string
+  ): Promise<{ status: string; message?: string }> {
+    return this.request(`/tasks/${taskId}/subtasks/${subtaskId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getTaskActivity(
+    taskId: string
+  ): Promise<{ status: string; results?: number; data: { activities: TaskActivity[] } | TaskActivity[] }> {
+    return this.request(`/tasks/${taskId}/activity`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getTaskWatchers(
+    taskId: string
+  ): Promise<{ status: string; results?: number; data: { watchers: TaskWatcher[] } | TaskWatcher[] }> {
+    return this.request(`/tasks/${taskId}/watchers`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async addTaskWatcher(
+    taskId: string,
+    userId: string
+  ): Promise<{ status: string; message?: string; data?: { watcher?: TaskWatcher } }> {
+    return this.request(`/tasks/${taskId}/watchers`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+  }
+
+  async removeTaskWatcher(
+    taskId: string,
+    userId: string
+  ): Promise<{ status: string; message?: string }> {
+    return this.request(`/tasks/${taskId}/watchers/${userId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async watchTask(taskId: string): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/tasks/${taskId}/watch`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async unwatchTask(taskId: string): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/tasks/${taskId}/unwatch`, {
+      method: "DELETE",
       headers: this.getAuthHeaders(),
     });
   }
@@ -1958,6 +2110,26 @@ class ApiClient {
       method: "POST",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+    });
+  }
+
+  async getWorkspaceSettings(
+    companyId: string
+  ): Promise<{ status: string; data: WorkspaceSettings }> {
+    return this.request(`/companies/${companyId}/settings`, {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async updateWorkspaceSettings(
+    companyId: string,
+    settings: Partial<WorkspaceSettings>
+  ): Promise<{ status: string; message?: string; data: WorkspaceSettings }> {
+    return this.request(`/companies/${companyId}/settings`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
     });
   }
 

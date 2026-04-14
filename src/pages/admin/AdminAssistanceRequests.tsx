@@ -102,15 +102,19 @@ const AdminAssistanceRequests = () => {
   useEffect(() => {
     loadRequests();
     loadCompanies();
+    const interval = setInterval(() => {
+      loadRequests();
+    }, 20000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadRequests = async () => {
     try {
       setLoading(true);
       const response = await api.getAllAssistanceRequests({
-        status: filters.status ? undefined : filters.status,
-        priority: filters.priority ? undefined : filters.priority,
-        companyId: filters.companyId ? undefined : filters.companyId,
+        status: filters.status || undefined,
+        priority: filters.priority || undefined,
+        companyId: filters.companyId || undefined,
         search: filters.search || undefined,
       });
       setRequests(response.data.requests);

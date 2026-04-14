@@ -33,16 +33,12 @@ const InviteUserDialog = ({
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
 
   const [role, setRole] = useState<InvitedRole>("team_member");
   const [loading, setLoading] = useState(false);
 
   const resetForm = () => {
     setEmail("");
-    setFirstName("");
-    setLastName("");
     setRole("team_member");
   };
 
@@ -59,26 +55,29 @@ const InviteUserDialog = ({
     try {
       setLoading(true);
 
-      // ✅ Backend should now auto-approve + auto-verify the membership
       await api.inviteAssistant({
         email: email.trim(),
-        firstName: firstName.trim() || undefined,
-        lastName: lastName.trim() || undefined,
         invitedRole: role,
       });
 
       toast({
-        title: "Invite sent and auto-approved",
-        description: `${role} has been added to the workspace and can log in immediately.`,
+        title: "Invite sent",
+        description: "The user will receive an invite email to join this workspace.",
       });
 
       onSuccess(); // reload team list
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
+      const message = String(error?.message || "").toLowerCase();
+      const isAlreadyMember =
+        message.includes("already in this workspace") ||
+        message.includes("already member");
       toast({
         title: "Error",
-        description: error.message || "Failed to send invite",
+        description: isAlreadyMember
+          ? "User is already in this workspace"
+          : error.message || "Failed to send invite",
         variant: "destructive",
       });
     } finally {
@@ -107,18 +106,6 @@ const InviteUserDialog = ({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@company.com"
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>First Name (optional)</Label>
-              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            </div>
-
-            <div>
-              <Label>Last Name (optional)</Label>
-              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
-            </div>
           </div>
 
           <div>

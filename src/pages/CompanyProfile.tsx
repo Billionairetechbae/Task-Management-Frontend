@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Building,
   Mail,
@@ -45,6 +46,11 @@ const CompanyProfile = () => {
     industry: "",
     bio: "",
   });
+  const [permissionSettings, setPermissionSettings] = useState({
+    invitePermissionMode: "restricted" as "restricted" | "free",
+    assistancePermissionMode: "restricted" as "restricted" | "free",
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
 
   const isExecutive = user?.role === "executive";
 
@@ -76,8 +82,25 @@ const CompanyProfile = () => {
     }
   };
 
+  const fetchWorkspaceSettings = async () => {
+    if (!activeCompanyId) return;
+    try {
+      setSettingsLoading(true);
+      const res = await api.getWorkspaceSettings(activeCompanyId);
+      setPermissionSettings({
+        invitePermissionMode: res.data.invitePermissionMode || "restricted",
+        assistancePermissionMode: res.data.assistancePermissionMode || "restricted",
+      });
+    } catch (error) {
+      console.error("Failed to fetch workspace settings:", error);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCompany();
+    fetchWorkspaceSettings();
   }, [activeCompanyId]);
 
   const handleSave = async () => {
@@ -91,6 +114,12 @@ const CompanyProfile = () => {
         industry: formData.industry,
         bio: formData.bio,
       });
+      if (activeCompanyId) {
+        await api.updateWorkspaceSettings(activeCompanyId, {
+          invitePermissionMode: permissionSettings.invitePermissionMode,
+          assistancePermissionMode: permissionSettings.assistancePermissionMode,
+        });
+      }
 
       toast({
         title: "Profile updated!",
@@ -321,6 +350,66 @@ const CompanyProfile = () => {
                         All team_members require executive approval
                       </p>
                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Workspace Permissions</CardTitle>
+                <CardDescription>
+                  Control who can invite and hire talent in this workspace
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex items-center justify-between border rounded-lg p-4">
+                  <div>
+                    <h4 className="font-semibold">Invite Permission</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {permissionSettings.invitePermissionMode === "free"
+                        ? "All members can invite and hire talent."
+                        : "Only owner/admin/manager can invite or hire talent."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">Restricted</span>
+                    <Switch
+                      checked={permissionSettings.invitePermissionMode === "free"}
+                      onCheckedChange={(checked) =>
+                        setPermissionSettings((prev) => ({
+                          ...prev,
+                          invitePermissionMode: checked ? "free" : "restricted",
+                        }))
+                      }
+                      disabled={settingsLoading}
+                    />
+                    <span className="text-xs text-muted-foreground">Free</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border rounded-lg p-4">
+                  <div>
+                    <h4 className="font-semibold">Hire Talent Permission</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {permissionSettings.assistancePermissionMode === "free"
+                        ? "All members can invite and hire talent."
+                        : "Only owner/admin/manager can invite or hire talent."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">Restricted</span>
+                    <Switch
+                      checked={permissionSettings.assistancePermissionMode === "free"}
+                      onCheckedChange={(checked) =>
+                        setPermissionSettings((prev) => ({
+                          ...prev,
+                          assistancePermissionMode: checked ? "free" : "restricted",
+                        }))
+                      }
+                      disabled={settingsLoading}
+                    />
+                    <span className="text-xs text-muted-foreground">Free</span>
                   </div>
                 </div>
               </CardContent>

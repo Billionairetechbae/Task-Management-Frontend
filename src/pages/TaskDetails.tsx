@@ -29,6 +29,9 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 import { getFileIcon } from "@/utils/fileIcons";
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
+import SubtaskList from "@/components/tasks/SubtaskList";
+import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
+import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -738,6 +741,13 @@ const TaskDetails = () => {
 
   if (!task) return null;
 
+  const canEditSubtasks =
+    user?.role === "admin" ||
+    user?.id === task.assigneeId ||
+    user?.id === task.creator?.id ||
+    user?.role === "executive" ||
+    user?.role === "manager";
+
   return (
     <>
       {/* Preview Modal */}
@@ -772,6 +782,12 @@ const TaskDetails = () => {
 
                 <Badge className={`px-2 sm:px-3 py-1 text-xs sm:text-sm ${STATUS_COLORS[task.status]}`}>
                   {STATUS_LABEL[task.status]}
+                </Badge>
+                <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
+                  {(task.subtasks || []).length} subtasks
+                </Badge>
+                <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
+                  {task.watcherCount || 0} watchers
                 </Badge>
                 
                 {!isConnected && (
@@ -843,6 +859,31 @@ const TaskDetails = () => {
               </div>
 
               {/* ATTACHMENTS */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-2">Watchers</h3>
+                <TaskWatcherSection
+                  taskId={task.id}
+                  initialWatcherCount={task.watcherCount || 0}
+                  initialIsWatching={!!task.isWatching}
+                  initialRecentWatchers={task.recentWatchers || []}
+                />
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-2">Subtasks</h3>
+                <SubtaskList
+                  taskId={task.id}
+                  initialSubtasks={task.subtasks || []}
+                  canEdit={canEditSubtasks}
+                  onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
+                />
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-2">Activity</h3>
+                <TaskActivityTimeline taskId={task.id} initialActivities={task.activities || []} />
+              </div>
+
               {task.attachments && task.attachments.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold mb-2">Attachments</h3>

@@ -5,12 +5,7 @@ export const inferWorkspaceRole = (
   globalRole: UserRole | null | undefined
 ): WorkspaceRole => {
   if (workspaceRole) return workspaceRole;
-  if (!globalRole) return "member";
-
   if (globalRole === "admin") return "owner";
-  if (globalRole === "executive") return "owner";
-  if (globalRole === "manager") return "manager";
-
   return "member";
 };
 

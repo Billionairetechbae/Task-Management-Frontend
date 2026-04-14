@@ -85,9 +85,15 @@ const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false }: ProjectTas
     <div className="space-y-4 animate-fade-in">
       {!isCompact && (
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Recent Tasks
-          </h3>
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Recent Tasks
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              {tasks.reduce((acc, t) => acc + (t.subtasks?.length || 0), 0)} subtasks •{" "}
+              {tasks.reduce((acc, t) => acc + (t.watcherCount || 0), 0)} watchers
+            </p>
+          </div>
           <Button size="sm" variant="ghost" className="text-primary" onClick={() => setIsCreateCreateDialogOpen(true)}>
             <Plus className="w-3.5 h-3.5 mr-1" />
             Add Task

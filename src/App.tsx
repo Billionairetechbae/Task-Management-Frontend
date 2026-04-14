@@ -79,6 +79,7 @@ const App = () => (
       <Route path="/signup-manager" element={<SignupManager />} />
       <Route path="/signup-executive-join" element={<SignupExecutiveJoin />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/signup-with-invite" element={<Invite />} />
       <Route path="/invite/:token" element={<Invite />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -221,7 +222,7 @@ const App = () => (
       <Route
         path="/team-management"
         element={
-          <ProtectedRoute allowedRoles={["executive", "manager"]}>
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
             <TeamManagement />
           </ProtectedRoute>
         }
@@ -403,7 +404,7 @@ const App = () => (
       <Route
         path="/assistance-requests"
         element={
-          <ProtectedRoute allowedRoles={["executive", "admin"]}>
+          <ProtectedRoute allowedRoles={["executive", "manager", "team_member", "admin"]}>
             <ExecutiveAssistanceRequests />
           </ProtectedRoute>
         }

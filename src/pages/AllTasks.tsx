@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, AllTasksFilters } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { ListChecks, Search, RotateCcw } from "lucide-react";
 
 const AllTasks = () => {
+  const location = useLocation();
   const { workspaces } = useAuth();
   const { toast } = useToast();
 
@@ -36,6 +38,9 @@ const AllTasks = () => {
   const [companyId, setCompanyId] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+  const [watchedOnly, setWatchedOnly] = useState(false);
+  const [hasSubtasksOnly, setHasSubtasksOnly] = useState(false);
+  const isMyTasksRoute = location.pathname.includes("/tasks/my");
 
   // Debounce search
   useEffect(() => {
@@ -75,26 +80,37 @@ const AllTasks = () => {
     setStatus("all");
     setPriority("all");
     setCompanyId("all");
+    setWatchedOnly(false);
+    setHasSubtasksOnly(false);
     setPage(1);
   };
 
   const tasks = data?.data?.tasks || [];
+  const filteredTasks = tasks.filter((task: any) => {
+    if (watchedOnly && !task.isWatching) return false;
+    if (hasSubtasksOnly && !(task.subtasks?.length > 0)) return false;
+    return true;
+  });
   const pagination = data?.pagination || {
     currentPage: page,
     totalPages: 1,
-    totalResults: tasks.length,
+    totalResults: filteredTasks.length,
     hasNextPage: false,
     hasPrevPage: false,
   };
 
   const startIndex = (page - 1) * limit;
-  const endIndex = startIndex + tasks.length;
+  const endIndex = startIndex + filteredTasks.length;
 
   return (
     <DashboardLayout>
       <PageHeader
-        title="All Tasks"
-        description="View and manage tasks across all your workspaces"
+        title={isMyTasksRoute ? "My Tasks" : "All Tasks"}
+        description={
+          isMyTasksRoute
+            ? "Focus on tasks assigned to you, including watched and subtask-heavy work."
+            : "View and manage tasks across all your workspaces"
+        }
       />
 
       {/* Filters Section */}
@@ -152,6 +168,26 @@ const AllTasks = () => {
 
           <div className="flex gap-2">
             <Button
+              variant={watchedOnly ? "default" : "outline"}
+              onClick={() => {
+                setWatchedOnly((v) => !v);
+                setPage(1);
+              }}
+              className="flex-1"
+            >
+              Watched
+            </Button>
+            <Button
+              variant={hasSubtasksOnly ? "default" : "outline"}
+              onClick={() => {
+                setHasSubtasksOnly((v) => !v);
+                setPage(1);
+              }}
+              className="flex-1"
+            >
+              Has Subtasks
+            </Button>
+            <Button
               variant="outline"
               onClick={resetFilters}
               className="flex-1 gap-2"
@@ -184,7 +220,7 @@ const AllTasks = () => {
             Retry
           </Button>
         </ContentCard>
-      ) : tasks.length === 0 ? (
+      ) : filteredTasks.length === 0 ? (
         <ContentCard>
           <EmptyState
             icon={ListChecks}
@@ -200,7 +236,7 @@ const AllTasks = () => {
         </ContentCard>
       ) : (
         <>
-          <TaskTable tasks={tasks} showAssignee={true} showExecutive={true} />
+          <TaskTable tasks={filteredTasks} showAssignee={true} showExecutive={true} />
           <Pagination
             currentPage={page}
             totalPages={pagination.totalPages}

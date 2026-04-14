@@ -11,6 +11,9 @@ import {
   Pencil,
   UserPlus,
   Trash2,
+  Bell,
+  GitBranch,
+  ListTodo,
 } from "lucide-react";
 import { Task } from "@/lib/api";
 import CompanyBadge from "@/components/CompanyBadge";
@@ -124,6 +127,22 @@ export const TaskTable = ({
                 {task.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{task.description}</p>
                 )}
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                  {!!task.parentTaskId && (
+                    <span className="inline-flex items-center gap-1">
+                      <GitBranch className="w-3 h-3" />
+                      Subtask
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1">
+                    <ListTodo className="w-3 h-3" />
+                    {task.subtasks?.length || 0} subtasks
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Bell className="w-3 h-3" />
+                    {task.watcherCount || 0} watchers
+                  </span>
+                </div>
               </div>
               <Badge className={cn("text-[10px]", getStatusBadgeClass(task.status))}>
                 {getStatusDisplay(task.status)}
@@ -180,6 +199,22 @@ export const TaskTable = ({
               {task.description && (
                 <p className="text-xs text-muted-foreground truncate mt-0.5">{task.description}</p>
               )}
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                {!!task.parentTaskId && (
+                  <span className="inline-flex items-center gap-1">
+                    <GitBranch className="w-3 h-3" />
+                    Subtask
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <ListTodo className="w-3 h-3" />
+                  {task.subtasks?.length || 0} subtasks
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Bell className="w-3 h-3" />
+                  {task.watcherCount || 0} watchers
+                </span>
+              </div>
             </div>
             {showAssignee && (
               <div className="text-sm text-muted-foreground">

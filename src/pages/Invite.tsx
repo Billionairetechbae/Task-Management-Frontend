@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
 const Invite = () => {
-  const { user } = useAuth();
+  const { user, refreshUser, setActiveCompanyId, workspaces } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const params = useParams();
@@ -18,26 +18,40 @@ const Invite = () => {
   const [formLoading, setFormLoading] = useState(false);
   const token = useMemo(() => params.token || search.get("token") || "", [params.token, search]);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
-  const [submitted, setSubmitted] = useState(false);
+  const hasAutoAcceptedRef = useRef(false);
+  const inviteEmail = useMemo(
+    () => (search.get("email") || search.get("inviteEmail") || "").toLowerCase().trim(),
+    [search]
+  );
+
+  const resolveDashboardRoute = () => {
+    if (!user) return "/dashboard";
+    return user.role === "executive"
+      ? "/dashboard-executive"
+      : user.role === "manager"
+      ? "/dashboard-manager"
+      : user.role === "team_member"
+      ? "/dashboard-team_member"
+      : "/dashboard-admin";
+  };
+
+  const completeWorkspaceJoin = async (companyId?: string) => {
+    await refreshUser();
+    const fallbackWorkspaceId = workspaces?.[0]?.id;
+    const nextCompanyId = companyId || fallbackWorkspaceId || localStorage.getItem("activeCompanyId");
+    if (nextCompanyId) {
+      setActiveCompanyId(nextCompanyId);
+      localStorage.setItem("activeCompanyId", nextCompanyId);
+    }
+    navigate(resolveDashboardRoute());
+  };
 
   const onAccept = async () => {
     setLoading(true);
     try {
       const res: any = await api.acceptWorkspaceInvite(token as string);
       const cid = res?.data?.company?.id || res?.data?.companyId || res?.companyId;
-      if (cid) {
-        localStorage.setItem("activeCompanyId", cid);
-      }
-      if (user) {
-        const route =
-          user.role === "executive" ? "/dashboard-executive" :
-          user.role === "manager" ? "/dashboard-manager" :
-          user.role === "team_member" ? "/dashboard-team_member" :
-          "/dashboard-admin";
-        navigate(route);
-      } else {
-        navigate("/");
-      }
+      await completeWorkspaceJoin(cid);
     } catch (err: any) {
       toast({ title: "Invite failed", description: err?.message || "Try again", variant: "destructive" as any });
     } finally {
@@ -49,14 +63,29 @@ const Invite = () => {
     e.preventDefault();
     setFormLoading(true);
     try {
-      await api.signupWithInvite({ token: token as string, ...form });
-      setSubmitted(true);
+      const res: any = await api.signupWithInvite({ token: token as string, ...form });
+      const cid = res?.data?.company?.id || res?.data?.companyId || res?.companyId;
+      await completeWorkspaceJoin(cid);
     } catch (err: any) {
       toast({ title: "Signup failed", description: err?.message || "Try again", variant: "destructive" as any });
     } finally {
       setFormLoading(false);
     }
   };
+
+  useEffect(() => {
+    const shouldAutoAccept =
+      !!user &&
+      !!token &&
+      !!inviteEmail &&
+      inviteEmail === (user.email || "").toLowerCase().trim() &&
+      !hasAutoAcceptedRef.current;
+
+    if (!shouldAutoAccept) return;
+    hasAutoAcceptedRef.current = true;
+    onAccept();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, token, inviteEmail]);
 
   if (!token) {
     return (
@@ -85,22 +114,6 @@ const Invite = () => {
           <CardContent className="flex gap-3">
             <Button onClick={onAccept} disabled={loading}>{loading ? "Accepting..." : "Accept Invite"}</Button>
             <Button variant="outline" asChild><Link to="/">Back to Dashboard</Link></Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>Verify your email</CardTitle>
-            <CardDescription>We sent a verification link. Please verify to continue.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild><Link to="/">Go to Login</Link></Button>
           </CardContent>
         </Card>
       </div>

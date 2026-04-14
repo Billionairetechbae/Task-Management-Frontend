@@ -40,6 +40,9 @@ import { api, Task, CompanyMember, TaskAttachment, UpdateTaskData } from "@/lib/
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import CompanyBadge from "@/components/CompanyBadge";
+import SubtaskList from "@/components/tasks/SubtaskList";
+import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
+import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 
 interface TaskEditDrawerProps {
   open: boolean;
@@ -450,6 +453,33 @@ export default function TaskEditDrawer({
               <TabsContent value="details" className="space-y-4">
                 {isManager ? (
                   <>
+                    {task && (
+                      <div className="rounded-lg border p-3 space-y-4">
+                        <div>
+                          <Label className="mb-2 block">Watchers</Label>
+                          <TaskWatcherSection
+                            taskId={task.id}
+                            initialWatcherCount={task.watcherCount || 0}
+                            initialIsWatching={!!task.isWatching}
+                            initialRecentWatchers={task.recentWatchers || []}
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-2 block">Subtasks (quick)</Label>
+                          <SubtaskList
+                            taskId={task.id}
+                            initialSubtasks={task.subtasks || []}
+                            canEdit={isManager}
+                            onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-2 block">Recent activity</Label>
+                          <TaskActivityTimeline taskId={task.id} initialActivities={task.activities || []} maxVisible={3} />
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label>Title</Label>
                       <Input value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -536,6 +566,28 @@ export default function TaskEditDrawer({
                   </>
                 ) : (
                   <>
+                    {task && (
+                      <div className="rounded-lg border p-3 space-y-4">
+                        <div>
+                          <Label className="mb-2 block">Watchers</Label>
+                          <TaskWatcherSection
+                            taskId={task.id}
+                            initialWatcherCount={task.watcherCount || 0}
+                            initialIsWatching={!!task.isWatching}
+                            initialRecentWatchers={task.recentWatchers || []}
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-2 block">Subtasks</Label>
+                          <SubtaskList
+                            taskId={task.id}
+                            initialSubtasks={task.subtasks || []}
+                            canEdit={false}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
                       <h4 className="font-semibold">{task?.title}</h4>
                       {task?.description && <p className="text-sm text-muted-foreground">{task.description}</p>}

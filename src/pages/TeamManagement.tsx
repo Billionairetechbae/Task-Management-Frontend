@@ -58,6 +58,9 @@ const TeamManagement = () => {
   const globalRole = user?.role ?? null;
   const canManageTeam = canManageWorkspace(workspaceRole, globalRole);
   const canAdminTeam = canAdminWorkspace(workspaceRole, globalRole);
+  const [invitePermissionMode, setInvitePermissionMode] = useState<"restricted" | "free">("restricted");
+  const canInviteTeam =
+    invitePermissionMode === "free" ? !!workspaceRole || user?.role === "admin" : canManageTeam;
 
   const [teamMembers, setTeamMembers] = useState<CompanyMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,11 +87,6 @@ const TeamManagement = () => {
   const loadTeam = async () => {
     try {
       setLoading(true);
-      if (!canManageTeam) {
-        setTeamMembers([]);
-        return;
-      }
-
       const res = await api.getCompanyAssistants();
       setTeamMembers(res.data.members || []);
     } catch (err: any) {
@@ -102,10 +100,21 @@ const TeamManagement = () => {
     }
   };
 
+  const loadSettings = async () => {
+    if (!activeCompanyId) return;
+    try {
+      const res = await api.getWorkspaceSettings(activeCompanyId);
+      setInvitePermissionMode(res.data.invitePermissionMode || "restricted");
+    } catch {
+      setInvitePermissionMode("restricted");
+    }
+  };
+
   useEffect(() => {
+    loadSettings();
     loadTeam();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canManageTeam, activeCompanyId]);
+  }, [activeCompanyId]);
 
   /* ---------------------------
    * HELPERS
@@ -268,7 +277,7 @@ const TeamManagement = () => {
             </p>
           </div>
 
-          {canAdminTeam && (
+          {canInviteTeam && (
             <Button className="gap-2" onClick={() => setInviteOpen(true)}>
               <Mail className="w-5 h-5" />
               Invite Team Member

@@ -103,7 +103,7 @@ const AssistanceRequestDialog = ({
       await api.createAssistanceRequest(requestData);
 
       toast({
-        title: "Request Submitted!",
+        title: "Request submitted.",
         description: "Your assistance request has been sent to Admiino team.",
       });
 
@@ -121,9 +121,15 @@ const AssistanceRequestDialog = ({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
+      const message = String(error?.message || "");
+      const friendlyMessage = message.toLowerCase().includes("only")
+        ? message
+        : message.toLowerCase().includes("forbidden")
+        ? "You do not have permission to submit requests in this workspace."
+        : message;
       toast({
         title: "Submission Failed",
-        description: error.message || "Failed to submit assistance request",
+        description: friendlyMessage || "Failed to submit assistance request",
         variant: "destructive",
       });
     } finally {
