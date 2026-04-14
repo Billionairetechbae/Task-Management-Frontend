@@ -97,29 +97,21 @@ const TaskDetails = () => {
         // Fix the profilePicture field if needed
         const fixedComment = fixCommentProfilePicture(message.comment);
         
-        const isOwnComment = message.userId === user?.id;
-        
-        if (isOwnComment && message.messageId) {
-          console.log('Processing echoed comment:', message.messageId);
-          
-          // Remove from pending
-          setPendingComments(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(message.messageId);
-            return newMap;
-          });
-          
-          // Remove the optimistic comment by messageId and add the real one
-          removeOptimisticComment(message.messageId);
+        const echoedMessageId =
+          message.messageId ||
+          message.comment?.metadata?.messageId ||
+          message.comment?.messageId;
+
+        if (echoedMessageId && optimisticCommentRef.current.has(echoedMessageId)) {
+          console.log('Processing echoed optimistic comment:', echoedMessageId);
+          removeOptimisticComment(echoedMessageId);
           setComments(prev => {
             const alreadyExists = prev.some(c => c.id === fixedComment.id);
             if (alreadyExists) return prev;
             return [...prev, fixedComment];
           });
         } else {
-          // Comment from another user
           setComments(prev => {
-            // Check if comment already exists
             const alreadyExists = prev.some(c => c.id === fixedComment.id);
             if (alreadyExists) {
               return prev;
@@ -866,6 +858,18 @@ const TaskDetails = () => {
                   initialWatcherCount={task.watcherCount || 0}
                   initialIsWatching={!!task.isWatching}
                   initialRecentWatchers={task.recentWatchers || []}
+                  onChanged={(next) =>
+                    setTask((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            watcherCount: next.watcherCount,
+                            isWatching: next.isWatching,
+                            recentWatchers: next.recentWatchers,
+                          }
+                        : prev
+                    )
+                  }
                 />
               </div>
 

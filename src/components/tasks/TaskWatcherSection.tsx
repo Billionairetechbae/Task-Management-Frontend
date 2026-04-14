@@ -1,15 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { api, TaskWatcher } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Props = {
   taskId: string;
   initialWatcherCount?: number;
   initialIsWatching?: boolean;
   initialRecentWatchers?: TaskWatcher[];
+  onChanged?: (next: {
+    watcherCount: number;
+    isWatching: boolean;
+    recentWatchers: TaskWatcher[];
+  }) => void;
 };
 
 const normalizeWatchers = (payload: any): TaskWatcher[] => {
@@ -28,7 +34,9 @@ const TaskWatcherSection = ({
   initialWatcherCount = 0,
   initialIsWatching = false,
   initialRecentWatchers = [],
+  onChanged,
 }: Props) => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [watcherCount, setWatcherCount] = useState(initialWatcherCount);
   const [isWatching, setIsWatching] = useState(initialIsWatching);
@@ -37,12 +45,25 @@ const TaskWatcherSection = ({
 
   const displayWatchers = useMemo(() => recentWatchers.slice(0, 5), [recentWatchers]);
 
+  useEffect(() => {
+    setWatcherCount(initialWatcherCount);
+    setIsWatching(initialIsWatching);
+    setRecentWatchers(initialRecentWatchers);
+  }, [initialWatcherCount, initialIsWatching, initialRecentWatchers]);
+
   const refreshWatchers = async () => {
     try {
       const res = await api.getTaskWatchers(taskId);
       const list = normalizeWatchers(res);
+      const userIsWatching = !!user?.id && list.some((watcher) => watcher.userId === user.id);
       setRecentWatchers(list);
-      setWatcherCount(list.length || watcherCount);
+      setWatcherCount(list.length);
+      setIsWatching(userIsWatching);
+      onChanged?.({
+        watcherCount: list.length,
+        isWatching: userIsWatching,
+        recentWatchers: list,
+      });
     } catch {
       // keep current values
     }
@@ -56,7 +77,7 @@ const TaskWatcherSection = ({
       setSaving(true);
       if (next) await api.watchTask(taskId);
       else await api.unwatchTask(taskId);
-      refreshWatchers();
+      await refreshWatchers();
     } catch (error: any) {
       setIsWatching(!next);
       setWatcherCount((c) => (!next ? c + 1 : Math.max(0, c - 1)));

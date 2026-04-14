@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { api, TaskSubtask } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,15 @@ const normalizeSubtasks = (payload: any): TaskSubtask[] => {
   return [];
 };
 
+const extractSubtask = (payload: any): TaskSubtask | null => {
+  if (!payload) return null;
+  if (payload?.id && payload?.title) return payload as TaskSubtask;
+  if (payload?.subtask?.id && payload?.subtask?.title) return payload.subtask as TaskSubtask;
+  if (payload?.data?.id && payload?.data?.title) return payload.data as TaskSubtask;
+  if (payload?.data?.subtask?.id && payload?.data?.subtask?.title) return payload.data.subtask as TaskSubtask;
+  return null;
+};
+
 const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }: Props) => {
   const { toast } = useToast();
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>(initialSubtasks);
@@ -28,6 +37,10 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+
+  useEffect(() => {
+    setSubtasks(initialSubtasks);
+  }, [initialSubtasks]);
 
   const completion = useMemo(() => {
     const total = subtasks.length;
@@ -66,7 +79,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
     try {
       setSaving(true);
       const res = await api.createTaskSubtask(taskId, { title: optimistic.title });
-      const created = (res as any)?.data?.subtask || (res as any)?.data || optimistic;
+      const created = extractSubtask(res) || optimistic;
       sync([created, ...previous]);
     } catch (error: any) {
       sync(previous);

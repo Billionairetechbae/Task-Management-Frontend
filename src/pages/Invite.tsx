@@ -8,6 +8,31 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
+const tryDecodeEmailFromToken = (token: string): string => {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return "";
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const json =
+      typeof window !== "undefined" && typeof window.atob === "function"
+        ? window.atob(padded)
+        : "";
+    if (!json) return "";
+    const parsed = JSON.parse(json);
+    const maybeEmail =
+      parsed?.email ||
+      parsed?.inviteEmail ||
+      parsed?.invitedEmail ||
+      parsed?.userEmail ||
+      "";
+    return String(maybeEmail).toLowerCase().trim();
+  } catch {
+    return "";
+  }
+};
+
 const Invite = () => {
   const { user, refreshUser, setActiveCompanyId, workspaces } = useAuth();
   const { toast } = useToast();
@@ -19,10 +44,17 @@ const Invite = () => {
   const token = useMemo(() => params.token || search.get("token") || "", [params.token, search]);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const hasAutoAcceptedRef = useRef(false);
-  const inviteEmail = useMemo(
-    () => (search.get("email") || search.get("inviteEmail") || "").toLowerCase().trim(),
-    [search]
-  );
+  const inviteEmail = useMemo(() => {
+    const fromQuery = (search.get("email") || search.get("inviteEmail") || "").toLowerCase().trim();
+    if (fromQuery) return fromQuery;
+    return tryDecodeEmailFromToken(token);
+  }, [search, token]);
+  const lockedInviteEmail = inviteEmail.length > 0;
+
+  useEffect(() => {
+    if (!lockedInviteEmail) return;
+    setForm((prev) => ({ ...prev, email: inviteEmail }));
+  }, [inviteEmail, lockedInviteEmail]);
 
   const resolveDashboardRoute = () => {
     if (!user) return "/dashboard";
@@ -141,7 +173,19 @@ const Invite = () => {
             </div>
             <div>
               <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+                readOnly={lockedInviteEmail}
+                disabled={lockedInviteEmail}
+              />
+              {lockedInviteEmail && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Email is pre-filled from your invite link.
+                </p>
+              )}
             </div>
             <div>
               <Label>Password</Label>
