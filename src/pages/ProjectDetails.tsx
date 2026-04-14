@@ -1,53 +1,90 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { api, Project, ProjectStatus } from "@/lib/api";
+import { api, Project, ProjectChecklist, ChecklistItem, ProjectInvite } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Loader2, Users, ClipboardList, ListChecks, Settings, Info, Plus, Pencil, Trash2, Calendar, TrendingUp, FolderOpen, ImagePlus, UserPlus, Save, X, ShieldAlert } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-import ProjectTasksTab from "@/components/projects/ProjectTasksTab";
-import ProjectChecklistsTab from "@/components/projects/ProjectChecklistsTab";
-import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProjectMiniSidebar from "@/components/projects/ProjectMiniSidebar";
-import CreateTaskDialog from "@/components/CreateTaskDialog";
+import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
+import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
+import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDialog";
+import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
+import { getStatusBadgeClass, getPriorityBadgeClass, getStatusDisplay, getPriorityDisplay } from "@/components/dashboard/TaskComponents";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import {
+  Loader2, Info, Plus, Pencil, Trash2, Calendar, FolderOpen, ImagePlus,
+  UserPlus, Save, X, Users, ClipboardList, ListChecks, Settings,
+  ChevronDown, ChevronRight, MoreHorizontal, Eye, Mail, RefreshCw,
+  XCircle, Check, Link2, ChevronLeft, ChevronsLeft, ChevronsRight
+} from "lucide-react";
+
+type MemberRow = { id: string; userId: string; role: string; status: string; firstName: string; lastName: string; email: string };
 
 export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
+  // Data
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
-  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ 
-    name: "", 
-    description: "", 
-    status: "active" as ProjectStatus 
-  });
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [invites, setInvites] = useState<ProjectInvite[]>([]);
+  const [checklists, setChecklists] = useState<ProjectChecklist[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
 
-  // Members state
+  // UI state
+  const [isLogoOpen, setIsLogoOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isCreateChecklistOpen, setIsCreateChecklistOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
   const [inviting, setInviting] = useState(false);
-  const [membersList, setMembersList] = useState<Array<{ id: string; role: string; status: string; firstName: string; lastName: string; email: string }>>([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  // Task pagination
+  const [taskPage, setTaskPage] = useState(1);
+  const tasksPerPage = 10;
+
+  // Collapsible panels
+  const [openPanels, setOpenPanels] = useState({
+    overview: true,
+    tasks: true,
+    checklists: true,
+    members: true,
+    settings: false,
+  });
+
+  // Settings form
+  const [settingsForm, setSettingsForm] = useState({ name: "", description: "", status: "active", startDate: "", endDate: "" });
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const togglePanel = (key: keyof typeof openPanels) => {
+    setOpenPanels(p => ({ ...p, [key]: !p[key] }));
+  };
+
+  useEffect(() => {
+    if (id) localStorage.setItem("lastProjectId", id);
+  }, [id]);
 
   const loadProjects = async () => {
     try {
       const res = await api.getProjects();
       const arr = (res as any)?.data?.projects || (res as any)?.projects || (res as any)?.data || [];
       setProjects(Array.isArray(arr) ? arr : []);
-    } catch (err: any) {
-      console.error("Failed to load projects list", err);
+    } catch (err) {
+      console.error("Failed to load projects", err);
     }
   };
 
@@ -55,14 +92,15 @@ export default function ProjectDetails() {
     if (!id) return;
     try {
       const res = await api.getProjectById(id);
-      const data = res.data;
-      const p = (data as any)?.project || data;
+      const p = (res as any)?.data?.project || res.data;
       setProject(p || null);
       if (p) {
-        setEditForm({ 
-          name: p.name, 
-          description: p.description || "", 
-          status: p.status as ProjectStatus
+        setSettingsForm({
+          name: p.name || "",
+          description: p.description || "",
+          status: p.status || "active",
+          startDate: p.startDate ? p.startDate.slice(0, 10) : "",
+          endDate: p.endDate ? p.endDate.slice(0, 10) : "",
         });
       }
     } catch (err: any) {
@@ -72,60 +110,69 @@ export default function ProjectDetails() {
     }
   };
 
-  const handleUpdateProject = async () => {
-    if (!id || !project) return;
-    try {
-      await api.updateProject(id, editForm);
-      toast({ title: "Project updated" });
-      setIsEditing(false);
-      loadProject();
-    } catch (err: any) {
-      toast({ title: "Update failed", description: err.message, variant: "destructive" });
-    }
-  };
-
-  const handleArchiveProject = async () => {
-    if (!id || !project) return;
-    if (!confirm("Are you sure you want to archive this project?")) return;
-    try {
-      await api.updateProject(id, { status: "completed" as ProjectStatus });
-      toast({ title: "Project marked as completed" });
-      navigate("/projects");
-    } catch (err: any) {
-      toast({ title: "Operation failed", description: err.message, variant: "destructive" });
-    }
-  };
-
-  const handleManagePermissions = () => {
-    toast({ title: "Permissions Management", description: "This feature is coming soon in the next update!" });
-  };
-
   const loadMembers = async () => {
     if (!id) return;
     try {
-      setLoadingMembers(true);
       const res = await api.getProjectMembers(id);
       const data = (res as any)?.data || {};
-      setMembersList(Array.isArray(data.members) ? data.members : []);
-    } catch (err: any) {
-      toast({ title: "Failed to load members", description: err.message, variant: "destructive" });
-    } finally {
-      setLoadingMembers(false);
+      setMembers(Array.isArray(data.members) ? data.members : []);
+      setInvites(Array.isArray(data.invites) ? data.invites : []);
+    } catch (err) {
+      console.error("Failed to load members", err);
     }
   };
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
+  const loadTasks = async () => {
+    if (!id) return;
+    try {
+      const res = await api.getProjectTasks(id);
+      const data = res.data;
+      const list = Array.isArray(data) ? data : (data as any)?.tasks || [];
+      setTasks(list);
+    } catch (err) {
+      console.error("Failed to load tasks", err);
+    }
+  };
 
-  useEffect(() => {
+  const loadChecklists = async () => {
+    if (!id) return;
+    try {
+      const res = await api.getProjectChecklists(id);
+      const data = res.data;
+      const list = Array.isArray(data) ? data : (data as any)?.checklists || [];
+      setChecklists(list);
+    } catch (err) {
+      console.error("Failed to load checklists", err);
+    }
+  };
+
+  const refreshAll = () => {
     loadProject();
     loadMembers();
+    loadTasks();
+    loadChecklists();
+  };
+
+  useEffect(() => { loadProjects(); }, []);
+  useEffect(() => {
+    setLoading(true);
+    setTaskPage(1);
+    refreshAll();
   }, [id]);
 
-  const handleLogoUpdated = (newUrl: string | null) => {
-    if (project) {
-      setProject({ ...project, logoUrl: newUrl });
+  // Members
+  const addMember = async () => {
+    if (!id || !memberEmail.trim()) return;
+    try {
+      setInviting(true);
+      await api.inviteMembersByEmail(id, [memberEmail.trim()]);
+      setMemberEmail("");
+      await loadMembers();
+      toast({ title: "Invitation sent" });
+    } catch (err: any) {
+      toast({ title: "Invite failed", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -140,29 +187,98 @@ export default function ProjectDetails() {
     }
   };
 
-  const addMember = async (emailToAdd?: string) => {
-    const email = (emailToAdd || memberEmail).trim();
-    if (!id || !email) return;
-
+  const revokeInvite = async (inviteId: string) => {
+    if (!id) return;
     try {
-      setInviting(true);
-      await api.inviteMembersByEmail(id, [email]);
-      setMemberEmail("");
+      await api.revokeProjectInvite(id, inviteId);
       await loadMembers();
-      toast({ title: "Invitation sent", description: `An invitation has been sent to ${email}.` });
+      toast({ title: "Invite revoked" });
     } catch (err: any) {
-      toast({ title: "Invite failed", description: err.message, variant: "destructive" });
-    } finally {
-      setInviting(false);
+      toast({ title: "Revoke failed", description: err.message, variant: "destructive" });
     }
+  };
+
+  const resendInvite = async (inviteId: string) => {
+    if (!id) return;
+    try {
+      await api.resendProjectInvite(id, inviteId);
+      toast({ title: "Invite resent" });
+    } catch (err: any) {
+      toast({ title: "Resend failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // Checklists
+  const handleToggleItem = async (checklistId: string, itemId: string, isCompleted: boolean) => {
+    if (!id) return;
+    setChecklists(prev => prev.map(cl =>
+      cl.id === checklistId
+        ? { ...cl, items: cl.items?.map(it => it.id === itemId ? { ...it, isCompleted } : it) }
+        : cl
+    ));
+    try {
+      await api.updateChecklistItem(id, checklistId, itemId, { isCompleted });
+    } catch (err: any) {
+      loadChecklists();
+      toast({ title: "Update failed", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteChecklistItem = async (checklistId: string, itemId: string) => {
+    if (!id) return;
+    try {
+      await api.deleteChecklistItem(id, checklistId, itemId);
+      setChecklists(prev => prev.map(cl =>
+        cl.id === checklistId
+          ? { ...cl, items: cl.items?.filter(it => it.id !== itemId) }
+          : cl
+      ));
+    } catch (err: any) {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteChecklist = async (checklistId: string) => {
+    if (!id) return;
+    try {
+      await api.deleteProjectChecklist(id, checklistId);
+      setChecklists(prev => prev.filter(cl => cl.id !== checklistId));
+      toast({ title: "Checklist deleted" });
+    } catch (err: any) {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  };
+
+  // Settings
+  const saveSettings = async () => {
+    if (!id) return;
+    try {
+      setSavingSettings(true);
+      await api.updateProject(id, {
+        name: settingsForm.name,
+        description: settingsForm.description,
+        status: settingsForm.status as any,
+        startDate: settingsForm.startDate || null,
+        endDate: settingsForm.endDate || null,
+      });
+      toast({ title: "Project updated" });
+      loadProject();
+    } catch (err: any) {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleLogoUpdated = (newUrl: string | null) => {
+    if (project) setProject({ ...project, logoUrl: newUrl });
   };
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground animate-pulse font-medium">Loading workspace environment...</p>
+      <DashboardLayout fullWidth hidePadding>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </DashboardLayout>
     );
@@ -171,306 +287,690 @@ export default function ProjectDetails() {
   if (!project) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 shadow-inner">
-            <Info className="w-8 h-8 text-muted-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Project Not Found</h1>
-          <p className="text-muted-foreground mb-6">The project you're looking for doesn't exist or you don't have access.</p>
-          <Button onClick={() => navigate("/projects")}>Back to Projects</Button>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+          <Info className="w-12 h-12 text-muted-foreground mb-4" />
+          <h1 className="text-xl font-bold mb-2">Project Not Found</h1>
+          <Button onClick={() => navigate("/projects")} className="mt-4">Back to Projects</Button>
         </div>
       </DashboardLayout>
     );
   }
 
+  const taskStats = {
+    total: tasks.length,
+    completed: tasks.filter(t => t.status === "completed").length,
+    inProgress: tasks.filter(t => t.status === "in_progress").length,
+    pending: tasks.filter(t => t.status === "pending").length,
+  };
+
+  // Task pagination
+  const totalTaskPages = Math.ceil(tasks.length / tasksPerPage);
+  const paginatedTasks = tasks.slice((taskPage - 1) * tasksPerPage, taskPage * tasksPerPage);
+
   return (
     <DashboardLayout fullWidth hidePadding>
-      <TooltipProvider delayDuration={150}>
-        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-background">
-          {/* Mini Sidebar */}
-          <ProjectMiniSidebar 
-            projects={projects} 
-            currentProjectId={project.id} 
-            onAddProject={() => navigate("/projects?create=true")}
-          />
+      <TooltipProvider delayDuration={100}>
+        <div className="flex h-[calc(100vh-56px)] overflow-hidden bg-background">
+          {/* Mini sidebar */}
+          <div className="hidden md:flex">
+            <ProjectMiniSidebar
+              projects={projects}
+              currentProjectId={project.id}
+              onAddProject={() => navigate("/projects?create=true")}
+            />
+          </div>
 
-          {/* Main Busy Screen */}
-          <div className="flex-1 overflow-hidden">
-            <div className="h-full flex flex-col md:flex-row p-4 gap-4 overflow-x-auto scrollbar-thin">
-              
-              {/* Column 1: Overview & Team (380px fixed) */}
-              <div className="w-[380px] flex flex-col gap-4 flex-shrink-0 h-full overflow-y-auto pr-1 pb-4 custom-scrollbar">
-                
-                {/* Header Section with Inline Editing */}
-                <Card className="p-5 border-border shadow-soft shrink-0 relative overflow-hidden bg-gradient-to-br from-card to-muted/10">
-                  <div className="flex items-start gap-4 mb-4">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setIsLogoModalOpen(true)}
-                          className="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 overflow-hidden hover:border-primary/50 transition-all relative"
-                        >
-                          {project.logoUrl ? (
-                            <>
-                              <img src={project.logoUrl} alt={project.name} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                <ImagePlus className="w-5 h-5 text-white" />
-                              </div>
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                              <FolderOpen className="w-6 h-6" />
-                              <span className="text-[9px] font-bold uppercase tracking-widest">LOGO</span>
-                            </div>
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">Update Project Logo</TooltipContent>
-                    </Tooltip>
-                    
-                    <div className="min-w-0 pt-1 flex-1">
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <Input 
-                            value={editForm.name} 
-                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                            className="h-8 text-sm font-bold px-2"
-                            placeholder="Project Name"
-                          />
-                          <div className="flex gap-1">
-                            <Button size="sm" className="h-7 px-2 text-[10px] gap-1" onClick={handleUpdateProject}>
-                              <Save className="w-3 h-3" /> Save
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1" onClick={() => setIsEditing(false)}>
-                              <X className="w-3 h-3" /> Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="group flex items-center gap-1.5 mb-1">
-                          <h2 className="font-black text-xl truncate tracking-tight text-foreground">{project.name}</h2>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                onClick={() => setIsEditing(true)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Edit Project Info</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      )}
-                      
-                      {!isEditing && (
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest",
-                            project.status === "active" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                          )}>
-                            {project.status}
+          {/* Main content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Mobile project switcher */}
+            <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-card overflow-x-auto scrollbar-none">
+              {projects.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/projects/${p.id}`)}
+                  className={cn(
+                    "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                    p.id === project.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  )}
+                >
+                  {p.name}
+                </button>
+              ))}
+              <button
+                onClick={() => navigate("/projects?create=true")}
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:text-primary"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Project header banner */}
+            <div className="relative border-b border-border bg-card overflow-hidden">
+              {/* Background banner with logo */}
+              <div className="relative h-32 md:h-40 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10">
+                {project.logoUrl && (
+                  <img
+                    src={project.logoUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-15 blur-sm"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+              </div>
+
+              {/* Content overlay */}
+              <div className="absolute bottom-0 left-0 right-0 px-4 md:px-6 pb-4">
+                <div className="flex items-end gap-4">
+                  {/* Logo avatar */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setIsLogoOpen(true)}
+                        className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-background bg-card shadow-elevated flex items-center justify-center shrink-0 overflow-hidden hover:border-primary/40 transition-all group"
+                      >
+                        {project.logoUrl ? (
+                          <img src={project.logoUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <FolderOpen className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Change Logo</TooltipContent>
+                  </Tooltip>
+
+                  {/* Project info */}
+                  <div className="flex-1 min-w-0 pb-0.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h1 className="font-bold text-lg md:text-xl truncate">{project.name}</h1>
+                      <Badge variant="outline" className={cn(
+                        "text-[9px] uppercase tracking-wider shrink-0",
+                        getStatusBadgeClass(project.status)
+                      )}>
+                        {project.status}
+                      </Badge>
+                    </div>
+                    {project.description && (
+                      <p className="text-xs text-muted-foreground truncate max-w-lg mb-1.5">{project.description}</p>
+                    )}
+
+                    {/* Date range + member avatars row */}
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {(project.startDate || project.endDate) && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <Calendar className="w-3 h-3 shrink-0" />
+                          <span>
+                            {project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "TBD"}
+                            {" — "}
+                            {project.endDate ? format(new Date(project.endDate), "MMM d, yyyy") : "TBD"}
                           </span>
                         </div>
                       )}
-                    </div>
-                  </div>
 
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5">
-                        Description
-                      </h4>
-                      {isEditing ? (
-                        <Textarea 
-                          value={editForm.description}
-                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                          className="text-xs min-h-[80px] leading-relaxed"
-                          placeholder="Project scope and goals..."
-                        />
-                      ) : (
-                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4 bg-muted/40 p-3 rounded-xl border border-border/50 italic">
-                          {project.description || "No project description provided yet."}
-                        </p>
+                      {/* Member avatars */}
+                      {members.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex -space-x-1.5">
+                            {members.slice(0, 5).map(m => (
+                              <Tooltip key={m.id}>
+                                <TooltipTrigger>
+                                  <Avatar className="w-5 h-5 border border-background">
+                                    <AvatarFallback className="text-[7px] font-bold bg-primary/10 text-primary">
+                                      {m.firstName?.[0]}{m.lastName?.[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">{m.firstName} {m.lastName}</TooltipContent>
+                              </Tooltip>
+                            ))}
+                            {members.length > 5 && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Avatar className="w-5 h-5 border border-background">
+                                    <AvatarFallback className="text-[7px] font-bold bg-muted text-muted-foreground">
+                                      +{members.length - 5}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">{members.length - 5} more members</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                          <span className="text-[9px] text-muted-foreground font-medium">{members.length} member{members.length !== 1 ? "s" : ""}</span>
+                        </div>
                       )}
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-4 py-3 border-y border-border/50">
-                      <div className="space-y-1">
-                        <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                          <Calendar className="w-3 h-3 text-primary" /> Start
-                        </h4>
-                        <p className="text-[11px] font-bold text-foreground">{project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "TBD"}</p>
-                      </div>
-                      <div className="space-y-1 text-right">
-                        <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5 justify-end text-destructive">
-                          <Calendar className="w-3 h-3" /> Due
-                        </h4>
-                        <p className="text-[11px] font-bold text-foreground">{project.endDate ? format(new Date(project.endDate), "MMM d, yyyy") : "TBD"}</p>
-                      </div>
-                    </div>
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
+                    <Tooltip><TooltipTrigger asChild>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsEditOpen(true)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger><TooltipContent>Edit Project</TooltipContent></Tooltip>
 
+                    <Tooltip><TooltipTrigger asChild>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateTaskOpen(true)}>
+                        <Plus className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
+
+                    <Tooltip><TooltipTrigger asChild>
+                      <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateChecklistOpen(true)}>
+                        <ListChecks className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dense multi-panel layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-0">
+              
+              {/* Left column: Overview + Members */}
+              <div className="lg:col-span-3 border-r border-border bg-card/50 overflow-y-auto lg:h-[calc(100vh-56px-160px)]">
+                {/* Overview panel */}
+                <CollapsiblePanel
+                  title="Overview"
+                  icon={<Info className="w-3.5 h-3.5" />}
+                  open={openPanels.overview}
+                  onToggle={() => togglePanel("overview")}
+                >
+                  <div className="px-3 pb-3 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-card border border-border p-3 rounded-xl text-center shadow-sm">
-                        <p className="text-xl font-black text-primary leading-none mb-1">{project._count?.tasks || 0}</p>
-                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Tasks</p>
-                      </div>
-                      <div className="bg-card border border-border p-3 rounded-xl text-center shadow-sm">
-                        <p className="text-xl font-black text-success leading-none mb-1">{project._count?.checklists || 0}</p>
-                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Checklists</p>
+                      <MiniStat label="Tasks" value={taskStats.total} color="text-primary" />
+                      <MiniStat label="Done" value={taskStats.completed} color="text-success" />
+                      <MiniStat label="Active" value={taskStats.inProgress} color="text-info" />
+                      <MiniStat label="Pending" value={taskStats.pending} color="text-warning" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        <span>{project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "No start"}</span>
+                        <span>→</span>
+                        <span>{project.endDate ? format(new Date(project.endDate), "MMM d, yyyy") : "No end"}</span>
                       </div>
                     </div>
+                    {taskStats.total > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
+                          <span>Completion</span>
+                          <span>{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}%</span>
+                        </div>
+                        <Progress value={taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0} className="h-1.5" />
+                      </div>
+                    )}
                   </div>
-                </Card>
+                </CollapsiblePanel>
 
-                {/* Team Management Card */}
-                <Card className="p-5 border-border shadow-soft flex-shrink-0 overflow-hidden flex flex-col bg-card">
-                  <div className="flex items-center justify-between mb-4 shrink-0">
-                    <h3 className="font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-                      <Users className="w-4 h-4 text-info" /> Team Members
-                    </h3>
-                  </div>
-                  
-                  <div className="flex gap-1.5 mb-4">
-                    <Input
-                      type="email"
-                      value={memberEmail}
-                      onChange={(e) => setMemberEmail(e.target.value)}
-                      placeholder="user@example.com"
-                      className="h-8 text-xs font-medium bg-muted/30 border-none shadow-inner"
-                      onKeyDown={(e) => e.key === "Enter" && addMember()}
-                    />
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button size="icon" className="h-8 w-8 rounded-lg shadow-sm" onClick={() => addMember()} disabled={inviting || !memberEmail.trim()}>
-                          {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Invite Member</TooltipContent>
-                    </Tooltip>
-                  </div>
+                {/* Members panel */}
+                <CollapsiblePanel
+                  title={`Members (${members.length})`}
+                  icon={<Users className="w-3.5 h-3.5" />}
+                  open={openPanels.members}
+                  onToggle={() => togglePanel("members")}
+                >
+                  <div className="px-3 pb-3 space-y-2">
+                    <div className="flex gap-1.5">
+                      <Input
+                        type="email"
+                        value={memberEmail}
+                        onChange={(e) => setMemberEmail(e.target.value)}
+                        placeholder="email@example.com"
+                        className="h-7 text-[11px] bg-muted/30"
+                        onKeyDown={(e) => e.key === "Enter" && addMember()}
+                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="icon" className="h-7 w-7 shrink-0" onClick={addMember} disabled={inviting || !memberEmail.trim()}>
+                            {inviting ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserPlus className="w-3 h-3" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Invite by Email</TooltipContent>
+                      </Tooltip>
+                    </div>
 
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                    {loadingMembers ? (
-                      <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-primary/30" /></div>
-                    ) : membersList.length > 0 ? (
-                      membersList.map((m) => (
-                        <div key={m.id} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 hover:bg-muted/40 transition-all text-xs group">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-[10px] shrink-0 border border-primary/20">
+                    <div className="space-y-1 max-h-[200px] overflow-y-auto scrollbar-none">
+                      {members.map(m => (
+                        <div key={m.id} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/40 transition-colors group text-[11px]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary shrink-0">
                               {m.firstName?.[0]}{m.lastName?.[0]}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-bold truncate text-foreground leading-tight">{m.firstName} {m.lastName}</p>
-                              <p className="text-[9px] text-muted-foreground uppercase font-black tracking-tighter opacity-60">{m.role}</p>
+                              <p className="font-medium truncate leading-tight">{m.firstName} {m.lastName}</p>
+                              <p className="text-[9px] text-muted-foreground truncate">{m.role}</p>
                             </div>
                           </div>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity rounded-lg" onClick={() => removeMember(m.id)}>
-                                <Trash2 className="w-3.5 h-3.5" />
+                              <Button size="icon" variant="ghost" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => removeMember(m.userId || m.id)}>
+                                <X className="w-3 h-3" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="left">Remove Member</TooltipContent>
+                            <TooltipContent>Remove</TooltipContent>
                           </Tooltip>
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-[10px] text-muted-foreground py-8 italic">No active members yet.</p>
+                      ))}
+                      {members.length === 0 && (
+                        <p className="text-[10px] text-muted-foreground text-center py-4 italic">No members yet</p>
+                      )}
+                    </div>
+
+                    {/* Pending invites */}
+                    {invites.length > 0 && (
+                      <div className="pt-2 border-t border-border space-y-1">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Pending Invites</p>
+                        {invites.filter(inv => inv.status === "pending" || inv.status === "pending_workspace").map(inv => (
+                          <div key={inv.id} className="flex items-center justify-between py-1 px-2 rounded-md bg-warning/5 text-[10px]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Mail className="w-3 h-3 text-warning shrink-0" />
+                              <span className="truncate">{inv.email}</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => resendInvite(inv.id)}>
+                                    <RefreshCw className="w-2.5 h-2.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Resend</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-5 w-5 text-destructive" onClick={() => revokeInvite(inv.id)}>
+                                    <XCircle className="w-2.5 h-2.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Revoke</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
+                </CollapsiblePanel>
 
-                  <div className="mt-6 pt-5 border-t border-border space-y-3">
-                    <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Workspace Controls</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-9 text-[10px] font-black uppercase tracking-tighter gap-2 rounded-xl"
-                        onClick={handleManagePermissions}
-                      >
-                        <ShieldAlert className="w-3.5 h-3.5 text-info" /> Permissions
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-9 text-[10px] font-black uppercase tracking-tighter gap-2 rounded-xl text-destructive hover:bg-destructive/5"
-                        onClick={handleArchiveProject}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Archive
-                      </Button>
+                {/* Settings panel */}
+                <CollapsiblePanel
+                  title="Settings"
+                  icon={<Settings className="w-3.5 h-3.5" />}
+                  open={openPanels.settings}
+                  onToggle={() => togglePanel("settings")}
+                >
+                  <div className="px-3 pb-3 space-y-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Name</label>
+                      <Input value={settingsForm.name} onChange={(e) => setSettingsForm(p => ({ ...p, name: e.target.value }))} className="h-7 text-[11px]" />
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Description</label>
+                      <Textarea value={settingsForm.description} onChange={(e) => setSettingsForm(p => ({ ...p, description: e.target.value }))} className="text-[11px] min-h-[50px]" rows={2} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Start</label>
+                        <Input type="date" value={settingsForm.startDate} onChange={(e) => setSettingsForm(p => ({ ...p, startDate: e.target.value }))} className="h-7 text-[10px] px-1.5" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">End</label>
+                        <Input type="date" value={settingsForm.endDate} onChange={(e) => setSettingsForm(p => ({ ...p, endDate: e.target.value }))} className="h-7 text-[10px] px-1.5" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Status</label>
+                      <select
+                        value={settingsForm.status}
+                        onChange={(e) => setSettingsForm(p => ({ ...p, status: e.target.value }))}
+                        className="flex h-7 w-full rounded-md border border-input bg-background px-2 text-[11px]"
+                      >
+                        <option value="planning">Planning</option>
+                        <option value="active">Active</option>
+                        <option value="on_hold">On Hold</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    <Button onClick={saveSettings} disabled={savingSettings} className="w-full h-7 text-[10px] gap-1.5">
+                      {savingSettings ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                      Save Settings
+                    </Button>
                   </div>
-                </Card>
+                </CollapsiblePanel>
               </div>
 
-              {/* Column 2: Tasks Board (450px fixed) */}
-              <div className="w-[450px] flex flex-col flex-shrink-0 h-full overflow-hidden pb-4">
-                <Card className="flex flex-col h-full border-border shadow-soft overflow-hidden bg-card">
-                  <div className="p-4 border-b border-border flex items-center justify-between shrink-0 bg-muted/5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
-                        <ClipboardList className="w-4.5 h-4.5" />
-                      </div>
-                      <div>
-                        <h3 className="font-black text-sm leading-tight tracking-tight">Project Board</h3>
-                        <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Active Tasks</p>
-                      </div>
-                    </div>
+              {/* Center column: Tasks as Table */}
+              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-160px)]">
+                <CollapsiblePanel
+                  title={`Tasks (${tasks.length})`}
+                  icon={<ClipboardList className="w-3.5 h-3.5" />}
+                  open={openPanels.tasks}
+                  onToggle={() => togglePanel("tasks")}
+                  action={
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="icon" variant="default" className="h-8 w-8 rounded-lg shadow-md" onClick={() => setIsCreateTaskOpen(true)}>
-                          <Plus className="w-4.5 h-4.5" />
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateTaskOpen(true); }}>
+                          <Plus className="w-3.5 h-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>New Task</TooltipContent>
                     </Tooltip>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-muted/5 custom-scrollbar">
-                    <ProjectTasksTab projectId={project.id} onRefresh={loadProject} isCompact />
-                  </div>
-                </Card>
-              </div>
-
-              {/* Column 3: Checklists Flow (400px fixed) */}
-              <div className="w-[400px] flex flex-col flex-shrink-0 h-full overflow-hidden pb-4">
-                <Card className="flex flex-col h-full border-border shadow-soft overflow-hidden bg-card">
-                  <div className="p-4 border-b border-border flex items-center justify-between shrink-0 bg-muted/5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-success text-success-foreground flex items-center justify-center shadow-sm">
-                        <ListChecks className="w-4.5 h-4.5" />
-                      </div>
-                      <div>
-                        <h3 className="font-black text-sm leading-tight tracking-tight">Milestones</h3>
-                        <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Flow & Progress</p>
-                      </div>
+                  }
+                >
+                  {tasks.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <ClipboardList className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">No tasks yet</p>
+                      <Button size="sm" variant="outline" className="mt-3 h-7 text-[10px] gap-1" onClick={() => setIsCreateTaskOpen(true)}>
+                        <Plus className="w-3 h-3" /> Add Task
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/5 custom-scrollbar">
-                    <ProjectChecklistsTab projectId={project.id} onRefresh={loadProject} />
-                  </div>
-                </Card>
+                  ) : (
+                    <div>
+                      {/* Table header */}
+                      <div className="hidden sm:grid grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-1.5 border-b border-border bg-muted/30 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <div>Task</div>
+                        <div>Priority</div>
+                        <div>Status</div>
+                        <div>Due</div>
+                        <div>Actions</div>
+                      </div>
+                      {/* Task rows */}
+                      <div className="divide-y divide-border">
+                        {paginatedTasks.map(task => (
+                          <div
+                            key={task.id}
+                            className="grid grid-cols-1 sm:grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-2 items-center hover:bg-muted/30 transition-colors group text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={cn(
+                                "w-1.5 h-1.5 rounded-full shrink-0",
+                                task.status === "completed" ? "bg-success" :
+                                task.status === "in_progress" ? "bg-info" :
+                                task.status === "cancelled" ? "bg-destructive" :
+                                "bg-warning"
+                              )} />
+                              <p className={cn(
+                                "font-medium truncate text-[11px]",
+                                task.status === "completed" && "line-through text-muted-foreground"
+                              )}>
+                                {task.title}
+                              </p>
+                              {task.assignee && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Avatar className="w-4 h-4 shrink-0">
+                                      <AvatarFallback className="text-[6px] font-bold bg-primary/10 text-primary">
+                                        {task.assignee.firstName?.[0]}{task.assignee.lastName?.[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="text-[10px]">{task.assignee.firstName} {task.assignee.lastName}</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                            <div>
+                              {task.priority && (
+                                <Badge variant="outline" className={cn("text-[8px] px-1.5 h-4", getPriorityBadgeClass(task.priority))}>
+                                  {getPriorityDisplay(task.priority)}
+                                </Badge>
+                              )}
+                            </div>
+                            <div>
+                              <Badge variant="outline" className={cn("text-[8px] px-1.5 h-4", getStatusBadgeClass(task.status))}>
+                                {getStatusDisplay(task.status)}
+                              </Badge>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {task.deadline ? format(new Date(task.deadline), "MMM d") : "—"}
+                            </div>
+                            <div className="flex items-center gap-0.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => navigate(`/task-details/${task.id}`)}>
+                                    <Eye className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">View</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => navigate(`/task-details/${task.id}`)}>
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px]">Edit</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Pagination */}
+                      {totalTaskPages > 1 && (
+                        <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/20">
+                          <span className="text-[9px] text-muted-foreground">
+                            {(taskPage - 1) * tasksPerPage + 1}–{Math.min(taskPage * tasksPerPage, tasks.length)} of {tasks.length}
+                          </span>
+                          <div className="flex items-center gap-0.5">
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(1)} disabled={taskPage === 1}>
+                              <ChevronsLeft className="w-3 h-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(p => p - 1)} disabled={taskPage === 1}>
+                              <ChevronLeft className="w-3 h-3" />
+                            </Button>
+                            <span className="text-[10px] px-2 font-medium">{taskPage}/{totalTaskPages}</span>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(p => p + 1)} disabled={taskPage === totalTaskPages}>
+                              <ChevronRight className="w-3 h-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(totalTaskPages)} disabled={taskPage === totalTaskPages}>
+                              <ChevronsRight className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CollapsiblePanel>
               </div>
 
+              {/* Right column: Checklists */}
+              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-160px)]">
+                <CollapsiblePanel
+                  title={`Checklists (${checklists.length})`}
+                  icon={<ListChecks className="w-3.5 h-3.5" />}
+                  open={openPanels.checklists}
+                  onToggle={() => togglePanel("checklists")}
+                  action={
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateChecklistOpen(true); }}>
+                          <Plus className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>New Checklist</TooltipContent>
+                    </Tooltip>
+                  }
+                >
+                  <div className="space-y-0">
+                    {checklists.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <ListChecks className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">No checklists yet</p>
+                        <Button size="sm" variant="outline" className="mt-3 h-7 text-[10px] gap-1" onClick={() => setIsCreateChecklistOpen(true)}>
+                          <Plus className="w-3 h-3" /> Add Checklist
+                        </Button>
+                      </div>
+                    ) : (
+                      checklists.map(cl => (
+                        <ChecklistPanel
+                          key={cl.id}
+                          projectId={project.id}
+                          checklist={cl}
+                          onToggleItem={handleToggleItem}
+                          onDeleteItem={handleDeleteChecklistItem}
+                          onDeleteChecklist={handleDeleteChecklist}
+                          onRefresh={loadChecklists}
+                        />
+                      ))
+                    )}
+                  </div>
+                </CollapsiblePanel>
+              </div>
             </div>
           </div>
-
-          <ProjectLogoUploader
-            projectId={project.id}
-            currentLogoUrl={project.logoUrl}
-            onLogoUpdated={handleLogoUpdated}
-            isOpen={isLogoModalOpen}
-            onClose={() => setIsLogoModalOpen(false)}
-          />
-
-          <CreateTaskDialog 
-            open={isCreateTaskOpen}
-            onOpenChange={setIsCreateTaskOpen}
-            onSuccess={loadProject}
-            projectId={project.id}
-          />
         </div>
       </TooltipProvider>
+
+      {/* Modals */}
+      <ProjectLogoUploader projectId={project.id} currentLogoUrl={project.logoUrl} onLogoUpdated={handleLogoUpdated} isOpen={isLogoOpen} onClose={() => setIsLogoOpen(false)} />
+      <EditProjectDrawer project={project} open={isEditOpen} onOpenChange={setIsEditOpen} onSuccess={refreshAll} mode="edit" />
+      <CreateProjectTaskDialog projectId={project.id} open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen} onSuccess={() => { loadTasks(); loadProject(); }} />
+      <CreateChecklistDialog projectId={project.id} open={isCreateChecklistOpen} onOpenChange={setIsCreateChecklistOpen} onSuccess={() => { loadChecklists(); loadProject(); }} />
     </DashboardLayout>
+  );
+}
+
+// ─── Reusable: Collapsible Panel ─────────────────────────────
+function CollapsiblePanel({ title, icon, open, onToggle, children, action }: {
+  title: string;
+  icon: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <Collapsible open={open} onOpenChange={onToggle}>
+      <CollapsibleTrigger asChild>
+        <button className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors border-b border-border group">
+          {open ? <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform" /> : <ChevronRight className="w-3 h-3 text-muted-foreground transition-transform" />}
+          <span className="text-muted-foreground">{icon}</span>
+          <span className="text-[11px] font-semibold flex-1 tracking-tight">{title}</span>
+          {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="animate-accordion-down">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// ─── Reusable: Mini Stat ─────────────────────────────────────
+function MiniStat({ label, value, color }: { label: string; value: number | string; color?: string }) {
+  return (
+    <div className="bg-muted/30 rounded-lg p-2 text-center">
+      <p className={cn("text-lg font-bold leading-none", color || "text-foreground")}>{value}</p>
+      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+// ─── Reusable: Checklist Panel ───────────────────────────────
+function ChecklistPanel({ projectId, checklist, onToggleItem, onDeleteItem, onDeleteChecklist, onRefresh }: {
+  projectId: string;
+  checklist: ProjectChecklist;
+  onToggleItem: (clId: string, itemId: string, checked: boolean) => void;
+  onDeleteItem: (clId: string, itemId: string) => void;
+  onDeleteChecklist: (clId: string) => void;
+  onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(true);
+  const [newItem, setNewItem] = useState("");
+  const items = checklist.items || [];
+  const completed = items.filter(i => i.isCompleted).length;
+  const progress = items.length > 0 ? (completed / items.length) * 100 : 0;
+
+  const addItem = async () => {
+    if (!newItem.trim()) return;
+    try {
+      await api.createChecklistItem(projectId, checklist.id, newItem.trim());
+      setNewItem("");
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="border-b border-border">
+      <div className="flex items-center gap-2 px-3 py-2 hover:bg-muted/20 transition-colors">
+        <button onClick={() => setOpen(!open)} className="shrink-0">
+          {open ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+        </button>
+        <span className="text-[11px] font-semibold flex-1 truncate">{checklist.title}</span>
+        <span className="text-[9px] text-muted-foreground shrink-0">{completed}/{items.length}</span>
+        <Progress value={progress} className="w-12 h-1 shrink-0" />
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-5 w-5 shrink-0">
+                  <MoreHorizontal className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Options</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="text-destructive text-xs" onClick={() => onDeleteChecklist(checklist.id)}>
+              <Trash2 className="w-3 h-3 mr-1.5" /> Delete Checklist
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {open && (
+        <div className="px-3 pb-2 space-y-0.5 animate-fade-in">
+          {items.map(item => (
+            <div key={item.id} className="flex items-center gap-2 py-1 group pl-5">
+              <Checkbox
+                checked={item.isCompleted}
+                onCheckedChange={(checked) => onToggleItem(checklist.id, item.id, !!checked)}
+                className="h-3.5 w-3.5"
+              />
+              <span className={cn(
+                "text-[11px] flex-1 transition-all",
+                item.isCompleted && "line-through text-muted-foreground"
+              )}>
+                {item.title}
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => onDeleteItem(checklist.id, item.id)}>
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete Item</TooltipContent>
+              </Tooltip>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 pl-5 pt-1">
+            <Input
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              placeholder="Add item..."
+              className="h-6 text-[10px] bg-transparent border-none shadow-none px-0 focus-visible:ring-0"
+              onKeyDown={(e) => e.key === "Enter" && addItem()}
+            />
+            {newItem.trim() && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-5 w-5" onClick={addItem}>
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
