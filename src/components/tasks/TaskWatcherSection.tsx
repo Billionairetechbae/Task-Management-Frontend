@@ -51,6 +51,12 @@ const TaskWatcherSection = ({
     setRecentWatchers(initialRecentWatchers);
   }, [initialWatcherCount, initialIsWatching, initialRecentWatchers]);
 
+  useEffect(() => {
+    if (!taskId) return;
+    refreshWatchers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
+
   const refreshWatchers = async () => {
     try {
       const res = await api.getTaskWatchers(taskId);

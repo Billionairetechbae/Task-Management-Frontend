@@ -44,7 +44,6 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminInvites from "./pages/admin/AdminInvites";
 
-import { WebSocketStatus } from '@/components/WebSocketStatus';
 import TaskDetailsDebug from "./pages/TaskDetailsDebug";
 // import DashboardEntry from "./pages/DashboardEntry";
 
@@ -68,7 +67,6 @@ const App = () => (
     <Toaster />
     <Toaster />
     <Sonner />
-    <WebSocketStatus />
     <OnboardingTour />
 
     <Routes>

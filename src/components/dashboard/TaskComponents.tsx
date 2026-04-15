@@ -48,6 +48,9 @@ export const getPriorityBadgeClass = (priority: string) => {
   }
 };
 
+const getSubtaskCount = (task: Task) =>
+  typeof task.subtaskCount === "number" ? task.subtaskCount : task.subtasks?.length || 0;
+
 const ActionButton = ({ icon: Icon, label, onClick, variant = "ghost", className: extraClass }: {
   icon: typeof Eye; label: string; onClick?: () => void;
   variant?: "ghost" | "outline"; className?: string;
@@ -89,7 +92,7 @@ export const TaskTable = ({ tasks, showAssignee = true, showExecutive = false, s
                 {task.description && <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{task.description}</p>}
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                   {!!task.parentTaskId && <span className="inline-flex items-center gap-1"><GitBranch className="w-3 h-3" />Subtask</span>}
-                  <span className="inline-flex items-center gap-1"><ListTodo className="w-3 h-3" />{task.subtasks?.length || 0}</span>
+                  <span className="inline-flex items-center gap-1"><ListTodo className="w-3 h-3" />{getSubtaskCount(task)}</span>
                   <span className="inline-flex items-center gap-1"><Bell className="w-3 h-3" />{task.watcherCount || 0}</span>
                 </div>
               </div>
@@ -124,7 +127,7 @@ export const TaskTable = ({ tasks, showAssignee = true, showExecutive = false, s
               {task.description && <p className="text-[11px] text-muted-foreground truncate mt-0.5">{task.description}</p>}
               <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                 {!!task.parentTaskId && <span className="inline-flex items-center gap-1"><GitBranch className="w-3 h-3" />Subtask</span>}
-                <span className="inline-flex items-center gap-1"><ListTodo className="w-3 h-3" />{task.subtasks?.length || 0}</span>
+                <span className="inline-flex items-center gap-1"><ListTodo className="w-3 h-3" />{getSubtaskCount(task)}</span>
                 <span className="inline-flex items-center gap-1"><Bell className="w-3 h-3" />{task.watcherCount || 0}</span>
               </div>
             </div>

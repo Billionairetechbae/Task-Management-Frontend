@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
+import { WebSocketStatus } from "@/components/WebSocketStatus";
 
 interface NavItem {
   label: string;
@@ -298,6 +299,9 @@ const DashboardLayout = ({ children, fullWidth = false, hidePadding = false }: D
               <div className="flex items-center gap-1.5">
                 <div className="hidden sm:block">
                   <WorkspaceSwitcher />
+                </div>
+                <div className="hidden sm:block">
+                  <WebSocketStatus />
                 </div>
                 <NotificationsDropdown />
                 <Tooltip>

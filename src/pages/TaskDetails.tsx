@@ -18,7 +18,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, Task, TaskComment } from "@/lib/api";
@@ -551,6 +551,20 @@ const TaskDetails = () => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
+  const renderDeliveryMark = (comment: CorrectedTaskComment) => {
+    if (comment.userId !== user?.id) return null;
+    const isOptimistic = comment.id.startsWith("optimistic-");
+    return (
+      <span className="ml-2 inline-flex items-center opacity-70">
+        {isOptimistic ? (
+          <Check className="w-3 h-3" />
+        ) : (
+          <CheckCheck className="w-3 h-3" />
+        )}
+      </span>
+    );
+  };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -667,12 +681,7 @@ const TaskDetails = () => {
                       }`}
                     >
                       <p className="text-sm">{comment.content}</p>
-                      {comment.id.startsWith('optimistic-') && (
-                        <div className="text-xs opacity-70 mt-1 flex items-center gap-1">
-                          <Clock className="w-3 h-3 animate-spin" />
-                          Sending...
-                        </div>
-                      )}
+                      {renderDeliveryMark(comment)}
                     </div>
                   </div>
                 </div>
@@ -1071,12 +1080,7 @@ const TaskDetails = () => {
                             }`}
                           >
                             <p className="text-sm">{comment.content}</p>
-                            {comment.id.startsWith('optimistic-') && (
-                              <div className="text-xs opacity-70 mt-1 flex items-center gap-1">
-                                <Clock className="w-3 h-3 animate-spin" />
-                                Sending...
-                              </div>
-                            )}
+                            {renderDeliveryMark(comment)}
                           </div>
                         </div>
                       </div>

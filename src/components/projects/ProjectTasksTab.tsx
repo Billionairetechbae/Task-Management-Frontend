@@ -90,7 +90,7 @@ const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false }: ProjectTas
               Recent Tasks
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              {tasks.reduce((acc, t) => acc + (t.subtasks?.length || 0), 0)} subtasks •{" "}
+              {tasks.reduce((acc, t) => acc + (typeof (t as any).subtaskCount === "number" ? (t as any).subtaskCount : (t.subtasks?.length || 0)), 0)} subtasks •{" "}
               {tasks.reduce((acc, t) => acc + (t.watcherCount || 0), 0)} watchers
             </p>
           </div>

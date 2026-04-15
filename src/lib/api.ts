@@ -240,6 +240,7 @@ export interface Task {
   attachments?: TaskAttachment[];
   parentTask?: Task | null;
   subtasks?: TaskSubtask[];
+  subtaskCount?: number;
   activities?: TaskActivity[];
   watcherCount?: number;
   isWatching?: boolean;
