@@ -32,6 +32,7 @@ import AttachmentPreview from "@/components/AttachmentPreview";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
+import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -785,10 +786,10 @@ const TaskDetails = () => {
                   {STATUS_LABEL[task.status]}
                 </Badge>
                 <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                  {(task.subtasks || []).length} subtasks
+                  {getTaskSubtaskCount(task)} subtasks
                 </Badge>
                 <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                  {task.watcherCount || 0} watchers
+                  {getTaskWatcherCount(task)} watchers
                 </Badge>
                 
                 {!isConnected && (

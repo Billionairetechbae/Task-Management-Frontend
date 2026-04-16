@@ -31,6 +31,7 @@ import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task } from "@/lib/api";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 
 const DashboardTeamMember = () => {
@@ -110,7 +111,7 @@ const DashboardTeamMember = () => {
 
       try {
         const taskRes = await api.getTasks();
-        setTasks(taskRes.data.tasks || []);
+        setTasks(filterTopLevelTasks(taskRes.data.tasks || []));
       } catch (_) {}
     } catch (err) {
       toast({

@@ -20,6 +20,7 @@ import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDial
 import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
 import KanbanBoard from "@/components/projects/KanbanBoard";
 import { getStatusBadgeClass, getPriorityBadgeClass, getStatusDisplay, getPriorityDisplay } from "@/components/dashboard/TaskComponents";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -105,7 +106,8 @@ export default function ProjectDetails() {
     try {
       const res = await api.getProjectTasks(id);
       const data = res.data;
-      setTasks(Array.isArray(data) ? data : (data as any)?.tasks || []);
+      const raw = Array.isArray(data) ? data : (data as any)?.tasks || [];
+      setTasks(filterTopLevelTasks(raw));
     } catch { /* ignore */ }
   };
 

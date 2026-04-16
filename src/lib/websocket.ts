@@ -1,5 +1,6 @@
 // src/lib/websocket.ts - Updated for Render
 import { toast } from "@/hooks/use-toast";
+import { envOr } from "@/lib/env";
 
 export interface WebSocketMessage {
   type: string;
@@ -30,8 +31,8 @@ class WebSocketService {
   }
 
   private getWebSocketUrl(token: string): string {
-    // For Render deployment
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://admiino-backend.onrender.com/api/v1';
+    // const apiBaseUrl = envOr("VITE_API_BASE_URL", "http://localhost:5000/api/v1");
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
     
     // Remove /api/v1 from the end
     const baseUrl = apiBaseUrl.replace('/api/v1', '');

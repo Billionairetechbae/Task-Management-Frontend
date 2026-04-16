@@ -1,8 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Bot, Crown, HelpCircle, Plus, X } from "lucide-react";
+import {
+  Bell,
+  Bot,
+  Crown,
+  HelpCircle,
+  Plus,
+  X,
+  ArrowRight,
+  Clock3,
+  ListTodo,
+  AlertTriangle,
+} from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 
 const tasks = [
   {
@@ -31,141 +43,229 @@ const tasks = [
   },
 ];
 
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case "In Progress":
+      return "bg-primary/10 text-primary border-primary/20";
+    case "Pending":
+      return "bg-warning/10 text-warning border-warning/20";
+    case "Past Due":
+      return "bg-destructive/10 text-destructive border-destructive/20";
+    case "Completed":
+      return "bg-success/10 text-success border-success/20";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+};
+
+const getPriorityBadgeClass = (priority: string) => {
+  switch (priority) {
+    case "High":
+      return "bg-destructive/10 text-destructive border-destructive/20";
+    case "Medium":
+      return "bg-warning/10 text-warning border-warning/20";
+    case "Low":
+      return "bg-info/10 text-info border-info/20";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+};
+
 const Dashboard = () => {
   const [showBanner, setShowBanner] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
+
+  const summary = useMemo(() => {
+    return {
+      total: tasks.length,
+      pending: tasks.filter((t) => t.status === "Pending").length,
+      inProgress: tasks.filter((t) => t.status === "In Progress").length,
+      pastDue: tasks.filter((t) => t.status === "Past Due").length,
+    };
+  }, []);
+
+  const filteredTasks = useMemo(() => {
+    switch (activeTab) {
+      case "pending":
+        return tasks.filter((t) => t.status === "Pending");
+      case "in_progress":
+        return tasks.filter((t) => t.status === "In Progress");
+      case "completed":
+        return tasks.filter((t) => t.status === "Completed");
+      default:
+        return tasks;
+    }
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-primary font-bold text-2xl">
-            admiino<span className="text-accent">°</span>
-          </h1>
+      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <h1 className="text-primary font-bold text-2xl">
+              admiino<span className="text-accent">°</span>
+            </h1>
+            <Badge variant="outline" className="hidden sm:inline-flex">
+              Executive Workspace
+            </Badge>
+          </div>
 
-          <div className="flex items-center gap-4">
-            <Button variant="outline" className="gap-2">
-              <Bot className="w-5 h-5" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button variant="outline" className="hidden sm:inline-flex gap-2">
+              <Bot className="h-4 w-4" />
               AI Hub
             </Button>
-            <button className="relative">
-              <HelpCircle className="w-6 h-6 text-muted-foreground" />
-            </button>
-            <button className="relative">
-              <Bell className="w-6 h-6 text-muted-foreground" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full" />
-            </button>
+
+            <Button variant="ghost" size="icon">
+              <HelpCircle className="h-5 w-5 text-muted-foreground" />
+            </Button>
+
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
+            </Button>
+
             <Button className="gap-2">
-              <Plus className="w-5 h-5" />
-              Delegate New Task
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Delegate New Task</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="px-6 py-8">
+      <main className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6">
         {showBanner && (
-          <div className="bg-primary rounded-2xl p-6 mb-8 relative">
+          <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-r from-primary to-primary/80 p-5 text-primary-foreground shadow-soft sm:p-6">
             <button
               onClick={() => setShowBanner(false)}
-              className="absolute top-4 right-4 text-primary-foreground/80 hover:text-primary-foreground"
+              className="absolute right-4 top-4 text-primary-foreground/80 transition hover:text-primary-foreground"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center flex-shrink-0">
-                <Crown className="w-6 h-6 text-accent-foreground" />
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                <Crown className="h-6 w-6" />
               </div>
+
               <div className="flex-1">
-                <h3 className="text-primary-foreground font-bold text-xl mb-2">
-                  Need more capacity?
-                </h3>
-                <p className="text-primary-foreground/90 mb-4">
-                  Upgrade to Premium and hire a dedicated Chief of Staff to handle your tasks
-                  professionally.
+                <h3 className="text-xl font-semibold">Need more capacity?</h3>
+                <p className="mt-1 max-w-2xl text-sm text-primary-foreground/90 sm:text-base">
+                  Upgrade to Premium and hire a dedicated Chief of Staff to
+                  handle your tasks professionally.
                 </p>
+
                 <Button
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
+                  className="mt-4 bg-background text-foreground hover:bg-background/90"
                   asChild
                 >
-                  <Link to="/team_members">Hire a Chief of Staff Now</Link>
+                  <Link to="/team_members" className="gap-2">
+                    Hire a Chief of Staff Now
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </Button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">My Tasks</h2>
-          <p className="text-muted-foreground">Manage and track all delegated tasks</p>
-        </div>
-
-        <div className="mb-6">
-          <div className="flex gap-2 border-b border-border">
-            <button className="px-4 py-2 font-semibold border-b-2 border-primary">
-              All Tasks
-            </button>
-            <button className="px-4 py-2 text-muted-foreground hover:text-foreground">
-              Pending
-            </button>
-            <button className="px-4 py-2 text-muted-foreground hover:text-foreground">
-              In Progress
-            </button>
-            <button className="px-4 py-2 text-muted-foreground hover:text-foreground">
-              Completed
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="grid grid-cols-[2fr,1fr,1fr,1fr,1fr] gap-4 p-4 border-b border-border font-semibold text-sm">
-            <div>Task Title</div>
-            <div>Priority</div>
-            <div>Deadline</div>
-            <div>Status</div>
-            <div>Actions</div>
+        <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">My Tasks</h2>
+            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+              Manage and track all delegated tasks
+            </p>
           </div>
 
-          {tasks.map((task, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[2fr,1fr,1fr,1fr,1fr] gap-4 p-4 border-b border-border last:border-0 items-center hover:bg-muted/50 transition-colors"
-            >
-              <div className="font-medium">{task.title}</div>
-              <div>
-                <Badge
-                  variant={task.priority === "High" ? "destructive" : "secondary"}
-                  className={
-                    task.priority === "Medium"
-                      ? "bg-warning/10 text-warning border-warning/20"
-                      : ""
-                  }
-                >
-                  {task.priority}
-                </Badge>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <ListTodo className="h-4 w-4" />
+                <span className="text-xs">Total</span>
               </div>
-              <div className="text-muted-foreground">{task.deadline}</div>
-              <div>
-                <Badge
-                  variant={task.status === "In Progress" ? "default" : "secondary"}
-                  className={
-                    task.status === "Pending"
-                      ? "bg-warning text-warning-foreground"
-                      : task.status === "Past Due"
-                      ? "bg-destructive/10 text-destructive border-destructive/20"
-                      : ""
-                  }
-                >
-                  {task.status}
-                </Badge>
+              <p className="mt-2 text-2xl font-semibold">{summary.total}</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock3 className="h-4 w-4" />
+                <span className="text-xs">Pending</span>
               </div>
-              <div>
-                <Button variant="link" className="text-primary" asChild>
+              <p className="mt-2 text-2xl font-semibold">{summary.pending}</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock3 className="h-4 w-4" />
+                <span className="text-xs">In Progress</span>
+              </div>
+              <p className="mt-2 text-2xl font-semibold">{summary.inProgress}</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-xs">Past Due</span>
+              </div>
+              <p className="mt-2 text-2xl font-semibold">{summary.pastDue}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card shadow-soft">
+          <div className="border-b border-border px-4 pt-4 sm:px-6">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: "all", label: "All Tasks" },
+                { key: "pending", label: "Pending" },
+                { key: "in_progress", label: "In Progress" },
+                { key: "completed", label: "Completed" },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition",
+                    activeTab === tab.key
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="divide-y divide-border">
+            {filteredTasks.map((task, index) => (
+              <div
+                key={index}
+                className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-muted/30 sm:px-6 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-foreground">{task.title}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge className={getPriorityBadgeClass(task.priority)}>
+                      {task.priority}
+                    </Badge>
+                    <Badge className={getStatusBadgeClass(task.status)}>
+                      {task.status}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      Due {new Date(task.deadline).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                <Button variant="outline" asChild className="w-full md:w-auto">
                   <Link to="/task-details">View Details</Link>
                 </Button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );

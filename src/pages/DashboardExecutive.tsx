@@ -33,6 +33,7 @@ import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, TeamMember } from "@/lib/api";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -97,11 +98,13 @@ const DashboardExecutive = () => {
       if (workspaceRole === "member") {
         const res = await api.getTasks();
         const wsTasks = (res as any)?.data?.tasks || [];
-        const mine = wsTasks.filter((t: any) => {
-          if (t.assigneeId && t.assigneeId === user?.id) return true;
-          if (Array.isArray(t.assignees) && t.assignees.some((a: any) => a?.id === user?.id)) return true;
-          return false;
-        });
+        const mine = filterTopLevelTasks(
+          wsTasks.filter((t: any) => {
+            if (t.assigneeId && t.assigneeId === user?.id) return true;
+            if (Array.isArray(t.assignees) && t.assignees.some((a: any) => a?.id === user?.id)) return true;
+            return false;
+          })
+        );
         setTasks(mine);
         const counts = {
           total: mine.length,
@@ -140,7 +143,7 @@ const DashboardExecutive = () => {
 
       const { team, tasks: t } = overview;
 
-      setTasks(recentActivity.tasks || []);
+      setTasks(filterTopLevelTasks(recentActivity.tasks || []));
       setTeamStats({
         totalAssistants: team.totalAssistants || 0,
         availableAssistants: team.availableAssistants || 0,

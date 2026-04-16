@@ -1,4 +1,5 @@
 // src/lib/api.ts
+import { envOr } from "@/lib/env";
 
 /* ============================
    SHARED TYPES
@@ -245,6 +246,8 @@ export interface Task {
   watcherCount?: number;
   isWatching?: boolean;
   recentWatchers?: TaskWatcher[];
+  /** Some APIs return full watcher list instead of only counts */
+  watchers?: TaskWatcher[];
 
   // Some backends return this
   assignees?: any[];
@@ -741,8 +744,7 @@ export interface NotificationsListResponse {
    API BASE URL
 ============================ */
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /* ============================
    API CLIENT

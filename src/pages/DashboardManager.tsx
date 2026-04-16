@@ -28,6 +28,7 @@ import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, TeamMember, Task } from "@/lib/api";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { Button } from "@/components/ui/button";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -89,17 +90,18 @@ const DashboardManager = () => {
         (a) => a.role === "team_member"
       );
 
-      setTasks(tasksRes.data.tasks);
+      const topTasks = filterTopLevelTasks(tasksRes.data.tasks);
+      setTasks(topTasks);
       setAssistants(assistantList);
 
-      const completed = tasksRes.data.tasks.filter((t) => t.status === "completed").length;
-      const total = tasksRes.data.tasks.length;
-      const pending = tasksRes.data.tasks.filter((t) => t.status === "pending").length;
-      const inProgress = tasksRes.data.tasks.filter((t) => t.status === "in_progress").length;
-      const overdue = tasksRes.data.tasks.filter(
+      const completed = topTasks.filter((t) => t.status === "completed").length;
+      const total = topTasks.length;
+      const pending = topTasks.filter((t) => t.status === "pending").length;
+      const inProgress = topTasks.filter((t) => t.status === "in_progress").length;
+      const overdue = topTasks.filter(
         (t) => new Date(t.deadline) < new Date() && t.status !== "completed"
       ).length;
-      const urgent = tasksRes.data.tasks.filter((t) => t.priority === "high").length;
+      const urgent = topTasks.filter((t) => t.priority === "high").length;
 
       setStats({
         totalTasks: total,

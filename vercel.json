@@ -10,8 +10,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_API_BASE_URL": "https://admiino-backend.onrender.com/api/v1"
-  }
+  ]
 }

@@ -11,6 +11,7 @@ import {
   Building2,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 
 const AdminTasks = () => {
   const { toast } = useToast();
@@ -40,7 +41,7 @@ const AdminTasks = () => {
           )
         : response.data.tasks;
 
-      setTasks(filtered);
+      setTasks(filterTopLevelTasks(filtered));
     } catch (err: any) {
       toast({
         title: "Failed to load tasks",

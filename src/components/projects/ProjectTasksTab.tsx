@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { TaskTable, getStatusBadgeClass, CompactTaskTable } from "@/components/dashboard/TaskComponents";
 import { EmptyState } from "@/components/dashboard/DashboardComponents";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
+import { filterTopLevelTasks, getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 
 interface ProjectTasksTabProps {
   projectId: string;
@@ -30,7 +31,7 @@ const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false }: ProjectTas
       const res = await api.getProjectTasks(projectId);
       const data = res.data;
       const list = Array.isArray(data) ? data : (data as any).tasks || [];
-      setTasks(list);
+      setTasks(filterTopLevelTasks(list));
     } catch (err) {
       console.error("Failed to fetch project tasks", err);
     } finally {
@@ -90,8 +91,8 @@ const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false }: ProjectTas
               Recent Tasks
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              {tasks.reduce((acc, t) => acc + (typeof (t as any).subtaskCount === "number" ? (t as any).subtaskCount : (t.subtasks?.length || 0)), 0)} subtasks •{" "}
-              {tasks.reduce((acc, t) => acc + (t.watcherCount || 0), 0)} watchers
+              {tasks.reduce((acc, t) => acc + getTaskSubtaskCount(t), 0)} subtasks •{" "}
+              {tasks.reduce((acc, t) => acc + getTaskWatcherCount(t), 0)} watchers
             </p>
           </div>
           <Button size="sm" variant="ghost" className="text-primary" onClick={() => setIsCreateCreateDialogOpen(true)}>

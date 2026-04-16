@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 
 const AdminSearch = () => {
   const { toast } = useToast();
@@ -47,9 +48,11 @@ const AdminSearch = () => {
     };
 
 
+  const topLevelSearchTasks = results ? filterTopLevelTasks(results.tasks || []) : [];
+
   const hasResults = results && (
     results.users?.length > 0 ||
-    results.tasks?.length > 0 ||
+    topLevelSearchTasks.length > 0 ||
     results.companies?.length > 0
   );
 
@@ -138,8 +141,8 @@ const AdminSearch = () => {
             </Card>
           )}
 
-          {/* Tasks */}
-          {results.tasks?.length > 0 && (
+          {/* Tasks (top-level only in list) */}
+          {topLevelSearchTasks.length > 0 && (
             <Card className="p-6 border border-border">
               <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
                 <Briefcase className="w-6 h-6 text-accent" />
@@ -147,7 +150,7 @@ const AdminSearch = () => {
               </h3>
 
               <ul className="space-y-2">
-                {results.tasks.map((t: any) => (
+                {topLevelSearchTasks.map((t: any) => (
                   <li key={t.id} className="border-b pb-2 border-border">
                     <span className="font-medium">{t.title}</span>
                     <p className="text-xs text-muted-foreground">{t.description}</p>

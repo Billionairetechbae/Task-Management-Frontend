@@ -17,6 +17,7 @@ interface KanbanTask {
   priority: string;
   deadline?: string;
   assignee?: { firstName?: string; lastName?: string };
+  parentTaskId?: string | null;
 }
 
 interface KanbanBoardProps {
@@ -34,9 +35,10 @@ export default function KanbanBoard({ tasks }: KanbanBoardProps) {
   const navigate = useNavigate();
 
   const grouped = useMemo(() => {
+    const topLevel = tasks.filter((t) => !t.parentTaskId);
     const map: Record<string, KanbanTask[]> = {};
     COLUMNS.forEach(c => { map[c.key] = []; });
-    tasks.forEach(t => {
+    topLevel.forEach(t => {
       const col = COLUMNS.find(c => c.key === t.status) ? t.status : "pending";
       map[col]?.push(t);
     });
