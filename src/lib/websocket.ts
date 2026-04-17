@@ -297,11 +297,11 @@ class WebSocketService {
     switch (message.type) {
       case 'connection_established':
         console.log('✅ WebSocket connection established');
-        toast({
-          title: 'Connected',
-          description: 'Chat features enabled',
-          variant: 'default',
-        });
+        // toast({
+        //   title: 'Connected',
+        //   description: 'Chat features enabled',
+        //   variant: 'default',
+        // });
         break;
 
       case 'pong':

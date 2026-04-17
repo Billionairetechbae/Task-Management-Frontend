@@ -37,10 +37,12 @@ import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 const DashboardExecutive = () => {
   const { user, activeWorkspace, workspaceRole } = useAuth();
   const { toast } = useToast();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -72,6 +74,10 @@ const DashboardExecutive = () => {
   });
 
   const [pendingAssistants, setPendingAssistants] = useState<TeamMember[]>([]);
+  const canCreateTask = canPerformRoleOperation("create_tasks", workspaceRole);
+  const hasTaskViewFilter =
+    (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
+    !canPerformRoleOperation("view_all_tasks", workspaceRole);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -258,7 +264,7 @@ const DashboardExecutive = () => {
                   <span className="sm:hidden">Hire</span>
                 </Link>
               </Button>
-              <Button variant="outline" onClick={() => setCreateTaskOpen(true)} className="gap-2">
+              <Button variant="outline" onClick={() => setCreateTaskOpen(true)} className="gap-2" disabled={!canCreateTask}>
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Delegate Task</span>
                 <span className="sm:hidden">New</span>
@@ -401,7 +407,7 @@ const DashboardExecutive = () => {
         description={totalItems > 0 ? `${totalItems} ${workspaceRole === "member" ? "assigned tasks" : "total tasks"}` : undefined}
         actions={
           workspaceRole === "member" ? undefined : (
-            <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2">
+            <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2" disabled={!canCreateTask}>
               <Plus className="w-4 h-4" />New Task
             </Button>
           )
@@ -411,6 +417,11 @@ const DashboardExecutive = () => {
       <div className="mb-4">
         <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
       </div>
+      {hasTaskViewFilter && (
+        <p className="text-xs text-muted-foreground mb-4">
+          You're viewing tasks created by or assigned to you based on workspace policy.
+        </p>
+      )}
 
       {filteredTasks.length === 0 ? (
         <ContentCard>
@@ -418,7 +429,7 @@ const DashboardExecutive = () => {
             icon={ClipboardList}
             title="No tasks found"
             description="Create your first task to get started with delegation"
-            action={<Button onClick={() => setCreateTaskOpen(true)}><Plus className="w-4 h-4 mr-2" />Create Task</Button>}
+            action={<Button onClick={() => setCreateTaskOpen(true)} disabled={!canCreateTask}><Plus className="w-4 h-4 mr-2" />Create Task</Button>}
           />
         </ContentCard>
       ) : (

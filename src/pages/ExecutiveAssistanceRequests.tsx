@@ -60,7 +60,8 @@ const ExecutiveAssistanceRequests = () => {
     if (!activeCompanyId) return;
     try {
       const response = await api.getWorkspaceSettings(activeCompanyId);
-      setAssistancePermissionMode(response.data.assistancePermissionMode || "restricted");
+      const settings = (response.data as any)?.settings || response.data;
+      setAssistancePermissionMode(settings.assistancePermissionMode || "restricted");
     } catch {
       setAssistancePermissionMode("restricted");
     }

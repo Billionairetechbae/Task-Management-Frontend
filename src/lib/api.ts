@@ -87,7 +87,34 @@ export type PermissionMode = "restricted" | "free";
 export interface WorkspaceSettings {
   invitePermissionMode: PermissionMode;
   assistancePermissionMode: PermissionMode;
+  roleOperationPermissions?: RoleOperationPermissions;
+  configurableRoles?: Array<"admin" | "manager" | "member">;
 }
+
+export type WorkspaceRolePermissionKey =
+  | "create_tasks"
+  | "view_all_tasks"
+  | "create_projects"
+  | "view_all_projects"
+  | "create_project_tasks"
+  | "upload_workspace_files";
+
+export type RolePermissionSet = Record<WorkspaceRolePermissionKey, boolean>;
+
+export type RoleOperationPermissions = {
+  admin: RolePermissionSet;
+  manager: RolePermissionSet;
+  member: RolePermissionSet;
+};
+
+export type GetWorkspaceSettingsResponse = {
+  status: "success" | string;
+  data: { settings: WorkspaceSettings } | WorkspaceSettings;
+};
+
+export type UpdateWorkspaceMemberRolePayload = {
+  role: "member" | "manager" | "admin" | "executive" | "team_member";
+};
 
 export interface AuthResponse {
   status: string;
@@ -2118,8 +2145,8 @@ class ApiClient {
 
   async getWorkspaceSettings(
     companyId: string
-  ): Promise<{ status: string; data: WorkspaceSettings }> {
-    return this.request(`/companies/${companyId}/settings`, {
+  ): Promise<GetWorkspaceSettingsResponse> {
+    return this.request(`/company/${companyId}/settings`, {
       method: "GET",
       headers: this.getAuthHeaders(true),
     });
@@ -2128,11 +2155,26 @@ class ApiClient {
   async updateWorkspaceSettings(
     companyId: string,
     settings: Partial<WorkspaceSettings>
-  ): Promise<{ status: string; message?: string; data: WorkspaceSettings }> {
-    return this.request(`/companies/${companyId}/settings`, {
+  ): Promise<GetWorkspaceSettingsResponse & { message?: string }> {
+    return this.request(`/company/${companyId}/settings`, {
       method: "PATCH",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
       body: JSON.stringify(settings),
+    });
+  }
+
+  async updateWorkspaceMemberRole(
+    userId: string,
+    payload: UpdateWorkspaceMemberRolePayload
+  ): Promise<{
+    status: string;
+    message?: string;
+    data?: { member?: CompanyMember };
+  }> {
+    return this.request(`/team/members/${userId}/role`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
   }
 

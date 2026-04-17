@@ -33,9 +33,11 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { api } from "@/lib/api";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import type { RoleOperationPermissions } from "@/lib/api";
 
 const CompanyProfile = () => {
-  const { user, refreshUser, activeCompanyId, activeWorkspace } = useAuth();
+  const { user, refreshUser, activeCompanyId, activeWorkspace, workspaceRole } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,8 +53,16 @@ const CompanyProfile = () => {
     assistancePermissionMode: "restricted" as "restricted" | "free",
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [roleOperationPermissions, setRoleOperationPermissions] = useState<RoleOperationPermissions | null>(null);
+  const {
+    settings: workspaceSettings,
+    permissionKeys,
+    updateSettings,
+    isUpdating: isUpdatingWorkspaceSettings,
+  } = useWorkspaceSettings();
 
   const isExecutive = user?.role === "executive";
+  const isWorkspaceOwner = workspaceRole === "owner" || user?.role === "admin";
 
   const fetchCompany = async () => {
     if (!activeCompanyId) return;
@@ -87,9 +97,10 @@ const CompanyProfile = () => {
     try {
       setSettingsLoading(true);
       const res = await api.getWorkspaceSettings(activeCompanyId);
+      const settings = (res.data as any)?.settings || res.data;
       setPermissionSettings({
-        invitePermissionMode: res.data.invitePermissionMode || "restricted",
-        assistancePermissionMode: res.data.assistancePermissionMode || "restricted",
+        invitePermissionMode: settings.invitePermissionMode || "restricted",
+        assistancePermissionMode: settings.assistancePermissionMode || "restricted",
       });
     } catch (error) {
       console.error("Failed to fetch workspace settings:", error);
@@ -103,6 +114,12 @@ const CompanyProfile = () => {
     fetchWorkspaceSettings();
   }, [activeCompanyId]);
 
+  useEffect(() => {
+    if (workspaceSettings?.roleOperationPermissions) {
+      setRoleOperationPermissions(workspaceSettings.roleOperationPermissions);
+    }
+  }, [workspaceSettings?.roleOperationPermissions]);
+
   const handleSave = async () => {
     if (!isExecutive) return;
 
@@ -115,9 +132,10 @@ const CompanyProfile = () => {
         bio: formData.bio,
       });
       if (activeCompanyId) {
-        await api.updateWorkspaceSettings(activeCompanyId, {
+        await updateSettings({
           invitePermissionMode: permissionSettings.invitePermissionMode,
           assistancePermissionMode: permissionSettings.assistancePermissionMode,
+          roleOperationPermissions: roleOperationPermissions || undefined,
         });
       }
 
@@ -200,7 +218,7 @@ const CompanyProfile = () => {
               </p>
             </div>
 
-            <Button onClick={handleSave} disabled={saving} className="gap-2">
+            <Button onClick={handleSave} disabled={saving || isUpdatingWorkspaceSettings} className="gap-2">
               {saving ? (
                 <>Saving...</>
               ) : (
@@ -298,6 +316,68 @@ const CompanyProfile = () => {
                     This helps team_members understand your company culture and
                     work environment.
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Role Permissions</CardTitle>
+                <CardDescription>
+                  Configure what Executive, Manager, and Team Member can do in this workspace.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!isWorkspaceOwner && (
+                  <div className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/30">
+                    Only workspace owners can edit role permissions.
+                  </div>
+                )}
+                <div className="border rounded-lg overflow-x-auto">
+                  <table className="w-full min-w-[900px]">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left p-3">Role</th>
+                        {permissionKeys.map((key) => (
+                          <th key={key} className="text-left p-3 text-xs uppercase tracking-wide text-muted-foreground">
+                            {key.replace("_", " ")}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { key: "admin" as const, label: "Executive" },
+                        { key: "manager" as const, label: "Manager" },
+                        { key: "member" as const, label: "Team Member" },
+                      ].map((role) => (
+                        <tr key={role.key} className="border-b last:border-b-0">
+                          <td className="p-3 font-medium">{role.label}</td>
+                          {permissionKeys.map((key) => (
+                            <td key={`${role.key}-${key}`} className="p-3">
+                              <Switch
+                                checked={!!roleOperationPermissions?.[role.key]?.[key]}
+                                onCheckedChange={(checked) => {
+                                  if (!isWorkspaceOwner || !roleOperationPermissions) return;
+                                  setRoleOperationPermissions((prev) => {
+                                    if (!prev) return prev;
+                                    return {
+                                      ...prev,
+                                      [role.key]: {
+                                        ...prev[role.key],
+                                        [key]: checked,
+                                      },
+                                    };
+                                  });
+                                }}
+                                disabled={!isWorkspaceOwner || isUpdatingWorkspaceSettings}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>

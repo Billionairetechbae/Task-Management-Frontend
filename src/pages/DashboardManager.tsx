@@ -32,10 +32,12 @@ import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { Button } from "@/components/ui/button";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 const DashboardManager = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [loading, setLoading] = useState(true);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
@@ -64,6 +66,8 @@ const DashboardManager = () => {
     totalAssistants: 0,
     verifiedAssistants: 0,
   });
+  const canCreateTask = canPerformRoleOperation("create_tasks", "manager");
+  const hasTaskViewFilter = !canPerformRoleOperation("view_all_tasks", "manager");
 
   const filteredTasks = statusFilter
     ? tasks.filter((t) => t.status === statusFilter)
@@ -163,7 +167,7 @@ const DashboardManager = () => {
         title="Manager Dashboard"
         description="Manage your team and delegate tasks"
         actions={
-          <Button onClick={() => setCreateTaskOpen(true)} className="gap-2">
+          <Button onClick={() => setCreateTaskOpen(true)} className="gap-2" disabled={!canCreateTask}>
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Delegate Task</span>
             <span className="sm:hidden">New</span>
@@ -219,7 +223,7 @@ const DashboardManager = () => {
         title="Tasks"
         description={totalItems > 0 ? `${totalItems} total tasks` : undefined}
         actions={
-          <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2">
+          <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2" disabled={!canCreateTask}>
             <Plus className="w-4 h-4" />
             New Task
           </Button>
@@ -229,6 +233,11 @@ const DashboardManager = () => {
       <div className="mb-4">
         <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
       </div>
+      {hasTaskViewFilter && (
+        <p className="text-xs text-muted-foreground mb-4">
+          You're viewing tasks created by or assigned to you based on workspace policy.
+        </p>
+      )}
 
       {filteredTasks.length === 0 ? (
         <ContentCard>
@@ -236,7 +245,7 @@ const DashboardManager = () => {
             icon={ClipboardList}
             title="No tasks available"
             description="Start by delegating a new task to your team"
-            action={<Button onClick={() => setCreateTaskOpen(true)}><Plus className="w-4 h-4 mr-2" />Create Task</Button>}
+            action={<Button onClick={() => setCreateTaskOpen(true)} disabled={!canCreateTask}><Plus className="w-4 h-4 mr-2" />Create Task</Button>}
           />
         </ContentCard>
       ) : (

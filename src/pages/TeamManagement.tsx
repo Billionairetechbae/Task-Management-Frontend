@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   User, Users, Search, Filter, CheckCircle2, Clock, X, Mail, Trash2,
   RotateCcw, Activity, Shield, ChevronDown, Eye, UserPlus, MoreHorizontal,
@@ -22,6 +23,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { PageHeader, LoadingState } from "@/components/dashboard/DashboardComponents";
 import { Pagination } from "@/components/dashboard/TaskComponents";
 import { cn } from "@/lib/utils";
+import { toApiRole, toUiRole, type UiWorkspaceRoleLabel, useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 type Tab = "active" | "removed";
 type ActivityEvent = { id: string; type: "removed" | "restored"; userName: string; role: string; at: string };
@@ -29,6 +31,7 @@ type ActivityEvent = { id: string; type: "removed" | "restored"; userName: strin
 const TeamManagement = () => {
   const { user, workspaceRole, activeCompanyId } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const globalRole = user?.role ?? null;
   const canManageTeam = canManageWorkspace(workspaceRole, globalRole);
   const canAdminTeam = canAdminWorkspace(workspaceRole, globalRole);
@@ -47,6 +50,7 @@ const TeamManagement = () => {
   const [confirmType, setConfirmType] = useState<"remove" | "restore" | null>(null);
   const [selectedMember, setSelectedMember] = useState<CompanyMember | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [roleUpdateLoadingUserId, setRoleUpdateLoadingUserId] = useState<string | null>(null);
   const [activityLog, setActivityLog] = useState<ActivityEvent[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
@@ -64,18 +68,12 @@ const TeamManagement = () => {
     }
   };
 
-  const loadSettings = async () => {
-    if (!activeCompanyId) return;
-    try {
-      const res = await api.getWorkspaceSettings(activeCompanyId);
-      setInvitePermissionMode(res.data.invitePermissionMode || "restricted");
-    } catch {
-      setInvitePermissionMode("restricted");
-    }
-  };
+  const { settings: workspaceSettings } = useWorkspaceSettings();
 
   useEffect(() => { loadTeam(); }, [canManageTeam, activeCompanyId]);
-  useEffect(() => { loadSettings(); }, [activeCompanyId]);
+  useEffect(() => {
+    setInvitePermissionMode(workspaceSettings?.invitePermissionMode || "restricted");
+  }, [workspaceSettings?.invitePermissionMode]);
 
   const isRemoved = (m: CompanyMember) => m.status === "removed";
 
@@ -111,6 +109,47 @@ const TeamManagement = () => {
 
   const pushActivity = (type: "removed" | "restored", target: CompanyMember) => {
     setActivityLog((prev) => [{ id: `${Date.now()}-${target.id}`, type, userName: `${target.user.firstName} ${target.user.lastName}`, role: target.role, at: new Date().toLocaleString() }, ...prev].slice(0, 20));
+  };
+
+  const getRoleLabel = (role: string) => toUiRole(role);
+
+  const isRoleEditable = (member: CompanyMember) => {
+    if (!canManageTeam || isRemoved(member)) return false;
+    if (member.role === "owner") return false;
+    if (member.userId === user?.id) return false;
+    return true;
+  };
+
+  const getRoleUpdateErrorMessage = (rawMessage?: string) => {
+    const message = rawMessage?.toLowerCase() || "";
+    if (message.includes("owner")) return "You cannot modify the workspace owner role.";
+    if (message.includes("yourself") || message.includes("your own")) return "You cannot modify your own role.";
+    if (message.includes("promote") && message.includes("admin")) return "Managers cannot promote members to executive.";
+    return rawMessage || "Failed to update role.";
+  };
+
+  const handleRoleChange = async (member: CompanyMember, role: UiWorkspaceRoleLabel) => {
+    const previousRole = member.role;
+    const apiRole = toApiRole(role);
+    setRoleUpdateLoadingUserId(member.userId);
+    setTeamMembers((prev) => prev.map((m) => (m.userId === member.userId ? { ...m, role: apiRole } : m)));
+    try {
+      const response = await api.updateWorkspaceMemberRole(member.userId, { role: apiRole });
+      const updatedRole = response.data?.member?.role || apiRole;
+      setTeamMembers((prev) => prev.map((m) => (m.userId === member.userId ? { ...m, role: updatedRole as any } : m)));
+      toast({ title: "Role updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["workspaceMembers", activeCompanyId] });
+      loadTeam();
+    } catch (err: any) {
+      setTeamMembers((prev) => prev.map((m) => (m.userId === member.userId ? { ...m, role: previousRole } : m)));
+      toast({
+        title: "Role update failed",
+        description: getRoleUpdateErrorMessage(err?.message),
+        variant: "destructive",
+      });
+    } finally {
+      setRoleUpdateLoadingUserId(null);
+    }
   };
 
   const handleVerify = async (userId: string) => {
@@ -290,7 +329,24 @@ const TeamManagement = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm capitalize">{m.role}</span>
+                          {isRoleEditable(m) ? (
+                            <Select
+                              value={toUiRole(m.role)}
+                              onValueChange={(value: UiWorkspaceRoleLabel) => handleRoleChange(m, value)}
+                              disabled={roleUpdateLoadingUserId === m.userId}
+                            >
+                              <SelectTrigger className="h-8 w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Team Member">Team Member</SelectItem>
+                                <SelectItem value="Manager">Manager</SelectItem>
+                                <SelectItem value="Executive">Executive</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-sm">{getRoleLabel(m.role)}</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={cn("text-[10px]", getSpecBadgeClass(m.user.specialization))}>

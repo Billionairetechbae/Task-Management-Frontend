@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 
 import { User, Clock, X, Plus, Paperclip } from "lucide-react";
 import { getFileIcon } from "@/utils/fileIcons";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -23,6 +25,8 @@ interface CreateTaskDialogProps {
 
 const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTaskDialogProps) => {
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [loading, setLoading] = useState(false);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -42,6 +46,9 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     estimatedHours: 0,
     assigneeId: "", // USER ID
   });
+  const canCreateTaskByPolicy = projectId
+    ? canPerformRoleOperation("create_project_tasks", workspaceRole)
+    : canPerformRoleOperation("create_tasks", workspaceRole);
 
   useEffect(() => {
     if (open) fetchMembers();
@@ -390,7 +397,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
               Cancel
             </Button>
 
-            <Button type="submit" disabled={loading} className="min-w-[100px]">
+            <Button type="submit" disabled={loading || !canCreateTaskByPolicy} className="min-w-[100px]">
               {loading ? (
                 <>
                   <Clock className="w-4 h-4 mr-2 animate-spin" />

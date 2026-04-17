@@ -29,6 +29,8 @@ import {
   ChevronDown, ChevronRight, MoreHorizontal, Eye, Mail, RefreshCw,
   XCircle, ChevronsLeft, ChevronsRight, ChevronLeft, LayoutList, Kanban,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 type MemberRow = { id: string; userId: string; role: string; status: string; firstName: string; lastName: string; email: string };
 
@@ -36,6 +38,8 @@ export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
@@ -63,6 +67,10 @@ export default function ProjectDetails() {
 
   const [settingsForm, setSettingsForm] = useState({ name: "", description: "", status: "active", startDate: "", endDate: "" });
   const [savingSettings, setSavingSettings] = useState(false);
+  const canCreateProjectTask = canPerformRoleOperation("create_project_tasks", workspaceRole);
+  const hasProjectViewFilter =
+    (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
+    !canPerformRoleOperation("view_all_projects", workspaceRole);
 
   const togglePanel = (key: keyof typeof openPanels) => {
     setOpenPanels(p => ({ ...p, [key]: !p[key] }));
@@ -296,7 +304,7 @@ export default function ProjectDetails() {
 
                   <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsEditOpen(true)}><Pencil className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Edit Project</TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateTaskOpen(true)}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateTaskOpen(true)} disabled={!canCreateProjectTask}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateChecklistOpen(true)}><ListChecks className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>
                   </div>
                 </div>
@@ -409,18 +417,23 @@ export default function ProjectDetails() {
                         </TooltipTrigger><TooltipContent className="text-[10px]">Board View</TooltipContent></Tooltip>
                       </div>
                       <Tooltip><TooltipTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateTaskOpen(true); }}><Plus className="w-3.5 h-3.5" /></Button>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateTaskOpen(true); }} disabled={!canCreateProjectTask}><Plus className="w-3.5 h-3.5" /></Button>
                       </TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
                     </div>
                   }
                 >
+                  {hasProjectViewFilter && (
+                    <p className="px-4 pt-3 text-xs text-muted-foreground">
+                      Your project/task visibility is filtered by workspace policy.
+                    </p>
+                  )}
                   {tasks.length === 0 ? (
                     <div className="px-4 py-10 text-center">
                       <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <ClipboardList className="w-6 h-6 text-muted-foreground/40" />
                       </div>
                       <p className="text-xs text-muted-foreground mb-3">No tasks yet</p>
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateTaskOpen(true)}><Plus className="w-3 h-3" /> Add Task</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateTaskOpen(true)} disabled={!canCreateProjectTask}><Plus className="w-3 h-3" /> Add Task</Button>
                     </div>
                   ) : taskView === "kanban" ? (
                     <KanbanBoard tasks={tasks} />

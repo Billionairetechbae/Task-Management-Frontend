@@ -33,6 +33,7 @@ import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -52,6 +53,7 @@ const TaskDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
   const { isConnected, joinTaskRoom, leaveTaskRoom, sendComment, sendTypingIndicator, on, off } = useWebSocket();
 
@@ -749,6 +751,10 @@ const TaskDetails = () => {
     user?.id === task.creator?.id ||
     user?.role === "executive" ||
     user?.role === "manager";
+  const canCreateSubtasksByPolicy =
+    user?.role === "manager" || user?.role === "admin"
+      ? canPerformRoleOperation("create_tasks", user?.role)
+      : true;
 
   return (
     <>
@@ -885,10 +891,15 @@ const TaskDetails = () => {
 
               <div className="mb-6">
                 <h3 className="text-sm font-semibold mb-2">Subtasks</h3>
+                {!canCreateSubtasksByPolicy && (
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Subtask creation is disabled by workspace policy.
+                  </p>
+                )}
                 <SubtaskList
                   taskId={task.id}
                   initialSubtasks={task.subtasks || []}
-                  canEdit={canEditSubtasks}
+                  canEdit={canEditSubtasks && canCreateSubtasksByPolicy}
                   onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
                 />
               </div>

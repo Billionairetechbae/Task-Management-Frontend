@@ -5,11 +5,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 type Tab = "workspace" | "personal";
 
 export default function Drive() {
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
   const [tab, setTab] = useState<Tab>("workspace");
   const [workspaceFolders, setWorkspaceFolders] = useState<Folder[]>([]);
   const [personalFolders, setPersonalFolders] = useState<Folder[]>([]);
@@ -19,6 +23,7 @@ export default function Drive() {
   const [folderName, setFolderName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<FileList | null>(null);
+  const canUploadWorkspaceFiles = canPerformRoleOperation("upload_workspace_files", workspaceRole);
 
   const loadFolders = async () => {
     try {
@@ -134,16 +139,21 @@ export default function Drive() {
 
             <div className="flex gap-2 mt-4">
               <Input value={folderName} onChange={(e) => setFolderName(e.target.value)} placeholder="New folder name" />
-              <Button onClick={createFolder} disabled={loading || !folderName.trim()}>Create</Button>
+              <Button onClick={createFolder} disabled={loading || !folderName.trim() || (tab === "workspace" && !canUploadWorkspaceFiles)}>Create</Button>
             </div>
+            {tab === "workspace" && !canUploadWorkspaceFiles && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Workspace uploads and folder creation are disabled by policy.
+              </p>
+            )}
           </Card>
 
           <Card className="p-4 border border-border md:col-span-2">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold">Files</h2>
               <div className="flex items-center gap-2">
-                <Input type="file" multiple onChange={(e) => setPendingFiles(e.target.files)} />
-                <Button onClick={doUpload} disabled={uploading || !selectedFolder || !pendingFiles || pendingFiles.length === 0}>Upload</Button>
+                <Input type="file" multiple onChange={(e) => setPendingFiles(e.target.files)} disabled={tab === "workspace" && !canUploadWorkspaceFiles} />
+                <Button onClick={doUpload} disabled={uploading || !selectedFolder || !pendingFiles || pendingFiles.length === 0 || (tab === "workspace" && !canUploadWorkspaceFiles)}>Upload</Button>
               </div>
             </div>
             {selectedFolder ? (

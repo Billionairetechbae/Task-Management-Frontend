@@ -10,11 +10,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 export default function Projects() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
   const [loading, setLoading] = useState(true);
+  const canCreateProject = canPerformRoleOperation("create_projects", workspaceRole);
+  const hasProjectViewFilter =
+    (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
+    !canPerformRoleOperation("view_all_projects", workspaceRole);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -78,7 +86,7 @@ export default function Projects() {
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shadow-soft active:scale-[0.97] transition-transform">
+                <Button onClick={() => setIsCreateOpen(true)} disabled={!canCreateProject} className="gap-2 shadow-soft active:scale-[0.97] transition-transform">
                   <Plus className="w-4 h-4" />
                   New Project
                 </Button>
@@ -86,6 +94,11 @@ export default function Projects() {
               <TooltipContent>Create a new project</TooltipContent>
             </Tooltip>
           </div>
+          {hasProjectViewFilter && (
+            <p className="text-xs text-muted-foreground mb-4">
+              Your project list is filtered by workspace policy.
+            </p>
+          )}
 
           {projects.length === 0 ? (
             /* Empty state */
@@ -97,7 +110,7 @@ export default function Projects() {
               <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
                 Projects help you organize tasks, checklists, and team members around a shared goal.
               </p>
-              <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+              <Button onClick={() => setIsCreateOpen(true)} className="gap-2" disabled={!canCreateProject}>
                 <Plus className="w-4 h-4" />
                 Create Project
               </Button>
@@ -151,7 +164,7 @@ export default function Projects() {
 
               {/* Add project card */}
               <Card
-                onClick={() => setIsCreateOpen(true)}
+                onClick={() => canCreateProject && setIsCreateOpen(true)}
                 className="p-4 cursor-pointer border-dashed border-2 border-border hover:border-primary/40 transition-all flex items-center justify-center min-h-[140px] group"
               >
                 <div className="text-center">

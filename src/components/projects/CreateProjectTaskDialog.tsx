@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api, CompanyMember } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 interface CreateProjectTaskDialogProps {
   projectId: string;
@@ -18,6 +20,8 @@ interface CreateProjectTaskDialogProps {
 
 const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: CreateProjectTaskDialogProps) => {
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [form, setForm] = useState({
@@ -29,6 +33,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
     estimatedHours: 0,
     category: "",
   });
+  const canCreateProjectTask = canPerformRoleOperation("create_project_tasks", workspaceRole);
 
   useEffect(() => {
     if (open) {
@@ -120,7 +125,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={loading}>
+            <Button onClick={handleSubmit} disabled={loading || !canCreateProjectTask}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Create Task
             </Button>
