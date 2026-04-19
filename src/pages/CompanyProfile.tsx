@@ -429,6 +429,24 @@ const CompanyProfile = () => {
                     </tbody>
                   </table>
                 </div>
+                {isWorkspaceOwner && (
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSavePermissions}
+                      disabled={savingPermissions || isUpdatingWorkspaceSettings}
+                      className="gap-2"
+                    >
+                      {savingPermissions || isUpdatingWorkspaceSettings ? (
+                        <>Saving...</>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save Permissions
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
