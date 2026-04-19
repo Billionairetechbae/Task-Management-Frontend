@@ -581,6 +581,7 @@ const CompanyProfile = () => {
                 )}
               </CardContent>
             </Card>
+          </div>
 
           {/* Right Column - Company Code & Quick Actions */}
           <div className="space-y-6">
