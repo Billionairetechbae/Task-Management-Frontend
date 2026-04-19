@@ -39,7 +39,8 @@ import type { RoleOperationPermissions } from "@/lib/api";
 const CompanyProfile = () => {
   const { user, refreshUser, activeCompanyId, activeWorkspace, workspaceRole } = useAuth();
   const { toast } = useToast();
-  const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPermissions, setSavingPermissions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,10 +60,15 @@ const CompanyProfile = () => {
     permissionKeys,
     updateSettings,
     isUpdating: isUpdatingWorkspaceSettings,
+    refetch: refetchWorkspaceSettings,
   } = useWorkspaceSettings();
 
   const isExecutive = user?.role === "executive";
+  // Only the actual workspace owner (or platform admin) can edit workspace settings/permissions per backend `requireWorkspaceOwner`.
   const isWorkspaceOwner = workspaceRole === "owner" || user?.role === "admin";
+  // Backend `updateActiveCompany` allows membership role of "owner" or "admin".
+  const canEditCompanyInfo =
+    workspaceRole === "owner" || workspaceRole === "admin" || user?.role === "admin";
 
   const fetchCompany = async () => {
     if (!activeCompanyId) return;
@@ -74,11 +80,10 @@ const CompanyProfile = () => {
         name: company.name || "",
         size: company.size || "",
         industry: company.industry || "",
-        bio: company.bio || "", // assuming bio might be on company or we use user.bio as fallback
+        bio: company.bio || "",
       });
     } catch (error) {
       console.error("Failed to fetch company details:", error);
-      // Fallback to activeWorkspace data if API fails
       if (activeWorkspace?.company) {
         setFormData({
           name: activeWorkspace.company.name || "",
@@ -93,7 +98,7 @@ const CompanyProfile = () => {
   };
 
   const fetchWorkspaceSettings = async () => {
-    if (!activeCompanyId) return;
+    if (!activeCompanyId || !isWorkspaceOwner) return;
     try {
       setSettingsLoading(true);
       const res = await api.getWorkspaceSettings(activeCompanyId);
@@ -112,7 +117,8 @@ const CompanyProfile = () => {
   useEffect(() => {
     fetchCompany();
     fetchWorkspaceSettings();
-  }, [activeCompanyId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCompanyId, isWorkspaceOwner]);
 
   useEffect(() => {
     if (workspaceSettings?.roleOperationPermissions) {
@@ -120,40 +126,80 @@ const CompanyProfile = () => {
     }
   }, [workspaceSettings?.roleOperationPermissions]);
 
-  const handleSave = async () => {
-    if (!isExecutive) return;
+  const handleSaveProfile = async () => {
+    if (!canEditCompanyInfo) {
+      toast({
+        title: "Not allowed",
+        description: "Only workspace owners and admins can update company information.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Build payload with only set / non-empty fields to avoid backend enum validation issues.
+    const payload: { name?: string; size?: string; industry?: string; bio?: string } = {};
+    if (formData.name.trim()) payload.name = formData.name.trim();
+    if (formData.size) payload.size = formData.size;
+    if (formData.industry) payload.industry = formData.industry;
+    if (formData.bio !== undefined) payload.bio = formData.bio;
+
+    if (!Object.keys(payload).length) {
+      toast({ title: "Nothing to save", description: "Please update at least one field.", variant: "destructive" });
+      return;
+    }
 
     try {
-      setSaving(true);
-      await api.updateActiveCompany({
-        name: formData.name,
-        size: formData.size,
-        industry: formData.industry,
-        bio: formData.bio,
-      });
-      if (activeCompanyId) {
-        await updateSettings({
-          invitePermissionMode: permissionSettings.invitePermissionMode,
-          assistancePermissionMode: permissionSettings.assistancePermissionMode,
-          roleOperationPermissions: roleOperationPermissions || undefined,
-        });
-      }
-
+      setSavingProfile(true);
+      await api.updateActiveCompany(payload);
       toast({
-        title: "Profile updated!",
-        description: "Your company information has been saved successfully.",
+        title: "Company profile saved",
+        description: "Your company information has been updated.",
       });
-
-      await refreshUser();
-    } catch (error) {
+      await Promise.all([fetchCompany(), refreshUser()]);
+    } catch (error: any) {
       console.error("Failed to update company profile:", error);
       toast({
-        title: "Error",
-        description: "Failed to update company profile",
+        title: "Failed to save company info",
+        description: error?.message || "Could not update company profile.",
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSavePermissions = async () => {
+    if (!isWorkspaceOwner) {
+      toast({
+        title: "Not allowed",
+        description: "Only the workspace owner can update permissions.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!activeCompanyId) return;
+
+    try {
+      setSavingPermissions(true);
+      await updateSettings({
+        invitePermissionMode: permissionSettings.invitePermissionMode,
+        assistancePermissionMode: permissionSettings.assistancePermissionMode,
+        roleOperationPermissions: roleOperationPermissions || undefined,
+      });
+      await refetchWorkspaceSettings();
+      toast({
+        title: "Permissions updated",
+        description: "Workspace permission settings have been saved.",
+      });
+    } catch (error: any) {
+      console.error("Failed to update workspace settings:", error);
+      toast({
+        title: "Failed to save permissions",
+        description: error?.message || "Could not update workspace settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingPermissions(false);
     }
   };
 
