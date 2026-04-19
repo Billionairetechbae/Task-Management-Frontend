@@ -110,7 +110,7 @@ const DashboardExecutive = () => {
             if (Array.isArray(t.assignees) && t.assignees.some((a: any) => a?.id === user?.id)) return true;
             return false;
           })
-        );
+        ) as Task[];
         setTasks(mine);
         const counts = {
           total: mine.length,
