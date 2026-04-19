@@ -560,9 +560,27 @@ const CompanyProfile = () => {
                     <span className="text-xs text-muted-foreground">Free</span>
                   </div>
                 </div>
+
+                {isWorkspaceOwner && (
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSavePermissions}
+                      disabled={savingPermissions || isUpdatingWorkspaceSettings}
+                      className="gap-2"
+                    >
+                      {savingPermissions || isUpdatingWorkspaceSettings ? (
+                        <>Saving...</>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save Workspace Permissions
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </div>
 
           {/* Right Column - Company Code & Quick Actions */}
           <div className="space-y-6">
