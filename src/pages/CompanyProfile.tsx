@@ -264,13 +264,17 @@ const CompanyProfile = () => {
               </p>
             </div>
 
-            <Button onClick={handleSave} disabled={saving || isUpdatingWorkspaceSettings} className="gap-2">
-              {saving ? (
+            <Button
+              onClick={handleSaveProfile}
+              disabled={savingProfile || !canEditCompanyInfo}
+              className="gap-2"
+            >
+              {savingProfile ? (
                 <>Saving...</>
               ) : (
                 <>
                   <Save className="w-5 h-5" />
-                  Save Changes
+                  Save Company Info
                 </>
               )}
             </Button>
