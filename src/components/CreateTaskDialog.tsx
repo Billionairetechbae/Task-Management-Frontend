@@ -43,7 +43,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     priority: "medium" as "low" | "medium" | "high",
     deadline: "",
     category: "",
-    estimatedHours: 0,
     assigneeId: "", // USER ID
   });
   const canCreateTaskByPolicy = projectId
