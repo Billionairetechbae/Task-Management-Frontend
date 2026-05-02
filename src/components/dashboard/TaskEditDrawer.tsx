@@ -208,7 +208,6 @@ export default function TaskEditDrawer({
         fd.append("status", status);
         if (deadline) fd.append("deadline", deadline.toISOString());
         fd.append("category", category);
-        fd.append("estimatedHours", String(estimatedHours));
 
         pendingFiles.forEach((f) => fd.append("files", f));
 
@@ -227,7 +226,6 @@ export default function TaskEditDrawer({
           status: status as any,
           deadline: deadline?.toISOString(),
           category,
-          estimatedHours,
         };
 
         const res = await api.updateTask(task.id, data);
