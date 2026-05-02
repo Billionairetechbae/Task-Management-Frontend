@@ -570,7 +570,12 @@ export default function TaskEditDrawer({
                           <SubtaskList
                             taskId={task.id}
                             initialSubtasks={task.subtasks || []}
-                            canEdit={false}
+                            canEdit={
+                              !!user?.id &&
+                              ((task as any).assigneeId === user.id ||
+                                (Array.isArray((task as any).assignees) &&
+                                  (task as any).assignees.some((a: any) => a?.id === user.id)))
+                            }
                           />
                         </div>
                       </div>
