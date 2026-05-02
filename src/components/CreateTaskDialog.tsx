@@ -142,7 +142,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
           priority: formData.priority,
           deadline: new Date(formData.deadline).toISOString(),
           category: formData.category,
-          estimatedHours: formData.estimatedHours,
+          assigneeId: formData.assigneeId || undefined,
           assigneeId: formData.assigneeId || undefined,
         };
         await api.createProjectTask(projectId, payload);
