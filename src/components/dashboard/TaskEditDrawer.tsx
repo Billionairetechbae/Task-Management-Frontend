@@ -513,6 +513,7 @@ export default function TaskEditDrawer({
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="delayed">Delayed</SelectItem>
                             <SelectItem value="cancelled">Cancelled</SelectItem>
                           </SelectContent>
                         </Select>
