@@ -143,7 +143,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
           deadline: new Date(formData.deadline).toISOString(),
           category: formData.category,
           assigneeId: formData.assigneeId || undefined,
-          assigneeId: formData.assigneeId || undefined,
         };
         await api.createProjectTask(projectId, payload);
       } else {
@@ -154,7 +153,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
         form.append("priority", formData.priority);
         form.append("deadline", new Date(formData.deadline).toISOString());
         form.append("category", formData.category);
-        form.append("estimatedHours", String(formData.estimatedHours));
 
         if (formData.assigneeId) form.append("assigneeId", formData.assigneeId);
         files.forEach((file) => form.append("files", file));
@@ -170,7 +168,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
         priority: "medium",
         deadline: "",
         category: "",
-        estimatedHours: 0,
         assigneeId: "",
       });
 
