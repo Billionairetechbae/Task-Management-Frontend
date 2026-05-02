@@ -30,14 +30,13 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
     priority: "medium",
     deadline: "",
     assigneeId: "",
-    estimatedHours: 0,
     category: "",
   });
   const canCreateProjectTask = canPerformRoleOperation("create_project_tasks", workspaceRole);
 
   useEffect(() => {
     if (open) {
-      setForm({ title: "", description: "", priority: "medium", deadline: "", assigneeId: "", estimatedHours: 0, category: "" });
+      setForm({ title: "", description: "", priority: "medium", deadline: "", assigneeId: "", category: "" });
       api.getCompanyTeam().then(r => setMembers(r.data.members || [])).catch(() => {});
     }
   }, [open]);
