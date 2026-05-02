@@ -55,7 +55,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
       };
       if (form.deadline) payload.deadline = form.deadline;
       if (form.assigneeId) payload.assigneeId = form.assigneeId;
-      if (form.estimatedHours) payload.estimatedHours = form.estimatedHours;
+      if (form.category) payload.category = form.category;
       if (form.category) payload.category = form.category;
 
       await api.createProjectTask(projectId, payload);
