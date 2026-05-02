@@ -599,6 +599,8 @@ export const TaskFilters = ({ statusFilter, onStatusChange }: TaskFiltersProps) 
     { value: "pending", label: "Pending" },
     { value: "in_progress", label: "In Progress" },
     { value: "completed", label: "Completed" },
+    { value: "delayed", label: "Delayed" },
+    { value: "cancelled", label: "Cancelled" },
   ];
 
   return (
