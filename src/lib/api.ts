@@ -286,7 +286,7 @@ export interface CreateTaskData {
   priority: TaskPriority;
   deadline: string;
   category: string;
-  estimatedHours: number;
+  estimatedHours?: number;
   assigneeId?: string;
 }
 
