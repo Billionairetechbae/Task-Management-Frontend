@@ -59,7 +59,7 @@ const TeamManagement = () => {
     try {
       setLoading(true);
       if (!canManageTeam) { setTeamMembers([]); return; }
-      const res = await api.getCompanyAssistants();
+      const res = await api.getCompanyTeam();
       setTeamMembers(res.data.members || []);
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Could not load team.", variant: "destructive" });

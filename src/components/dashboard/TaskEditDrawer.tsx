@@ -208,7 +208,6 @@ export default function TaskEditDrawer({
         fd.append("status", status);
         if (deadline) fd.append("deadline", deadline.toISOString());
         fd.append("category", category);
-        fd.append("estimatedHours", String(estimatedHours));
 
         pendingFiles.forEach((f) => fd.append("files", f));
 
@@ -227,7 +226,6 @@ export default function TaskEditDrawer({
           status: status as any,
           deadline: deadline?.toISOString(),
           category,
-          estimatedHours,
         };
 
         const res = await api.updateTask(task.id, data);
@@ -515,6 +513,7 @@ export default function TaskEditDrawer({
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="delayed">Delayed</SelectItem>
                             <SelectItem value="cancelled">Cancelled</SelectItem>
                           </SelectContent>
                         </Select>
@@ -548,20 +547,9 @@ export default function TaskEditDrawer({
                       </Popover>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label>Category</Label>
-                        <Input value={category} onChange={(e) => setCategory(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Estimated Hours</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={estimatedHours}
-                          onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label>Category</Label>
+                      <Input value={category} onChange={(e) => setCategory(e.target.value)} />
                     </div>
                   </>
                 ) : (
@@ -582,7 +570,12 @@ export default function TaskEditDrawer({
                           <SubtaskList
                             taskId={task.id}
                             initialSubtasks={task.subtasks || []}
-                            canEdit={false}
+                            canEdit={
+                              !!user?.id &&
+                              ((task as any).assigneeId === user.id ||
+                                (Array.isArray((task as any).assignees) &&
+                                  (task as any).assignees.some((a: any) => a?.id === user.id)))
+                            }
                           />
                         </div>
                       </div>
@@ -610,6 +603,8 @@ export default function TaskEditDrawer({
                           <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="in_progress">In Progress</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="delayed">Delayed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

@@ -52,7 +52,7 @@ const TeamMembers = () => {
   const fetchTeam = async () => {
     try {
       setLoading(true);
-      const response = await api.getCompanyAssistants();
+      const response = await api.getCompanyTeam();
       const members = response.data.members || [];
       const activeMembers = members.filter((m) => m.status !== "removed");
       setTeamMembers(activeMembers.map(mapCompanyMemberToTeamCard));

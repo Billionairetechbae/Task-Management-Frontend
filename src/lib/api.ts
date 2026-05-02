@@ -180,7 +180,7 @@ export interface TaskSubtask {
   id: string;
   taskId: string;
   title: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled" | string;
+  status: "pending" | "in_progress" | "completed" | "delayed" | "cancelled" | string;
   sortOrder?: number;
   createdBy?: string;
   createdAt: string;
@@ -220,7 +220,7 @@ export interface TaskWatcher {
 }
 
 export type TaskPriority = "low" | "medium" | "high";
-export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type TaskStatus = "pending" | "in_progress" | "completed" | "delayed" | "cancelled";
 
 export interface Task {
   id: string;
@@ -286,7 +286,7 @@ export interface CreateTaskData {
   priority: TaskPriority;
   deadline: string;
   category: string;
-  estimatedHours: number;
+  estimatedHours?: number;
   assigneeId?: string;
 }
 

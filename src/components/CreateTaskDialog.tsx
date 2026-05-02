@@ -43,7 +43,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     priority: "medium" as "low" | "medium" | "high",
     deadline: "",
     category: "",
-    estimatedHours: 0,
     assigneeId: "", // USER ID
   });
   const canCreateTaskByPolicy = projectId
@@ -59,7 +58,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     try {
       setMembersLoading(true);
 
-      const res = await api.getCompanyAssistants();
+      const res = await api.getCompanyTeam();
       const data = (res as any)?.data || {};
 
       const list: CompanyMember[] = Array.isArray(data.members)
@@ -143,7 +142,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
           priority: formData.priority,
           deadline: new Date(formData.deadline).toISOString(),
           category: formData.category,
-          estimatedHours: formData.estimatedHours,
           assigneeId: formData.assigneeId || undefined,
         };
         await api.createProjectTask(projectId, payload);
@@ -155,7 +153,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
         form.append("priority", formData.priority);
         form.append("deadline", new Date(formData.deadline).toISOString());
         form.append("category", formData.category);
-        form.append("estimatedHours", String(formData.estimatedHours));
 
         if (formData.assigneeId) form.append("assigneeId", formData.assigneeId);
         files.forEach((file) => form.append("files", file));
@@ -171,7 +168,6 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
         priority: "medium",
         deadline: "",
         category: "",
-        estimatedHours: 0,
         assigneeId: "",
       });
 
@@ -337,27 +333,14 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Deadline *</Label>
-              <Input
-                type="datetime-local"
-                value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                required
-              />
-            </div>
-
-            <div>
-              <Label>Estimated Hours</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.5"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: Number(e.target.value) })}
-              />
-            </div>
+          <div>
+            <Label>Deadline *</Label>
+            <Input
+              type="datetime-local"
+              value={formData.deadline}
+              onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+              required
+            />
           </div>
 
           <div>
