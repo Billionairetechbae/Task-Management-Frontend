@@ -547,20 +547,9 @@ export default function TaskEditDrawer({
                       </Popover>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label>Category</Label>
-                        <Input value={category} onChange={(e) => setCategory(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Estimated Hours</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={estimatedHours}
-                          onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label>Category</Label>
+                      <Input value={category} onChange={(e) => setCategory(e.target.value)} />
                     </div>
                   </>
                 ) : (
