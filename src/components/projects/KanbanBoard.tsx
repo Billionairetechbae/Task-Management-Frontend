@@ -28,6 +28,7 @@ const COLUMNS = [
   { key: "pending", label: "Pending", color: "bg-warning" },
   { key: "in_progress", label: "In Progress", color: "bg-primary" },
   { key: "completed", label: "Done", color: "bg-success" },
+  { key: "delayed", label: "Delayed", color: "bg-destructive" },
   { key: "cancelled", label: "Cancelled", color: "bg-muted-foreground" },
 ];
 
