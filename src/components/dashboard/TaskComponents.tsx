@@ -39,6 +39,7 @@ export const getStatusDisplay = (status: string) => {
     pending: "Pending",
     in_progress: "In Progress",
     completed: "Completed",
+    delayed: "Delayed",
     cancelled: "Cancelled",
   };
   return m[status] || status;
@@ -57,6 +58,8 @@ export const getStatusBadgeClass = (status: string) => {
     case "pending":
     case "planning":
       return "bg-warning/10 text-warning border-warning/20";
+    case "delayed":
+      return "bg-destructive/10 text-destructive border-destructive/20";
     case "on_hold":
       return "bg-info/10 text-info border-info/20";
     case "cancelled":
