@@ -333,27 +333,14 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Deadline *</Label>
-              <Input
-                type="datetime-local"
-                value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                required
-              />
-            </div>
-
-            <div>
-              <Label>Estimated Hours</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.5"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: Number(e.target.value) })}
-              />
-            </div>
+          <div>
+            <Label>Deadline *</Label>
+            <Input
+              type="datetime-local"
+              value={formData.deadline}
+              onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+              required
+            />
           </div>
 
           <div>
