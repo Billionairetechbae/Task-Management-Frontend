@@ -220,7 +220,7 @@ export interface TaskWatcher {
 }
 
 export type TaskPriority = "low" | "medium" | "high";
-export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type TaskStatus = "pending" | "in_progress" | "completed" | "delayed" | "cancelled";
 
 export interface Task {
   id: string;
