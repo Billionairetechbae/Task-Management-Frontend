@@ -180,7 +180,7 @@ export interface TaskSubtask {
   id: string;
   taskId: string;
   title: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled" | string;
+  status: "pending" | "in_progress" | "completed" | "delayed" | "cancelled" | string;
   sortOrder?: number;
   createdBy?: string;
   createdAt: string;
