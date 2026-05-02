@@ -58,7 +58,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     try {
       setMembersLoading(true);
 
-      const res = await api.getCompanyAssistants();
+      const res = await api.getCompanyTeam();
       const data = (res as any)?.data || {};
 
       const list: CompanyMember[] = Array.isArray(data.members)
