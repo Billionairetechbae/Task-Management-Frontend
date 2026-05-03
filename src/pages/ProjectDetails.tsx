@@ -339,6 +339,7 @@ export default function ProjectDetails() {
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsEditOpen(true)}><Pencil className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Edit Project</TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateTaskOpen(true)} disabled={!canCreateProjectTask}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateChecklistOpen(true)}><ListChecks className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-sm" onClick={() => setAccessOpen(true)}><KeyRound className="w-3.5 h-3.5" /><span className="hidden sm:inline text-[11px]">Request Access</span></Button></TooltipTrigger><TooltipContent>Request elevated access</TooltipContent></Tooltip>
                   </div>
                 </div>
               </div>
