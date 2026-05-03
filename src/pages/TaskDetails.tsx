@@ -683,7 +683,7 @@ const TaskDetails = () => {
                           : 'bg-muted'
                       }`}
                     >
-                      <p className="text-sm">{comment.content}</p>
+                      <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
                       {renderDeliveryMark(comment)}
                     </div>
                   </div>
@@ -1091,7 +1091,7 @@ const TaskDetails = () => {
                                 : 'bg-muted'
                             }`}
                           >
-                            <p className="text-sm">{comment.content}</p>
+                            <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
                             {renderDeliveryMark(comment)}
                           </div>
                         </div>
