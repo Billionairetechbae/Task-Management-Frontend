@@ -299,7 +299,16 @@ export default function ProjectDetails() {
                       <h1 className="font-bold text-lg md:text-xl truncate">{project.name}</h1>
                       <Badge variant="outline" className={cn("text-[9px] uppercase tracking-wider shrink-0", getStatusBadgeClass(project.status))}>{project.status}</Badge>
                     </div>
-                    {project.description && <p className="text-xs text-muted-foreground truncate max-w-lg mb-1">{project.description}</p>}
+                    {project.description && (
+                      <div className="mb-1 max-w-2xl">
+                        <p className={cn("text-xs text-muted-foreground whitespace-pre-wrap break-words", !descExpanded && "line-clamp-2")}>{project.description}</p>
+                        {project.description.length > 120 && (
+                          <button onClick={() => setDescExpanded(v => !v)} className="text-[10px] font-semibold text-primary hover:underline mt-0.5">
+                            {descExpanded ? "Show less" : "See more"}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 flex-wrap">
                       {(project.startDate || project.endDate) && (
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
