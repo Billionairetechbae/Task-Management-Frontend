@@ -28,7 +28,10 @@ import {
   UserPlus, Save, X, Users, ClipboardList, ListChecks, Settings,
   ChevronDown, ChevronRight, MoreHorizontal, Eye, Mail, RefreshCw,
   XCircle, ChevronsLeft, ChevronsRight, ChevronLeft, LayoutList, Kanban,
+  Lock, KeyRound,
 } from "lucide-react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
@@ -60,6 +63,12 @@ export default function ProjectDetails() {
   const [taskView, setTaskView] = useState<"table" | "kanban">("table");
   const [taskPage, setTaskPage] = useState(1);
   const tasksPerPage = 10;
+
+  // UI: description expand + access request dialog
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
+  const [accessReason, setAccessReason] = useState("");
+  const [accessSubmitting, setAccessSubmitting] = useState(false);
 
   const [openPanels, setOpenPanels] = useState({
     overview: true, tasks: true, checklists: true, members: true, settings: false,
@@ -193,6 +202,21 @@ export default function ProjectDetails() {
 
   const handleLogoUpdated = (newUrl: string | null) => { if (project) setProject({ ...project, logoUrl: newUrl }); };
 
+  const submitAccessRequest = async () => {
+    if (!id) return;
+    try {
+      setAccessSubmitting(true);
+      await api.createAccessRequest({ resourceType: "project", resourceId: id, reason: accessReason.trim() || undefined });
+      toast({ title: "Access request sent", description: "An admin will review your request." });
+      setAccessOpen(false);
+      setAccessReason("");
+    } catch (err: any) {
+      toast({ title: "Request failed", description: err.message, variant: "destructive" });
+    } finally {
+      setAccessSubmitting(false);
+    }
+  };
+
   // ─── Render states ────────────────────────────────────────
   if (loading) {
     return (
@@ -275,7 +299,16 @@ export default function ProjectDetails() {
                       <h1 className="font-bold text-lg md:text-xl truncate">{project.name}</h1>
                       <Badge variant="outline" className={cn("text-[9px] uppercase tracking-wider shrink-0", getStatusBadgeClass(project.status))}>{project.status}</Badge>
                     </div>
-                    {project.description && <p className="text-xs text-muted-foreground truncate max-w-lg mb-1">{project.description}</p>}
+                    {project.description && (
+                      <div className="mb-1 max-w-2xl">
+                        <p className={cn("text-xs text-muted-foreground whitespace-pre-wrap break-words", !descExpanded && "line-clamp-2")}>{project.description}</p>
+                        {project.description.length > 120 && (
+                          <button onClick={() => setDescExpanded(v => !v)} className="text-[10px] font-semibold text-primary hover:underline mt-0.5">
+                            {descExpanded ? "Show less" : "See more"}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 flex-wrap">
                       {(project.startDate || project.endDate) && (
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -306,15 +339,15 @@ export default function ProjectDetails() {
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsEditOpen(true)}><Pencil className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Edit Project</TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateTaskOpen(true)} disabled={!canCreateProjectTask}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
                     <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateChecklistOpen(true)}><ListChecks className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>
+                    <Tooltip><TooltipTrigger asChild><Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-sm" onClick={() => setAccessOpen(true)}><KeyRound className="w-3.5 h-3.5" /><span className="hidden sm:inline text-[11px]">Request Access</span></Button></TooltipTrigger><TooltipContent>Request elevated access</TooltipContent></Tooltip>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Content grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-              {/* Left column */}
-              <div className="lg:col-span-3 border-r border-border bg-card/40 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
+            <ResizablePanelGroup direction="horizontal" className="hidden lg:flex h-[calc(100vh-56px-144px)]">
+              <ResizablePanel defaultSize={25} minSize={12} maxSize={50} className="bg-card/40 overflow-hidden">
+                <div className="h-full overflow-y-auto">
                 <CollapsiblePanel title="Overview" icon={<Info className="w-3.5 h-3.5" />} open={openPanels.overview} onToggle={() => togglePanel("overview")}>
                   <div className="px-3 pb-3 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
@@ -392,10 +425,13 @@ export default function ProjectDetails() {
                     </Button>
                   </div>
                 </CollapsiblePanel>
-              </div>
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle className="bg-border hover:bg-primary/30 transition-colors" />
 
               {/* Center column — Tasks */}
-              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
+              <ResizablePanel defaultSize={45} minSize={25} className="overflow-hidden">
+                <div className="h-full overflow-y-auto">
                 <CollapsiblePanel
                   title={`Tasks (${tasks.length})`}
                   icon={<ClipboardList className="w-3.5 h-3.5" />}
@@ -480,31 +516,56 @@ export default function ProjectDetails() {
                 </CollapsiblePanel>
               </div>
 
+              </ResizablePanel>
+              <ResizableHandle withHandle className="bg-border hover:bg-primary/30 transition-colors" />
+
               {/* Right column — Checklists */}
-              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
-                <CollapsiblePanel
-                  title={`Checklists (${checklists.length})`}
-                  icon={<ListChecks className="w-3.5 h-3.5" />}
-                  open={openPanels.checklists}
-                  onToggle={() => togglePanel("checklists")}
-                  action={<Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateChecklistOpen(true); }}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>}
-                >
-                  <div className="space-y-0">
-                    {checklists.length === 0 ? (
-                      <div className="px-4 py-10 text-center">
-                        <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
-                          <ListChecks className="w-6 h-6 text-muted-foreground/40" />
+              <ResizablePanel defaultSize={30} minSize={15} maxSize={55} className="overflow-hidden">
+                <div className="h-full overflow-y-auto">
+                  <CollapsiblePanel
+                    title={`Checklists (${checklists.length})`}
+                    icon={<ListChecks className="w-3.5 h-3.5" />}
+                    open={openPanels.checklists}
+                    onToggle={() => togglePanel("checklists")}
+                    action={<Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateChecklistOpen(true); }}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>}
+                  >
+                    <div className="space-y-0">
+                      {checklists.length === 0 ? (
+                        <div className="px-4 py-10 text-center">
+                          <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <ListChecks className="w-6 h-6 text-muted-foreground/40" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-3">No checklists yet</p>
+                          <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateChecklistOpen(true)}><Plus className="w-3 h-3" /> Add Checklist</Button>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-3">No checklists yet</p>
-                        <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateChecklistOpen(true)}><Plus className="w-3 h-3" /> Add Checklist</Button>
-                      </div>
-                    ) : checklists.map(cl => (
-                      <ChecklistPanel key={cl.id} projectId={project.id} checklist={cl} onToggleItem={handleToggleItem} onDeleteItem={handleDeleteChecklistItem} onDeleteChecklist={handleDeleteChecklist} onRefresh={loadChecklists} />
-                    ))}
-                  </div>
-                </CollapsiblePanel>
-              </div>
-            </div>
+                      ) : checklists.map(cl => (
+                        <ChecklistPanel key={cl.id} projectId={project.id} checklist={cl} onToggleItem={handleToggleItem} onDeleteItem={handleDeleteChecklistItem} onDeleteChecklist={handleDeleteChecklist} onRefresh={loadChecklists} />
+                      ))}
+                    </div>
+                  </CollapsiblePanel>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+
+            {/* Request Access Dialog */}
+            <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Request Project Access</DialogTitle>
+                  <DialogDescription className="text-xs">Send a request to the workspace admins for elevated access to this project.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Reason (optional)</label>
+                  <Textarea value={accessReason} onChange={(e) => setAccessReason(e.target.value)} placeholder="Why do you need access?" rows={3} className="text-sm" />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAccessOpen(false)} disabled={accessSubmitting}>Cancel</Button>
+                  <Button onClick={submitAccessRequest} disabled={accessSubmitting} className="gap-1.5">
+                    {accessSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />} Send Request
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </TooltipProvider>
