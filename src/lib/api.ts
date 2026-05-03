@@ -1203,6 +1203,17 @@ class ApiClient {
     });
   }
 
+  async updateTaskProgress(
+    taskId: string,
+    data: { status?: string; actualHours?: number; notes?: string }
+  ): Promise<{ status: string; message: string; data: { task: Task } }> {
+    return this.request(`/workflow/${taskId}/progress`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteTaskAttachment(
     attachmentId: string
   ): Promise<{ status: string; message: string }> {
