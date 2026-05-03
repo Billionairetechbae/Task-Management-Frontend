@@ -516,31 +516,56 @@ export default function ProjectDetails() {
                 </CollapsiblePanel>
               </div>
 
+              </ResizablePanel>
+              <ResizableHandle withHandle className="bg-border hover:bg-primary/30 transition-colors" />
+
               {/* Right column — Checklists */}
-              <div className="lg:col-span-4 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
-                <CollapsiblePanel
-                  title={`Checklists (${checklists.length})`}
-                  icon={<ListChecks className="w-3.5 h-3.5" />}
-                  open={openPanels.checklists}
-                  onToggle={() => togglePanel("checklists")}
-                  action={<Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateChecklistOpen(true); }}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>}
-                >
-                  <div className="space-y-0">
-                    {checklists.length === 0 ? (
-                      <div className="px-4 py-10 text-center">
-                        <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
-                          <ListChecks className="w-6 h-6 text-muted-foreground/40" />
+              <ResizablePanel defaultSize={30} minSize={15} maxSize={55} className="overflow-hidden">
+                <div className="h-full overflow-y-auto">
+                  <CollapsiblePanel
+                    title={`Checklists (${checklists.length})`}
+                    icon={<ListChecks className="w-3.5 h-3.5" />}
+                    open={openPanels.checklists}
+                    onToggle={() => togglePanel("checklists")}
+                    action={<Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateChecklistOpen(true); }}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>}
+                  >
+                    <div className="space-y-0">
+                      {checklists.length === 0 ? (
+                        <div className="px-4 py-10 text-center">
+                          <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <ListChecks className="w-6 h-6 text-muted-foreground/40" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-3">No checklists yet</p>
+                          <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateChecklistOpen(true)}><Plus className="w-3 h-3" /> Add Checklist</Button>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-3">No checklists yet</p>
-                        <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateChecklistOpen(true)}><Plus className="w-3 h-3" /> Add Checklist</Button>
-                      </div>
-                    ) : checklists.map(cl => (
-                      <ChecklistPanel key={cl.id} projectId={project.id} checklist={cl} onToggleItem={handleToggleItem} onDeleteItem={handleDeleteChecklistItem} onDeleteChecklist={handleDeleteChecklist} onRefresh={loadChecklists} />
-                    ))}
-                  </div>
-                </CollapsiblePanel>
-              </div>
-            </div>
+                      ) : checklists.map(cl => (
+                        <ChecklistPanel key={cl.id} projectId={project.id} checklist={cl} onToggleItem={handleToggleItem} onDeleteItem={handleDeleteChecklistItem} onDeleteChecklist={handleDeleteChecklist} onRefresh={loadChecklists} />
+                      ))}
+                    </div>
+                  </CollapsiblePanel>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+
+            {/* Request Access Dialog */}
+            <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Request Project Access</DialogTitle>
+                  <DialogDescription className="text-xs">Send a request to the workspace admins for elevated access to this project.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Reason (optional)</label>
+                  <Textarea value={accessReason} onChange={(e) => setAccessReason(e.target.value)} placeholder="Why do you need access?" rows={3} className="text-sm" />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAccessOpen(false)} disabled={accessSubmitting}>Cancel</Button>
+                  <Button onClick={submitAccessRequest} disabled={accessSubmitting} className="gap-1.5">
+                    {accessSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />} Send Request
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </TooltipProvider>
