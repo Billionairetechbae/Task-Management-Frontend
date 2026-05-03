@@ -344,7 +344,17 @@ const TaskDetails = () => {
 
     try {
       setUpdating(true);
-      await api.updateTask(task.id, { status: newStatus as any });
+      const isPrivileged =
+        user?.role === "admin" ||
+        user?.role === "executive" ||
+        user?.role === "manager" ||
+        user?.id === task.creator?.id;
+
+      if (isPrivileged) {
+        await api.updateTask(task.id, { status: newStatus as any });
+      } else {
+        await api.updateTaskProgress(task.id, { status: newStatus });
+      }
       toast({ title: "Success", description: "Task status updated" });
       fetchTask();
     } catch (error: any) {
@@ -960,8 +970,14 @@ const TaskDetails = () => {
                 </div>
               )}
 
-              {/* STATUS UPDATE */}
-              {user?.role === "team_member" && (
+              {/* STATUS UPDATE - visible to any assignee, creator, manager, executive, admin */}
+              {(user?.id === task.assigneeId ||
+                (task as any).assignees?.some((a: any) => a.id === user?.id) ||
+                user?.id === task.creator?.id ||
+                user?.role === "manager" ||
+                user?.role === "executive" ||
+                user?.role === "admin" ||
+                user?.role === "team_member") && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Update Status</p>
 
@@ -978,6 +994,7 @@ const TaskDetails = () => {
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="delayed">Delayed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
