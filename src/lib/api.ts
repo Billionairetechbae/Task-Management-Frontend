@@ -2524,6 +2524,37 @@ class ApiClient {
       headers: this.getAuthHeaders(),
     });
   }
+
+  /* ============================
+     ACCESS REQUESTS
+  ============================ */
+  async createAccessRequest(data: {
+    resourceType: "project" | "task" | "workspace" | string;
+    resourceId?: string;
+    reason?: string;
+    requestedRole?: string;
+  }): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/access-requests`, {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listAccessRequests(): Promise<{ status: string; data: any }> {
+    return this.request(`/access-requests`, {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async decideAccessRequest(id: string, data: { decision: "approved" | "rejected"; note?: string }): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/access-requests/${id}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const api = new ApiClient();
