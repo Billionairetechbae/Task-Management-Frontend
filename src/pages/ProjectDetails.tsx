@@ -64,6 +64,12 @@ export default function ProjectDetails() {
   const [taskPage, setTaskPage] = useState(1);
   const tasksPerPage = 10;
 
+  // UI: description expand + access request dialog
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
+  const [accessReason, setAccessReason] = useState("");
+  const [accessSubmitting, setAccessSubmitting] = useState(false);
+
   const [openPanels, setOpenPanels] = useState({
     overview: true, tasks: true, checklists: true, members: true, settings: false,
   });
