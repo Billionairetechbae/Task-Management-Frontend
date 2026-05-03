@@ -345,10 +345,13 @@ export default function ProjectDetails() {
               </div>
             </div>
 
-            {/* Content grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-              {/* Left column */}
-              <div className="lg:col-span-3 border-r border-border bg-card/40 overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
+            {/* Content grid — resizable on lg, stacked on mobile */}
+            <div className="lg:hidden flex flex-col">
+              <div className="border-b border-border bg-card/40">
+            </div>
+            <ResizablePanelGroup direction="horizontal" className="hidden lg:flex h-[calc(100vh-56px-144px)]">
+              <ResizablePanel defaultSize={25} minSize={15} maxSize={45} className="bg-card/40 overflow-y-auto">
+                <div className="h-full overflow-y-auto">
                 <CollapsiblePanel title="Overview" icon={<Info className="w-3.5 h-3.5" />} open={openPanels.overview} onToggle={() => togglePanel("overview")}>
                   <div className="px-3 pb-3 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
