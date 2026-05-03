@@ -28,7 +28,10 @@ import {
   UserPlus, Save, X, Users, ClipboardList, ListChecks, Settings,
   ChevronDown, ChevronRight, MoreHorizontal, Eye, Mail, RefreshCw,
   XCircle, ChevronsLeft, ChevronsRight, ChevronLeft, LayoutList, Kanban,
+  Lock, KeyRound,
 } from "lucide-react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
