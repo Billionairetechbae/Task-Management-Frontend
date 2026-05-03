@@ -345,12 +345,8 @@ export default function ProjectDetails() {
               </div>
             </div>
 
-            {/* Content grid — resizable on lg, stacked on mobile */}
-            <div className="lg:hidden flex flex-col">
-              <div className="border-b border-border bg-card/40">
-            </div>
             <ResizablePanelGroup direction="horizontal" className="hidden lg:flex h-[calc(100vh-56px-144px)]">
-              <ResizablePanel defaultSize={25} minSize={15} maxSize={45} className="bg-card/40 overflow-y-auto">
+              <ResizablePanel defaultSize={25} minSize={12} maxSize={50} className="bg-card/40 overflow-hidden">
                 <div className="h-full overflow-y-auto">
                 <CollapsiblePanel title="Overview" icon={<Info className="w-3.5 h-3.5" />} open={openPanels.overview} onToggle={() => togglePanel("overview")}>
                   <div className="px-3 pb-3 space-y-3">
