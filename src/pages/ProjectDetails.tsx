@@ -202,6 +202,21 @@ export default function ProjectDetails() {
 
   const handleLogoUpdated = (newUrl: string | null) => { if (project) setProject({ ...project, logoUrl: newUrl }); };
 
+  const submitAccessRequest = async () => {
+    if (!id) return;
+    try {
+      setAccessSubmitting(true);
+      await api.createAccessRequest({ resourceType: "project", resourceId: id, reason: accessReason.trim() || undefined });
+      toast({ title: "Access request sent", description: "An admin will review your request." });
+      setAccessOpen(false);
+      setAccessReason("");
+    } catch (err: any) {
+      toast({ title: "Request failed", description: err.message, variant: "destructive" });
+    } finally {
+      setAccessSubmitting(false);
+    }
+  };
+
   // ─── Render states ────────────────────────────────────────
   if (loading) {
     return (
