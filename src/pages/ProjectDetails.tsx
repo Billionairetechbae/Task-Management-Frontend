@@ -425,10 +425,13 @@ export default function ProjectDetails() {
                     </Button>
                   </div>
                 </CollapsiblePanel>
-              </div>
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle className="bg-border hover:bg-primary/30 transition-colors" />
 
               {/* Center column — Tasks */}
-              <div className="lg:col-span-5 border-r border-border overflow-y-auto lg:h-[calc(100vh-56px-144px)]">
+              <ResizablePanel defaultSize={45} minSize={25} className="overflow-hidden">
+                <div className="h-full overflow-y-auto">
                 <CollapsiblePanel
                   title={`Tasks (${tasks.length})`}
                   icon={<ClipboardList className="w-3.5 h-3.5" />}
