@@ -344,7 +344,17 @@ const TaskDetails = () => {
 
     try {
       setUpdating(true);
-      await api.updateTask(task.id, { status: newStatus as any });
+      const isPrivileged =
+        user?.role === "admin" ||
+        user?.role === "executive" ||
+        user?.role === "manager" ||
+        user?.id === task.creator?.id;
+
+      if (isPrivileged) {
+        await api.updateTask(task.id, { status: newStatus as any });
+      } else {
+        await api.updateTaskProgress(task.id, { status: newStatus });
+      }
       toast({ title: "Success", description: "Task status updated" });
       fetchTask();
     } catch (error: any) {
