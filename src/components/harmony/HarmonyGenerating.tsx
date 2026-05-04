@@ -1,19 +1,20 @@
-import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 const HarmonyGenerating = () => {
   return (
-    <div className="max-w-xl mx-auto">
-      <Card>
-        <CardContent className="py-10 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <div className="text-lg font-medium">Generating your Harmony Profile...</div>
-          <p className="text-sm text-muted-foreground">
-            This usually takes a few seconds. Sit tight while we craft your report.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="rounded-2xl">
+      <CardContent className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center">
+        <div className="mb-5 rounded-full bg-primary/10 p-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+
+        <h3 className="text-2xl font-bold">Building your Harmony profile</h3>
+        <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+          We are saving your latest work style profile and preparing your practical collaboration insights.
+        </p>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { api, Project, ProjectChecklist, ChecklistItem, ProjectInvite } from "@/lib/api";
+import {
+  api,
+  Project,
+  ProjectChecklist,
+  ProjectInvite,
+} from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +15,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ProjectMiniSidebar from "@/components/projects/ProjectMiniSidebar";
 import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
@@ -19,23 +39,72 @@ import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDialog";
 import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
 import KanbanBoard from "@/components/projects/KanbanBoard";
-import { getStatusBadgeClass, getPriorityBadgeClass, getStatusDisplay, getPriorityDisplay } from "@/components/dashboard/TaskComponents";
+import {
+  getStatusBadgeClass,
+  getPriorityBadgeClass,
+  getStatusDisplay,
+  getPriorityDisplay,
+} from "@/components/dashboard/TaskComponents";
 import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
-  Loader2, Info, Plus, Pencil, Trash2, Calendar, FolderOpen, 
-  UserPlus, Save, X, Users, ClipboardList, ListChecks, Settings,
-  ChevronDown, ChevronRight, MoreHorizontal, Eye, Mail, RefreshCw,
-  XCircle, ChevronsLeft, ChevronsRight, ChevronLeft, LayoutList, Kanban,
-  Lock, KeyRound,
+  Loader2,
+  Info,
+  Plus,
+  Pencil,
+  Trash2,
+  Calendar,
+  FolderOpen,
+  UserPlus,
+  Save,
+  X,
+  Users,
+  ClipboardList,
+  ListChecks,
+  Settings,
+  ChevronDown,
+  ChevronRight,
+  MoreHorizontal,
+  Eye,
+  Mail,
+  RefreshCw,
+  XCircle,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronLeft,
+  LayoutList,
+  Kanban,
+  Lock,
+  KeyRound,
 } from "lucide-react";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
-type MemberRow = { id: string; userId: string; role: string; status: string; firstName: string; lastName: string; email: string };
+type MemberRow = {
+  id: string;
+  userId: string;
+  role: string;
+  status: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+};
+
+const PROJECT_TASK_ACCESS_PERMISSION = "create_project_tasks" as const;
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -59,165 +128,379 @@ export default function ProjectDetails() {
   const [memberEmail, setMemberEmail] = useState("");
   const [inviting, setInviting] = useState(false);
 
-  // Task view mode
   const [taskView, setTaskView] = useState<"table" | "kanban">("table");
   const [taskPage, setTaskPage] = useState(1);
   const tasksPerPage = 10;
 
-  // UI: description expand + access request dialog
   const [descExpanded, setDescExpanded] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
   const [accessReason, setAccessReason] = useState("");
   const [accessSubmitting, setAccessSubmitting] = useState(false);
+  const [pendingAccessRequests, setPendingAccessRequests] = useState<any[]>([]);
 
   const [openPanels, setOpenPanels] = useState({
-    overview: true, tasks: true, checklists: true, members: true, settings: false,
+    overview: true,
+    tasks: true,
+    checklists: true,
+    members: true,
+    settings: false,
   });
 
-  const [settingsForm, setSettingsForm] = useState({ name: "", description: "", status: "active", startDate: "", endDate: "" });
+  const [settingsForm, setSettingsForm] = useState({
+    name: "",
+    description: "",
+    status: "active",
+    startDate: "",
+    endDate: "",
+  });
+
   const [savingSettings, setSavingSettings] = useState(false);
-  const canCreateProjectTask = canPerformRoleOperation("create_project_tasks", workspaceRole);
+
+  const canCreateProjectTask = canPerformRoleOperation(
+    "create_project_tasks",
+    workspaceRole
+  );
+
   const hasProjectViewFilter =
-    (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
+    (workspaceRole === "admin" ||
+      workspaceRole === "manager" ||
+      workspaceRole === "member") &&
     !canPerformRoleOperation("view_all_projects", workspaceRole);
 
+  const canRequestProjectTaskAccess =
+    workspaceRole === "member" && !canCreateProjectTask;
+
+  const hasPendingProjectTaskAccessRequest = pendingAccessRequests.some(
+    (request) =>
+      request.permissionKey === PROJECT_TASK_ACCESS_PERMISSION &&
+      request.status === "pending"
+  );
+
   const togglePanel = (key: keyof typeof openPanels) => {
-    setOpenPanels(p => ({ ...p, [key]: !p[key] }));
+    setOpenPanels((p) => ({ ...p, [key]: !p[key] }));
   };
 
-  useEffect(() => { if (id) localStorage.setItem("lastProjectId", id); }, [id]);
+  useEffect(() => {
+    if (id) localStorage.setItem("lastProjectId", id);
+  }, [id]);
 
-  // ─── Data loaders ──────────────────────────────────────────
   const loadProjects = async () => {
     try {
       const res = await api.getProjects();
-      const arr = (res as any)?.data?.projects || (res as any)?.projects || (res as any)?.data || [];
+      const arr =
+        (res as any)?.data?.projects ||
+        (res as any)?.projects ||
+        (res as any)?.data ||
+        [];
       setProjects(Array.isArray(arr) ? arr : []);
-    } catch { /* ignore */ }
+    } catch {
+      // ignore
+    }
   };
 
   const loadProject = async () => {
     if (!id) return;
+
     try {
       const res = await api.getProjectById(id);
-      const p = (res as any)?.data?.project || res.data;
+      const p = (res as any)?.data?.project || (res as any)?.data;
+
       setProject(p || null);
-      if (p) setSettingsForm({ name: p.name || "", description: p.description || "", status: p.status || "active", startDate: p.startDate ? p.startDate.slice(0, 10) : "", endDate: p.endDate ? p.endDate.slice(0, 10) : "" });
+
+      if (p) {
+        setSettingsForm({
+          name: p.name || "",
+          description: p.description || "",
+          status: p.status || "active",
+          startDate: p.startDate ? p.startDate.slice(0, 10) : "",
+          endDate: p.endDate ? p.endDate.slice(0, 10) : "",
+        });
+      }
     } catch (err: any) {
-      toast({ title: "Failed to load project", description: err.message, variant: "destructive" });
-    } finally { setLoading(false); }
+      toast({
+        title: "Failed to load project",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadMembers = async () => {
     if (!id) return;
+
     try {
       const res = await api.getProjectMembers(id);
       const data = (res as any)?.data || {};
+
       setMembers(Array.isArray(data.members) ? data.members : []);
       setInvites(Array.isArray(data.invites) ? data.invites : []);
-    } catch { /* ignore */ }
+    } catch {
+      // ignore
+    }
   };
 
   const loadTasks = async () => {
     if (!id) return;
+
     try {
       const res = await api.getProjectTasks(id);
-      const data = res.data;
+      const data = (res as any)?.data;
       const raw = Array.isArray(data) ? data : (data as any)?.tasks || [];
+
       setTasks(filterTopLevelTasks(raw));
-    } catch { /* ignore */ }
+    } catch {
+      // ignore
+    }
   };
 
   const loadChecklists = async () => {
     if (!id) return;
+
     try {
       const res = await api.getProjectChecklists(id);
-      const data = res.data;
-      setChecklists(Array.isArray(data) ? data : (data as any)?.checklists || []);
-    } catch { /* ignore */ }
+      const data = (res as any)?.data;
+
+      setChecklists(
+        Array.isArray(data) ? data : (data as any)?.checklists || []
+      );
+    } catch {
+      // ignore
+    }
   };
 
-  const refreshAll = () => { loadProject(); loadMembers(); loadTasks(); loadChecklists(); };
-  useEffect(() => { loadProjects(); }, []);
-  useEffect(() => { setLoading(true); setTaskPage(1); refreshAll(); }, [id]);
+  const loadPendingAccessRequests = async () => {
+    try {
+      if (workspaceRole !== "member") {
+        setPendingAccessRequests([]);
+        return;
+      }
 
-  // ─── Actions ───────────────────────────────────────────────
+      const res = await api.listAccessRequests({ status: "pending" });
+      const requests = (res as any)?.data?.requests || [];
+
+      setPendingAccessRequests(Array.isArray(requests) ? requests : []);
+    } catch {
+      setPendingAccessRequests([]);
+    }
+  };
+
+  const refreshAll = () => {
+    loadProject();
+    loadMembers();
+    loadTasks();
+    loadChecklists();
+    loadPendingAccessRequests();
+  };
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    setTaskPage(1);
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, workspaceRole]);
+
   const addMember = async () => {
     if (!id || !memberEmail.trim()) return;
+
     try {
       setInviting(true);
+
       await api.inviteMembersByEmail(id, [memberEmail.trim()]);
-      setMemberEmail(""); await loadMembers();
+
+      setMemberEmail("");
+      await loadMembers();
+
       toast({ title: "Invitation sent" });
-    } catch (err: any) { toast({ title: "Invite failed", description: err.message, variant: "destructive" }); }
-    finally { setInviting(false); }
+    } catch (err: any) {
+      toast({
+        title: "Invite failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setInviting(false);
+    }
   };
 
   const removeMember = async (userId: string) => {
     if (!id) return;
-    try { await api.removeProjectMember(id, userId); await loadMembers(); toast({ title: "Member removed" }); }
-    catch (err: any) { toast({ title: "Remove failed", description: err.message, variant: "destructive" }); }
+
+    try {
+      await api.removeProjectMember(id, userId);
+      await loadMembers();
+
+      toast({ title: "Member removed" });
+    } catch (err: any) {
+      toast({
+        title: "Remove failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const revokeInvite = async (inviteId: string) => {
     if (!id) return;
-    try { await api.revokeProjectInvite(id, inviteId); await loadMembers(); toast({ title: "Invite revoked" }); }
-    catch (err: any) { toast({ title: "Revoke failed", description: err.message, variant: "destructive" }); }
+
+    try {
+      await api.revokeProjectInvite(id, inviteId);
+      await loadMembers();
+
+      toast({ title: "Invite revoked" });
+    } catch (err: any) {
+      toast({
+        title: "Revoke failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const resendInvite = async (inviteId: string) => {
     if (!id) return;
-    try { await api.resendProjectInvite(id, inviteId); toast({ title: "Invite resent" }); }
-    catch (err: any) { toast({ title: "Resend failed", description: err.message, variant: "destructive" }); }
+
+    try {
+      await api.resendProjectInvite(id, inviteId);
+      toast({ title: "Invite resent" });
+    } catch (err: any) {
+      toast({
+        title: "Resend failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleToggleItem = async (checklistId: string, itemId: string, isCompleted: boolean) => {
+  const handleToggleItem = async (
+    checklistId: string,
+    itemId: string,
+    isCompleted: boolean
+  ) => {
     if (!id) return;
-    setChecklists(prev => prev.map(cl => cl.id === checklistId ? { ...cl, items: cl.items?.map(it => it.id === itemId ? { ...it, isCompleted } : it) } : cl));
-    try { await api.updateChecklistItem(id, checklistId, itemId, { isCompleted }); }
-    catch { loadChecklists(); toast({ title: "Update failed", variant: "destructive" }); }
+
+    setChecklists((prev) =>
+      prev.map((cl) =>
+        cl.id === checklistId
+          ? {
+              ...cl,
+              items: cl.items?.map((it) =>
+                it.id === itemId ? { ...it, isCompleted } : it
+              ),
+            }
+          : cl
+      )
+    );
+
+    try {
+      await api.updateChecklistItem(id, checklistId, itemId, { isCompleted });
+    } catch {
+      loadChecklists();
+      toast({ title: "Update failed", variant: "destructive" });
+    }
   };
 
-  const handleDeleteChecklistItem = async (checklistId: string, itemId: string) => {
+  const handleDeleteChecklistItem = async (
+    checklistId: string,
+    itemId: string
+  ) => {
     if (!id) return;
-    try { await api.deleteChecklistItem(id, checklistId, itemId); setChecklists(prev => prev.map(cl => cl.id === checklistId ? { ...cl, items: cl.items?.filter(it => it.id !== itemId) } : cl)); }
-    catch (err: any) { toast({ title: "Delete failed", variant: "destructive" }); }
+
+    try {
+      await api.deleteChecklistItem(id, checklistId, itemId);
+
+      setChecklists((prev) =>
+        prev.map((cl) =>
+          cl.id === checklistId
+            ? {
+                ...cl,
+                items: cl.items?.filter((it) => it.id !== itemId),
+              }
+            : cl
+        )
+      );
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
   };
 
   const handleDeleteChecklist = async (checklistId: string) => {
     if (!id) return;
-    try { await api.deleteProjectChecklist(id, checklistId); setChecklists(prev => prev.filter(cl => cl.id !== checklistId)); toast({ title: "Checklist deleted" }); }
-    catch (err: any) { toast({ title: "Delete failed", variant: "destructive" }); }
+
+    try {
+      await api.deleteProjectChecklist(id, checklistId);
+      setChecklists((prev) => prev.filter((cl) => cl.id !== checklistId));
+
+      toast({ title: "Checklist deleted" });
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
   };
 
   const saveSettings = async () => {
     if (!id) return;
+
     try {
       setSavingSettings(true);
-      await api.updateProject(id, { name: settingsForm.name, description: settingsForm.description, status: settingsForm.status as any, startDate: settingsForm.startDate || null, endDate: settingsForm.endDate || null });
-      toast({ title: "Project updated" }); loadProject();
-    } catch (err: any) { toast({ title: "Update failed", description: err.message, variant: "destructive" }); }
-    finally { setSavingSettings(false); }
+
+      await api.updateProject(id, {
+        name: settingsForm.name,
+        description: settingsForm.description,
+        status: settingsForm.status as any,
+        startDate: settingsForm.startDate || null,
+        endDate: settingsForm.endDate || null,
+      });
+
+      toast({ title: "Project updated" });
+      loadProject();
+    } catch (err: any) {
+      toast({
+        title: "Update failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingSettings(false);
+    }
   };
 
-  const handleLogoUpdated = (newUrl: string | null) => { if (project) setProject({ ...project, logoUrl: newUrl }); };
+  const handleLogoUpdated = (newUrl: string | null) => {
+    if (project) setProject({ ...project, logoUrl: newUrl });
+  };
 
   const submitAccessRequest = async () => {
-    if (!id) return;
     try {
       setAccessSubmitting(true);
-      await api.createAccessRequest({ resourceType: "project", resourceId: id, reason: accessReason.trim() || undefined });
-      toast({ title: "Access request sent", description: "An admin will review your request." });
+
+      await api.createAccessRequest({
+        permissionKey: PROJECT_TASK_ACCESS_PERMISSION,
+        reason: accessReason.trim() || undefined,
+      });
+
+      toast({
+        title: "Access request sent",
+        description: "An admin will review your request.",
+      });
+
       setAccessOpen(false);
       setAccessReason("");
+      await loadPendingAccessRequests();
     } catch (err: any) {
-      toast({ title: "Request failed", description: err.message, variant: "destructive" });
+      toast({
+        title: "Request failed",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setAccessSubmitting(false);
     }
   };
 
-  // ─── Render states ────────────────────────────────────────
   if (loading) {
     return (
       <DashboardLayout fullWidth hidePadding>
@@ -235,9 +518,16 @@ export default function ProjectDetails() {
           <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center mb-4">
             <Info className="w-7 h-7 text-muted-foreground/60" />
           </div>
+
           <h1 className="text-lg font-bold mb-2">Project Not Found</h1>
-          <p className="text-sm text-muted-foreground mb-4">This project may have been removed or you don't have access.</p>
-          <Button onClick={() => navigate("/projects")}>Back to Projects</Button>
+
+          <p className="text-sm text-muted-foreground mb-4">
+            This project may have been removed or you don't have access.
+          </p>
+
+          <Button onClick={() => navigate("/projects")}>
+            Back to Projects
+          </Button>
         </div>
       </DashboardLayout>
     );
@@ -245,289 +535,945 @@ export default function ProjectDetails() {
 
   const taskStats = {
     total: tasks.length,
-    completed: tasks.filter(t => t.status === "completed").length,
-    inProgress: tasks.filter(t => t.status === "in_progress").length,
-    pending: tasks.filter(t => t.status === "pending").length,
+    completed: tasks.filter((t) => t.status === "completed").length,
+    inProgress: tasks.filter((t) => t.status === "in_progress").length,
+    pending: tasks.filter((t) => t.status === "pending").length,
   };
 
   const totalTaskPages = Math.ceil(tasks.length / tasksPerPage);
-  const paginatedTasks = tasks.slice((taskPage - 1) * tasksPerPage, taskPage * tasksPerPage);
+  const paginatedTasks = tasks.slice(
+    (taskPage - 1) * tasksPerPage,
+    taskPage * tasksPerPage
+  );
 
   return (
     <DashboardLayout fullWidth hidePadding>
       <TooltipProvider delayDuration={100}>
         <div className="flex h-[calc(100vh-56px)] overflow-hidden bg-background">
-          {/* Mini sidebar */}
           <div className="hidden md:flex">
-            <ProjectMiniSidebar projects={projects} currentProjectId={project.id} onAddProject={() => navigate("/projects?create=true")} />
+            <ProjectMiniSidebar
+              projects={projects}
+              currentProjectId={project.id}
+              onAddProject={() => navigate("/projects?create=true")}
+            />
           </div>
 
-          {/* Main content */}
           <div className="flex-1 min-w-0 overflow-y-auto">
-            {/* Mobile project switcher */}
             <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-card overflow-x-auto scrollbar-none">
-              {projects.map(p => (
-                <button key={p.id} onClick={() => navigate(`/projects/${p.id}`)} className={cn(
-                  "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-                  p.id === project.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}>{p.name}</button>
+              {projects.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/projects/${p.id}`)}
+                  className={cn(
+                    "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
+                    p.id === project.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  )}
+                >
+                  {p.name}
+                </button>
               ))}
-              <button onClick={() => navigate("/projects?create=true")} className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:text-primary">
+
+              <button
+                onClick={() => navigate("/projects?create=true")}
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:text-primary"
+              >
                 <Plus className="w-3 h-3" />
               </button>
             </div>
 
-            {/* Banner header */}
             <div className="relative border-b border-border bg-card overflow-hidden">
               <div className="relative h-28 md:h-36 bg-gradient-to-br from-primary/8 via-primary/4 to-accent/8">
-                {project.logoUrl && <img src={project.logoUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-10 blur-md" />}
+                {project.logoUrl && (
+                  <img
+                    src={project.logoUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-10 blur-md"
+                  />
+                )}
+
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
               </div>
+
               <div className="absolute bottom-0 left-0 right-0 px-4 md:px-6 pb-4">
                 <div className="flex items-end gap-4">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button onClick={() => setIsLogoOpen(true)} className="w-14 h-14 md:w-16 md:h-16 rounded-xl border-2 border-background bg-card shadow-elevated flex items-center justify-center shrink-0 overflow-hidden hover:border-primary/30 transition-all duration-200 group">
-                        {project.logoUrl ? <img src={project.logoUrl} alt="" className="w-full h-full object-cover" /> : <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />}
+                      <button
+                        onClick={() => setIsLogoOpen(true)}
+                        className="w-14 h-14 md:w-16 md:h-16 rounded-xl border-2 border-background bg-card shadow-elevated flex items-center justify-center shrink-0 overflow-hidden hover:border-primary/30 transition-all duration-200 group"
+                      >
+                        {project.logoUrl ? (
+                          <img
+                            src={project.logoUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                        )}
                       </button>
                     </TooltipTrigger>
+
                     <TooltipContent>Change Logo</TooltipContent>
                   </Tooltip>
 
                   <div className="flex-1 min-w-0 pb-0.5">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <h1 className="font-bold text-lg md:text-xl truncate">{project.name}</h1>
-                      <Badge variant="outline" className={cn("text-[9px] uppercase tracking-wider shrink-0", getStatusBadgeClass(project.status))}>{project.status}</Badge>
+                      <h1 className="font-bold text-lg md:text-xl truncate">
+                        {project.name}
+                      </h1>
+
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[9px] uppercase tracking-wider shrink-0",
+                          getStatusBadgeClass(project.status)
+                        )}
+                      >
+                        {project.status}
+                      </Badge>
                     </div>
+
                     {project.description && (
                       <div className="mb-1 max-w-2xl">
-                        <p className={cn("text-xs text-muted-foreground whitespace-pre-wrap break-words", !descExpanded && "line-clamp-2")}>{project.description}</p>
+                        <p
+                          className={cn(
+                            "text-xs text-muted-foreground whitespace-pre-wrap break-words",
+                            !descExpanded && "line-clamp-2"
+                          )}
+                        >
+                          {project.description}
+                        </p>
+
                         {project.description.length > 120 && (
-                          <button onClick={() => setDescExpanded(v => !v)} className="text-[10px] font-semibold text-primary hover:underline mt-0.5">
+                          <button
+                            onClick={() => setDescExpanded((v) => !v)}
+                            className="text-[10px] font-semibold text-primary hover:underline mt-0.5"
+                          >
                             {descExpanded ? "Show less" : "See more"}
                           </button>
                         )}
                       </div>
                     )}
+
                     <div className="flex items-center gap-4 flex-wrap">
                       {(project.startDate || project.endDate) && (
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                           <Calendar className="w-3 h-3 shrink-0" />
-                          <span>{project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "TBD"} — {project.endDate ? format(new Date(project.endDate), "MMM d, yyyy") : "TBD"}</span>
+
+                          <span>
+                            {project.startDate
+                              ? format(new Date(project.startDate), "MMM d, yyyy")
+                              : "TBD"}{" "}
+                            —{" "}
+                            {project.endDate
+                              ? format(new Date(project.endDate), "MMM d, yyyy")
+                              : "TBD"}
+                          </span>
                         </div>
                       )}
+
                       {members.length > 0 && (
                         <div className="flex items-center gap-1.5">
                           <div className="flex -space-x-1.5">
-                            {members.slice(0, 5).map(m => (
-                              <Tooltip key={m.id}><TooltipTrigger>
-                                <Avatar className="w-5 h-5 border border-background"><AvatarFallback className="text-[7px] font-bold bg-primary/10 text-primary">{m.firstName?.[0]}{m.lastName?.[0]}</AvatarFallback></Avatar>
-                              </TooltipTrigger><TooltipContent className="text-[10px]">{m.firstName} {m.lastName}</TooltipContent></Tooltip>
+                            {members.slice(0, 5).map((m) => (
+                              <Tooltip key={m.id}>
+                                <TooltipTrigger>
+                                  <Avatar className="w-5 h-5 border border-background">
+                                    <AvatarFallback className="text-[7px] font-bold bg-primary/10 text-primary">
+                                      {m.firstName?.[0]}
+                                      {m.lastName?.[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+
+                                <TooltipContent className="text-[10px]">
+                                  {m.firstName} {m.lastName}
+                                </TooltipContent>
+                              </Tooltip>
                             ))}
+
                             {members.length > 5 && (
-                              <Tooltip><TooltipTrigger><Avatar className="w-5 h-5 border border-background"><AvatarFallback className="text-[7px] font-bold bg-muted text-muted-foreground">+{members.length - 5}</AvatarFallback></Avatar></TooltipTrigger>
-                              <TooltipContent className="text-[10px]">{members.length - 5} more</TooltipContent></Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Avatar className="w-5 h-5 border border-background">
+                                    <AvatarFallback className="text-[7px] font-bold bg-muted text-muted-foreground">
+                                      +{members.length - 5}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+
+                                <TooltipContent className="text-[10px]">
+                                  {members.length - 5} more
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
-                          <span className="text-[9px] text-muted-foreground font-medium">{members.length} member{members.length !== 1 ? "s" : ""}</span>
+
+                          <span className="text-[9px] text-muted-foreground font-medium">
+                            {members.length} member
+                            {members.length !== 1 ? "s" : ""}
+                          </span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
-                    <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsEditOpen(true)}><Pencil className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>Edit Project</TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateTaskOpen(true)} disabled={!canCreateProjectTask}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => setIsCreateChecklistOpen(true)}><ListChecks className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>
-                    <Tooltip><TooltipTrigger asChild><Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-sm" onClick={() => setAccessOpen(true)}><KeyRound className="w-3.5 h-3.5" /><span className="hidden sm:inline text-[11px]">Request Access</span></Button></TooltipTrigger><TooltipContent>Request elevated access</TooltipContent></Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="h-8 w-8 shadow-sm"
+                          onClick={() => setIsEditOpen(true)}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+
+                      <TooltipContent>Edit Project</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="h-8 w-8 shadow-sm"
+                          onClick={() => setIsCreateTaskOpen(true)}
+                          disabled={!canCreateProjectTask}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+
+                      <TooltipContent>
+                        {canCreateProjectTask
+                          ? "New Task"
+                          : "You do not have permission to create project tasks"}
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="h-8 w-8 shadow-sm"
+                          onClick={() => setIsCreateChecklistOpen(true)}
+                        >
+                          <ListChecks className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+
+                      <TooltipContent>New Checklist</TooltipContent>
+                    </Tooltip>
+
+                    {canRequestProjectTaskAccess && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1.5 shadow-sm"
+                            onClick={() => setAccessOpen(true)}
+                            disabled={hasPendingProjectTaskAccessRequest}
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+
+                            <span className="hidden sm:inline text-[11px]">
+                              {hasPendingProjectTaskAccessRequest
+                                ? "Access Pending"
+                                : "Request Access"}
+                            </span>
+                          </Button>
+                        </TooltipTrigger>
+
+                        <TooltipContent>
+                          {hasPendingProjectTaskAccessRequest
+                            ? "Your access request is already pending"
+                            : "Request permission to create project tasks"}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            <ResizablePanelGroup direction="horizontal" className="hidden lg:flex h-[calc(100vh-56px-144px)]">
-              <ResizablePanel defaultSize={25} minSize={12} maxSize={50} className="bg-card/40 overflow-hidden">
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="hidden lg:flex h-[calc(100vh-56px-144px)]"
+            >
+              <ResizablePanel
+                defaultSize={25}
+                minSize={12}
+                maxSize={50}
+                className="bg-card/40 overflow-hidden"
+              >
                 <div className="h-full overflow-y-auto">
-                <CollapsiblePanel title="Overview" icon={<Info className="w-3.5 h-3.5" />} open={openPanels.overview} onToggle={() => togglePanel("overview")}>
-                  <div className="px-3 pb-3 space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <MiniStat label="Tasks" value={taskStats.total} color="text-primary" />
-                      <MiniStat label="Done" value={taskStats.completed} color="text-success" />
-                      <MiniStat label="Active" value={taskStats.inProgress} color="text-info" />
-                      <MiniStat label="Pending" value={taskStats.pending} color="text-warning" />
-                    </div>
-                    {taskStats.total > 0 && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
-                          <span>Completion</span>
-                          <span>{Math.round((taskStats.completed / taskStats.total) * 100)}%</span>
-                        </div>
-                        <Progress value={(taskStats.completed / taskStats.total) * 100} className="h-1.5" />
+                  <CollapsiblePanel
+                    title="Overview"
+                    icon={<Info className="w-3.5 h-3.5" />}
+                    open={openPanels.overview}
+                    onToggle={() => togglePanel("overview")}
+                  >
+                    <div className="px-3 pb-3 space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <MiniStat
+                          label="Tasks"
+                          value={taskStats.total}
+                          color="text-primary"
+                        />
+                        <MiniStat
+                          label="Done"
+                          value={taskStats.completed}
+                          color="text-success"
+                        />
+                        <MiniStat
+                          label="Active"
+                          value={taskStats.inProgress}
+                          color="text-info"
+                        />
+                        <MiniStat
+                          label="Pending"
+                          value={taskStats.pending}
+                          color="text-warning"
+                        />
                       </div>
-                    )}
-                  </div>
-                </CollapsiblePanel>
 
-                <CollapsiblePanel title={`Members (${members.length})`} icon={<Users className="w-3.5 h-3.5" />} open={openPanels.members} onToggle={() => togglePanel("members")}>
-                  <div className="px-3 pb-3 space-y-2">
-                    <div className="flex gap-1.5">
-                      <Input type="email" value={memberEmail} onChange={(e) => setMemberEmail(e.target.value)} placeholder="email@example.com" className="h-7 text-[11px] bg-muted/30" onKeyDown={(e) => e.key === "Enter" && addMember()} />
-                      <Tooltip><TooltipTrigger asChild><Button size="icon" className="h-7 w-7 shrink-0" onClick={addMember} disabled={inviting || !memberEmail.trim()}>{inviting ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserPlus className="w-3 h-3" />}</Button></TooltipTrigger><TooltipContent>Invite</TooltipContent></Tooltip>
-                    </div>
-                    <div className="space-y-0.5 max-h-[200px] overflow-y-auto scrollbar-none">
-                      {members.map(m => (
-                        <div key={m.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors duration-150 group text-[11px]">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary shrink-0">{m.firstName?.[0]}{m.lastName?.[0]}</div>
-                            <div className="min-w-0">
-                              <p className="font-medium truncate leading-tight">{m.firstName} {m.lastName}</p>
-                              <p className="text-[9px] text-muted-foreground truncate">{m.role}</p>
-                            </div>
-                          </div>
-                          <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive transition-opacity" onClick={() => removeMember(m.userId || m.id)}><X className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>Remove</TooltipContent></Tooltip>
-                        </div>
-                      ))}
-                      {members.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-4 italic">No members yet</p>}
-                    </div>
-                    {invites.length > 0 && (
-                      <div className="pt-2 border-t border-border space-y-1">
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Pending Invites</p>
-                        {invites.filter(inv => inv.status === "pending" || inv.status === "pending_workspace").map(inv => (
-                          <div key={inv.id} className="flex items-center justify-between py-1 px-2 rounded-lg bg-warning/5 text-[10px]">
-                            <div className="flex items-center gap-1.5 min-w-0"><Mail className="w-3 h-3 text-warning shrink-0" /><span className="truncate">{inv.email}</span></div>
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => resendInvite(inv.id)}><RefreshCw className="w-2.5 h-2.5" /></Button></TooltipTrigger><TooltipContent>Resend</TooltipContent></Tooltip>
-                              <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-5 w-5 text-destructive" onClick={() => revokeInvite(inv.id)}><XCircle className="w-2.5 h-2.5" /></Button></TooltipTrigger><TooltipContent>Revoke</TooltipContent></Tooltip>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </CollapsiblePanel>
-
-                <CollapsiblePanel title="Settings" icon={<Settings className="w-3.5 h-3.5" />} open={openPanels.settings} onToggle={() => togglePanel("settings")}>
-                  <div className="px-3 pb-3 space-y-2.5">
-                    <div className="space-y-1"><label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Name</label><Input value={settingsForm.name} onChange={(e) => setSettingsForm(p => ({ ...p, name: e.target.value }))} className="h-7 text-[11px]" /></div>
-                    <div className="space-y-1"><label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Description</label><Textarea value={settingsForm.description} onChange={(e) => setSettingsForm(p => ({ ...p, description: e.target.value }))} className="text-[11px] min-h-[50px]" rows={2} /></div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1"><label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Start</label><Input type="date" value={settingsForm.startDate} onChange={(e) => setSettingsForm(p => ({ ...p, startDate: e.target.value }))} className="h-7 text-[10px] px-1.5" /></div>
-                      <div className="space-y-1"><label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">End</label><Input type="date" value={settingsForm.endDate} onChange={(e) => setSettingsForm(p => ({ ...p, endDate: e.target.value }))} className="h-7 text-[10px] px-1.5" /></div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Status</label>
-                      <select value={settingsForm.status} onChange={(e) => setSettingsForm(p => ({ ...p, status: e.target.value }))} className="flex h-7 w-full rounded-lg border border-input bg-background px-2 text-[11px]">
-                        <option value="planning">Planning</option><option value="active">Active</option><option value="on_hold">On Hold</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                    <Button onClick={saveSettings} disabled={savingSettings} className="w-full h-7 text-[10px] gap-1.5">
-                      {savingSettings ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save Settings
-                    </Button>
-                  </div>
-                </CollapsiblePanel>
-                </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle className="bg-border hover:bg-primary/30 transition-colors" />
-
-              {/* Center column — Tasks */}
-              <ResizablePanel defaultSize={45} minSize={25} className="overflow-hidden">
-                <div className="h-full overflow-y-auto">
-                <CollapsiblePanel
-                  title={`Tasks (${tasks.length})`}
-                  icon={<ClipboardList className="w-3.5 h-3.5" />}
-                  open={openPanels.tasks}
-                  onToggle={() => togglePanel("tasks")}
-                  action={
-                    <div className="flex items-center gap-1">
-                      {/* View toggle */}
-                      <div className="flex items-center bg-muted/40 rounded-md p-0.5">
-                        <Tooltip><TooltipTrigger asChild>
-                          <button onClick={(e) => { e.stopPropagation(); setTaskView("table"); }} className={cn("p-1 rounded-sm transition-all duration-200", taskView === "table" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                            <LayoutList className="w-3 h-3" />
-                          </button>
-                        </TooltipTrigger><TooltipContent className="text-[10px]">Table View</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild>
-                          <button onClick={(e) => { e.stopPropagation(); setTaskView("kanban"); }} className={cn("p-1 rounded-sm transition-all duration-200", taskView === "kanban" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                            <Kanban className="w-3 h-3" />
-                          </button>
-                        </TooltipTrigger><TooltipContent className="text-[10px]">Board View</TooltipContent></Tooltip>
-                      </div>
-                      <Tooltip><TooltipTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateTaskOpen(true); }} disabled={!canCreateProjectTask}><Plus className="w-3.5 h-3.5" /></Button>
-                      </TooltipTrigger><TooltipContent>New Task</TooltipContent></Tooltip>
-                    </div>
-                  }
-                >
-                  {hasProjectViewFilter && (
-                    <p className="px-4 pt-3 text-xs text-muted-foreground">
-                      Your project/task visibility is filtered by workspace policy.
-                    </p>
-                  )}
-                  {tasks.length === 0 ? (
-                    <div className="px-4 py-10 text-center">
-                      <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <ClipboardList className="w-6 h-6 text-muted-foreground/40" />
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">No tasks yet</p>
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateTaskOpen(true)} disabled={!canCreateProjectTask}><Plus className="w-3 h-3" /> Add Task</Button>
-                    </div>
-                  ) : taskView === "kanban" ? (
-                    <KanbanBoard tasks={tasks} />
-                  ) : (
-                    <div>
-                      <div className="hidden sm:grid grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-1.5 border-b border-border bg-muted/20 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-                        <div>Task</div><div>Priority</div><div>Status</div><div>Due</div><div>Actions</div>
-                      </div>
-                      <div className="divide-y divide-border">
-                        {paginatedTasks.map(task => (
-                          <div key={task.id} className="grid grid-cols-1 sm:grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-2 items-center hover:bg-muted/20 transition-colors duration-150 group text-xs">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", task.status === "completed" ? "bg-success" : task.status === "in_progress" ? "bg-info" : task.status === "cancelled" ? "bg-destructive" : "bg-warning")} />
-                              <p className={cn("font-medium truncate text-[11px]", task.status === "completed" && "line-through text-muted-foreground")}>{task.title}</p>
-                              {task.assignee && (
-                                <Tooltip><TooltipTrigger><Avatar className="w-4 h-4 shrink-0"><AvatarFallback className="text-[6px] font-bold bg-primary/10 text-primary">{task.assignee.firstName?.[0]}{task.assignee.lastName?.[0]}</AvatarFallback></Avatar></TooltipTrigger>
-                                <TooltipContent className="text-[10px]">{task.assignee.firstName} {task.assignee.lastName}</TooltipContent></Tooltip>
+                      {taskStats.total > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
+                            <span>Completion</span>
+                            <span>
+                              {Math.round(
+                                (taskStats.completed / taskStats.total) * 100
                               )}
-                            </div>
-                            <div>{task.priority && <Badge variant="outline" className={cn("text-[8px] px-1.5 h-4", getPriorityBadgeClass(task.priority))}>{getPriorityDisplay(task.priority)}</Badge>}</div>
-                            <div><Badge variant="outline" className={cn("text-[8px] px-1.5 h-4", getStatusBadgeClass(task.status))}>{getStatusDisplay(task.status)}</Badge></div>
-                            <div className="text-[10px] text-muted-foreground">{task.deadline ? format(new Date(task.deadline), "MMM d") : "—"}</div>
-                            <div className="flex items-center gap-0.5">
-                              <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => navigate(`/task-details/${task.id}`)}><Eye className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent className="text-[10px]">View</TooltipContent></Tooltip>
-                              <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => navigate(`/task-details/${task.id}`)}><Pencil className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent className="text-[10px]">Edit</TooltipContent></Tooltip>
-                            </div>
+                              %
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                      {totalTaskPages > 1 && (
-                        <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
-                          <span className="text-[9px] text-muted-foreground">{(taskPage - 1) * tasksPerPage + 1}–{Math.min(taskPage * tasksPerPage, tasks.length)} of {tasks.length}</span>
-                          <div className="flex items-center gap-0.5">
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(1)} disabled={taskPage === 1}><ChevronsLeft className="w-3 h-3" /></Button>
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(p => p - 1)} disabled={taskPage === 1}><ChevronLeft className="w-3 h-3" /></Button>
-                            <span className="text-[10px] px-2 font-medium">{taskPage}/{totalTaskPages}</span>
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(p => p + 1)} disabled={taskPage === totalTaskPages}><ChevronRight className="w-3 h-3" /></Button>
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setTaskPage(totalTaskPages)} disabled={taskPage === totalTaskPages}><ChevronsRight className="w-3 h-3" /></Button>
-                          </div>
+
+                          <Progress
+                            value={(taskStats.completed / taskStats.total) * 100}
+                            className="h-1.5"
+                          />
                         </div>
                       )}
                     </div>
-                  )}
-                </CollapsiblePanel>
-              </div>
+                  </CollapsiblePanel>
 
+                  <CollapsiblePanel
+                    title={`Members (${members.length})`}
+                    icon={<Users className="w-3.5 h-3.5" />}
+                    open={openPanels.members}
+                    onToggle={() => togglePanel("members")}
+                  >
+                    <div className="px-3 pb-3 space-y-2">
+                      <div className="flex gap-1.5">
+                        <Input
+                          type="email"
+                          value={memberEmail}
+                          onChange={(e) => setMemberEmail(e.target.value)}
+                          placeholder="email@example.com"
+                          className="h-7 text-[11px] bg-muted/30"
+                          onKeyDown={(e) => e.key === "Enter" && addMember()}
+                        />
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              className="h-7 w-7 shrink-0"
+                              onClick={addMember}
+                              disabled={inviting || !memberEmail.trim()}
+                            >
+                              {inviting ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <UserPlus className="w-3 h-3" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+
+                          <TooltipContent>Invite</TooltipContent>
+                        </Tooltip>
+                      </div>
+
+                      <div className="space-y-0.5 max-h-[200px] overflow-y-auto scrollbar-none">
+                        {members.map((m) => (
+                          <div
+                            key={m.id}
+                            className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors duration-150 group text-[11px]"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary shrink-0">
+                                {m.firstName?.[0]}
+                                {m.lastName?.[0]}
+                              </div>
+
+                              <div className="min-w-0">
+                                <p className="font-medium truncate leading-tight">
+                                  {m.firstName} {m.lastName}
+                                </p>
+
+                                <p className="text-[9px] text-muted-foreground truncate">
+                                  {m.role}
+                                </p>
+                              </div>
+                            </div>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
+                                  onClick={() => removeMember(m.userId || m.id)}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </TooltipTrigger>
+
+                              <TooltipContent>Remove</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        ))}
+
+                        {members.length === 0 && (
+                          <p className="text-[10px] text-muted-foreground text-center py-4 italic">
+                            No members yet
+                          </p>
+                        )}
+                      </div>
+
+                      {invites.length > 0 && (
+                        <div className="pt-2 border-t border-border space-y-1">
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                            Pending Invites
+                          </p>
+
+                          {invites
+                            .filter(
+                              (inv) =>
+                                inv.status === "pending" ||
+                                inv.status === "pending_workspace"
+                            )
+                            .map((inv) => (
+                              <div
+                                key={inv.id}
+                                className="flex items-center justify-between py-1 px-2 rounded-lg bg-warning/5 text-[10px]"
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <Mail className="w-3 h-3 text-warning shrink-0" />
+                                  <span className="truncate">{inv.email}</span>
+                                </div>
+
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-5 w-5"
+                                        onClick={() => resendInvite(inv.id)}
+                                      >
+                                        <RefreshCw className="w-2.5 h-2.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+
+                                    <TooltipContent>Resend</TooltipContent>
+                                  </Tooltip>
+
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-5 w-5 text-destructive"
+                                        onClick={() => revokeInvite(inv.id)}
+                                      >
+                                        <XCircle className="w-2.5 h-2.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+
+                                    <TooltipContent>Revoke</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsiblePanel>
+
+                  <CollapsiblePanel
+                    title="Settings"
+                    icon={<Settings className="w-3.5 h-3.5" />}
+                    open={openPanels.settings}
+                    onToggle={() => togglePanel("settings")}
+                  >
+                    <div className="px-3 pb-3 space-y-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          Name
+                        </label>
+
+                        <Input
+                          value={settingsForm.name}
+                          onChange={(e) =>
+                            setSettingsForm((p) => ({
+                              ...p,
+                              name: e.target.value,
+                            }))
+                          }
+                          className="h-7 text-[11px]"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          Description
+                        </label>
+
+                        <Textarea
+                          value={settingsForm.description}
+                          onChange={(e) =>
+                            setSettingsForm((p) => ({
+                              ...p,
+                              description: e.target.value,
+                            }))
+                          }
+                          className="text-[11px] min-h-[50px]"
+                          rows={2}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                            Start
+                          </label>
+
+                          <Input
+                            type="date"
+                            value={settingsForm.startDate}
+                            onChange={(e) =>
+                              setSettingsForm((p) => ({
+                                ...p,
+                                startDate: e.target.value,
+                              }))
+                            }
+                            className="h-7 text-[10px] px-1.5"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                            End
+                          </label>
+
+                          <Input
+                            type="date"
+                            value={settingsForm.endDate}
+                            onChange={(e) =>
+                              setSettingsForm((p) => ({
+                                ...p,
+                                endDate: e.target.value,
+                              }))
+                            }
+                            className="h-7 text-[10px] px-1.5"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          Status
+                        </label>
+
+                        <select
+                          value={settingsForm.status}
+                          onChange={(e) =>
+                            setSettingsForm((p) => ({
+                              ...p,
+                              status: e.target.value,
+                            }))
+                          }
+                          className="flex h-7 w-full rounded-lg border border-input bg-background px-2 text-[11px]"
+                        >
+                          <option value="planning">Planning</option>
+                          <option value="active">Active</option>
+                          <option value="on_hold">On Hold</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+
+                      <Button
+                        onClick={saveSettings}
+                        disabled={savingSettings}
+                        className="w-full h-7 text-[10px] gap-1.5"
+                      >
+                        {savingSettings ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Save className="w-3 h-3" />
+                        )}
+                        Save Settings
+                      </Button>
+                    </div>
+                  </CollapsiblePanel>
+                </div>
               </ResizablePanel>
-              <ResizableHandle withHandle className="bg-border hover:bg-primary/30 transition-colors" />
 
-              {/* Right column — Checklists */}
-              <ResizablePanel defaultSize={30} minSize={15} maxSize={55} className="overflow-hidden">
+              <ResizableHandle
+                withHandle
+                className="bg-border hover:bg-primary/30 transition-colors"
+              />
+
+              <ResizablePanel defaultSize={45} minSize={25} className="overflow-hidden">
+                <div className="h-full overflow-y-auto">
+                  <CollapsiblePanel
+                    title={`Tasks (${tasks.length})`}
+                    icon={<ClipboardList className="w-3.5 h-3.5" />}
+                    open={openPanels.tasks}
+                    onToggle={() => togglePanel("tasks")}
+                    action={
+                      <div className="flex items-center gap-1">
+                        <div className="flex items-center bg-muted/40 rounded-md p-0.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTaskView("table");
+                                }}
+                                className={cn(
+                                  "p-1 rounded-sm transition-all duration-200",
+                                  taskView === "table"
+                                    ? "bg-card shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                <LayoutList className="w-3 h-3" />
+                              </button>
+                            </TooltipTrigger>
+
+                            <TooltipContent className="text-[10px]">
+                              Table View
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTaskView("kanban");
+                                }}
+                                className={cn(
+                                  "p-1 rounded-sm transition-all duration-200",
+                                  taskView === "kanban"
+                                    ? "bg-card shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                <Kanban className="w-3 h-3" />
+                              </button>
+                            </TooltipTrigger>
+
+                            <TooltipContent className="text-[10px]">
+                              Board View
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsCreateTaskOpen(true);
+                              }}
+                              disabled={!canCreateProjectTask}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+
+                          <TooltipContent>New Task</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    }
+                  >
+                    {hasProjectViewFilter && (
+                      <p className="px-4 pt-3 text-xs text-muted-foreground">
+                        Your project/task visibility is filtered by workspace
+                        policy.
+                      </p>
+                    )}
+
+                    {tasks.length === 0 ? (
+                      <div className="px-4 py-10 text-center">
+                        <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
+                          <ClipboardList className="w-6 h-6 text-muted-foreground/40" />
+                        </div>
+
+                        <p className="text-xs text-muted-foreground mb-3">
+                          No tasks yet
+                        </p>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] gap-1"
+                          onClick={() => setIsCreateTaskOpen(true)}
+                          disabled={!canCreateProjectTask}
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add Task
+                        </Button>
+                      </div>
+                    ) : taskView === "kanban" ? (
+                      <KanbanBoard tasks={tasks} />
+                    ) : (
+                      <div>
+                        <div className="hidden sm:grid grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-1.5 border-b border-border bg-muted/20 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          <div>Task</div>
+                          <div>Priority</div>
+                          <div>Status</div>
+                          <div>Due</div>
+                          <div>Actions</div>
+                        </div>
+
+                        <div className="divide-y divide-border">
+                          {paginatedTasks.map((task) => (
+                            <div
+                              key={task.id}
+                              className="grid grid-cols-1 sm:grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-2 items-center hover:bg-muted/20 transition-colors duration-150 group text-xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div
+                                  className={cn(
+                                    "w-1.5 h-1.5 rounded-full shrink-0",
+                                    task.status === "completed"
+                                      ? "bg-success"
+                                      : task.status === "in_progress"
+                                      ? "bg-info"
+                                      : task.status === "cancelled"
+                                      ? "bg-destructive"
+                                      : "bg-warning"
+                                  )}
+                                />
+
+                                <p
+                                  className={cn(
+                                    "font-medium truncate text-[11px]",
+                                    task.status === "completed" &&
+                                      "line-through text-muted-foreground"
+                                  )}
+                                >
+                                  {task.title}
+                                </p>
+
+                                {task.assignee && (
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Avatar className="w-4 h-4 shrink-0">
+                                        <AvatarFallback className="text-[6px] font-bold bg-primary/10 text-primary">
+                                          {task.assignee.firstName?.[0]}
+                                          {task.assignee.lastName?.[0]}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </TooltipTrigger>
+
+                                    <TooltipContent className="text-[10px]">
+                                      {task.assignee.firstName}{" "}
+                                      {task.assignee.lastName}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+
+                              <div>
+                                {task.priority && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[8px] px-1.5 h-4",
+                                      getPriorityBadgeClass(task.priority)
+                                    )}
+                                  >
+                                    {getPriorityDisplay(task.priority)}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[8px] px-1.5 h-4",
+                                    getStatusBadgeClass(task.status)
+                                  )}
+                                >
+                                  {getStatusDisplay(task.status)}
+                                </Badge>
+                              </div>
+
+                              <div className="text-[10px] text-muted-foreground">
+                                {task.deadline
+                                  ? format(new Date(task.deadline), "MMM d")
+                                  : "—"}
+                              </div>
+
+                              <div className="flex items-center gap-0.5">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6"
+                                      onClick={() =>
+                                        navigate(`/task-details/${task.id}`)
+                                      }
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+
+                                  <TooltipContent className="text-[10px]">
+                                    View
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6"
+                                      onClick={() =>
+                                        navigate(`/task-details/${task.id}`)
+                                      }
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+
+                                  <TooltipContent className="text-[10px]">
+                                    Edit
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {totalTaskPages > 1 && (
+                          <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
+                            <span className="text-[9px] text-muted-foreground">
+                              {(taskPage - 1) * tasksPerPage + 1}–
+                              {Math.min(taskPage * tasksPerPage, tasks.length)}{" "}
+                              of {tasks.length}
+                            </span>
+
+                            <div className="flex items-center gap-0.5">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => setTaskPage(1)}
+                                disabled={taskPage === 1}
+                              >
+                                <ChevronsLeft className="w-3 h-3" />
+                              </Button>
+
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => setTaskPage((p) => p - 1)}
+                                disabled={taskPage === 1}
+                              >
+                                <ChevronLeft className="w-3 h-3" />
+                              </Button>
+
+                              <span className="text-[10px] px-2 font-medium">
+                                {taskPage}/{totalTaskPages}
+                              </span>
+
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => setTaskPage((p) => p + 1)}
+                                disabled={taskPage === totalTaskPages}
+                              >
+                                <ChevronRight className="w-3 h-3" />
+                              </Button>
+
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => setTaskPage(totalTaskPages)}
+                                disabled={taskPage === totalTaskPages}
+                              >
+                                <ChevronsRight className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CollapsiblePanel>
+                </div>
+              </ResizablePanel>
+
+              <ResizableHandle
+                withHandle
+                className="bg-border hover:bg-primary/30 transition-colors"
+              />
+
+              <ResizablePanel
+                defaultSize={30}
+                minSize={15}
+                maxSize={55}
+                className="overflow-hidden"
+              >
                 <div className="h-full overflow-y-auto">
                   <CollapsiblePanel
                     title={`Checklists (${checklists.length})`}
                     icon={<ListChecks className="w-3.5 h-3.5" />}
                     open={openPanels.checklists}
                     onToggle={() => togglePanel("checklists")}
-                    action={<Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsCreateChecklistOpen(true); }}><Plus className="w-3.5 h-3.5" /></Button></TooltipTrigger><TooltipContent>New Checklist</TooltipContent></Tooltip>}
+                    action={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsCreateChecklistOpen(true);
+                            }}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+
+                        <TooltipContent>New Checklist</TooltipContent>
+                      </Tooltip>
+                    }
                   >
                     <div className="space-y-0">
                       {checklists.length === 0 ? (
@@ -535,33 +1481,88 @@ export default function ProjectDetails() {
                           <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
                             <ListChecks className="w-6 h-6 text-muted-foreground/40" />
                           </div>
-                          <p className="text-xs text-muted-foreground mb-3">No checklists yet</p>
-                          <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => setIsCreateChecklistOpen(true)}><Plus className="w-3 h-3" /> Add Checklist</Button>
+
+                          <p className="text-xs text-muted-foreground mb-3">
+                            No checklists yet
+                          </p>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] gap-1"
+                            onClick={() => setIsCreateChecklistOpen(true)}
+                          >
+                            <Plus className="w-3 h-3" />
+                            Add Checklist
+                          </Button>
                         </div>
-                      ) : checklists.map(cl => (
-                        <ChecklistPanel key={cl.id} projectId={project.id} checklist={cl} onToggleItem={handleToggleItem} onDeleteItem={handleDeleteChecklistItem} onDeleteChecklist={handleDeleteChecklist} onRefresh={loadChecklists} />
-                      ))}
+                      ) : (
+                        checklists.map((cl) => (
+                          <ChecklistPanel
+                            key={cl.id}
+                            projectId={project.id}
+                            checklist={cl}
+                            onToggleItem={handleToggleItem}
+                            onDeleteItem={handleDeleteChecklistItem}
+                            onDeleteChecklist={handleDeleteChecklist}
+                            onRefresh={loadChecklists}
+                          />
+                        ))
+                      )}
                     </div>
                   </CollapsiblePanel>
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
 
-            {/* Request Access Dialog */}
             <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Request Project Access</DialogTitle>
-                  <DialogDescription className="text-xs">Send a request to the workspace admins for elevated access to this project.</DialogDescription>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-primary" />
+                    Request Project Task Access
+                  </DialogTitle>
+
+                  <DialogDescription className="text-xs">
+                    Send a request to workspace admins to allow you create tasks
+                    within projects.
+                  </DialogDescription>
                 </DialogHeader>
+
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Reason (optional)</label>
-                  <Textarea value={accessReason} onChange={(e) => setAccessReason(e.target.value)} placeholder="Why do you need access?" rows={3} className="text-sm" />
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Reason optional
+                  </label>
+
+                  <Textarea
+                    value={accessReason}
+                    onChange={(e) => setAccessReason(e.target.value)}
+                    placeholder="Why do you need this access?"
+                    rows={3}
+                    className="text-sm"
+                  />
                 </div>
+
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setAccessOpen(false)} disabled={accessSubmitting}>Cancel</Button>
-                  <Button onClick={submitAccessRequest} disabled={accessSubmitting} className="gap-1.5">
-                    {accessSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />} Send Request
+                  <Button
+                    variant="outline"
+                    onClick={() => setAccessOpen(false)}
+                    disabled={accessSubmitting}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    onClick={submitAccessRequest}
+                    disabled={accessSubmitting}
+                    className="gap-1.5"
+                  >
+                    {accessSubmitting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <KeyRound className="w-3.5 h-3.5" />
+                    )}
+                    Send Request
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -570,92 +1571,256 @@ export default function ProjectDetails() {
         </div>
       </TooltipProvider>
 
-      <ProjectLogoUploader projectId={project.id} currentLogoUrl={project.logoUrl} onLogoUpdated={handleLogoUpdated} isOpen={isLogoOpen} onClose={() => setIsLogoOpen(false)} />
-      <EditProjectDrawer project={project} open={isEditOpen} onOpenChange={setIsEditOpen} onSuccess={refreshAll} mode="edit" />
-      <CreateProjectTaskDialog projectId={project.id} open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen} onSuccess={() => { loadTasks(); loadProject(); }} />
-      <CreateChecklistDialog projectId={project.id} open={isCreateChecklistOpen} onOpenChange={setIsCreateChecklistOpen} onSuccess={() => { loadChecklists(); loadProject(); }} />
+      <ProjectLogoUploader
+        projectId={project.id}
+        currentLogoUrl={project.logoUrl}
+        onLogoUpdated={handleLogoUpdated}
+        isOpen={isLogoOpen}
+        onClose={() => setIsLogoOpen(false)}
+      />
+
+      <EditProjectDrawer
+        project={project}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        onSuccess={refreshAll}
+        mode="edit"
+      />
+
+      <CreateProjectTaskDialog
+        projectId={project.id}
+        open={isCreateTaskOpen}
+        onOpenChange={setIsCreateTaskOpen}
+        onSuccess={() => {
+          loadTasks();
+          loadProject();
+        }}
+      />
+
+      <CreateChecklistDialog
+        projectId={project.id}
+        open={isCreateChecklistOpen}
+        onOpenChange={setIsCreateChecklistOpen}
+        onSuccess={() => {
+          loadChecklists();
+          loadProject();
+        }}
+      />
     </DashboardLayout>
   );
 }
 
-// ─── Collapsible Panel ───────────────────────────────────────
-function CollapsiblePanel({ title, icon, open, onToggle, children, action }: {
-  title: string; icon: React.ReactNode; open: boolean; onToggle: () => void; children: React.ReactNode; action?: React.ReactNode;
+function CollapsiblePanel({
+  title,
+  icon,
+  open,
+  onToggle,
+  children,
+  action,
+}: {
+  title: string;
+  icon: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+  action?: ReactNode;
 }) {
   return (
     <Collapsible open={open} onOpenChange={onToggle}>
       <CollapsibleTrigger asChild>
         <button className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors duration-150 border-b border-border group">
-          {open ? <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform" /> : <ChevronRight className="w-3 h-3 text-muted-foreground transition-transform" />}
+          {open ? (
+            <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform" />
+          ) : (
+            <ChevronRight className="w-3 h-3 text-muted-foreground transition-transform" />
+          )}
+
           <span className="text-muted-foreground">{icon}</span>
-          <span className="text-[11px] font-semibold flex-1 tracking-tight">{title}</span>
+
+          <span className="text-[11px] font-semibold flex-1 tracking-tight">
+            {title}
+          </span>
+
           {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="animate-accordion-down">{children}</CollapsibleContent>
+
+      <CollapsibleContent className="animate-accordion-down">
+        {children}
+      </CollapsibleContent>
     </Collapsible>
   );
 }
 
-// ─── Mini Stat ───────────────────────────────────────────────
-function MiniStat({ label, value, color }: { label: string; value: number | string; color?: string }) {
+function MiniStat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number | string;
+  color?: string;
+}) {
   return (
     <div className="bg-muted/25 rounded-lg p-2 text-center transition-colors duration-200 hover:bg-muted/40">
-      <p className={cn("text-lg font-bold leading-none", color || "text-foreground")}>{value}</p>
-      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>
+      <p className={cn("text-lg font-bold leading-none", color || "text-foreground")}>
+        {value}
+      </p>
+
+      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+        {label}
+      </p>
     </div>
   );
 }
 
-// ─── Checklist Panel ─────────────────────────────────────────
-function ChecklistPanel({ projectId, checklist, onToggleItem, onDeleteItem, onDeleteChecklist, onRefresh }: {
-  projectId: string; checklist: ProjectChecklist; onToggleItem: (clId: string, itemId: string, checked: boolean) => void;
-  onDeleteItem: (clId: string, itemId: string) => void; onDeleteChecklist: (clId: string) => void; onRefresh: () => void;
+function ChecklistPanel({
+  projectId,
+  checklist,
+  onToggleItem,
+  onDeleteItem,
+  onDeleteChecklist,
+  onRefresh,
+}: {
+  projectId: string;
+  checklist: ProjectChecklist;
+  onToggleItem: (clId: string, itemId: string, checked: boolean) => void;
+  onDeleteItem: (clId: string, itemId: string) => void;
+  onDeleteChecklist: (clId: string) => void;
+  onRefresh: () => void;
 }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(true);
   const [newItem, setNewItem] = useState("");
+
   const items = checklist.items || [];
-  const completed = items.filter(i => i.isCompleted).length;
+  const completed = items.filter((i) => i.isCompleted).length;
   const progress = items.length > 0 ? (completed / items.length) * 100 : 0;
 
   const addItem = async () => {
     if (!newItem.trim()) return;
-    try { await api.createChecklistItem(projectId, checklist.id, newItem.trim()); setNewItem(""); onRefresh(); }
-    catch (err: any) { toast({ title: "Failed", description: err.message, variant: "destructive" }); }
+
+    try {
+      await api.createChecklistItem(projectId, checklist.id, newItem.trim());
+      setNewItem("");
+      onRefresh();
+    } catch (err: any) {
+      toast({
+        title: "Failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <div className="border-b border-border">
       <div className="flex items-center gap-2 px-3 py-2 hover:bg-muted/15 transition-colors duration-150">
         <button onClick={() => setOpen(!open)} className="shrink-0">
-          {open ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+          {open ? (
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+          )}
         </button>
-        <span className="text-[11px] font-semibold flex-1 truncate">{checklist.title}</span>
-        <span className="text-[9px] text-muted-foreground shrink-0">{completed}/{items.length}</span>
+
+        <span className="text-[11px] font-semibold flex-1 truncate">
+          {checklist.title}
+        </span>
+
+        <span className="text-[9px] text-muted-foreground shrink-0">
+          {completed}/{items.length}
+        </span>
+
         <Progress value={progress} className="w-12 h-1 shrink-0" />
+
         <DropdownMenu>
-          <Tooltip><TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="h-5 w-5 shrink-0"><MoreHorizontal className="w-3 h-3" /></Button></DropdownMenuTrigger>
-          </TooltipTrigger><TooltipContent>Options</TooltipContent></Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-5 w-5 shrink-0">
+                  <MoreHorizontal className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+
+            <TooltipContent>Options</TooltipContent>
+          </Tooltip>
+
           <DropdownMenuContent align="end">
-            <DropdownMenuItem className="text-destructive text-xs" onClick={() => onDeleteChecklist(checklist.id)}><Trash2 className="w-3 h-3 mr-1.5" /> Delete</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive text-xs"
+              onClick={() => onDeleteChecklist(checklist.id)}
+            >
+              <Trash2 className="w-3 h-3 mr-1.5" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
       {open && (
         <div className="px-3 pb-2 space-y-0.5">
-          {items.map(item => (
+          {items.map((item) => (
             <div key={item.id} className="flex items-center gap-2 py-1 group pl-5">
-              <Checkbox checked={item.isCompleted} onCheckedChange={(checked) => onToggleItem(checklist.id, item.id, !!checked)} className="h-3.5 w-3.5" />
-              <span className={cn("text-[11px] flex-1 transition-all", item.isCompleted && "line-through text-muted-foreground")}>{item.title}</span>
-              <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive transition-opacity" onClick={() => onDeleteItem(checklist.id, item.id)}><Trash2 className="w-2.5 h-2.5" /></Button></TooltipTrigger><TooltipContent>Delete</TooltipContent></Tooltip>
+              <Checkbox
+                checked={item.isCompleted}
+                onCheckedChange={(checked) =>
+                  onToggleItem(checklist.id, item.id, !!checked)
+                }
+                className="h-3.5 w-3.5"
+              />
+
+              <span
+                className={cn(
+                  "text-[11px] flex-1 transition-all",
+                  item.isCompleted && "line-through text-muted-foreground"
+                )}
+              >
+                {item.title}
+              </span>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
+                    onClick={() => onDeleteItem(checklist.id, item.id)}
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </Button>
+                </TooltipTrigger>
+
+                <TooltipContent>Delete</TooltipContent>
+              </Tooltip>
             </div>
           ))}
+
           <div className="flex items-center gap-1.5 pl-5 pt-1">
-            <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="Add item..." className="h-6 text-[10px] bg-transparent border-none shadow-none px-0 focus-visible:ring-0" onKeyDown={(e) => e.key === "Enter" && addItem()} />
+            <Input
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              placeholder="Add item..."
+              className="h-6 text-[10px] bg-transparent border-none shadow-none px-0 focus-visible:ring-0"
+              onKeyDown={(e) => e.key === "Enter" && addItem()}
+            />
+
             {newItem.trim() && (
-              <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" className="h-5 w-5" onClick={addItem}><Plus className="w-3 h-3" /></Button></TooltipTrigger><TooltipContent>Add</TooltipContent></Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-5 w-5"
+                    onClick={addItem}
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </TooltipTrigger>
+
+                <TooltipContent>Add</TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>

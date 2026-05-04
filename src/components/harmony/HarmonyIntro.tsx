@@ -1,40 +1,93 @@
-import { Users, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { BadgeCheck, RefreshCw, Users } from "lucide-react";
 
 interface HarmonyIntroProps {
+  hasProfile: boolean;
   onGetStarted: () => void;
-  hasReport: boolean;
-  onViewReport: () => void;
+  onViewProfile: () => void;
 }
 
-const HarmonyIntro = ({ onGetStarted, hasReport, onViewReport }: HarmonyIntroProps) => {
+const HarmonyIntro = ({ hasProfile, onGetStarted, onViewProfile }: HarmonyIntroProps) => {
   return (
-    <div className="max-w-3xl mx-auto">
-      <Card className="border-border">
-        <CardHeader className="flex flex-col gap-3">
-          <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center">
-            <Users className="w-7 h-7 text-primary-foreground" />
+    <Card className="overflow-hidden rounded-2xl">
+      <CardContent className="grid gap-8 p-6 md:grid-cols-[1.1fr_0.9fr] md:p-8">
+        <div className="space-y-5">
+          <div>
+            <p className="mb-2 text-sm font-medium text-primary">Harmony Work Style Index</p>
+            <h3 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Understand how you work best with others
+            </h3>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Harmony helps you identify your natural work style, then uses that profile to support better collaboration across every workspace you belong to.
+            </p>
           </div>
-          <CardTitle className="text-3xl">Harmony: Team Compatibility Assessment</CardTitle>
-          <CardDescription className="text-base">
-            Understand your collaboration style and learn how to get the best out of teamwork.
-            Answer 16 quick questions to generate your Harmony Profile.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          <Button className="gap-2" onClick={onGetStarted}>
-            <Sparkles className="w-4 h-4" />
-            Get Started
-          </Button>
-          {hasReport && (
-            <Button variant="outline" onClick={onViewReport}>
-              View My Profile
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <BadgeCheck className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm font-semibold">16 questions</p>
+              <p className="mt-1 text-xs text-muted-foreground">Simple work-style scenarios.</p>
+            </div>
+
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <RefreshCw className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm font-semibold">Global profile</p>
+              <p className="mt-1 text-xs text-muted-foreground">One result across all workspaces.</p>
+            </div>
+
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <Users className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm font-semibold">Team insights</p>
+              <p className="mt-1 text-xs text-muted-foreground">See alignment and working norms.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={onGetStarted}>
+              {hasProfile ? "Retake Assessment" : "Take Assessment"}
             </Button>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+
+            {hasProfile && (
+              <Button variant="outline" onClick={onViewProfile}>
+                View My Profile
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-background to-muted p-6">
+          <div className="rounded-2xl border bg-background/80 p-5 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              What Harmony shows
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-sm font-semibold">Your archetype</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  A practical summary of how you naturally approach work.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold">Your collaboration style</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  How others can work with you more effectively.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold">Workspace compatibility</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  How team members align, differ, and can set better working norms.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

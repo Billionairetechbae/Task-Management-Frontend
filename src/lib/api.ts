@@ -88,7 +88,22 @@ export interface WorkspaceSettings {
   invitePermissionMode: PermissionMode;
   assistancePermissionMode: PermissionMode;
   roleOperationPermissions?: RoleOperationPermissions;
+  effectiveOperationPermissions?: RolePermissionSet;
+  userPermissionOverrides?: Partial<RolePermissionSet>;
   configurableRoles?: Array<"admin" | "manager" | "member">;
+}
+
+
+export interface EffectiveWorkspacePermissionsResponse {
+  status: string;
+  data: {
+    companyId: string;
+    userId: string;
+    role: WorkspaceRole;
+    rolePermissions: RolePermissionSet;
+    individualOverrides: Partial<RolePermissionSet>;
+    permissions: RolePermissionSet;
+  };
 }
 
 export type WorkspaceRolePermissionKey =
@@ -766,6 +781,194 @@ export interface NotificationsListResponse {
     hasPrevPage: boolean;
   };
 }
+
+
+
+
+/* ============================
+   HARMONY
+============================ */
+
+export type HarmonyDimensionKey =
+  | "pace_orientation"
+  | "structure_preference"
+  | "interaction_mode"
+  | "feedback_orientation";
+
+export interface HarmonyAssessmentOption {
+  id: string;
+  text: string;
+}
+
+export interface HarmonyAssessmentQuestion {
+  id: string;
+  dimensionKey: HarmonyDimensionKey;
+  title: string;
+  text: string;
+  required: boolean;
+  options: HarmonyAssessmentOption[];
+}
+
+export interface HarmonyAssessmentDimension {
+  key: HarmonyDimensionKey;
+  label: string;
+  description: string;
+  questionIds: string[];
+}
+
+export interface HarmonyAssessmentDefinition {
+  key: string;
+  version: string;
+  title: string;
+  description: string;
+  instructions: string;
+  dimensions: HarmonyAssessmentDimension[];
+  questions: HarmonyAssessmentQuestion[];
+}
+
+export interface HarmonyAssessmentAnswer {
+  questionId: string;
+  optionId: string;
+}
+
+export interface HarmonyDimensionSummary {
+  score: number;
+  band: string;
+  displayPercentage: number;
+}
+
+export interface HarmonyIndividualReport {
+  archetype: string;
+  summary: string;
+  dimensionSummary: Record<HarmonyDimensionKey, HarmonyDimensionSummary>;
+  strengths: string[];
+  challenges: string[];
+  collaborationStyle: string[];
+  idealTeamRoles: string[];
+  do: string[];
+  dont: string[];
+  generatedAt: string;
+}
+
+export interface HarmonyProfile {
+  id: string;
+  userId: string;
+  latestSubmissionId?: string | null;
+  assessmentKey: string;
+  assessmentVersion: string;
+  dimensionScores: Record<HarmonyDimensionKey, number>;
+  dimensionBands: Record<HarmonyDimensionKey, string>;
+  archetype: string;
+  report: HarmonyIndividualReport;
+  completedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+    email?: string;
+    avatar?: string | null;
+    profilePictureUrl?: string | null;
+  };
+}
+
+export interface HarmonyPairDimensionComparison {
+  dimensionKey: HarmonyDimensionKey;
+  scoreA: number;
+  scoreB: number;
+  difference: number;
+  similarity: number;
+}
+
+export interface HarmonyPairCompatibility {
+  userA?: any;
+  userB?: any;
+  archetypeA: string;
+  archetypeB: string;
+  compatibilityScore: number;
+  interpretation: string;
+  dimensionComparisons: HarmonyPairDimensionComparison[];
+  dynamicType?: "Complementary" | "Potential Friction" | "Neutral" | string;
+  dynamicNote?: string;
+}
+
+export interface HarmonyScoreboardData {
+  teamSize: number;
+  completedCount: number;
+  missingCount: number;
+  completedMembers: Array<{
+    user: any;
+    archetype: string;
+    dimensionBands: Record<HarmonyDimensionKey, string>;
+    completedAt: string;
+  }>;
+  pendingMembers: any[];
+  cohesionScore: number | null;
+  interpretation: string;
+  archetypeDistribution: Array<{
+    archetype: string;
+    count: number;
+  }>;
+  dimensionAverages: Partial<Record<HarmonyDimensionKey, number>>;
+  dimensionSpread: Partial<Record<HarmonyDimensionKey, number>>;
+  strongestAlignmentAreas: Array<{
+    dimensionKey: HarmonyDimensionKey;
+    spread: number;
+    note: string;
+  }>;
+  likelyFrictionAreas: Array<{
+    dimensionKey: HarmonyDimensionKey;
+    spread: number;
+    note: string;
+  }>;
+  recommendedTeamNorms: string[];
+  pairwiseCompatibility: HarmonyPairCompatibility[];
+  complementaryPairings: HarmonyPairCompatibility[];
+  frictionPronePairings: HarmonyPairCompatibility[];
+}
+
+
+
+/* ============================
+   ACCESS REQUESTS
+============================ */
+
+export type WorkspaceAccessPermissionKey =
+  | "create_tasks"
+  | "view_all_tasks"
+  | "create_projects"
+  | "view_all_projects"
+  | "create_project_tasks"
+  | "upload_workspace_files";
+
+export interface WorkspaceAccessRequest {
+  id: string;
+  companyId: string;
+  requesterUserId: string;
+  permissionKey: WorkspaceAccessPermissionKey;
+  status: "pending" | "approved" | "denied" | string;
+  reason?: string | null;
+  decidedByUserId?: string | null;
+  decidedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  requester?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+  decidedBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+
 
 /* ============================
    API BASE URL
@@ -1987,93 +2190,104 @@ class ApiClient {
     });
   }
 
-  /* ============================
-     HARMONY (Team Compatibility)
-  ============================ */
+/* ============================
+   HARMONY
+============================ */
 
-  async getHarmonyAssessment(): Promise<{
-    status: string;
-    data: {
-      assessment: {
-        id: string;
-        title: string;
-        questions: Array<{
-          id: string;
-          text: string;
-          options: Array<{
-            id: string;
-            label: string;
-          }>;
-        }>;
-      };
-    };
-  }> {
-    return this.request("/harmony/assessment", {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-  }
+async getHarmonyAssessment(): Promise<{
+  status: string;
+  data: {
+    assessment: HarmonyAssessmentDefinition;
+  };
+}> {
+  return this.request("/harmony/assessment", {
+    method: "GET",
+    headers: this.getAuthHeaders(false),
+  });
+}
 
-  async submitHarmonyAssessment(answers: Array<{ questionId: string; optionId: string }>): Promise<{
-    status: string;
-    message?: string;
-    data?: {
-      submissionId: string;
-    };
-  }> {
-    return this.request("/harmony/submissions", {
-      method: "POST",
-      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ answers }),
-    });
-  }
+async submitHarmonyAssessment(
+  answers: HarmonyAssessmentAnswer[]
+): Promise<{
+  status: string;
+  message?: string;
+  data: {
+    submissionId: string;
+    profile: HarmonyProfile;
+  };
+}> {
+  return this.request("/harmony/submissions", {
+    method: "POST",
+    headers: {
+      ...this.getAuthHeaders(false),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ answers }),
+  });
+}
 
-  async getMyHarmonyLatest(): Promise<{
-    status: string;
-    data?: {
-      report: {
-        id: string;
-        userId: string;
-        companyId: string;
-        archetype: string;
-        summary: string;
-        do: string[];
-        dont: string[];
-        createdAt: string;
-        updatedAt: string;
-        user?: {
-          firstName?: string;
-          lastName?: string;
-          email?: string;
-        };
-      };
-    };
-  }> {
-    return this.request("/harmony/me/latest", {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-  }
+async getMyHarmonyProfile(): Promise<{
+  status: string;
+  data: {
+    profile: HarmonyProfile | null;
+  };
+}> {
+  return this.request("/harmony/me/profile", {
+    method: "GET",
+    headers: this.getAuthHeaders(false),
+  });
+}
 
-  async getHarmonyScoreboard(): Promise<{
-    status: string;
-    data?: {
-      cohesionScore: number;
-      label: "Strong" | "Moderate" | "Needs attention" | string;
-      categories: Array<{
-        key: string;
-        label: string;
-        percent: number;
-      }>;
-      note?: string;
-      totalSubmissions?: number;
+async getMyHarmonySubmissions(): Promise<{
+  status: string;
+  data: {
+    submissions: any[];
+  };
+}> {
+  return this.request("/harmony/me/submissions", {
+    method: "GET",
+    headers: this.getAuthHeaders(false),
+  });
+}
+
+async getHarmonyScoreboard(): Promise<{
+  status: string;
+  data: HarmonyScoreboardData;
+}> {
+  return this.request("/harmony/scoreboard", {
+    method: "GET",
+    headers: this.getAuthHeaders(true),
+  });
+}
+
+async compareHarmonyWithMember(userId: string): Promise<{
+  status: string;
+  data: {
+    userA: {
+      user: any;
+      archetype: string;
+      dimensionBands: Record<HarmonyDimensionKey, string>;
     };
-  }> {
-    return this.request("/harmony/scoreboard", {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-  }
+    userB: {
+      user: any;
+      archetype: string;
+      dimensionBands: Record<HarmonyDimensionKey, string>;
+    };
+    comparison: {
+      compatibilityScore: number;
+      interpretation: string;
+      dimensionComparisons: HarmonyPairDimensionComparison[];
+    };
+  };
+}> {
+  return this.request(`/harmony/compatibility/${userId}`, {
+    method: "GET",
+    headers: this.getAuthHeaders(true),
+  });
+}
+
+
+
 
   /* ============================
      NOTIFICATIONS
@@ -2529,30 +2743,62 @@ class ApiClient {
      ACCESS REQUESTS
   ============================ */
   async createAccessRequest(data: {
-    resourceType: "project" | "task" | "workspace" | string;
-    resourceId?: string;
+    permissionKey: WorkspaceRolePermissionKey;
     reason?: string;
-    requestedRole?: string;
-  }): Promise<{ status: string; message?: string; data?: any }> {
-    return this.request(`/access-requests`, {
+  }): Promise<{
+    status: string;
+    message?: string;
+    data?: { request: WorkspaceAccessRequest };
+  }> {
+    return this.request("/access-requests", {
       method: "POST",
       headers: this.getAuthHeaders(true),
       body: JSON.stringify(data),
     });
   }
-
-  async listAccessRequests(): Promise<{ status: string; data: any }> {
-    return this.request(`/access-requests`, {
-      method: "GET",
-      headers: this.getAuthHeaders(true),
-    });
+  
+  async listAccessRequests(filters?: {
+    status?: "pending" | "approved" | "denied" | string;
+  }): Promise<{
+    status: string;
+    results?: number;
+    data: { requests: WorkspaceAccessRequest[] };
+  }> {
+    const params = new URLSearchParams();
+  
+    if (filters?.status) {
+      params.append("status", filters.status);
+    }
+  
+    return this.request(
+      `/access-requests${params.toString() ? `?${params.toString()}` : ""}`,
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
-
-  async decideAccessRequest(id: string, data: { decision: "approved" | "rejected"; note?: string }): Promise<{ status: string; message?: string; data?: any }> {
+  
+  async decideAccessRequest(
+    id: string,
+    data: { action: "approve" | "deny" }
+  ): Promise<{
+    status: string;
+    message?: string;
+    data?: { request: WorkspaceAccessRequest };
+  }> {
     return this.request(`/access-requests/${id}`, {
       method: "PATCH",
       headers: this.getAuthHeaders(true),
       body: JSON.stringify(data),
+    });
+  }
+
+
+  async getMyEffectiveWorkspacePermissions(): Promise<EffectiveWorkspacePermissionsResponse> {
+    return this.request("/access-requests/me/effective-permissions", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
     });
   }
 }

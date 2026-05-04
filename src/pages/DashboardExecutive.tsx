@@ -13,6 +13,7 @@ import {
   ClipboardList,
   TrendingUp,
   AlertTriangle,
+  ShieldCheck,
 } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -40,7 +41,7 @@ import InviteUserDialog from "@/components/InviteUserDialog";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 const DashboardExecutive = () => {
-  const { user, activeWorkspace, workspaceRole } = useAuth();
+  const { user, workspaceRole } = useAuth();
   const { toast } = useToast();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
@@ -51,7 +52,6 @@ const DashboardExecutive = () => {
   const [loading, setLoading] = useState(true);
   const [teamLoading, setTeamLoading] = useState(false);
 
-  // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [drawerTab, setDrawerTab] = useState("details");
@@ -74,12 +74,26 @@ const DashboardExecutive = () => {
   });
 
   const [pendingAssistants, setPendingAssistants] = useState<TeamMember[]>([]);
+
   const canCreateTask = canPerformRoleOperation("create_tasks", workspaceRole);
+
   const hasTaskViewFilter =
-    (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
+    (workspaceRole === "admin" ||
+      workspaceRole === "manager" ||
+      workspaceRole === "member") &&
     !canPerformRoleOperation("view_all_tasks", workspaceRole);
 
-  // Pagination
+  const canViewTeamAdminSections =
+    workspaceRole === "owner" ||
+    workspaceRole === "admin" ||
+    workspaceRole === "manager";
+
+  const canManageTeam =
+    workspaceRole === "owner" || workspaceRole === "admin";
+
+  const canAccessCompanySettings =
+    workspaceRole === "owner" || workspaceRole === "admin";
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -100,31 +114,60 @@ const DashboardExecutive = () => {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      // For workspace members, show a limited dashboard focused on assigned tasks
+
       if (workspaceRole === "member") {
         const res = await api.getTasks();
         const wsTasks = (res as any)?.data?.tasks || [];
+
         const mine = filterTopLevelTasks(
-          wsTasks.filter((t: any) => {
-            if (t.assigneeId && t.assigneeId === user?.id) return true;
-            if (Array.isArray(t.assignees) && t.assignees.some((a: any) => a?.id === user?.id)) return true;
+          wsTasks.filter((task: any) => {
+            if (task.assigneeId && task.assigneeId === user?.id) return true;
+
+            if (
+              Array.isArray(task.assignees) &&
+              task.assignees.some((assignee: any) => assignee?.id === user?.id)
+            ) {
+              return true;
+            }
+
             return false;
           })
         ) as Task[];
+
         setTasks(mine);
+
         const counts = {
           total: mine.length,
-          pending: mine.filter((t: any) => t.status === "pending").length,
-          inProgress: mine.filter((t: any) => t.status === "in_progress").length,
-          completed: mine.filter((t: any) => t.status === "completed").length,
-          overdue: mine.filter((t: any) => {
-            if (!t.deadline) return false;
-            return t.status !== "completed" && new Date(t.deadline).getTime() < Date.now();
+          pending: mine.filter((task: any) => task.status === "pending").length,
+          inProgress: mine.filter(
+            (task: any) => task.status === "in_progress"
+          ).length,
+          completed: mine.filter(
+            (task: any) => task.status === "completed"
+          ).length,
+          overdue: mine.filter((task: any) => {
+            if (!task.deadline) return false;
+
+            return (
+              task.status !== "completed" &&
+              new Date(task.deadline).getTime() < Date.now()
+            );
           }).length,
-          urgent: mine.filter((t: any) => t.priority === "urgent").length,
+          urgent: mine.filter((task: any) => task.priority === "urgent").length,
         };
-        const completionRate = counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0;
-        setTeamStats({ totalAssistants: 0, availableAssistants: 0, pendingVerifications: 0, totalExecutives: 0 });
+
+        const completionRate =
+          counts.total > 0
+            ? Math.round((counts.completed / counts.total) * 100)
+            : 0;
+
+        setTeamStats({
+          totalAssistants: 0,
+          availableAssistants: 0,
+          pendingVerifications: 0,
+          totalExecutives: 0,
+        });
+
         setTaskStats({
           totalTasks: counts.total,
           pendingTasks: counts.pending,
@@ -134,42 +177,60 @@ const DashboardExecutive = () => {
           urgentTasks: counts.urgent,
           completionRate,
         });
+
         return;
       }
-      // Owner/Admin/Manager: full executive dashboard
+
       const response = await api.getExecutiveDashboard();
 
       const {
         overview = {
-          team: { totalAssistants: 0, availableAssistants: 0, pendingVerifications: 0, totalExecutives: 0 },
-          tasks: { totalTasks: 0, pendingTasks: 0, inProgressTasks: 0, completedTasks: 0, overdueTasks: 0, urgentTasks: 0, completionRate: 0 },
+          team: {
+            totalAssistants: 0,
+            availableAssistants: 0,
+            pendingVerifications: 0,
+            totalExecutives: 0,
+          },
+          tasks: {
+            totalTasks: 0,
+            pendingTasks: 0,
+            inProgressTasks: 0,
+            completedTasks: 0,
+            overdueTasks: 0,
+            urgentTasks: 0,
+            completionRate: 0,
+          },
         },
         recentActivity = { tasks: [] as Task[] },
       } = response.data || {};
 
-      const { team, tasks: t } = overview;
+      const { team, tasks: taskOverview } = overview;
 
       setTasks(filterTopLevelTasks(recentActivity.tasks || []));
+
       setTeamStats({
         totalAssistants: team.totalAssistants || 0,
         availableAssistants: team.availableAssistants || 0,
         pendingVerifications: team.pendingVerifications || 0,
         totalExecutives: team.totalExecutives || 0,
       });
+
       setTaskStats({
-        totalTasks: t.totalTasks || 0,
-        pendingTasks: t.pendingTasks || 0,
-        inProgressTasks: t.inProgressTasks || 0,
-        completedTasks: t.completedTasks || 0,
-        overdueTasks: t.overdueTasks || 0,
-        urgentTasks: t.urgentTasks || 0,
-        completionRate: t.completionRate || 0,
+        totalTasks: taskOverview.totalTasks || 0,
+        pendingTasks: taskOverview.pendingTasks || 0,
+        inProgressTasks: taskOverview.inProgressTasks || 0,
+        completedTasks: taskOverview.completedTasks || 0,
+        overdueTasks: taskOverview.overdueTasks || 0,
+        urgentTasks: taskOverview.urgentTasks || 0,
+        completionRate: taskOverview.completionRate || 0,
       });
     } catch (error) {
       console.error("Failed to fetch dashboard:", error);
+
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load dashboard",
+        description:
+          error instanceof Error ? error.message : "Failed to load dashboard",
         variant: "destructive",
       });
     } finally {
@@ -178,12 +239,18 @@ const DashboardExecutive = () => {
   };
 
   const fetchPendingAssistants = async () => {
+    if (!canViewTeamAdminSections) {
+      setPendingAssistants([]);
+      return;
+    }
+
     try {
       setTeamLoading(true);
+
       const response = await api.getPendingVerifications();
       setPendingAssistants(response.data.pendingAssistants || []);
     } catch (error) {
-      console.error("Failed to fetch pending team_members:", error);
+      console.error("Failed to fetch pending team members:", error);
     } finally {
       setTeamLoading(false);
     }
@@ -192,7 +259,8 @@ const DashboardExecutive = () => {
   useEffect(() => {
     fetchDashboard();
     fetchPendingAssistants();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceRole, user?.id]);
 
   const handleTaskCreated = () => {
     fetchDashboard();
@@ -203,22 +271,40 @@ const DashboardExecutive = () => {
   const handleVerifyAssistant = async (assistantId: string) => {
     try {
       await api.verifyAssistant(assistantId);
-      toast({ title: "TeamMember verified!", description: "The team_member can now receive tasks" });
+
+      toast({
+        title: "Team member verified",
+        description: "The team member can now receive tasks.",
+      });
+
       fetchPendingAssistants();
       fetchDashboard();
     } catch (error: any) {
-      toast({ title: "Verification failed", description: error.message, variant: "destructive" });
+      toast({
+        title: "Verification failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   const handleRejectAssistant = async (assistantId: string) => {
     try {
       await api.rejectAssistant(assistantId);
-      toast({ title: "TeamMember rejected", description: "The registration has been removed" });
+
+      toast({
+        title: "Team member rejected",
+        description: "The registration has been removed.",
+      });
+
       fetchPendingAssistants();
       fetchDashboard();
     } catch (error: any) {
-      toast({ title: "Rejection failed", description: error.message, variant: "destructive" });
+      toast({
+        title: "Rejection failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -229,11 +315,13 @@ const DashboardExecutive = () => {
   };
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+    setTasks((prev) =>
+      prev.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+    );
   };
 
   const handleTaskDeleted = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setTasks((prev) => prev.filter((task) => task.id !== taskId));
   };
 
   if (loading) {
@@ -248,12 +336,22 @@ const DashboardExecutive = () => {
     <DashboardLayout>
       <PageHeader
         title={`Welcome back, ${user?.firstName}!`}
-        description={workspaceRole === "member"
-          ? "Your workspace access is limited to your assigned tasks and progress"
-          : "Manage your team and track task progress"}
+        description={
+          workspaceRole === "member"
+            ? "Track your assigned work and request additional workspace access when needed."
+            : "Manage your team, monitor execution, and control workspace access."
+        }
         actions={
-          workspaceRole === "member" ? undefined : (
-            <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild className="gap-2">
+              <Link to="/workspace-access">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Workspace Access</span>
+                <span className="sm:hidden">Access</span>
+              </Link>
+            </Button>
+
+            {workspaceRole !== "member" && (
               <Button
                 asChild
                 className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
@@ -264,78 +362,168 @@ const DashboardExecutive = () => {
                   <span className="sm:hidden">Hire</span>
                 </Link>
               </Button>
-              <Button variant="outline" onClick={() => setCreateTaskOpen(true)} className="gap-2" disabled={!canCreateTask}>
+            )}
+
+            {canCreateTask && (
+              <Button
+                variant={workspaceRole === "member" ? "default" : "outline"}
+                onClick={() => setCreateTaskOpen(true)}
+                className="gap-2"
+              >
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Delegate Task</span>
+                <span className="hidden sm:inline">
+                  {workspaceRole === "member" ? "Create Task" : "Delegate Task"}
+                </span>
                 <span className="sm:hidden">New</span>
               </Button>
-            </div>
-          )
+            )}
+          </div>
         }
       />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard title={workspaceRole === "member" ? "My Tasks" : "Total Tasks"} value={taskStats.totalTasks} icon={ClipboardList} iconClassName="bg-primary/10" />
-        <StatsCard title="Completion Rate" value={`${taskStats.completionRate}%`} icon={TrendingUp} iconClassName="bg-success/10" />
-        <StatsCard title={workspaceRole === "member" ? "My In Progress" : "In Progress"} value={taskStats.inProgressTasks} icon={Clock} iconClassName="bg-info/10" />
-        <StatsCard title={workspaceRole === "member" ? "My Overdue" : "Overdue"} value={taskStats.overdueTasks} icon={AlertTriangle} iconClassName="bg-destructive/10" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <StatsCard
+          title={workspaceRole === "member" ? "My Tasks" : "Total Tasks"}
+          value={taskStats.totalTasks}
+          icon={ClipboardList}
+          iconClassName="bg-primary/10"
+        />
+
+        <StatsCard
+          title="Completion Rate"
+          value={`${taskStats.completionRate}%`}
+          icon={TrendingUp}
+          iconClassName="bg-success/10"
+        />
+
+        <StatsCard
+          title={workspaceRole === "member" ? "My In Progress" : "In Progress"}
+          value={taskStats.inProgressTasks}
+          icon={Clock}
+          iconClassName="bg-info/10"
+        />
+
+        <StatsCard
+          title={workspaceRole === "member" ? "My Overdue" : "Overdue"}
+          value={taskStats.overdueTasks}
+          icon={AlertTriangle}
+          iconClassName="bg-destructive/10"
+        />
       </div>
 
-      {/* Team Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <ContentCard className="lg:col-span-2">
-          <SectionHeader
-            title="Team Overview"
-            actions={
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/team-directory" className="gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {workspaceRole !== "member" && (
+          <ContentCard className="lg:col-span-2">
+            <SectionHeader
+              title="Team Overview"
+              actions={
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/team-directory" className="gap-2">
+                    <Users className="w-4 h-4" />
+                    View All
+                  </Link>
+                </Button>
+              }
+            />
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              <div className="text-center p-3 bg-muted/50 rounded-lg">
+                <p className="text-xl font-bold">{teamStats.totalAssistants}</p>
+                <p className="text-xs text-muted-foreground">Team Members</p>
+              </div>
+
+              <div className="text-center p-3 bg-success/10 rounded-lg">
+                <p className="text-xl font-bold text-success">
+                  {teamStats.availableAssistants}
+                </p>
+                <p className="text-xs text-muted-foreground">Available</p>
+              </div>
+
+              <div className="text-center p-3 bg-warning/10 rounded-lg">
+                <p className="text-xl font-bold text-warning">
+                  {teamStats.pendingVerifications}
+                </p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+
+              <div className="text-center p-3 bg-primary/10 rounded-lg">
+                <p className="text-xl font-bold text-primary">
+                  {teamStats.totalExecutives}
+                </p>
+                <p className="text-xs text-muted-foreground">Executives</p>
+              </div>
+            </div>
+          </ContentCard>
+        )}
+
+        <ContentCard className={workspaceRole === "member" ? "lg:col-span-3" : ""}>
+          <SectionHeader title="Quick Actions" />
+
+          <div className="space-y-2 mt-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3"
+              asChild
+            >
+              <Link to="/workspace-access">
+                <ShieldCheck className="w-4 h-4" />
+                Workspace Access
+              </Link>
+            </Button>
+
+            {canCreateTask && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={() => setCreateTaskOpen(true)}
+              >
+                <Plus className="w-4 h-4" />
+                Create Task
+              </Button>
+            )}
+
+            {workspaceRole !== "member" && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={() => setInviteOpen(true)}
+              >
+                <Mail className="w-4 h-4" />
+                Invite Team Member
+              </Button>
+            )}
+
+            {canManageTeam && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                asChild
+              >
+                <Link to="/team-management">
                   <Users className="w-4 h-4" />
-                  View All
+                  Manage Team
                 </Link>
               </Button>
-            }
-          />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold">{teamStats.totalAssistants}</p>
-              <p className="text-sm text-muted-foreground">TeamMembers</p>
-            </div>
-            <div className="text-center p-4 bg-success/10 rounded-lg">
-              <p className="text-2xl font-bold text-success">{teamStats.availableAssistants}</p>
-              <p className="text-sm text-muted-foreground">Available</p>
-            </div>
-            <div className="text-center p-4 bg-warning/10 rounded-lg">
-              <p className="text-2xl font-bold text-warning">{teamStats.pendingVerifications}</p>
-              <p className="text-sm text-muted-foreground">Pending</p>
-            </div>
-            <div className="text-center p-4 bg-primary/10 rounded-lg">
-              <p className="text-2xl font-bold text-primary">{teamStats.totalExecutives}</p>
-              <p className="text-sm text-muted-foreground">Executives</p>
-            </div>
-          </div>
-        </ContentCard>
+            )}
 
-        <ContentCard>
-          <SectionHeader title="Quick Actions" />
-          <div className="space-y-2 mt-4">
-            <Button variant="outline" className="w-full justify-start gap-3" onClick={() => setInviteOpen(true)}>
-              <Mail className="w-4 h-4" />
-              Invite Team Member
-            </Button>
-            <Button variant="outline" className="w-full justify-start gap-3" asChild>
-              <Link to="/team-management"><Users className="w-4 h-4" />Manage Team</Link>
-            </Button>
-            <Button variant="outline" className="w-full justify-start gap-3" asChild>
-              <Link to="/company-profile"><User className="w-4 h-4" />Company Settings</Link>
-            </Button>
+            {canAccessCompanySettings && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                asChild
+              >
+                <Link to="/company-profile">
+                  <User className="w-4 h-4" />
+                  Company Settings
+                </Link>
+              </Button>
+            )}
           </div>
         </ContentCard>
       </div>
 
-      {/* Pending Verifications */}
-      {teamStats.pendingVerifications > 0 && (
-        <ContentCard className="mb-8">
+      {canViewTeamAdminSections && teamStats.pendingVerifications > 0 && (
+        <ContentCard className="mb-6">
           <SectionHeader
             title="Pending Verifications"
             actions={
@@ -344,41 +532,62 @@ const DashboardExecutive = () => {
               </Badge>
             }
           />
+
           {teamLoading ? (
             <LoadingState message="Loading verifications..." />
           ) : (
             <div className="space-y-3 mt-4">
-              {pendingAssistants.map((team_member) => (
+              {pendingAssistants.map((teamMember) => (
                 <div
-                  key={team_member.id}
+                  key={teamMember.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                       <User className="w-5 h-5 text-primary" />
                     </div>
+
                     <div>
-                      <p className="font-semibold">{team_member.firstName} {team_member.lastName}</p>
-                      <p className="text-sm text-muted-foreground">{team_member.email}</p>
+                      <p className="font-semibold">
+                        {teamMember.firstName} {teamMember.lastName}
+                      </p>
+
+                      <p className="text-sm text-muted-foreground">
+                        {teamMember.email}
+                      </p>
+
                       <div className="flex gap-2 mt-1">
-                        {team_member.specialization && (
-                          <Badge variant="outline" className="text-xs">{team_member.specialization}</Badge>
+                        {teamMember.specialization && (
+                          <Badge variant="outline" className="text-xs">
+                            {teamMember.specialization}
+                          </Badge>
                         )}
-                        {team_member.experience && (
-                          <Badge variant="outline" className="text-xs">{team_member.experience} yrs exp</Badge>
+
+                        {teamMember.experience && (
+                          <Badge variant="outline" className="text-xs">
+                            {teamMember.experience} yrs exp
+                          </Badge>
                         )}
                       </div>
                     </div>
                   </div>
+
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleVerifyAssistant(team_member.id)}>
+                    <Button
+                      size="sm"
+                      onClick={() => handleVerifyAssistant(teamMember.id)}
+                    >
                       <CheckCircle2 className="w-4 h-4 mr-1" />
                       Approve
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleRejectAssistant(team_member.id)}>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRejectAssistant(teamMember.id)}
+                    >
                       Reject
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleRejectAssistant(team_member.id)}>Reject</Button>
                   </div>
                 </div>
               ))}
@@ -387,39 +596,40 @@ const DashboardExecutive = () => {
         </ContentCard>
       )}
 
-      {/* Company Code */}
-      {/* <ContentCard className="mb-8 bg-primary/5 border-primary/20">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-semibold mb-1">Your Company Code</h3>
-            <p className="text-sm text-muted-foreground mb-3">Share this code with team members to join your workspace</p>
-            <div className="bg-primary/10 border border-primary/20 rounded-lg px-4 py-3 inline-block">
-              <code className="text-xl font-mono font-bold text-primary">{activeWorkspace?.company?.companyCode || "Loading..."}</code>
-            </div>
-          </div>
-          <Button variant="outline" className="gap-2"><Mail className="w-4 h-4" />Share Code</Button>
-        </div>
-      </ContentCard> */}
-
-      {/* Tasks Section */}
       <SectionHeader
         title={workspaceRole === "member" ? "My Tasks" : "Recent Tasks"}
-        description={totalItems > 0 ? `${totalItems} ${workspaceRole === "member" ? "assigned tasks" : "total tasks"}` : undefined}
+        description={
+          totalItems > 0
+            ? `${totalItems} ${
+                workspaceRole === "member" ? "assigned tasks" : "total tasks"
+              }`
+            : undefined
+        }
         actions={
-          workspaceRole === "member" ? undefined : (
-            <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2" disabled={!canCreateTask}>
-              <Plus className="w-4 h-4" />New Task
+          canCreateTask ? (
+            <Button
+              onClick={() => setCreateTaskOpen(true)}
+              size="sm"
+              className="gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              New Task
             </Button>
-          )
+          ) : undefined
         }
       />
 
       <div className="mb-4">
-        <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
+        <TaskFilters
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+        />
       </div>
+
       {hasTaskViewFilter && (
         <p className="text-xs text-muted-foreground mb-4">
-          You're viewing tasks created by or assigned to you based on workspace policy.
+          You're viewing tasks created by or assigned to you based on workspace
+          policy.
         </p>
       )}
 
@@ -428,8 +638,26 @@ const DashboardExecutive = () => {
           <EmptyState
             icon={ClipboardList}
             title="No tasks found"
-            description="Create your first task to get started with delegation"
-            action={<Button onClick={() => setCreateTaskOpen(true)} disabled={!canCreateTask}><Plus className="w-4 h-4 mr-2" />Create Task</Button>}
+            description={
+              canCreateTask
+                ? "Create your first task to get started."
+                : "No assigned tasks were found."
+            }
+            action={
+              canCreateTask ? (
+                <Button onClick={() => setCreateTaskOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Task
+                </Button>
+              ) : (
+                <Button variant="outline" asChild>
+                  <Link to="/workspace-access">
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Request Access
+                  </Link>
+                </Button>
+              )
+            }
           />
         </ContentCard>
       ) : (
@@ -437,12 +665,25 @@ const DashboardExecutive = () => {
           <TaskTable
             tasks={currentTasks}
             showAssignee={workspaceRole !== "member"}
-            showExecutive={true}
+            showExecutive
             showActions={workspaceRole !== "member"}
-            onEdit={workspaceRole !== "member" ? (task) => openDrawer(task, "details") : undefined}
-            onAssign={workspaceRole !== "member" ? (task) => openDrawer(task, "assignees") : undefined}
-            onDelete={workspaceRole !== "member" ? (task) => openDrawer(task, "danger") : undefined}
+            onEdit={
+              workspaceRole !== "member"
+                ? (task) => openDrawer(task, "details")
+                : undefined
+            }
+            onAssign={
+              workspaceRole !== "member"
+                ? (task) => openDrawer(task, "assignees")
+                : undefined
+            }
+            onDelete={
+              workspaceRole !== "member"
+                ? (task) => openDrawer(task, "danger")
+                : undefined
+            }
           />
+
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -454,9 +695,18 @@ const DashboardExecutive = () => {
         </>
       )}
 
-      {/* Dialogs */}
-      <CreateTaskDialog open={createTaskOpen} onOpenChange={setCreateTaskOpen} onSuccess={handleTaskCreated} />
-      <InviteUserDialog open={inviteOpen} onOpenChange={setInviteOpen} onSuccess={fetchDashboard} />
+      <CreateTaskDialog
+        open={createTaskOpen}
+        onOpenChange={setCreateTaskOpen}
+        onSuccess={handleTaskCreated}
+      />
+
+      <InviteUserDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onSuccess={fetchDashboard}
+      />
+
       <TaskEditDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

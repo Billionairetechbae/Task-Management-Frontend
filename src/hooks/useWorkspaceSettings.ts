@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   api,
   type RoleOperationPermissions,
+  type RolePermissionSet,
   type WorkspaceRolePermissionKey,
   type WorkspaceSettings,
 } from "@/lib/api";
@@ -11,7 +12,9 @@ import { useAuth } from "@/contexts/AuthContext";
 export type UiWorkspaceRoleLabel = "Executive" | "Manager" | "Team Member";
 export type ApiWorkspaceRole = "owner" | "admin" | "manager" | "member";
 
-export const toApiRole = (role: UiWorkspaceRoleLabel): "admin" | "manager" | "member" => {
+export const toApiRole = (
+  role: UiWorkspaceRoleLabel
+): "admin" | "manager" | "member" => {
   if (role === "Executive") return "admin";
   if (role === "Manager") return "manager";
   return "member";
@@ -32,7 +35,7 @@ export const workspacePermissionKeys: WorkspaceRolePermissionKey[] = [
   "upload_workspace_files",
 ];
 
-const defaultRolePermissionSet = {
+const defaultAllTruePermissionSet: RolePermissionSet = {
   create_tasks: true,
   view_all_tasks: true,
   create_projects: true,
@@ -41,39 +44,98 @@ const defaultRolePermissionSet = {
   upload_workspace_files: true,
 };
 
-const defaultRoleOperationPermissions: RoleOperationPermissions = {
-  admin: { ...defaultRolePermissionSet },
-  manager: { ...defaultRolePermissionSet },
-  member: {
-    create_tasks: false,
-    view_all_tasks: false,
-    create_projects: false,
-    view_all_projects: false,
-    create_project_tasks: false,
-    upload_workspace_files: false,
-  },
+const defaultMemberPermissionSet: RolePermissionSet = {
+  create_tasks: false,
+  view_all_tasks: true,
+  create_projects: false,
+  view_all_projects: true,
+  create_project_tasks: false,
+  upload_workspace_files: false,
 };
 
-const normalizeSettings = (raw: unknown): WorkspaceSettings => {
-  const payload = raw as { settings?: WorkspaceSettings } | WorkspaceSettings | undefined;
-  const settings: WorkspaceSettings = payload && "settings" in (payload as any) ? (payload as any).settings || {} : ((payload as WorkspaceSettings) || {});
-  const roleOperationPermissions = settings.roleOperationPermissions ?? defaultRoleOperationPermissions;
+const defaultRoleOperationPermissions: RoleOperationPermissions = {
+  admin: { ...defaultAllTruePermissionSet },
+  manager: { ...defaultAllTruePermissionSet },
+  member: { ...defaultMemberPermissionSet },
+};
+
+const normalizeRoleOperationPermissions = (
+  input?: Partial<RoleOperationPermissions>
+): RoleOperationPermissions => {
   return {
-    invitePermissionMode: settings.invitePermissionMode || "restricted",
-    assistancePermissionMode: settings.assistancePermissionMode || "restricted",
-    roleOperationPermissions: {
-      admin: { ...defaultRoleOperationPermissions.admin, ...(roleOperationPermissions?.admin || {}) },
-      manager: { ...defaultRoleOperationPermissions.manager, ...(roleOperationPermissions?.manager || {}) },
-      member: { ...defaultRoleOperationPermissions.member, ...(roleOperationPermissions?.member || {}) },
+    admin: {
+      ...defaultRoleOperationPermissions.admin,
+      ...(input?.admin || {}),
     },
-    configurableRoles: settings.configurableRoles || ["admin", "manager", "member"],
+    manager: {
+      ...defaultRoleOperationPermissions.manager,
+      ...(input?.manager || {}),
+    },
+    member: {
+      ...defaultRoleOperationPermissions.member,
+      ...(input?.member || {}),
+    },
   };
 };
 
-export const resolveEffectiveRoleForUI = (userRole?: string | null, workspaceRole?: string | null): ApiWorkspaceRole => {
-  if (workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") {
+const normalizePermissionSet = (
+  input?: Partial<RolePermissionSet>,
+  fallback: RolePermissionSet = defaultMemberPermissionSet
+): RolePermissionSet => {
+  const normalized = {} as RolePermissionSet;
+
+  workspacePermissionKeys.forEach((key) => {
+    normalized[key] =
+      input && Object.prototype.hasOwnProperty.call(input, key)
+        ? Boolean(input[key])
+        : Boolean(fallback[key]);
+  });
+
+  return normalized;
+};
+
+const normalizeSettings = (raw: unknown): WorkspaceSettings => {
+  const payload = raw as
+    | { settings?: WorkspaceSettings }
+    | WorkspaceSettings
+    | undefined;
+
+  const settings: WorkspaceSettings =
+    payload && "settings" in (payload as any)
+      ? (payload as any).settings || {}
+      : (payload as WorkspaceSettings) || {};
+
+  const roleOperationPermissions = normalizeRoleOperationPermissions(
+    settings.roleOperationPermissions
+  );
+
+  return {
+    invitePermissionMode: settings.invitePermissionMode || "restricted",
+    assistancePermissionMode: settings.assistancePermissionMode || "restricted",
+    roleOperationPermissions,
+    effectiveOperationPermissions: settings.effectiveOperationPermissions,
+    userPermissionOverrides: settings.userPermissionOverrides || {},
+    configurableRoles: settings.configurableRoles || [
+      "admin",
+      "manager",
+      "member",
+    ],
+  };
+};
+
+export const resolveEffectiveRoleForUI = (
+  userRole?: string | null,
+  workspaceRole?: string | null
+): ApiWorkspaceRole => {
+  if (
+    workspaceRole === "owner" ||
+    workspaceRole === "admin" ||
+    workspaceRole === "manager" ||
+    workspaceRole === "member"
+  ) {
     return workspaceRole;
   }
+
   if (userRole === "admin") return "owner";
   if (userRole === "executive") return "admin";
   if (userRole === "manager") return "manager";
@@ -89,6 +151,7 @@ export const canRolePerform = (
 ): boolean => {
   if (role === "owner") return true;
   if (!settings?.roleOperationPermissions) return false;
+
   return !!settings.roleOperationPermissions[role]?.[permissionKey];
 };
 
@@ -100,24 +163,91 @@ export const useWorkspaceSettings = () => {
     queryKey: ["workspaceSettings", activeCompanyId],
     enabled: !!activeCompanyId,
     queryFn: async () => {
-      const response = await api.getWorkspaceSettings(activeCompanyId!);
-      return normalizeSettings(response.data);
+      const [settingsResponse, effectiveResponse] = await Promise.allSettled([
+        api.getWorkspaceSettings(activeCompanyId!),
+        api.getMyEffectiveWorkspacePermissions(),
+      ]);
+
+      const settingsRaw =
+        settingsResponse.status === "fulfilled"
+          ? settingsResponse.value.data
+          : {};
+
+      const normalized = normalizeSettings(settingsRaw);
+
+      const effectiveRole = resolveEffectiveRoleForUI(
+        user?.role,
+        workspaceRole
+      );
+
+      const fallbackRole =
+        effectiveRole === "owner"
+          ? "admin"
+          : (effectiveRole as "admin" | "manager" | "member");
+
+      if (effectiveResponse.status === "fulfilled") {
+        const effectiveData = effectiveResponse.value.data;
+
+        return {
+          ...normalized,
+          effectiveOperationPermissions: normalizePermissionSet(
+            effectiveData.permissions,
+            normalized.roleOperationPermissions?.[fallbackRole] ||
+              defaultMemberPermissionSet
+          ),
+          userPermissionOverrides: effectiveData.individualOverrides || {},
+        };
+      }
+
+      return {
+        ...normalized,
+        effectiveOperationPermissions:
+          effectiveRole === "owner"
+            ? { ...defaultAllTruePermissionSet }
+            : normalizePermissionSet(
+                normalized.roleOperationPermissions?.[fallbackRole],
+                defaultMemberPermissionSet
+              ),
+        userPermissionOverrides: {},
+      };
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async (payload: Partial<WorkspaceSettings>) => {
-      const response = await api.updateWorkspaceSettings(activeCompanyId!, payload);
+      const response = await api.updateWorkspaceSettings(
+        activeCompanyId!,
+        payload
+      );
+
       return normalizeSettings(response.data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workspaceSettings", activeCompanyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["workspaceSettings", activeCompanyId],
+      });
     },
   });
 
-  const canPerformRoleOperation = (key?: WorkspaceRolePermissionKey, roleOverride?: string | null): boolean => {
+  const canPerformRoleOperation = (
+    key?: WorkspaceRolePermissionKey,
+    roleOverride?: string | null
+  ): boolean => {
     if (!key) return true;
-    const effectiveRole = resolveEffectiveRoleForUI(user?.role, roleOverride ?? workspaceRole);
+
+    const effectiveRole = resolveEffectiveRoleForUI(
+      user?.role,
+      roleOverride ?? workspaceRole
+    );
+
+    if (effectiveRole === "owner") return true;
+
+    const isCurrentUserCheck = !roleOverride || roleOverride === workspaceRole;
+
+    if (isCurrentUserCheck && query.data?.effectiveOperationPermissions) {
+      return !!query.data.effectiveOperationPermissions[key];
+    }
+
     return canRolePerform(key, query.data, effectiveRole);
   };
 

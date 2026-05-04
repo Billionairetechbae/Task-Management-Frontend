@@ -60,7 +60,9 @@ import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
 import Drive from "./pages/Drive";
 import ProjectInvite from "./pages/ProjectInvite";
+import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
 // import DashboardEntry from "./pages/DashboardEntry";
+
 
 const App = () => (
   <>
@@ -169,6 +171,15 @@ const App = () => (
         element={
           <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
             <WorkspaceOnboarding />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/workspace-access"
+        element={
+          <ProtectedRoute>
+            <WorkspaceAccessRequests />
           </ProtectedRoute>
         }
       />

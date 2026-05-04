@@ -374,7 +374,7 @@ const CompanyProfile = () => {
               <CardHeader>
                 <CardTitle>Role Permissions</CardTitle>
                 <CardDescription>
-                  Configure what Executive, Manager, and Team Member can do in this workspace.
+                    Configure default permissions for each workspace role. Individual approvals can still grant access to specific users.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -390,7 +390,7 @@ const CompanyProfile = () => {
                         <th className="text-left p-3">Role</th>
                         {permissionKeys.map((key) => (
                           <th key={key} className="text-left p-3 text-xs uppercase tracking-wide text-muted-foreground">
-                            {key.replace("_", " ")}
+                            {key.split("_").join(" ")}
                           </th>
                         ))}
                       </tr>
