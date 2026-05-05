@@ -143,7 +143,7 @@ export const InlineStatusSelect = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [value, setValue] = useState(task.status);
+  const [value, setValue] = useState<string>(task.status as string);
   const [saving, setSaving] = useState(false);
 
   // Permission: assignees, creator, or privileged roles
