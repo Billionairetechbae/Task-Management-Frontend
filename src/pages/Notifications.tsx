@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCheck, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { getNotificationLink } from "@/lib/notificationLink";
 
 export default function NotificationsPage() {
   const { notifications, unreadCount, loadNotifications, markRead, markAllRead, remove } = useNotifications();
