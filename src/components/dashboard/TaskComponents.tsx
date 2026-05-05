@@ -392,9 +392,9 @@ export const TaskTable = ({
                 </div>
               </div>
 
-              <Badge className={cn("shrink-0 text-[10px]", getStatusBadgeClass(task.status))}>
-                {getStatusDisplay(task.status)}
-              </Badge>
+              <div className="shrink-0">
+                <InlineStatusSelect task={task} onChanged={onStatusChange} size="xs" />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
