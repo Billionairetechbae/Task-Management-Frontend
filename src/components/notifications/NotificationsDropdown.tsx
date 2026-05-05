@@ -53,9 +53,9 @@ export default function NotificationsDropdown() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative h-8 w-8">
                 <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
+                {displayedUnread > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-medium px-1 animate-scale-in">
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                    {displayedUnread > 99 ? "99+" : displayedUnread}
                   </span>
                 )}
               </Button>
