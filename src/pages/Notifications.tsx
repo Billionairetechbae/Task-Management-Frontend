@@ -12,12 +12,20 @@ import { getNotificationLink } from "@/lib/notificationLink";
 export default function NotificationsPage() {
   const { notifications, unreadCount, loadNotifications, markRead, markAllRead, remove } = useNotifications();
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadNotifications({ unreadOnly: showUnreadOnly, limit: 50, offset: 0 });
   }, [showUnreadOnly, loadNotifications]);
 
   const list = showUnreadOnly ? notifications.filter((n) => !n.isRead) : notifications;
+
+  const handleClick = async (n: typeof notifications[number]) => {
+    if (!n.isRead) {
+      try { await markRead(n.id); } catch (_) { /* noop */ }
+    }
+    navigate(getNotificationLink(n));
+  };
 
   return (
     <DashboardLayout>
