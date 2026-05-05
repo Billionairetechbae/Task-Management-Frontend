@@ -862,10 +862,7 @@ const TaskDetails = () => {
                   <p className="text-xs text-muted-foreground">Hours</p>
                   <p className="font-semibold flex items-center gap-2 text-sm sm:text-base">
                     <Clock className="w-4 h-4" />
-                    {task.actualHours
-                      ? `${task.actualHours}h (actual)`
-                      : "No actual hours"}{" "}
-                    • {task.estimatedHours}h estimated
+                    {task.actualHours ? `${task.actualHours}h logged` : "No hours logged"}
                   </p>
                 </div>
               </div>
