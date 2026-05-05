@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CheckCheck, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -15,18 +15,35 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getNotificationLink } from "@/lib/notificationLink";
 
 export default function NotificationsDropdown() {
   const { notifications, unreadCount, loadNotifications, markRead, markAllRead, remove } = useNotifications();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [seenCount, setSeenCount] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
       setLoading(true);
       loadNotifications().finally(() => setLoading(false));
+      // Hide the counter while open; remember current unread total
+      setSeenCount(unreadCount);
     }
   }, [open, loadNotifications]);
+
+  // If new notifications arrive while open, show the diff again
+  const displayedUnread = open ? Math.max(0, unreadCount - seenCount) : unreadCount;
+
+  const handleNotificationClick = async (n: typeof notifications[number]) => {
+    setOpen(false);
+    if (!n.isRead) {
+      try { await markRead(n.id); } catch (_) { /* noop */ }
+    }
+    navigate(getNotificationLink(n));
+  };
+
 
   return (
     <TooltipProvider delayDuration={200}>
