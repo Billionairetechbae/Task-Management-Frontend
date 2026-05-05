@@ -8,6 +8,13 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -19,10 +26,13 @@ import {
   Bell,
   ListTodo,
 } from "lucide-react";
-import { Task } from "@/lib/api";
+import { useState } from "react";
+import { Task, api } from "@/lib/api";
 import CompanyBadge from "@/components/CompanyBadge";
 import { cn } from "@/lib/utils";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TaskTableProps {
   tasks: Task[];
@@ -32,6 +42,7 @@ interface TaskTableProps {
   onEdit?: (task: Task) => void;
   onAssign?: (task: Task) => void;
   onDelete?: (task: Task) => void;
+  onStatusChange?: (taskId: string, status: string) => void;
 }
 
 export const getStatusDisplay = (status: string) => {
