@@ -8,6 +8,13 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -19,10 +26,13 @@ import {
   Bell,
   ListTodo,
 } from "lucide-react";
-import { Task } from "@/lib/api";
+import { useState } from "react";
+import { Task, api } from "@/lib/api";
 import CompanyBadge from "@/components/CompanyBadge";
 import { cn } from "@/lib/utils";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TaskTableProps {
   tasks: Task[];
@@ -32,6 +42,7 @@ interface TaskTableProps {
   onEdit?: (task: Task) => void;
   onAssign?: (task: Task) => void;
   onDelete?: (task: Task) => void;
+  onStatusChange?: (taskId: string, status: string) => void;
 }
 
 export const getStatusDisplay = (status: string) => {
@@ -113,6 +124,94 @@ const ActionButton = ({
   </Tooltip>
 );
 
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "completed", label: "Completed" },
+  { value: "delayed", label: "Delayed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export const InlineStatusSelect = ({
+  task,
+  onChanged,
+  size = "sm",
+}: {
+  task: Task;
+  onChanged?: (taskId: string, status: string) => void;
+  size?: "sm" | "xs";
+}) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [value, setValue] = useState<string>(task.status as string);
+  const [saving, setSaving] = useState(false);
+
+  // Permission: assignees, creator, or privileged roles
+  const isAssignee =
+    task.assigneeId === user?.id ||
+    (Array.isArray((task as any).assignees) &&
+      (task as any).assignees.some((a: any) => a?.id === user?.id));
+  const isCreator = (task as any).createdBy === user?.id || (task as any).creator?.id === user?.id;
+  const isPrivileged =
+    user?.role === "admin" || user?.role === "executive" || user?.role === "manager";
+  const canChange = isPrivileged || isCreator || isAssignee;
+
+  if (!canChange) {
+    return (
+      <Badge className={cn("text-[10px]", getStatusBadgeClass(task.status))}>
+        {getStatusDisplay(task.status)}
+      </Badge>
+    );
+  }
+
+  const handleChange = async (next: string) => {
+    if (next === value) return;
+    const prev = value;
+    setValue(next);
+    setSaving(true);
+    try {
+      if (isPrivileged || isCreator) {
+        await api.updateTask(task.id, { status: next as any });
+      } else {
+        await api.updateTaskProgress(task.id, { status: next });
+      }
+      toast({ title: "Status updated", description: `Task is now ${getStatusDisplay(next)}.` });
+      onChanged?.(task.id, next);
+    } catch (e: any) {
+      setValue(prev);
+      toast({
+        title: "Could not update status",
+        description: e?.message || "Try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Select value={value} onValueChange={handleChange} disabled={saving}>
+      <SelectTrigger
+        className={cn(
+          "h-7 px-2 text-[10px] font-medium border w-[124px]",
+          getStatusBadgeClass(value),
+          size === "xs" && "h-6 text-[10px] w-[112px]"
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent onClick={(e) => e.stopPropagation()}>
+        {STATUS_OPTIONS.map((o) => (
+          <SelectItem key={o.value} value={o.value} className="text-xs">
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
 export const TaskTable = ({
   tasks,
   showAssignee = true,
@@ -121,6 +220,7 @@ export const TaskTable = ({
   onEdit,
   onAssign,
   onDelete,
+  onStatusChange,
 }: TaskTableProps) => (
   <TooltipProvider delayDuration={100}>
     <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -252,9 +352,7 @@ export const TaskTable = ({
                 </td>
 
                 <td className="px-4 py-3">
-                  <Badge className={cn("text-[10px]", getStatusBadgeClass(task.status))}>
-                    {getStatusDisplay(task.status)}
-                  </Badge>
+                  <InlineStatusSelect task={task} onChanged={onStatusChange} />
                 </td>
               </tr>
             ))}
@@ -294,9 +392,9 @@ export const TaskTable = ({
                 </div>
               </div>
 
-              <Badge className={cn("shrink-0 text-[10px]", getStatusBadgeClass(task.status))}>
-                {getStatusDisplay(task.status)}
-              </Badge>
+              <div className="shrink-0">
+                <InlineStatusSelect task={task} onChanged={onStatusChange} size="xs" />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">

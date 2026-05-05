@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CheckCheck, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -15,18 +15,35 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getNotificationLink } from "@/lib/notificationLink";
 
 export default function NotificationsDropdown() {
   const { notifications, unreadCount, loadNotifications, markRead, markAllRead, remove } = useNotifications();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [seenCount, setSeenCount] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
       setLoading(true);
       loadNotifications().finally(() => setLoading(false));
+      // Hide the counter while open; remember current unread total
+      setSeenCount(unreadCount);
     }
   }, [open, loadNotifications]);
+
+  // If new notifications arrive while open, show the diff again
+  const displayedUnread = open ? Math.max(0, unreadCount - seenCount) : unreadCount;
+
+  const handleNotificationClick = async (n: typeof notifications[number]) => {
+    setOpen(false);
+    if (!n.isRead) {
+      try { await markRead(n.id); } catch (_) { /* noop */ }
+    }
+    navigate(getNotificationLink(n));
+  };
+
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -36,9 +53,9 @@ export default function NotificationsDropdown() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative h-8 w-8">
                 <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
+                {displayedUnread > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-medium px-1 animate-scale-in">
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                    {displayedUnread > 99 ? "99+" : displayedUnread}
                   </span>
                 )}
               </Button>
@@ -78,8 +95,17 @@ export default function NotificationsDropdown() {
                 notifications.map((n, idx) => (
                   <div
                     key={n.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleNotificationClick(n)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleNotificationClick(n);
+                      }
+                    }}
                     className={cn(
-                      "px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors duration-150 flex items-start gap-3 animate-slide-up",
+                      "px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors duration-150 flex items-start gap-3 animate-slide-up cursor-pointer focus:outline-none focus:bg-muted/60",
                     )}
                     style={{ animationDelay: `${idx * 30}ms` }}
                   >
@@ -96,7 +122,7 @@ export default function NotificationsDropdown() {
                             {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                           </p>
                         </div>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                           {!n.isRead && (
                             <Tooltip>
                               <TooltipTrigger asChild>

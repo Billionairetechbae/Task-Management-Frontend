@@ -80,6 +80,7 @@ const AllTasks = () => {
 
   const resetFilters = () => {
     setSearch("");
+    setDebouncedSearch("");
     setStatus("all");
     setPriority("all");
     setCompanyId("all");
