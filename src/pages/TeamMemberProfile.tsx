@@ -137,10 +137,29 @@ const TeamMemberProfile = () => {
     }
   };
 
-  if (loading || !member) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         Loading profile...
+      </div>
+    );
+  }
+
+  if (!member) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <UserIcon className="w-12 h-12 text-muted-foreground/40" />
+        <div>
+          <h2 className="text-lg font-semibold">Member not found</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            This profile is unavailable or you don't have access to it in the current workspace.
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link to="/team-directory">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Directory
+          </Link>
+        </Button>
       </div>
     );
   }
