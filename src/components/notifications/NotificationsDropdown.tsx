@@ -95,8 +95,17 @@ export default function NotificationsDropdown() {
                 notifications.map((n, idx) => (
                   <div
                     key={n.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleNotificationClick(n)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleNotificationClick(n);
+                      }
+                    }}
                     className={cn(
-                      "px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors duration-150 flex items-start gap-3 animate-slide-up",
+                      "px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors duration-150 flex items-start gap-3 animate-slide-up cursor-pointer focus:outline-none focus:bg-muted/60",
                     )}
                     style={{ animationDelay: `${idx * 30}ms` }}
                   >
@@ -113,7 +122,7 @@ export default function NotificationsDropdown() {
                             {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                           </p>
                         </div>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                           {!n.isRead && (
                             <Tooltip>
                               <TooltipTrigger asChild>
