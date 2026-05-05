@@ -422,282 +422,210 @@ const DashboardExecutive = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {workspaceRole !== "member" && (
-          <ContentCard className="lg:col-span-2">
-            <SectionHeader
-              title="Team Overview"
-              actions={
+      {(() => {
+        const teamOverview = (
+          <Collapsible defaultOpen>
+            <ContentCard>
+              <div className="flex items-center justify-between gap-2">
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-2 text-left flex-1 group">
+                    <ChevronDown className="w-4 h-4 transition-transform group-data-[state=closed]:-rotate-90 text-muted-foreground" />
+                    <h2 className="text-base font-semibold tracking-tight">Team Overview</h2>
+                  </button>
+                </CollapsibleTrigger>
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/team-directory" className="gap-2">
                     <Users className="w-4 h-4" />
-                    View All
+                    <span className="hidden sm:inline">View All</span>
                   </Link>
                 </Button>
+              </div>
+              <CollapsibleContent>
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xl font-bold">{teamStats.totalAssistants}</p>
+                    <p className="text-xs text-muted-foreground">Team Members</p>
+                  </div>
+                  <div className="text-center p-3 bg-success/10 rounded-lg">
+                    <p className="text-xl font-bold text-success">{teamStats.availableAssistants}</p>
+                    <p className="text-xs text-muted-foreground">Available</p>
+                  </div>
+                  <div className="text-center p-3 bg-warning/10 rounded-lg">
+                    <p className="text-xl font-bold text-warning">{teamStats.pendingVerifications}</p>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                  </div>
+                  <div className="text-center p-3 bg-primary/10 rounded-lg">
+                    <p className="text-xl font-bold text-primary">{teamStats.totalExecutives}</p>
+                    <p className="text-xs text-muted-foreground">Executives</p>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </ContentCard>
+          </Collapsible>
+        );
+
+        const quickActions = (
+          <Collapsible defaultOpen>
+            <ContentCard>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 text-left w-full group">
+                  <ChevronDown className="w-4 h-4 transition-transform group-data-[state=closed]:-rotate-90 text-muted-foreground" />
+                  <h2 className="text-base font-semibold tracking-tight">Quick Actions</h2>
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-2 mt-4">
+                  <Button variant="outline" className="w-full justify-start gap-3" asChild>
+                    <Link to="/workspace-access">
+                      <ShieldCheck className="w-4 h-4" />
+                      Workspace Access
+                    </Link>
+                  </Button>
+                  {canCreateTask && (
+                    <Button variant="outline" className="w-full justify-start gap-3" onClick={() => setCreateTaskOpen(true)}>
+                      <Plus className="w-4 h-4" />
+                      Create Task
+                    </Button>
+                  )}
+                  {workspaceRole !== "member" && (
+                    <Button variant="outline" className="w-full justify-start gap-3" onClick={() => setInviteOpen(true)}>
+                      <Mail className="w-4 h-4" />
+                      Invite Team Member
+                    </Button>
+                  )}
+                  {canManageTeam && (
+                    <Button variant="outline" className="w-full justify-start gap-3" asChild>
+                      <Link to="/team-management">
+                        <Users className="w-4 h-4" />
+                        Manage Team
+                      </Link>
+                    </Button>
+                  )}
+                  {canAccessCompanySettings && (
+                    <Button variant="outline" className="w-full justify-start gap-3" asChild>
+                      <Link to="/company-profile">
+                        <User className="w-4 h-4" />
+                        Company Settings
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </ContentCard>
+          </Collapsible>
+        );
+
+        const tasksSection = (
+          <div className="space-y-4">
+            <SectionHeader
+              title={workspaceRole === "member" ? "My Tasks" : "Recent Tasks"}
+              description={
+                totalItems > 0
+                  ? `${totalItems} ${workspaceRole === "member" ? "assigned tasks" : "total tasks"}`
+                  : undefined
+              }
+              actions={
+                canCreateTask ? (
+                  <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    New Task
+                  </Button>
+                ) : undefined
               }
             />
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-xl font-bold">{teamStats.totalAssistants}</p>
-                <p className="text-xs text-muted-foreground">Team Members</p>
-              </div>
+            <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
 
-              <div className="text-center p-3 bg-success/10 rounded-lg">
-                <p className="text-xl font-bold text-success">
-                  {teamStats.availableAssistants}
-                </p>
-                <p className="text-xs text-muted-foreground">Available</p>
-              </div>
-
-              <div className="text-center p-3 bg-warning/10 rounded-lg">
-                <p className="text-xl font-bold text-warning">
-                  {teamStats.pendingVerifications}
-                </p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-
-              <div className="text-center p-3 bg-primary/10 rounded-lg">
-                <p className="text-xl font-bold text-primary">
-                  {teamStats.totalExecutives}
-                </p>
-                <p className="text-xs text-muted-foreground">Executives</p>
-              </div>
-            </div>
-          </ContentCard>
-        )}
-
-        <ContentCard className={workspaceRole === "member" ? "lg:col-span-3" : ""}>
-          <SectionHeader title="Quick Actions" />
-
-          <div className="space-y-2 mt-4">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3"
-              asChild
-            >
-              <Link to="/workspace-access">
-                <ShieldCheck className="w-4 h-4" />
-                Workspace Access
-              </Link>
-            </Button>
-
-            {canCreateTask && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3"
-                onClick={() => setCreateTaskOpen(true)}
-              >
-                <Plus className="w-4 h-4" />
-                Create Task
-              </Button>
+            {hasTaskViewFilter && (
+              <p className="text-xs text-muted-foreground">
+                You're viewing tasks created by or assigned to you based on workspace policy.
+              </p>
             )}
 
-            {workspaceRole !== "member" && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3"
-                onClick={() => setInviteOpen(true)}
-              >
-                <Mail className="w-4 h-4" />
-                Invite Team Member
-              </Button>
-            )}
-
-            {canManageTeam && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3"
-                asChild
-              >
-                <Link to="/team-management">
-                  <Users className="w-4 h-4" />
-                  Manage Team
-                </Link>
-              </Button>
-            )}
-
-            {canAccessCompanySettings && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3"
-                asChild
-              >
-                <Link to="/company-profile">
-                  <User className="w-4 h-4" />
-                  Company Settings
-                </Link>
-              </Button>
+            {filteredTasks.length === 0 ? (
+              <ContentCard>
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No tasks found"
+                  description={canCreateTask ? "Create your first task to get started." : "No assigned tasks were found."}
+                  action={
+                    canCreateTask ? (
+                      <Button onClick={() => setCreateTaskOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Task
+                      </Button>
+                    ) : (
+                      <Button variant="outline" asChild>
+                        <Link to="/workspace-access">
+                          <ShieldCheck className="w-4 h-4 mr-2" />
+                          Request Access
+                        </Link>
+                      </Button>
+                    )
+                  }
+                />
+              </ContentCard>
+            ) : (
+              <>
+                <TaskTable
+                  tasks={currentTasks}
+                  showAssignee={workspaceRole !== "member"}
+                  showExecutive
+                  showActions={workspaceRole !== "member"}
+                  onStatusChange={(taskId, status) =>
+                    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: status as any } : t)))
+                  }
+                  onEdit={workspaceRole !== "member" ? (task) => openDrawer(task, "details") : undefined}
+                  onAssign={workspaceRole !== "member" ? (task) => openDrawer(task, "assignees") : undefined}
+                  onDelete={workspaceRole !== "member" ? (task) => openDrawer(task, "danger") : undefined}
+                />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  startIndex={startIndex}
+                  endIndex={endIndex}
+                  onPageChange={setCurrentPage}
+                />
+              </>
             )}
           </div>
-        </ContentCard>
-      </div>
+        );
 
-      {canViewTeamAdminSections && teamStats.pendingVerifications > 0 && (
-        <ContentCard className="mb-6">
-          <SectionHeader
-            title="Pending Verifications"
-            actions={
-              <Badge variant="outline" className="bg-warning/10 text-warning">
-                {pendingAssistants.length} waiting
-              </Badge>
-            }
-          />
+        if (workspaceRole === "member") {
+          return <div className="space-y-4">{tasksSection}</div>;
+        }
 
-          {teamLoading ? (
-            <LoadingState message="Loading verifications..." />
-          ) : (
-            <div className="space-y-3 mt-4">
-              {pendingAssistants.map((teamMember) => (
-                <div
-                  key={teamMember.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-primary" />
-                    </div>
-
-                    <div>
-                      <p className="font-semibold">
-                        {teamMember.firstName} {teamMember.lastName}
-                      </p>
-
-                      <p className="text-sm text-muted-foreground">
-                        {teamMember.email}
-                      </p>
-
-                      <div className="flex gap-2 mt-1">
-                        {teamMember.specialization && (
-                          <Badge variant="outline" className="text-xs">
-                            {teamMember.specialization}
-                          </Badge>
-                        )}
-
-                        {teamMember.experience && (
-                          <Badge variant="outline" className="text-xs">
-                            {teamMember.experience} yrs exp
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleVerifyAssistant(teamMember.id)}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-1" />
-                      Approve
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRejectAssistant(teamMember.id)}
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                </div>
-              ))}
+        return (
+          <>
+            {/* Mobile / tablet stacked */}
+            <div className="space-y-4 lg:hidden">
+              {teamOverview}
+              {quickActions}
+              {tasksSection}
             </div>
-          )}
-        </ContentCard>
-      )}
 
-      <SectionHeader
-        title={workspaceRole === "member" ? "My Tasks" : "Recent Tasks"}
-        description={
-          totalItems > 0
-            ? `${totalItems} ${
-                workspaceRole === "member" ? "assigned tasks" : "total tasks"
-              }`
-            : undefined
-        }
-        actions={
-          canCreateTask ? (
-            <Button
-              onClick={() => setCreateTaskOpen(true)}
-              size="sm"
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              New Task
-            </Button>
-          ) : undefined
-        }
-      />
-
-      <div className="mb-4">
-        <TaskFilters
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
-      </div>
-
-      {hasTaskViewFilter && (
-        <p className="text-xs text-muted-foreground mb-4">
-          You're viewing tasks created by or assigned to you based on workspace
-          policy.
-        </p>
-      )}
-
-      {filteredTasks.length === 0 ? (
-        <ContentCard>
-          <EmptyState
-            icon={ClipboardList}
-            title="No tasks found"
-            description={
-              canCreateTask
-                ? "Create your first task to get started."
-                : "No assigned tasks were found."
-            }
-            action={
-              canCreateTask ? (
-                <Button onClick={() => setCreateTaskOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Task
-                </Button>
-              ) : (
-                <Button variant="outline" asChild>
-                  <Link to="/workspace-access">
-                    <ShieldCheck className="w-4 h-4 mr-2" />
-                    Request Access
-                  </Link>
-                </Button>
-              )
-            }
-          />
-        </ContentCard>
-      ) : (
-        <>
-          <TaskTable
-            tasks={currentTasks}
-            showAssignee={workspaceRole !== "member"}
-            showExecutive
-            showActions={workspaceRole !== "member"}
-            onEdit={
-              workspaceRole !== "member"
-                ? (task) => openDrawer(task, "details")
-                : undefined
-            }
-            onAssign={
-              workspaceRole !== "member"
-                ? (task) => openDrawer(task, "assignees")
-                : undefined
-            }
-            onDelete={
-              workspaceRole !== "member"
-                ? (task) => openDrawer(task, "danger")
-                : undefined
-            }
-          />
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
+            {/* Desktop resizable */}
+            <div className="hidden lg:block">
+              <ResizablePanelGroup
+                direction="horizontal"
+                className="min-h-[600px] rounded-xl"
+              >
+                <ResizablePanel defaultSize={35} minSize={22} maxSize={55}>
+                  <div className="pr-3 space-y-4 h-full overflow-y-auto">
+                    {teamOverview}
+                    {quickActions}
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle withHandle className="bg-transparent mx-1" />
+                <ResizablePanel defaultSize={65} minSize={45}>
+                  <div className="pl-3 h-full overflow-y-auto">{tasksSection}</div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </div>
+          </>
+        );
+      })()}
             totalItems={totalItems}
             startIndex={startIndex}
             endIndex={endIndex}
