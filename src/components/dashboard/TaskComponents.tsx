@@ -352,9 +352,7 @@ export const TaskTable = ({
                 </td>
 
                 <td className="px-4 py-3">
-                  <Badge className={cn("text-[10px]", getStatusBadgeClass(task.status))}>
-                    {getStatusDisplay(task.status)}
-                  </Badge>
+                  <InlineStatusSelect task={task} onChanged={onStatusChange} />
                 </td>
               </tr>
             ))}
