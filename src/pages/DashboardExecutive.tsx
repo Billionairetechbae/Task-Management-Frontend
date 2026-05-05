@@ -626,12 +626,59 @@ const DashboardExecutive = () => {
           </>
         );
       })()}
-            totalItems={totalItems}
-            startIndex={startIndex}
-            endIndex={endIndex}
-            onPageChange={setCurrentPage}
+
+      {canViewTeamAdminSections && teamStats.pendingVerifications > 0 && (
+        <ContentCard className="mt-6">
+          <SectionHeader
+            title="Pending Verifications"
+            actions={
+              <Badge variant="outline" className="bg-warning/10 text-warning">
+                {pendingAssistants.length} waiting
+              </Badge>
+            }
           />
-        </>
+          {teamLoading ? (
+            <LoadingState message="Loading verifications..." />
+          ) : (
+            <div className="space-y-3 mt-4">
+              {pendingAssistants.map((teamMember) => (
+                <div
+                  key={teamMember.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg gap-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">
+                        {teamMember.firstName} {teamMember.lastName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{teamMember.email}</p>
+                      <div className="flex gap-2 mt-1">
+                        {teamMember.specialization && (
+                          <Badge variant="outline" className="text-xs">{teamMember.specialization}</Badge>
+                        )}
+                        {teamMember.experience && (
+                          <Badge variant="outline" className="text-xs">{teamMember.experience} yrs exp</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleVerifyAssistant(teamMember.id)}>
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleRejectAssistant(teamMember.id)}>
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ContentCard>
       )}
 
       <CreateTaskDialog
