@@ -14,7 +14,18 @@ import {
   TrendingUp,
   AlertTriangle,
   ShieldCheck,
+  ChevronDown,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
