@@ -108,8 +108,7 @@ const HarmonyAssessment = ({
                   <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
 
                   <div className="flex-1">
-                    <p className="text-sm font-semibold">Option {index + 1}</p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{option.text}</p>
+                    <p className="text-sm leading-6">{option.text}</p>
                   </div>
 
                   {selected && <CheckCircle2 className="h-5 w-5 text-primary" />}

@@ -43,6 +43,13 @@ const HarmonyIntro = ({ hasProfile, onGetStarted, onViewProfile }: HarmonyIntroP
             </div>
           </div>
 
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-sm font-semibold text-primary">Instruction for Respondents</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              This assessment measures your natural work style preferences, how you typically approach work and collaboration. There are no right or wrong answers. Please select the option that best describes your genuine preferences, not what you think is expected or ideal. Consider how you naturally behave in most work situations, not exceptional circumstances.
+            </p>
+          </div>
+
           <div className="flex flex-wrap gap-3">
             <Button onClick={onGetStarted}>
               {hasProfile ? "Retake Assessment" : "Take Assessment"}
