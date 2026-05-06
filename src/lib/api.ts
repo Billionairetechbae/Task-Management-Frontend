@@ -2801,6 +2801,105 @@ async compareHarmonyWithMember(userId: string): Promise<{
       headers: this.getAuthHeaders(),
     });
   }
+
+  /* ============================
+    PROFESSIONAL / CV PROFILE
+  ============================ */
+
+  async getMyProfessionalProfile(): Promise<{ status: string; data: ProfessionalProfileBundle }> {
+    return this.request("/profile/me", { method: "GET", headers: this.getAuthHeaders(false) });
+  }
+
+  async updateMyProfessionalProfile(payload: Partial<ProfessionalProfileDetails>) {
+    return this.request("/profile/me", { method: "PUT", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+
+  async createEducation(payload: Partial<EducationItem>) {
+    return this.request("/profile/me/education", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async updateEducation(id: string, payload: Partial<EducationItem>) {
+    return this.request(`/profile/me/education/${id}`, { method: "PUT", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async deleteEducation(id: string) {
+    return this.request(`/profile/me/education/${id}`, { method: "DELETE", headers: this.getAuthHeaders(false) });
+  }
+
+  async createWorkExperience(payload: Partial<WorkExperienceItem>) {
+    return this.request("/profile/me/work-experience", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async updateWorkExperience(id: string, payload: Partial<WorkExperienceItem>) {
+    return this.request(`/profile/me/work-experience/${id}`, { method: "PUT", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async deleteWorkExperience(id: string) {
+    return this.request(`/profile/me/work-experience/${id}`, { method: "DELETE", headers: this.getAuthHeaders(false) });
+  }
+
+  async createSkill(payload: Partial<SkillItem>) {
+    return this.request("/profile/me/skills", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async updateSkill(id: string, payload: Partial<SkillItem>) {
+    return this.request(`/profile/me/skills/${id}`, { method: "PUT", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async deleteSkill(id: string) {
+    return this.request(`/profile/me/skills/${id}`, { method: "DELETE", headers: this.getAuthHeaders(false) });
+  }
+
+  async createCertification(payload: Partial<CertificationItem>) {
+    return this.request("/profile/me/certifications", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async updateCertification(id: string, payload: Partial<CertificationItem>) {
+    return this.request(`/profile/me/certifications/${id}`, { method: "PUT", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async deleteCertification(id: string) {
+    return this.request(`/profile/me/certifications/${id}`, { method: "DELETE", headers: this.getAuthHeaders(false) });
+  }
+
+  async createProfileProject(payload: Partial<ProfileProjectItem>) {
+    return this.request("/profile/me/projects", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async updateProfileProject(id: string, payload: Partial<ProfileProjectItem>) {
+    return this.request(`/profile/me/projects/${id}`, { method: "PUT", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async deleteProfileProject(id: string) {
+    return this.request(`/profile/me/projects/${id}`, { method: "DELETE", headers: this.getAuthHeaders(false) });
+  }
+
+  async createLanguage(payload: Partial<LanguageItem>) {
+    return this.request("/profile/me/languages", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async updateLanguage(id: string, payload: Partial<LanguageItem>) {
+    return this.request(`/profile/me/languages/${id}`, { method: "PUT", headers: this.getAuthHeaders(false), body: JSON.stringify(payload) });
+  }
+  async deleteLanguage(id: string) {
+    return this.request(`/profile/me/languages/${id}`, { method: "DELETE", headers: this.getAuthHeaders(false) });
+  }
+
+  async downloadMyCv(filename = "CV.pdf"): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/profile/me/cv.pdf`, { headers: this.getAuthHeaders(false) });
+    if (!res.ok) throw new Error("Failed to download CV");
+    triggerBlobDownload(await res.blob(), filename);
+  }
+
+  async getUserProfessionalProfile(userId: string): Promise<{ status: string; data: ProfessionalProfileBundle }> {
+    return this.request(`/profile/users/${userId}`, { method: "GET", headers: this.getAuthHeaders(false) });
+  }
+
+  async downloadUserCv(userId: string, filename = "CV.pdf"): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/profile/users/${userId}/cv.pdf`, { headers: this.getAuthHeaders(false) });
+    if (!res.ok) throw new Error("Failed to download CV");
+    triggerBlobDownload(await res.blob(), filename);
+  }
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 export const api = new ApiClient();
