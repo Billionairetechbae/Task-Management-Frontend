@@ -969,6 +969,110 @@ export interface WorkspaceAccessRequest {
 }
 
 
+/* ============================
+   PROFESSIONAL PROFILE TYPES
+============================ */
+
+export type ProfileVisibility = "private" | "workspace" | "public";
+
+export interface ProfessionalProfileDetails {
+  id?: string;
+  userId?: string;
+  phoneNumber?: string | null;
+  contactEmail?: string | null;
+  websiteUrl?: string | null;
+  linkedinUrl?: string | null;
+  githubUrl?: string | null;
+  twitterUrl?: string | null;
+  portfolioUrl?: string | null;
+  currentLocation?: string | null;
+  nationality?: string | null;
+  gender?: string | null;
+  dateOfBirth?: string | null;
+  professionalHeadline?: string | null;
+  professionalSummary?: string | null;
+  careerObjective?: string | null;
+  profileVisibility?: ProfileVisibility;
+}
+
+export interface EducationItem {
+  id?: string;
+  institution: string;
+  degree?: string | null;
+  fieldOfStudy?: string | null;
+  location?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  isCurrent?: boolean;
+  description?: string | null;
+  sortOrder?: number;
+}
+
+export interface WorkExperienceItem {
+  id?: string;
+  companyName: string;
+  jobTitle: string;
+  location?: string | null;
+  employmentType?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  isCurrent?: boolean;
+  description?: string | null;
+  achievements?: string[];
+  sortOrder?: number;
+}
+
+export interface SkillItem {
+  id?: string;
+  name: string;
+  category?: string | null;
+  proficiency?: string | null;
+  sortOrder?: number;
+}
+
+export interface CertificationItem {
+  id?: string;
+  title: string;
+  issuingOrganization?: string | null;
+  issueDate?: string | null;
+  expiryDate?: string | null;
+  credentialUrl?: string | null;
+  description?: string | null;
+  sortOrder?: number;
+}
+
+export interface ProfileProjectItem {
+  id?: string;
+  title: string;
+  role?: string | null;
+  organization?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  isCurrent?: boolean;
+  description?: string | null;
+  achievements?: string[];
+  projectUrl?: string | null;
+  sortOrder?: number;
+}
+
+export interface LanguageItem {
+  id?: string;
+  language: string;
+  proficiency?: string | null;
+  sortOrder?: number;
+}
+
+export interface ProfessionalProfileBundle {
+  user: User;
+  profile: ProfessionalProfileDetails | null;
+  education: EducationItem[];
+  workExperience: WorkExperienceItem[];
+  skills: SkillItem[];
+  certifications: CertificationItem[];
+  projects: ProfileProjectItem[];
+  languages: LanguageItem[];
+}
+
 
 /* ============================
    API BASE URL
