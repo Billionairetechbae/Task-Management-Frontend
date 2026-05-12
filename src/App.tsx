@@ -181,6 +181,15 @@ const App = () => (
       />
 
       <Route
+        path="/resource-access"
+        element={
+          <ProtectedRoute>
+            <ResourceAccessRequests />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/workspace-access"
         element={
           <ProtectedRoute>
