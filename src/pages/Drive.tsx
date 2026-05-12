@@ -175,12 +175,22 @@ export default function Drive() {
               files.length > 0 ? (
                 <ul className="space-y-2">
                   {files.map((file) => (
-                    <li key={file.id} className="flex items-center justify-between border rounded-lg p-3">
-                      <div>
-                        <p className="font-medium">{file.fileName}</p>
+                    <li key={file.id} className="flex items-center justify-between border rounded-lg p-3 gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{file.fileName}</p>
                         <p className="text-xs text-muted-foreground">{file.fileType} • {(file.fileSize / 1024).toFixed(1)} KB</p>
                       </div>
-                      <a href={file.fileUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Open</a>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <a href={file.fileUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Open</a>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteFile(file)}
+                          disabled={loading || (tab === "workspace" && !canUploadWorkspaceFiles)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>
