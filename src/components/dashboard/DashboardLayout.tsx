@@ -277,6 +277,11 @@ const DashboardLayout = ({
         icon: <ShieldCheck className="w-[18px] h-[18px]" />,
       },
       {
+        label: "My Access Requests",
+        href: "/resource-access",
+        icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+      },
+      {
         label: "Harmony",
         href: "/harmony",
         icon: <Users className="w-[18px] h-[18px]" />,
