@@ -773,6 +773,13 @@ export default function ProjectDetails() {
                       <TooltipContent>New Checklist</TooltipContent>
                     </Tooltip>
 
+                    {project && (
+                      <ClientViewShareButton
+                        resourceType="project"
+                        resourceId={project.id}
+                      />
+                    )}
+
                     {canRequestProjectTaskAccess && (
                       <Tooltip>
                         <TooltipTrigger asChild>
