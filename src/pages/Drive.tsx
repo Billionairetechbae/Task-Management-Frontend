@@ -74,6 +74,21 @@ export default function Drive() {
     }
   };
 
+  const handleDeleteFile = async (file: FolderFile) => {
+    if (!selectedFolder) return;
+    if (!window.confirm(`Delete "${file.fileName}"? This cannot be undone.`)) return;
+    try {
+      setLoading(true);
+      await api.deleteFile(file.id);
+      setFiles((prev) => prev.filter((f) => f.id !== file.id));
+      toast({ title: "File deleted" });
+    } catch (err: any) {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const doUpload = async () => {
     if (!selectedFolder || !pendingFiles || pendingFiles.length === 0) return;
     try {
