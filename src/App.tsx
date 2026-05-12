@@ -64,6 +64,8 @@ import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
 // import DashboardEntry from "./pages/DashboardEntry";
 
 import ProjectHealth from "@/pages/ProjectHealth";
+import ClientView from "@/pages/ClientView";
+import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 
 
 const App = () => (
@@ -87,6 +89,7 @@ const App = () => (
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/project-invite/:token" element={<ProjectInvite />} />
+      <Route path="/client-view/:token" element={<ClientView />} />
 
       {/* TeamMembers Page */}
       <Route
@@ -173,6 +176,15 @@ const App = () => (
         element={
           <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
             <WorkspaceOnboarding />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/resource-access"
+        element={
+          <ProtectedRoute>
+            <ResourceAccessRequests />
           </ProtectedRoute>
         }
       />

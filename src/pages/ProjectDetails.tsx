@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import ClientViewShareButton from "@/components/ClientViewShareButton";
 import {
   api,
   Project,
@@ -771,6 +772,13 @@ export default function ProjectDetails() {
 
                       <TooltipContent>New Checklist</TooltipContent>
                     </Tooltip>
+
+                    {project && (
+                      <ClientViewShareButton
+                        resourceType="project"
+                        resourceId={project.id}
+                      />
+                    )}
 
                     {canRequestProjectTaskAccess && (
                       <Tooltip>

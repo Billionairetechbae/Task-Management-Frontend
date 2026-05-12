@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import ClientViewShareButton from "@/components/ClientViewShareButton";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -816,9 +817,14 @@ const TaskDetails = () => {
               </div>
             </div>
 
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="flex-shrink-0">
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {task && (
+                <ClientViewShareButton resourceType="task" resourceId={task.id} />
+              )}
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              </Button>
+            </div>
           </div>
 
           {/* MAIN CONTENT */}

@@ -147,6 +147,102 @@ export interface ErrorResponse {
 }
 
 /* ============================
+   CLIENT VIEW / RESOURCE ACCESS
+============================ */
+
+export type ClientViewResourceType = "project" | "task";
+
+export interface ClientViewShareLink {
+  id: string;
+  resourceType: ClientViewResourceType;
+  resourceId: string;
+  visibilityLevel: "summary" | "detailed";
+  isActive: boolean;
+  expiresAt?: string | null;
+  viewCount: number;
+  lastViewedAt?: string | null;
+  publicUrl: string;
+  createdAt: string;
+}
+
+export interface ClientViewProjectPayload {
+  resourceType: "project";
+  token: string;
+  visibilityLevel: "summary" | "detailed";
+  canRequestAccess: boolean;
+  project: {
+    name: string;
+    description?: string | null;
+    status?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    logoUrl?: string | null;
+    progress: number;
+    stats: {
+      totalTasks: number;
+      completed: number;
+      inProgress: number;
+      pending: number;
+      overdue: number;
+    };
+    tasks: Array<{
+      title: string;
+      description?: string | null;
+      status?: string | null;
+      priority?: string | null;
+      deadline?: string | null;
+      assignee?: string | null;
+    }>;
+  };
+}
+
+export interface ClientViewTaskPayload {
+  resourceType: "task";
+  token: string;
+  visibilityLevel: "summary" | "detailed";
+  canRequestAccess: boolean;
+  task: {
+    title: string;
+    description?: string | null;
+    status?: string | null;
+    priority?: string | null;
+    deadline?: string | null;
+    category?: string | null;
+    progress: number;
+    assignee?: string | null;
+    subtasks: Array<{
+      title: string;
+      status?: string | null;
+      priority?: string | null;
+      deadline?: string | null;
+    }>;
+  };
+}
+
+export type ClientViewPayload =
+  | ClientViewProjectPayload
+  | ClientViewTaskPayload;
+
+export interface ResourceAccessRequest {
+  id: string;
+  companyId: string;
+  resourceType: ClientViewResourceType;
+  resourceId: string;
+  requesterUserId: string;
+  accessLevel: "viewer";
+  status: "pending" | "approved" | "denied";
+  reason?: string | null;
+  requester?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    profilePictureUrl?: string | null;
+  };
+  createdAt: string;
+}
+
+/* ============================
    AUTH PAYLOADS
 ============================ */
 
@@ -3082,7 +3178,92 @@ async compareHarmonyWithMember(userId: string): Promise<{
     triggerBlobDownload(await res.blob(), filename);
   }
 
-  
+  /* ============================
+     CLIENT VIEW / RESOURCE ACCESS
+  ============================ */
+
+  async createClientViewShareLink(payload: {
+    resourceType: ClientViewResourceType;
+    resourceId: string;
+    visibilityLevel?: "summary" | "detailed";
+    expiresAt?: string | null;
+  }): Promise<{ status: string; data: { shareLink: ClientViewShareLink } }> {
+    return this.request("/client-view/share-links", {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify({
+        visibilityLevel: "summary",
+        ...payload,
+      }),
+    });
+  }
+
+  async getPublicClientView(
+    token: string
+  ): Promise<{ status: string; data: ClientViewPayload }> {
+    const url = `${API_BASE_URL}/client-view/share/${encodeURIComponent(token)}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    let result: any = {};
+    try {
+      result = await response.json();
+    } catch {}
+    if (!response.ok) {
+      throw new Error(result?.message || "Unable to load client view");
+    }
+    return result;
+  }
+
+  async createResourceAccessRequest(payload: {
+    token: string;
+    reason?: string;
+  }): Promise<{ status: string; data: { request: ResourceAccessRequest } }> {
+    return this.request("/client-view/resource-access-requests", {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getResourceAccessRequests(params: {
+    status?: "pending" | "approved" | "denied";
+    resourceType?: ClientViewResourceType;
+    resourceId?: string;
+  } = {}): Promise<{ status: string; data: { requests: ResourceAccessRequest[] } }> {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    if (params.resourceType) qs.set("resourceType", params.resourceType);
+    if (params.resourceId) qs.set("resourceId", params.resourceId);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return this.request(`/client-view/resource-access-requests${suffix}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async getMyResourceAccessRequests(): Promise<{
+    status: string;
+    data: { requests: ResourceAccessRequest[] };
+  }> {
+    return this.request("/client-view/resource-access-requests/me", {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async decideResourceAccessRequest(
+    requestId: string,
+    status: "approved" | "denied"
+  ): Promise<{ status: string; data: { request: ResourceAccessRequest } }> {
+    return this.request(`/client-view/resource-access-requests/${requestId}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify({ status }),
+    });
+  }
+
   async getProjectHealth(): Promise<{
     status: string;
     data: {

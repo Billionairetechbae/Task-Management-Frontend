@@ -143,6 +143,11 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Client Access",
+          href: "/resource-access",
+          icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Workspace Access",
           href: "/workspace-access",
           icon: <ShieldCheck className="w-[18px] h-[18px]" />,
@@ -213,6 +218,11 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Client Access",
+          href: "/resource-access",
+          icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Workspace Access",
           href: "/workspace-access",
           icon: <ShieldCheck className="w-[18px] h-[18px]" />,
@@ -264,6 +274,11 @@ const DashboardLayout = ({
       {
         label: "Workspace Access",
         href: "/workspace-access",
+        icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+      },
+      {
+        label: "My Access Requests",
+        href: "/resource-access",
         icon: <ShieldCheck className="w-[18px] h-[18px]" />,
       },
       {
