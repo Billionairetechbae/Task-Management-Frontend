@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import ClientViewShareButton from "@/components/ClientViewShareButton";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
