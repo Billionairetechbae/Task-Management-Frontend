@@ -89,6 +89,7 @@ const App = () => (
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/project-invite/:token" element={<ProjectInvite />} />
+      <Route path="/client-view/:token" element={<ClientView />} />
 
       {/* TeamMembers Page */}
       <Route
