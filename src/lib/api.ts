@@ -3082,7 +3082,92 @@ async compareHarmonyWithMember(userId: string): Promise<{
     triggerBlobDownload(await res.blob(), filename);
   }
 
-  
+  /* ============================
+     CLIENT VIEW / RESOURCE ACCESS
+  ============================ */
+
+  async createClientViewShareLink(payload: {
+    resourceType: ClientViewResourceType;
+    resourceId: string;
+    visibilityLevel?: "summary" | "detailed";
+    expiresAt?: string | null;
+  }): Promise<{ status: string; data: { shareLink: ClientViewShareLink } }> {
+    return this.request("/client-view/share-links", {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify({
+        visibilityLevel: "summary",
+        ...payload,
+      }),
+    });
+  }
+
+  async getPublicClientView(
+    token: string
+  ): Promise<{ status: string; data: ClientViewPayload }> {
+    const url = `${API_BASE_URL}/client-view/share/${encodeURIComponent(token)}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    let result: any = {};
+    try {
+      result = await response.json();
+    } catch {}
+    if (!response.ok) {
+      throw new Error(result?.message || "Unable to load client view");
+    }
+    return result;
+  }
+
+  async createResourceAccessRequest(payload: {
+    token: string;
+    reason?: string;
+  }): Promise<{ status: string; data: { request: ResourceAccessRequest } }> {
+    return this.request("/client-view/resource-access-requests", {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getResourceAccessRequests(params: {
+    status?: "pending" | "approved" | "denied";
+    resourceType?: ClientViewResourceType;
+    resourceId?: string;
+  } = {}): Promise<{ status: string; data: { requests: ResourceAccessRequest[] } }> {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    if (params.resourceType) qs.set("resourceType", params.resourceType);
+    if (params.resourceId) qs.set("resourceId", params.resourceId);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return this.request(`/client-view/resource-access-requests${suffix}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async getMyResourceAccessRequests(): Promise<{
+    status: string;
+    data: { requests: ResourceAccessRequest[] };
+  }> {
+    return this.request("/client-view/resource-access-requests/me", {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async decideResourceAccessRequest(
+    requestId: string,
+    status: "approved" | "denied"
+  ): Promise<{ status: string; data: { request: ResourceAccessRequest } }> {
+    return this.request(`/client-view/resource-access-requests/${requestId}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify({ status }),
+    });
+  }
+
   async getProjectHealth(): Promise<{
     status: string;
     data: {
