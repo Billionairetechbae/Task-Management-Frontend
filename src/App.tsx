@@ -64,6 +64,8 @@ import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
 // import DashboardEntry from "./pages/DashboardEntry";
 
 import ProjectHealth from "@/pages/ProjectHealth";
+import ClientView from "@/pages/ClientView";
+import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 
 
 const App = () => (
