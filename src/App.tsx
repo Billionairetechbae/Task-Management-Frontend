@@ -63,6 +63,8 @@ import ProjectInvite from "./pages/ProjectInvite";
 import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
 // import DashboardEntry from "./pages/DashboardEntry";
 
+import ProjectHealth from "@/pages/ProjectHealth";
+
 
 const App = () => (
   <>
@@ -415,6 +417,15 @@ const App = () => (
         element={
           <ProtectedRoute allowedRoles={["executive", "manager", "team_member", "admin"]}>
             <ExecutiveAssistanceRequests />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/project-health"
+        element={
+          <ProtectedRoute>
+            <ProjectHealth />
           </ProtectedRoute>
         }
       />

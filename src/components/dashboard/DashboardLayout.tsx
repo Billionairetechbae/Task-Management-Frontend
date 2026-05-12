@@ -31,6 +31,7 @@ import {
   Paperclip,
   Folder,
   FolderKanban,
+  Activity,
   ShieldCheck,
 } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
@@ -127,6 +128,11 @@ const DashboardLayout = ({
           icon: <FolderKanban className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Project Health",
+          href: "/project-health",
+          icon: <Activity className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "All Tasks",
           href: "/tasks/all",
           icon: <ListChecks className="w-[18px] h-[18px]" />,
@@ -190,6 +196,11 @@ const DashboardLayout = ({
           label: "Projects",
           href: "/projects",
           icon: <FolderKanban className="w-[18px] h-[18px]" />,
+        },
+        {
+          label: "Project Health",
+          href: "/project-health",
+          icon: <Activity className="w-[18px] h-[18px]" />,
         },
         {
           label: "All Tasks",

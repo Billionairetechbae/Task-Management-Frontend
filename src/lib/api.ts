@@ -1074,6 +1074,94 @@ export interface ProfessionalProfileBundle {
 }
 
 
+
+export type ProjectHealthStatus = "healthy" | "watchlist" | "at_risk" | "critical";
+
+export interface ProjectHealthUser {
+  id: string | null;
+  firstName: string;
+  lastName?: string;
+  email?: string | null;
+}
+
+export interface ProjectHealthMetrics {
+  totalTasks: number;
+  completedTasks: number;
+  cancelledTasks: number;
+  openTasks: number;
+  pendingTasks: number;
+  inProgressTasks: number;
+  delayedTasks: number;
+  overdueTasks: number;
+  urgentOpenTasks: number;
+  staleOpenTasks: number;
+  ownerlessOpenTasks: number;
+  completionRate: number;
+}
+
+export interface ProjectHealthWorkload {
+  topAssignee: ProjectHealthUser | null;
+  topAssigneeOpenTasks: number;
+  concentrationPercentage: number;
+}
+
+export interface ProjectHealthPriorityTask {
+  id: string;
+  title: string;
+  status: string;
+  priority?: string;
+  deadline?: string | null;
+  assignee?: ProjectHealthUser | null;
+  isOverdue: boolean;
+  isStale: boolean;
+}
+
+export interface ProjectHealthProject {
+  project: {
+    id: string;
+    name: string;
+    description?: string | null;
+    status?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    dueDate?: string | null;
+    logoUrl?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+  healthScore: number;
+  healthStatus: ProjectHealthStatus;
+  healthLabel: string;
+  healthDescription: string;
+  metrics: ProjectHealthMetrics;
+  workload: ProjectHealthWorkload;
+  riskReasons: string[];
+  recommendedActions: string[];
+  priorityTasks: ProjectHealthPriorityTask[];
+  generatedAt: string;
+}
+
+export interface ProjectHealthSummary {
+  totalProjects: number;
+  averageHealthScore: number;
+  counts: {
+    healthy: number;
+    watchlist: number;
+    at_risk: number;
+    critical: number;
+  };
+  totalOverdueTasks: number;
+  totalOpenTasks: number;
+  criticalProjects: Array<{
+    id: string;
+    name: string;
+    healthScore: number;
+    healthStatus: ProjectHealthStatus;
+    healthLabel: string;
+    topRisk: string;
+  }>;
+}
+
 /* ============================
    API BASE URL
 ============================ */
@@ -2993,6 +3081,33 @@ async compareHarmonyWithMember(userId: string): Promise<{
     if (!res.ok) throw new Error("Failed to download CV");
     triggerBlobDownload(await res.blob(), filename);
   }
+
+  
+  async getProjectHealth(): Promise<{
+    status: string;
+    data: {
+      summary: ProjectHealthSummary;
+      projects: ProjectHealthProject[];
+    };
+  }> {
+    return this.request("/project-health", {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+  
+  async getProjectHealthDetail(projectId: string): Promise<{
+    status: string;
+    data: {
+      projectHealth: ProjectHealthProject;
+    };
+  }> {
+    return this.request(`/project-health/${projectId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+  
 }
 
 function triggerBlobDownload(blob: Blob, filename: string) {
