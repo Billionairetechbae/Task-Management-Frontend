@@ -10,6 +10,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -22,6 +27,7 @@ import {
   Menu,
   X,
   ChevronLeft,
+  ChevronDown,
   TrendingUp,
   Search,
   Bot,
@@ -45,6 +51,18 @@ interface NavItem {
   badge?: number;
 }
 
+interface NavGroup {
+  label: string;
+  icon?: React.ReactNode;
+  items: NavItem[];
+}
+
+type NavItemOrGroup = NavItem | NavGroup;
+
+const isNavGroup = (item: NavItemOrGroup): item is NavGroup => {
+  return "items" in item;
+};
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
   fullWidth?: boolean;
@@ -62,7 +80,7 @@ const DashboardLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const getNavItems = (): NavItem[] => {
+  const getNavItems = (): NavItemOrGroup[] => {
     const role = user?.role;
 
     if (role === "admin") {
@@ -124,18 +142,33 @@ const DashboardLayout = ({
         },
         {
           label: "Projects",
-          href: "/projects",
-          icon: <FolderKanban className="w-[18px] h-[18px]" />,
+          items: [
+            {
+              label: "All Projects",
+              href: "/projects",
+              icon: <FolderKanban className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Create Project",
+              href: "/projects?create=true",
+              icon: <FolderKanban className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Project Health",
+              href: "/project-health",
+              icon: <Activity className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
-          label: "Project Health",
-          href: "/project-health",
-          icon: <Activity className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "All Tasks",
-          href: "/tasks/all",
-          icon: <ListChecks className="w-[18px] h-[18px]" />,
+          label: "Tasks",
+          items: [
+            {
+              label: "All Tasks",
+              href: "/tasks/all",
+              icon: <ListChecks className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
           label: "Drive",
@@ -143,34 +176,44 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
-          label: "Client Access",
-          href: "/resource-access",
-          icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+          label: "Access & Permissions",
+          items: [
+            {
+              label: "Client Access",
+              href: "/resource-access",
+              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Workspace Access",
+              href: "/workspace-access",
+              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
-          label: "Workspace Access",
-          href: "/workspace-access",
-          icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Hire Talent",
-          href: "/assistance-requests",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Team Directory",
-          href: "/team-directory",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Team Management",
-          href: "/team-management",
-          icon: <Crown className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Team Members",
-          href: "/team_members",
-          icon: <UserCircle className="w-[18px] h-[18px]" />,
+          label: "Team",
+          items: [
+            {
+              label: "Hire Talent",
+              href: "/assistance-requests",
+              icon: <Users className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Team Directory",
+              href: "/team-directory",
+              icon: <Users className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Team Management",
+              href: "/team-management",
+              icon: <Crown className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Team Members",
+              href: "/team_members",
+              icon: <UserCircle className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
           label: "Harmony",
@@ -199,18 +242,28 @@ const DashboardLayout = ({
         },
         {
           label: "Projects",
-          href: "/projects",
-          icon: <FolderKanban className="w-[18px] h-[18px]" />,
+          items: [
+            {
+              label: "All Projects",
+              href: "/projects",
+              icon: <FolderKanban className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Project Health",
+              href: "/project-health",
+              icon: <Activity className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
-          label: "Project Health",
-          href: "/project-health",
-          icon: <Activity className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "All Tasks",
-          href: "/tasks/all",
-          icon: <ListChecks className="w-[18px] h-[18px]" />,
+          label: "Tasks",
+          items: [
+            {
+              label: "All Tasks",
+              href: "/tasks/all",
+              icon: <ListChecks className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
           label: "Drive",
@@ -218,24 +271,34 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
-          label: "Client Access",
-          href: "/resource-access",
-          icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+          label: "Access & Permissions",
+          items: [
+            {
+              label: "Client Access",
+              href: "/resource-access",
+              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Workspace Access",
+              href: "/workspace-access",
+              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
-          label: "Workspace Access",
-          href: "/workspace-access",
-          icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Team Directory",
-          href: "/team-directory",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Team Members",
-          href: "/team_members",
-          icon: <UserCircle className="w-[18px] h-[18px]" />,
+          label: "Team",
+          items: [
+            {
+              label: "Team Directory",
+              href: "/team-directory",
+              icon: <Users className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Team Members",
+              href: "/team_members",
+              icon: <UserCircle className="w-[18px] h-[18px]" />,
+            },
+          ],
         },
         {
           label: "Harmony",
@@ -253,13 +316,28 @@ const DashboardLayout = ({
       },
       {
         label: "Projects",
-        href: "/projects",
-        icon: <FolderKanban className="w-[18px] h-[18px]" />,
+        items: [
+          {
+            label: "All Projects",
+            href: "/projects",
+            icon: <FolderKanban className="w-[18px] h-[18px]" />,
+          },
+        ],
       },
       {
-        label: "All Tasks",
-        href: "/tasks/all",
-        icon: <ListChecks className="w-[18px] h-[18px]" />,
+        label: "Tasks",
+        items: [
+          {
+            label: "All Tasks",
+            href: "/tasks/all",
+            icon: <ListChecks className="w-[18px] h-[18px]" />,
+          },
+          {
+            label: "My Tasks",
+            href: "/tasks/my",
+            icon: <ClipboardList className="w-[18px] h-[18px]" />,
+          },
+        ],
       },
       {
         label: "Drive",
@@ -267,19 +345,19 @@ const DashboardLayout = ({
         icon: <Folder className="w-[18px] h-[18px]" />,
       },
       {
-        label: "My Tasks",
-        href: "/tasks/my",
-        icon: <ClipboardList className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Workspace Access",
-        href: "/workspace-access",
-        icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "My Access Requests",
-        href: "/resource-access",
-        icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+        label: "Access",
+        items: [
+          {
+            label: "Workspace Access",
+            href: "/workspace-access",
+            icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+          },
+          {
+            label: "My Access Requests",
+            href: "/resource-access",
+            icon: <ShieldCheck className="w-[18px] h-[18px]" />,
+          },
+        ],
       },
       {
         label: "Harmony",
@@ -328,7 +406,7 @@ const DashboardLayout = ({
     }
   };
 
-  const NavItemLink = ({ item }: { item: NavItem }) => {
+  const NavItemLink = ({ item, isSubItem = false }: { item: NavItem; isSubItem?: boolean }) => {
     const active = isActive(item.href);
 
     const link = (
@@ -337,6 +415,7 @@ const DashboardLayout = ({
         onClick={() => setMobileOpen(false)}
         className={cn(
           "group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative overflow-hidden",
+          isSubItem && "ml-6",
           active
             ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -374,6 +453,69 @@ const DashboardLayout = ({
     }
 
     return link;
+  };
+
+  const NavItemGroup = ({ group }: { group: NavGroup }) => {
+    const [open, setOpen] = useState(true);
+    
+    const isAnyActive = group.items.some((item) => isActive(item.href));
+    const firstItem = group.items[0];
+
+    if (!sidebarOpen) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to={firstItem.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "group flex items-center justify-center px-2 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative overflow-hidden",
+                  isAnyActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+              >
+                <span
+                  className={cn(
+                    "shrink-0 transition-transform duration-200",
+                    !isAnyActive && "group-hover:scale-110"
+                  )}
+                >
+                  {firstItem.icon}
+                </span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium text-xs">
+              {group.label}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return (
+      <Collapsible open={open} onOpenChange={setOpen} className="group">
+        <CollapsibleTrigger asChild>
+          <button
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 w-full text-left",
+              isAnyActive
+                ? "bg-sidebar-primary/10 text-sidebar-primary"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <ChevronDown className="w-4 h-4 shrink-0 transition-transform duration-200 group-data-[state=closed]:-rotate-90" />
+            <span className="truncate">{group.label}</span>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-0.5">
+          {group.items.map((item) => (
+            <NavItemLink key={item.href + item.label} item={item} isSubItem />
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+    );
   };
 
   const SidebarContent = () => (
@@ -425,9 +567,12 @@ const DashboardLayout = ({
 
       <ScrollArea className="flex-1 py-2">
         <nav className="px-2 space-y-0.5">
-          {navItems.map((item) => (
-            <NavItemLink key={item.href + item.label} item={item} />
-          ))}
+          {navItems.map((item, index) => {
+            if (isNavGroup(item)) {
+              return <NavItemGroup key={`group-${index}-${item.label}`} group={item} />;
+            }
+            return <NavItemLink key={item.href + item.label} item={item} />;
+          })}
         </nav>
       </ScrollArea>
 

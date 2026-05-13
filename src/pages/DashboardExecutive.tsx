@@ -106,7 +106,7 @@ const DashboardExecutive = () => {
     workspaceRole === "owner" || workspaceRole === "admin";
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 7;
 
   const filteredTasks = statusFilter
     ? tasks.filter((task) => task.status === statusFilter)
@@ -609,7 +609,7 @@ const DashboardExecutive = () => {
             <div className="hidden lg:block">
               <ResizablePanelGroup
                 direction="horizontal"
-                className="min-h-[600px] rounded-xl"
+                className="h-[calc(100vh-120px)] rounded-xl"
               >
                 <ResizablePanel defaultSize={35} minSize={22} maxSize={55}>
                   <div className="pr-3 space-y-4 h-full overflow-y-auto">
