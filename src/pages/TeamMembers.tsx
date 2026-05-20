@@ -23,6 +23,7 @@ const mapCompanyMemberToTeamCard = (m: CompanyMember): TeamMember => {
     email: u.email || "",
     company: u.company?.name || "",
     role: u.role || "",
+    workspaceRole: m.role || "",
     subscriptionTier: u.subscriptionTier || "free",
     isVerified: m.isVerified,
     isActive: m.status !== "removed",

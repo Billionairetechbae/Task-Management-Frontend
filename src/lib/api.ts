@@ -536,7 +536,8 @@ export interface TeamMember {
   lastName: string;
   email: string;
   company: string;
-  role: string;
+  role: string; // global user role (optional to use)
+  workspaceRole: string; // workspace role (prefer this)
   subscriptionTier: string;
   isVerified: boolean;
   isActive: boolean;
@@ -937,12 +938,18 @@ export interface HarmonyIndividualReport {
   archetype: string;
   summary: string;
   dimensionSummary: Record<HarmonyDimensionKey, HarmonyDimensionSummary>;
-  strengths: string[];
-  challenges: string[];
-  collaborationStyle: string[];
-  idealTeamRoles: string[];
-  do: string[];
-  dont: string[];
+  strengths: string[] | any[];
+  challenges: string[] | any[];
+  risks?: string[] | any[];
+  collaborationStyle: string[] | any[];
+  collaborationTips?: string[] | any[];
+  idealTeamRoles: string[] | any[];
+  suggestedRoles?: string[] | any[];
+  bestWorkConditions?: string[] | any[];
+  nextActions?: string[] | any[];
+  do: string[] | any[];
+  dont: string[] | any[];
+  archetypeMeaning?: any;
   generatedAt: string;
 }
 
@@ -1023,6 +1030,75 @@ export interface HarmonyScoreboardData {
   pairwiseCompatibility: HarmonyPairCompatibility[];
   complementaryPairings: HarmonyPairCompatibility[];
   frictionPronePairings: HarmonyPairCompatibility[];
+}
+
+/* ============================
+   HARMONY AI REPORTS
+============================ */
+
+export interface HarmonyAiReportTeamMakeupItem {
+  archetype: string;
+  count: number;
+  whatItMeans: string;
+}
+
+export interface HarmonyAiReportBestPairing {
+  pairing: string;
+  why: string;
+  idealWork: string;
+}
+
+export interface HarmonyAiReportWatchOutPairing {
+  pairing: string;
+  why: string;
+  mitigation: string;
+}
+
+export interface HarmonyAiReport {
+  teamSnapshot?: string;
+  teamMakeup?: HarmonyAiReportTeamMakeupItem[] | any[];
+  strengths?: string[] | any[];
+  risks?: string[] | any[];
+  bestPairings?: HarmonyAiReportBestPairing[] | any[];
+  watchOutPairings?: HarmonyAiReportWatchOutPairing[] | any[];
+  operatingNorms?: string[] | any[];
+  actionsNext30Days?: string[] | any[];
+  archetypePrimer?: any;
+  generatedAt?: string;
+}
+
+export interface HarmonyAiReportResponse {
+  status: string;
+  data: {
+    report: HarmonyAiReport | null;
+    cached: boolean;
+  };
+}
+
+/* ============================
+   ONBOARDING
+============================ */
+
+export interface OnboardingStatus {
+  needsGender: boolean;
+  needsAge?: boolean;
+  gender?: string;
+  age?: number;
+}
+
+export interface UpdateOnboardingPayload {
+  gender: string;
+  age?: number;
+}
+
+export interface OnboardingStatusResponse {
+  status: string;
+  data: OnboardingStatus;
+}
+
+export interface UpdateOnboardingResponse {
+  status: string;
+  data: { user: any };
 }
 
 
@@ -2574,6 +2650,42 @@ async compareHarmonyWithMember(userId: string): Promise<{
   });
 }
 
+async getHarmonyAiSummaryMe(force?: boolean): Promise<HarmonyAiReportResponse> {
+  const queryParams = new URLSearchParams();
+  if (force) queryParams.append("force", "true");
+  const query = queryParams.toString();
+  
+  return this.request(`/harmony/ai-summary/me${query ? `?${query}` : ""}`, {
+    method: "GET",
+    headers: this.getAuthHeaders(false), // NO x-company-id
+  });
+}
+
+async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse> {
+    const queryParams = new URLSearchParams();
+    if (force) queryParams.append("force", "true");
+    const query = queryParams.toString();
+    
+    return this.request(`/harmony/ai-summary/team${query ? `?${query}` : ""}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(true), // YES x-company-id
+    });
+  }
+
+  async getOnboardingStatus(): Promise<OnboardingStatusResponse> {
+    return this.request("/profile/onboarding-status", {
+      method: "GET",
+      headers: this.getAuthHeaders(false), // NO x-company-id
+    });
+  }
+
+  async updateOnboarding(payload: UpdateOnboardingPayload): Promise<UpdateOnboardingResponse> {
+    return this.request("/profile/onboarding", {
+      method: "PATCH",
+      headers: this.getAuthHeaders(false), // NO x-company-id
+      body: JSON.stringify(payload),
+    });
+  }
 
 
 
@@ -2896,6 +3008,13 @@ async compareHarmonyWithMember(userId: string): Promise<{
 
   async deleteFile(fileId: string): Promise<{ status: string; message?: string }> {
     return this.request(`/drive/files/${fileId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async deleteFolder(folderId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/drive/folders/${folderId}`, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
     });

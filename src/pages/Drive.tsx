@@ -89,6 +89,24 @@ export default function Drive() {
     }
   };
 
+  const handleDeleteFolder = async (folder: Folder) => {
+    if (!window.confirm(`Delete "${folder.name}"? This removes all files inside.`)) return;
+    try {
+      setLoading(true);
+      await api.deleteFolder(folder.id);
+      await loadFolders();
+      toast({ title: "Folder deleted" });
+    } catch (err: any) {
+      if (err.status === 403) {
+        toast({ title: "Delete failed", description: "Only the folder owner can delete.", variant: "destructive" });
+      } else {
+        toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const doUpload = async () => {
     if (!selectedFolder || !pendingFiles || pendingFiles.length === 0) return;
     try {
@@ -137,16 +155,29 @@ export default function Drive() {
               <ul className="space-y-2">
                 {(tab === "workspace" ? workspaceFolders : personalFolders).map((f) => (
                   <li key={f.id}>
-                    <button
-                      className={`w-full text-left px-3 py-2 rounded-lg border ${selectedFolder?.id === f.id ? "border-primary text-primary" : "border-border"}`}
-                      onClick={() => {
-                        setSelectedFolder(f);
-                        loadFiles(f);
-                      }}
-                    >
-                      <div className="font-medium">{f.name}</div>
-                      <div className="text-xs text-muted-foreground">{f.scope}</div>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className={`flex-1 text-left px-3 py-2 rounded-lg border ${selectedFolder?.id === f.id ? "border-primary text-primary" : "border-border"}`}
+                        onClick={() => {
+                          setSelectedFolder(f);
+                          loadFiles(f);
+                        }}
+                      >
+                        <div className="font-medium">{f.name}</div>
+                        <div className="text-xs text-muted-foreground">{f.scope}</div>
+                      </button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFolder(f);
+                        }}
+                        disabled={loading || (tab === "workspace" && !canUploadWorkspaceFiles)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>

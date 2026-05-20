@@ -235,17 +235,35 @@ const HarmonyScoreboard = ({
           <CardTitle className="text-base">Recommended team norms</CardTitle>
         </CardHeader>
         <CardContent>
-          {data.recommendedTeamNorms?.length ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              {data.recommendedTeamNorms.map((norm, index) => (
-                <div key={index} className="rounded-xl border bg-muted/30 p-4 text-sm leading-6">
-                  {norm}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No recommendations available yet.</p>
-          )}
+          {(() => {
+            const safe = (v: any) => (typeof v === "string" ? { text: v } : v);
+            const arr = (v: any) => (Array.isArray(v) ? v : []);
+
+            if (!arr(data.recommendedTeamNorms).length) {
+              return <p className="text-sm text-muted-foreground">No recommendations available yet.</p>;
+            }
+
+            return (
+              <div className="grid gap-3 md:grid-cols-2">
+                {arr(data.recommendedTeamNorms).map((norm: any, index: number) => {
+                  const s = safe(norm);
+                  return (
+                    <div key={index} className="rounded-xl border bg-muted/30 p-4 text-sm leading-6">
+                      {s.norm ? (
+                        <>
+                          <p className="font-medium">{s.norm}</p>
+                          {s.why && <p className="text-xs text-muted-foreground mt-1">{s.why}</p>}
+                          {s.howToImplement && <p className="text-xs text-muted-foreground mt-1">How to implement: {s.howToImplement}</p>}
+                        </>
+                      ) : (
+                        s.text || String(norm)
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 

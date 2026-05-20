@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Routes, Route } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 import Login from "./pages/Login";
 import SignupExecutive from "./pages/SignupExecutive";
@@ -25,6 +26,9 @@ import NotFound from "./pages/NotFound";
 import TeamMembers from "./pages/TeamMembers";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import OnboardingProfileModal from "./components/OnboardingProfileModal";
+import { api } from "./lib/api";
+import { useAuth } from "./contexts/AuthContext";
 
 
 // ADMIN PAGES
@@ -68,14 +72,41 @@ import ClientView from "@/pages/ClientView";
 import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 
 
-const App = () => (
-  <>
-    <Toaster />
-    <Toaster />
-    <Sonner />
-    <OnboardingTour />
+const App = () => {
+  const { user, loading } = useAuth();
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
-    <Routes>
+  useEffect(() => {
+    if (loading || !user) return;
+
+    const checkOnboarding = async () => {
+      try {
+        const res = await api.getOnboardingStatus();
+        if (res.data.needsGender) {
+          setShowOnboardingModal(true);
+        }
+      } catch (err) {
+        console.error("Failed to check onboarding status:", err);
+      }
+    };
+
+    checkOnboarding();
+  }, [user, loading]);
+
+  return (
+    <>
+      <Toaster />
+      <Toaster />
+      <Sonner />
+      <OnboardingTour />
+
+      <OnboardingProfileModal
+        isOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+        onSuccess={() => setShowOnboardingModal(false)}
+      />
+
+      <Routes>
       {/* PUBLIC ROUTES */}
       <Route path="/" element={<Login />} />
       <Route path="/signup-executive" element={<SignupExecutive />} /> 
@@ -446,7 +477,8 @@ const App = () => (
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
-  </>
-);
+    </>
+  );
+};
 
 export default App;

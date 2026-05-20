@@ -32,12 +32,18 @@ const formatDate = (date?: string) => {
   }
 };
 
-const ListCard = ({
+const safe = (v: any) => (typeof v === "string" ? { text: v } : v);
+const arr = (v: any) => (Array.isArray(v) ? v : []);
+const str = (v: any) => (v ? String(v) : "");
+
+const StructuredListCard = ({
   title,
   items,
+  type,
 }: {
   title: string;
-  items: string[];
+  items: any[];
+  type: "strength" | "risk" | "collaborationTip" | "bestWorkCondition" | "suggestedRole" | "nextAction" | "other";
 }) => (
   <Card className="rounded-2xl">
     <CardHeader>
@@ -46,12 +52,50 @@ const ListCard = ({
     <CardContent>
       {items?.length ? (
         <ul className="space-y-3">
-          {items.map((item, index) => (
-            <li key={`${title}-${index}`} className="flex gap-3 text-sm leading-6">
-              <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary" />
-              <span>{item}</span>
-            </li>
-          ))}
+          {items.map((item, index) => {
+            const s = safe(item);
+            return (
+              <li key={`${title}-${index}`} className="border rounded-lg p-3">
+                {(type === "strength" || type === "risk") && (
+                  <>
+                    <p className="font-medium text-sm">{s.title || s.text || ""}</p>
+                    {s.whatItMeans && <p className="text-xs text-muted-foreground mt-1">{s.whatItMeans}</p>}
+                    {s.evidence && <p className="text-xs text-muted-foreground mt-1">Evidence: {s.evidence}</p>}
+                    {type === "risk" && s.mitigation && <p className="text-xs text-muted-foreground mt-1">Mitigation: {s.mitigation}</p>}
+                  </>
+                )}
+                {type === "collaborationTip" && (
+                  <>
+                    <p className="font-medium text-sm">{s.tip || s.text || ""}</p>
+                    {s.why && <p className="text-xs text-muted-foreground mt-1">{s.why}</p>}
+                    {s.example && <p className="text-xs text-muted-foreground mt-1">Example: {s.example}</p>}
+                  </>
+                )}
+                {type === "bestWorkCondition" && (
+                  <>
+                    <p className="font-medium text-sm">{s.condition || s.text || ""}</p>
+                    {s.why && <p className="text-xs text-muted-foreground mt-1">{s.why}</p>}
+                  </>
+                )}
+                {type === "suggestedRole" && (
+                  <>
+                    <p className="font-medium text-sm">{s.role || s.text || ""}</p>
+                    {s.why && <p className="text-xs text-muted-foreground mt-1">{s.why}</p>}
+                  </>
+                )}
+                {type === "nextAction" && (
+                  <>
+                    <p className="font-medium text-sm">{s.action || s.text || ""}</p>
+                    {s.why && <p className="text-xs text-muted-foreground mt-1">{s.why}</p>}
+                    {s.successSignal && <p className="text-xs text-muted-foreground mt-1">Success signal: {s.successSignal}</p>}
+                  </>
+                )}
+                {type === "other" && (
+                  <p className="text-sm">{s.text || String(item)}</p>
+                )}
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="text-sm text-muted-foreground">No guidance available.</p>
@@ -76,7 +120,7 @@ const HarmonyReport = ({ profile, onRetake }: HarmonyReportProps) => {
               <Badge className="mb-3">{profile.archetype}</Badge>
               <h3 className="text-3xl font-bold tracking-tight">Your Harmony Profile</h3>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-                {report.summary}
+                {str(report.summary)}
               </p>
 
               <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
@@ -92,6 +136,44 @@ const HarmonyReport = ({ profile, onRetake }: HarmonyReportProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Archetype Meaning */}
+      {report.archetypeMeaning && (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Your Archetype Meaning</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              {report.archetypeMeaning.name && <p className="font-medium text-sm">{report.archetypeMeaning.name}</p>}
+              {report.archetypeMeaning.whatItMeans && <p className="text-xs text-muted-foreground mt-1">{report.archetypeMeaning.whatItMeans}</p>}
+              {report.archetypeMeaning.howItShowsUp && <p className="text-xs text-muted-foreground mt-1">How it shows up: {report.archetypeMeaning.howItShowsUp}</p>}
+            </div>
+
+            {arr(report.archetypeMeaning.strengths).length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-1">Strengths:</p>
+                <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">
+                  {arr(report.archetypeMeaning.strengths).map((s: any, i: number) => (
+                    <li key={`archetype-strength-${i}`}>{typeof s === "string" ? s : s.text || s.title || ""}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {arr(report.archetypeMeaning.watchOuts).length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-1">Watch outs:</p>
+                <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">
+                  {arr(report.archetypeMeaning.watchOuts).map((w: any, i: number) => (
+                    <li key={`archetype-watchout-${i}`}>{typeof w === "string" ? w : w.text || w.title || ""}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         {dimensionEntries.map(([key, item]) => (
@@ -116,45 +198,27 @@ const HarmonyReport = ({ profile, onRetake }: HarmonyReportProps) => {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ListCard title="Strengths" items={report.strengths || []} />
-        <ListCard title="Watch-outs" items={report.challenges || []} />
+        <StructuredListCard title="Strengths" items={arr(report.strengths)} type="strength" />
+        <StructuredListCard title="Watch-outs" items={arr(report.challenges || report.risks)} type="risk" />
       </div>
-
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-base">How you tend to collaborate</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            {(report.collaborationStyle || []).map((item, index) => (
-              <div key={index} className="rounded-xl border bg-muted/30 p-4 text-sm leading-6">
-                {item}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ListCard title="How others can work well with you" items={report.do || []} />
-        <ListCard title="What others should avoid" items={report.dont || []} />
+        <StructuredListCard title="Collaboration Tips" items={arr(report.collaborationTips || report.collaborationStyle)} type="collaborationTip" />
+        <StructuredListCard title="Best Work Conditions" items={arr(report.bestWorkConditions)} type="bestWorkCondition" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StructuredListCard title="How others can work well with you" items={arr(report.do)} type="other" />
+        <StructuredListCard title="What others should avoid" items={arr(report.dont)} type="other" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StructuredListCard title="Suggested Roles" items={arr(report.suggestedRoles || report.idealTeamRoles)} type="suggestedRole" />
+        <StructuredListCard title="Next Actions" items={arr(report.nextActions)} type="nextAction" />
       </div>
 
       <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-base">Best-fit contribution areas</CardTitle>
-        </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {(report.idealTeamRoles || []).map((role) => (
-              <Badge key={role} variant="secondary">
-                {role}
-              </Badge>
-            ))}
-          </div>
-
-          <Separator className="my-5" />
-
           <p className="text-xs leading-5 text-muted-foreground">
             This profile is saved globally to your account and will be used across every workspace where you are a member.
           </p>

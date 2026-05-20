@@ -79,16 +79,31 @@ const TeamDirectory = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "executive":
+      case "owner":
         return "bg-purple-100 text-purple-800";
-      case "manager":
-        return "bg-blue-100 text-blue-800";
-      case "team_member":
-        return "bg-green-100 text-green-800";
       case "admin":
         return "bg-red-100 text-red-800";
+      case "manager":
+        return "bg-blue-100 text-blue-800";
+      case "member":
+        return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "owner":
+        return "Owner";
+      case "admin":
+        return "Admin";
+      case "manager":
+        return "Manager";
+      case "member":
+        return "Member";
+      default:
+        return "Member";
     }
   };
 
@@ -103,7 +118,12 @@ const TeamDirectory = () => {
         return false;
       }
 
-      if (roleFilter !== "all" && member.user?.role !== roleFilter) return false;
+      if (roleFilter !== "all") {
+        const workspaceRole = member.role;
+        if (roleFilter === "executive" && workspaceRole !== "owner") return false;
+        if (roleFilter === "manager" && workspaceRole !== "manager") return false;
+        if (roleFilter === "team_member" && workspaceRole !== "member") return false;
+      }
 
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -219,10 +239,8 @@ const TeamDirectory = () => {
                 </h3>
 
                 {/* Role Badge */}
-                <Badge className={`mt-2 ${getRoleColor(member.user?.role || "")}`}>
-                  {member.user?.role
-                    ? member.user.role.charAt(0).toUpperCase() + member.user.role.slice(1)
-                    : "Member"}
+                <Badge className={`mt-2 ${getRoleColor(member.role || "")}`}>
+                  {getRoleLabel(member.role || "")}
                 </Badge>
 
                 {/* Specialization */}
