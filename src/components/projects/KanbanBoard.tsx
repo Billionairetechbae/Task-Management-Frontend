@@ -22,6 +22,8 @@ interface KanbanTask {
 
 interface KanbanBoardProps {
   tasks: KanbanTask[];
+  onEdit?: (taskId: string) => void;
+  onView?: (taskId: string) => void;
 }
 
 const COLUMNS = [
@@ -32,8 +34,24 @@ const COLUMNS = [
   { key: "cancelled", label: "Cancelled", color: "bg-muted-foreground" },
 ];
 
-export default function KanbanBoard({ tasks }: KanbanBoardProps) {
+export default function KanbanBoard({ tasks, onEdit, onView }: KanbanBoardProps) {
   const navigate = useNavigate();
+  
+  const handleView = (taskId: string) => {
+    if (onView) {
+      onView(taskId);
+    } else {
+      navigate(`/task-details/${taskId}`);
+    }
+  };
+  
+  const handleEdit = (taskId: string) => {
+    if (onEdit) {
+      onEdit(taskId);
+    } else {
+      navigate(`/task-details/${taskId}`);
+    }
+  };
 
   const grouped = useMemo(() => {
     const topLevel = tasks.filter((t) => !t.parentTaskId);
@@ -71,7 +89,7 @@ export default function KanbanBoard({ tasks }: KanbanBoardProps) {
                   <div
                     key={task.id}
                     className="bg-card border border-border rounded-lg p-2.5 hover:shadow-elevated hover:border-primary/15 transition-all duration-200 cursor-pointer group"
-                    onClick={() => navigate(`/task-details/${task.id}`)}
+                    onClick={() => handleView(task.id)}
                   >
                     <p className="text-[12px] font-medium leading-tight mb-1.5 line-clamp-2">{task.title}</p>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -100,11 +118,19 @@ export default function KanbanBoard({ tasks }: KanbanBoardProps) {
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button size="icon" variant="ghost" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); navigate(`/task-details/${task.id}`); }}>
+                            <Button size="icon" variant="ghost" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); handleView(task.id); }}>
                               <Eye className="w-3 h-3" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent className="text-[10px]">View</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); handleEdit(task.id); }}>
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="text-[10px]">Edit</TooltipContent>
                         </Tooltip>
                       </div>
                     </div>

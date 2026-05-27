@@ -40,6 +40,7 @@ interface TaskTableProps {
   showExecutive?: boolean;
   showActions?: boolean;
   onEdit?: (task: Task) => void;
+  onView?: (task: Task) => void;
   onAssign?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   onStatusChange?: (taskId: string, status: string) => void;
@@ -218,6 +219,7 @@ export const TaskTable = ({
   showExecutive = false,
   showActions = false,
   onEdit,
+  onView,
   onAssign,
   onDelete,
   onStatusChange,
@@ -323,10 +325,20 @@ export const TaskTable = ({
                   <div className="flex items-center justify-end gap-0.5">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                          <Link to={`/task-details/${task.id}`}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (onView) {
+                              onView(task);
+                            } else {
+                              window.location.href = `/task-details/${task.id}`;
+                            }
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs">
@@ -441,11 +453,21 @@ export const TaskTable = ({
             <div className="flex items-center justify-end gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                    <Link to={`/task-details/${task.id}`}>
-                      <Eye className="h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onView) {
+                      onView(task);
+                    } else {
+                      window.location.href = `/task-details/${task.id}`;
+                    }
+                  }}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
                   View
@@ -477,9 +499,11 @@ export const TaskTable = ({
 export const CompactTaskTable = ({
   tasks,
   onEdit,
+  onView,
 }: {
   tasks: Task[];
   onEdit?: (task: Task) => void;
+  onView?: (task: Task) => void;
 }) => (
   <TooltipProvider delayDuration={100}>
     <div className="space-y-1.5">
@@ -533,11 +557,21 @@ export const CompactTaskTable = ({
           <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                  <Link to={`/task-details/${task.id}`}>
-                    <Eye className="h-3.5 w-3.5" />
-                  </Link>
-                </Button>
+                <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onView) {
+                    onView(task);
+                  } else {
+                    window.location.href = `/task-details/${task.id}`;
+                  }
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-[10px]">
                 View

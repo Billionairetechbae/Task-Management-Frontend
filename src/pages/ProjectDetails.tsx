@@ -40,6 +40,7 @@ import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDialog";
 import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
 import KanbanBoard from "@/components/projects/KanbanBoard";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import {
   getStatusBadgeClass,
   getPriorityBadgeClass,
@@ -126,6 +127,8 @@ export default function ProjectDetails() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCreateChecklistOpen, setIsCreateChecklistOpen] = useState(false);
+  const [taskEditDrawerOpen, setTaskEditDrawerOpen] = useState(false);
+  const [taskEditDrawerId, setTaskEditDrawerId] = useState<string | null>(null);
   const [memberEmail, setMemberEmail] = useState("");
   const [inviting, setInviting] = useState(false);
 
@@ -293,6 +296,20 @@ export default function ProjectDetails() {
     loadTasks();
     loadChecklists();
     loadPendingAccessRequests();
+  };
+
+  const handleOpenTaskEdit = (taskId: string) => {
+    setTaskEditDrawerId(taskId);
+    setTaskEditDrawerOpen(true);
+  };
+
+  const handleTaskUpdated = (updatedTask: any) => {
+    setTasks((prev) => prev.map((t) => t.id === updatedTask.id ? updatedTask : t));
+  };
+
+  const handleTaskDeleted = (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setTaskEditDrawerOpen(false);
   };
 
   useEffect(() => {
@@ -1250,7 +1267,11 @@ export default function ProjectDetails() {
                         </Button>
                       </div>
                     ) : taskView === "kanban" ? (
-                      <KanbanBoard tasks={tasks} />
+                      <KanbanBoard 
+                        tasks={tasks} 
+                        onEdit={handleOpenTaskEdit}
+                        onView={(taskId) => navigate(`/task-details/${taskId}`)}
+                      />
                     ) : (
                       <div>
                         <div className="hidden sm:grid grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-1.5 border-b border-border bg-muted/20 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -1368,9 +1389,7 @@ export default function ProjectDetails() {
                                       size="icon"
                                       variant="ghost"
                                       className="h-6 w-6"
-                                      onClick={() =>
-                                        navigate(`/task-details/${task.id}`)
-                                      }
+                                      onClick={() => handleOpenTaskEdit(task.id)}
                                     >
                                       <Pencil className="w-3 h-3" />
                                     </Button>
@@ -1613,6 +1632,14 @@ export default function ProjectDetails() {
           loadChecklists();
           loadProject();
         }}
+      />
+
+      <TaskEditDrawer
+        open={taskEditDrawerOpen}
+        onOpenChange={setTaskEditDrawerOpen}
+        taskId={taskEditDrawerId}
+        onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
       />
     </DashboardLayout>
   );

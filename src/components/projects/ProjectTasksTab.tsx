@@ -17,10 +17,28 @@ interface ProjectTasksTabProps {
   projectId: string;
   onRefresh?: () => void;
   isCompact?: boolean;
+  onEdit?: (taskId: string) => void;
+  onView?: (taskId: string) => void;
 }
 
-const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false }: ProjectTasksTabProps) => {
+const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false, onEdit, onView }: ProjectTasksTabProps) => {
   const navigate = useNavigate();
+  
+  const handleView = (taskId: string) => {
+    if (onView) {
+      onView(taskId);
+    } else {
+      navigate(`/task-details/${taskId}`);
+    }
+  };
+  
+  const handleEdit = (taskId: string) => {
+    if (onEdit) {
+      onEdit(taskId);
+    } else {
+      navigate(`/task-details/${taskId}`);
+    }
+  };
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateCreateDialogOpen] = useState(false);
@@ -105,13 +123,15 @@ const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false }: ProjectTas
       {isCompact ? (
         <CompactTaskTable
           tasks={tasks}
-          onEdit={(task) => navigate(`/task-details/${task.id}`)}
+          onEdit={(task) => handleEdit(task.id)}
+          onView={(task) => handleView(task.id)}
         />
       ) : (
         <TaskTable
           tasks={tasks}
           showActions={true}
-          onEdit={(task) => navigate(`/task-details/${task.id}`)}
+          onEdit={(task) => handleEdit(task.id)}
+          onView={(task) => handleView(task.id)}
         />
       )}
 

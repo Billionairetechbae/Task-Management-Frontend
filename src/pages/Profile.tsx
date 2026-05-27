@@ -86,7 +86,7 @@ const fmtDate = (v?: string | null) => {
 const dateRange = (start?: string | null, end?: string | null, isCurrent?: boolean) => {
   const s = fmtDate(start);
   const e = isCurrent ? "Present" : fmtDate(end);
-  if (s && e) return `${s} – ${e}`;
+  if (s && e) return `${s} · ${e}`;
   return s || e || "";
 };
 
@@ -347,6 +347,7 @@ const Profile = () => {
   };
 
   /* ============ download CV ============ */
+  /* COMMENTED OUT
   const handleDownloadCv = async () => {
     try {
       const filename = `${user.firstName}_${user.lastName}_CV.pdf`.split(" ").join("_");
@@ -355,6 +356,7 @@ const Profile = () => {
       toast({ title: "Download failed", description: err.message, variant: "destructive" });
     }
   };
+  */
 
   /* ============ generic save wrapper ============ */
   const runMutation = async (fn: () => Promise<any>, successMsg: string, after?: () => void) => {
@@ -437,6 +439,7 @@ const Profile = () => {
                       {profile.professionalHeadline}
                     </p>
                   )}
+                  {/* COMMENTED OUT - Location, phone, links, etc.
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     {profile.currentLocation && (
                       <span className="inline-flex items-center gap-1">
@@ -474,6 +477,7 @@ const Profile = () => {
                       </a>
                     )}
                   </div>
+                  */}
                 </div>
               </div>
 
@@ -481,15 +485,17 @@ const Profile = () => {
                 <Button variant="outline" onClick={() => setEditProfileOpen(true)}>
                   <Edit className="h-4 w-4 mr-1" /> Edit Profile
                 </Button>
+                {/* COMMENTED OUT Download CV
                 <Button onClick={handleDownloadCv}>
                   <Download className="h-4 w-4 mr-1" /> Download CV
                 </Button>
+                */}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* TABS */}
+        {/* TABS - COMMENTED OUT all CV-related, kept only minimal
         <Tabs defaultValue="overview">
           <TabsList className="flex flex-wrap h-auto justify-start gap-1 bg-muted/60 p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -501,8 +507,9 @@ const Profile = () => {
             <TabsTrigger value="languages">Languages</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
+        */}
 
-          {/* OVERVIEW */}
+          {/* OVERVIEW - COMMENTED OUT
           <TabsContent value="overview" className="space-y-4 mt-4">
             <Card className="rounded-xl">
               <CardHeader>
@@ -553,8 +560,9 @@ const Profile = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          */}
 
-          {/* EXPERIENCE */}
+          {/* EXPERIENCE - COMMENTED OUT
           <TabsContent value="experience" className="mt-4">
             <Section
               title="Work Experience"
@@ -584,8 +592,9 @@ const Profile = () => {
               </div>
             </Section>
           </TabsContent>
+          */}
 
-          {/* EDUCATION */}
+          {/* EDUCATION - COMMENTED OUT
           <TabsContent value="education" className="mt-4">
             <Section
               title="Education"
@@ -614,8 +623,9 @@ const Profile = () => {
               </div>
             </Section>
           </TabsContent>
+          */}
 
-          {/* SKILLS */}
+          {/* SKILLS - COMMENTED OUT
           <TabsContent value="skills" className="mt-4">
             <Section
               title="Skills"
@@ -651,8 +661,9 @@ const Profile = () => {
               </div>
             </Section>
           </TabsContent>
+          */}
 
-          {/* CERTIFICATIONS */}
+          {/* CERTIFICATIONS - COMMENTED OUT
           <TabsContent value="certifications" className="mt-4">
             <Section
               title="Certifications"
@@ -685,8 +696,9 @@ const Profile = () => {
               </div>
             </Section>
           </TabsContent>
+          */}
 
-          {/* PROJECTS */}
+          {/* PROJECTS - COMMENTED OUT
           <TabsContent value="projects" className="mt-4">
             <Section
               title="Projects"
@@ -715,8 +727,9 @@ const Profile = () => {
               </div>
             </Section>
           </TabsContent>
+          */}
 
-          {/* LANGUAGES */}
+          {/* LANGUAGES - COMMENTED OUT
           <TabsContent value="languages" className="mt-4">
             <Section
               title="Languages"
@@ -755,8 +768,9 @@ const Profile = () => {
               </div>
             </Section>
           </TabsContent>
+          */}
 
-          {/* SETTINGS */}
+          {/* SETTINGS - COMMENTED OUT
           <TabsContent value="settings" className="mt-4">
             <SettingsTab
               profile={profile}
@@ -779,9 +793,22 @@ const Profile = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        */}
+
+        {/* Added simple settings/account section instead of tabs */}
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle className="text-lg">Account</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={logout}>
+              <LogOut className="h-4 w-4 mr-1" /> Logout
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* DIALOGS */}
+      {/* DIALOGS - kept ProfileEditDialog, commented others out*/}
       <ProfileEditDialog
         open={editProfileOpen}
         onOpenChange={setEditProfileOpen}
@@ -801,6 +828,7 @@ const Profile = () => {
         }
       />
 
+      {/* COMMENTED OUT CV-related dialogs
       <EducationDialog
         open={eduOpen.open}
         onOpenChange={(o) => setEduOpen({ open: o })}
@@ -902,6 +930,7 @@ const Profile = () => {
           )
         }
       />
+      */}
 
       {confirmNode}
     </div>
@@ -909,8 +938,8 @@ const Profile = () => {
 };
 
 /* ============================================================
-   SETTINGS TAB
-============================================================ */
+   SETTINGS TAB (COMMENTED OUT)
+============================================================
 const SettingsTab = ({
   profile,
   onSave,
@@ -951,6 +980,7 @@ const SettingsTab = ({
     </Card>
   );
 };
+*/
 
 /* ============================================================
    MAIN PROFILE EDIT DIALOG
@@ -1006,9 +1036,10 @@ const ProfileEditDialog = ({
         <Field label="Last name"><Input value={s.lastName || ""} onChange={(e) => set("lastName", e.target.value)} /></Field>
 
         <Field label="Professional headline" full>
-          <Input value={s.professionalHeadline || ""} onChange={(e) => set("professionalHeadline", e.target.value)} placeholder="e.g. Senior Product Designer" />
+          <Input value={s.professionalHeadline || ""} onChange={(e) => set("professionalHeadline", e.target.value)} placeholder="e.g., Senior Product Designer" />
         </Field>
 
+        {/* COMMENTED OUT other fields
         <Field label="Professional summary" full>
           <Textarea rows={4} value={s.professionalSummary || ""} onChange={(e) => set("professionalSummary", e.target.value)} />
         </Field>
@@ -1016,12 +1047,16 @@ const ProfileEditDialog = ({
         <Field label="Career objective" full>
           <Textarea rows={3} value={s.careerObjective || ""} onChange={(e) => set("careerObjective", e.target.value)} />
         </Field>
+        */}
 
         <Field label="Contact email"><Input type="email" value={s.contactEmail || ""} onChange={(e) => set("contactEmail", e.target.value)} /></Field>
+        {/* COMMENTED OUT phone, location, nationality, links, etc.
         <Field label="Phone number"><Input value={s.phoneNumber || ""} onChange={(e) => set("phoneNumber", e.target.value)} /></Field>
         <Field label="Location"><Input value={s.currentLocation || ""} onChange={(e) => set("currentLocation", e.target.value)} /></Field>
         <Field label="Nationality"><Input value={s.nationality || ""} onChange={(e) => set("nationality", e.target.value)} /></Field>
+        */}
         <Field label="Gender"><Input value={s.gender || ""} onChange={(e) => set("gender", e.target.value)} /></Field>
+        {/* COMMENTED OUT date of birth, links, etc.
         <Field label="Date of birth"><Input type="date" value={s.dateOfBirth || ""} onChange={(e) => set("dateOfBirth", e.target.value)} /></Field>
 
         <Field label="Website"><Input type="url" value={s.websiteUrl || ""} onChange={(e) => set("websiteUrl", e.target.value)} /></Field>
@@ -1029,14 +1064,15 @@ const ProfileEditDialog = ({
         <Field label="GitHub"><Input type="url" value={s.githubUrl || ""} onChange={(e) => set("githubUrl", e.target.value)} /></Field>
         <Field label="Twitter"><Input type="url" value={s.twitterUrl || ""} onChange={(e) => set("twitterUrl", e.target.value)} /></Field>
         <Field label="Portfolio" full><Input type="url" value={s.portfolioUrl || ""} onChange={(e) => set("portfolioUrl", e.target.value)} /></Field>
+        */}
       </div>
     </FormDialog>
   );
 };
 
 /* ============================================================
-   EDUCATION DIALOG
-============================================================ */
+   EDUCATION DIALOG (COMMENTED OUT)
+============================================================
 const EducationDialog = ({
   open,
   onOpenChange,
@@ -1097,10 +1133,11 @@ const EducationDialog = ({
     </FormDialog>
   );
 };
+*/
 
 /* ============================================================
-   WORK DIALOG
-============================================================ */
+   WORK DIALOG (COMMENTED OUT)
+============================================================
 const WorkDialog = ({
   open,
   onOpenChange,
@@ -1168,10 +1205,11 @@ const WorkDialog = ({
     </FormDialog>
   );
 };
+*/
 
 /* ============================================================
-   SKILL DIALOG
-============================================================ */
+   SKILL DIALOG (COMMENTED OUT)
+============================================================
 const SkillDialog = ({
   open,
   onOpenChange,
@@ -1222,10 +1260,11 @@ const SkillDialog = ({
     </FormDialog>
   );
 };
+*/
 
 /* ============================================================
-   CERTIFICATION DIALOG
-============================================================ */
+   CERTIFICATION DIALOG (COMMENTED OUT)
+============================================================
 const CertDialog = ({
   open,
   onOpenChange,
@@ -1272,10 +1311,11 @@ const CertDialog = ({
     </FormDialog>
   );
 };
+*/
 
 /* ============================================================
-   PROJECT DIALOG
-============================================================ */
+   PROJECT DIALOG (COMMENTED OUT)
+============================================================
 const ProjDialog = ({
   open,
   onOpenChange,
@@ -1343,10 +1383,11 @@ const ProjDialog = ({
     </FormDialog>
   );
 };
+*/
 
 /* ============================================================
-   LANGUAGE DIALOG
-============================================================ */
+   LANGUAGE DIALOG (COMMENTED OUT)
+============================================================
 const LangDialog = ({
   open,
   onOpenChange,
@@ -1395,5 +1436,6 @@ const LangDialog = ({
     </FormDialog>
   );
 };
+*/
 
 export default Profile;

@@ -2,7 +2,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-import { api, CompanyMember } from "@/lib/api";
+import { api, CompanyMember, ProfessionalProfileBundle } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -33,7 +33,8 @@ const TeamMemberProfile = () => {
   const { toast } = useToast();
   const { user: currentUser, workspaceRole } = useAuth();
 
-  const [member, setMember] = useState<CompanyMember | null>(null);
+  const [workspaceMember, setWorkspaceMember] = useState<CompanyMember | null>(null);
+  const [profileBundle, setProfileBundle] = useState<ProfessionalProfileBundle | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
@@ -50,16 +51,37 @@ const TeamMemberProfile = () => {
     try {
       setLoading(true);
 
-      // Pull from workspace membership API
-      const res = await api.getWorkspaceMember(userId);
-      setMember(res.data.member);
+      // Fetch both APIs in parallel!
+      const [workspaceRes, profileRes] = await Promise.allSettled([
+        api.getWorkspaceMember(userId),
+        api.getUserProfessionalProfile(userId)
+      ]);
+
+      // Process workspace member response
+      if (workspaceRes.status === "fulfilled") {
+        const resData = workspaceRes.value.data as any;
+        let memberData: CompanyMember | null = null;
+        if ('member' in resData) {
+          memberData = resData.member;
+        } else if (resData?.id || resData?.userId) {
+          memberData = resData as CompanyMember;
+        }
+        setWorkspaceMember(memberData);
+      }
+
+      // Process profile bundle response
+      if (profileRes.status === "fulfilled") {
+        setProfileBundle(profileRes.value.data);
+      }
+
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to load team member.",
         variant: "destructive",
       });
-      setMember(null);
+      setWorkspaceMember(null);
+      setProfileBundle(null);
     } finally {
       setLoading(false);
     }
@@ -74,12 +96,12 @@ const TeamMemberProfile = () => {
 
   const canModify =
     (isWorkspaceManager || isGlobalAdmin) &&
-    member &&
-    member.user.role !== "executive" &&
-    currentUser?.id !== member.userId;
+    workspaceMember &&
+    (profileBundle?.user?.role !== "executive") &&
+    currentUser?.id !== workspaceMember.userId;
 
   // IMPORTANT: removed status comes from CompanyMember.status
-  const isRemoved = member?.status === "removed";
+  const isRemoved = workspaceMember?.status === "removed";
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -102,24 +124,24 @@ const TeamMemberProfile = () => {
   };
 
   const handleConfirm = async () => {
-    if (!member || !confirmAction) return;
+    if (!workspaceMember || !confirmAction) return;
 
     try {
       setActionLoading(true);
 
       if (confirmAction === "remove") {
-        await api.removeTeamMember(member.userId);
+        await api.removeTeamMember(workspaceMember.userId);
         toast({
           title: "User removed",
-          description: `${member.user.firstName} has been deactivated.`,
+          description: `${profileBundle?.user?.firstName || "User"} has been deactivated.`,
         });
       }
 
       if (confirmAction === "restore") {
-        await api.restoreTeamMember(member.userId);
+        await api.restoreTeamMember(workspaceMember.userId);
         toast({
           title: "User restored",
-          description: `${member.user.firstName} has been reactivated.`,
+          description: `${profileBundle?.user?.firstName || "User"} has been reactivated.`,
         });
       }
 
@@ -145,7 +167,7 @@ const TeamMemberProfile = () => {
     );
   }
 
-  if (!member) {
+  if (!workspaceMember && !profileBundle) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
         <UserIcon className="w-12 h-12 text-muted-foreground/40" />
@@ -164,7 +186,7 @@ const TeamMemberProfile = () => {
     );
   }
 
-  const u = member.user;
+  const u = profileBundle?.user || (workspaceMember?.user || workspaceMember || {}) as any;
 
   return (
     <div className="min-h-screen bg-background">
@@ -197,7 +219,7 @@ const TeamMemberProfile = () => {
         <div className="bg-card border border-border rounded-2xl p-8">
           {/* TOP SECTION */}
           <div className="flex flex-col items-center text-center mb-8">
-            {u.profilePictureUrl ? (
+            {u?.profilePictureUrl ? (
               <img
                 src={u.profilePictureUrl}
                 alt="Profile"
@@ -205,18 +227,18 @@ const TeamMemberProfile = () => {
               />
             ) : (
               <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center border text-4xl font-bold text-primary mb-4">
-                {(u.firstName?.[0] || "").toUpperCase()}
-                {(u.lastName?.[0] || "").toUpperCase()}
+                {(u?.firstName?.[0] || "").toUpperCase()}
+                {(u?.lastName?.[0] || "").toUpperCase()}
               </div>
             )}
 
             <h2 className="text-3xl font-bold mb-2">
-              {u.firstName} {u.lastName}
+              {u?.firstName || ""} {u?.lastName || ""}
             </h2>
 
             <div className="flex flex-wrap items-center gap-2 justify-center mb-2">
-              <Badge className={`${getRoleColor(u.role)} text-sm`}>
-                {u.role.toUpperCase()}
+              <Badge className={`${getRoleColor(u?.role || workspaceMember?.role || "")} text-sm`}>
+                {(u?.role || workspaceMember?.role || "Member").toUpperCase()}
               </Badge>
 
               {isRemoved ? (
@@ -239,7 +261,7 @@ const TeamMemberProfile = () => {
             {/* Verification (use membership) */}
             <p className="text-xs mt-2 flex items-center gap-1 text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
-              {member.isVerified ? "Verified Account" : "Not Verified"}
+              {workspaceMember?.isVerified ? "Verified Account" : "Not Verified"}
             </p>
           </div>
 
@@ -251,18 +273,18 @@ const TeamMemberProfile = () => {
                 <Mail className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{u.email}</p>
+                  <p className="font-medium">{u?.email || "—"}</p>
                 </div>
               </div>
 
-              {(u.company || member.company) && (
+              {(u?.company || workspaceMember?.company) && (
                 <>
                   <div className="flex items-center gap-3">
                     <Building2 className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Company</p>
                       <p className="font-medium">
-                        {(u.company || member.company)?.name}
+                        {(u?.company || workspaceMember?.company)?.name || "—"}
                       </p>
                     </div>
                   </div>
@@ -272,7 +294,7 @@ const TeamMemberProfile = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">Industry</p>
                       <p className="font-medium">
-                        {(u.company || member.company)?.industry || "—"}
+                        {(u?.company || workspaceMember?.company)?.industry || "—"}
                       </p>
                     </div>
                   </div>
@@ -284,7 +306,7 @@ const TeamMemberProfile = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Joined</p>
                   <p className="font-medium">
-                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
+                    {u?.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
                   </p>
                 </div>
               </div>
@@ -292,7 +314,7 @@ const TeamMemberProfile = () => {
 
             {/* Column 2 */}
             <div className="space-y-4">
-              {(u.specialization || "").trim() && (
+              {(u?.specialization || "").trim() && (
                 <div className="flex items-center gap-3">
                   <Briefcase className="w-5 h-5 text-muted-foreground" />
                   <div>
@@ -302,21 +324,21 @@ const TeamMemberProfile = () => {
                 </div>
               )}
 
-              {u.experience !== null && u.experience !== undefined && (
+              {u?.experience !== null && u?.experience !== undefined && (
                 <div>
                   <p className="text-sm text-muted-foreground">Experience</p>
                   <p className="font-medium">{u.experience} years</p>
                 </div>
               )}
 
-              {u.hourlyRate !== null && u.hourlyRate !== undefined && (
+              {u?.hourlyRate !== null && u?.hourlyRate !== undefined && (
                 <div>
                   <p className="text-sm text-muted-foreground">Hourly Rate</p>
                   <p className="font-medium">${u.hourlyRate}/hour</p>
                 </div>
               )}
 
-              {typeof u.rating === "number" && u.rating > 0 && (
+              {typeof u?.rating === "number" && u.rating > 0 && (
                 <div className="flex items-center gap-1">
                   <Star className="w-5 h-5 text-yellow-500" />
                   <p className="font-medium">{u.rating} / 5.0</p>
@@ -326,7 +348,7 @@ const TeamMemberProfile = () => {
           </div>
 
           {/* BIO */}
-          {u.bio && (
+          {u?.bio && (
             <div className="mt-10">
               <h3 className="text-xl font-bold mb-2">About</h3>
               <p className="text-muted-foreground leading-relaxed">{u.bio}</p>
@@ -334,11 +356,11 @@ const TeamMemberProfile = () => {
           )}
 
           {/* SKILLS */}
-          {u.skills && u.skills.length > 0 && (
+          {u?.skills && u.skills.length > 0 && (
             <div className="mt-10">
               <h3 className="text-xl font-bold mb-2">Skills</h3>
               <div className="flex flex-wrap gap-2">
-                {u.skills.map((skill) => (
+                {u.skills.map((skill: string) => (
                   <span
                     key={skill}
                     className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
@@ -382,7 +404,7 @@ const TeamMemberProfile = () => {
       </main>
 
       {/* CONFIRMATION MODAL */}
-      {confirmOpen && confirmAction && member && (
+      {confirmOpen && confirmAction && workspaceMember && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold mb-2">
@@ -393,13 +415,13 @@ const TeamMemberProfile = () => {
             <p className="text-sm text-muted-foreground mb-4">
               {confirmAction === "remove" ? (
                 <>
-                  This will deactivate <strong>{u.firstName}</strong>’s account.
+                  This will deactivate <strong>{u?.firstName || "the user"}</strong>’s account.
                   They won’t be able to log in again unless restored. Historical
                   data will be preserved.
                 </>
               ) : (
                 <>
-                  This will reactivate <strong>{u.firstName}</strong>’s account
+                  This will reactivate <strong>{u?.firstName || "the user"}</strong>’s account
                   and allow them to log in again.
                 </>
               )}
