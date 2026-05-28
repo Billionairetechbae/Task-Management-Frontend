@@ -3407,6 +3407,24 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       headers: this.getAuthHeaders(true),
     });
   }
+
+
+  async exportWorkspaceZip(): Promise<Response> {
+    // use raw fetch because you need the binary stream
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    const companyId = localStorage.getItem("activeCompanyId");
+
+    if (!token) throw new Error("Not authenticated");
+    if (!companyId) throw new Error("No active workspace selected");
+
+    return fetch(`${API_BASE_URL}/exports/workspace`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "x-company-id": companyId,
+      },
+    });
+  }
   
 }
 

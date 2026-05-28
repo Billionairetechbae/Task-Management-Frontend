@@ -1,3 +1,4 @@
+// src/pages/Profile.tsx
 import { useEffect, useState, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,17 @@ const toDateInput = (v?: string | null) => {
   const d = new Date(v);
   if (isNaN(d.getTime())) return "";
   return d.toISOString().slice(0, 10);
+};
+
+const triggerBlobDownload = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
 };
 
 /* ============== SECTION WRAPPER ============== */
@@ -294,6 +306,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
+  // NEW: export state
+  const [exporting, setExporting] = useState(false);
+
   /* dialog state */
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [eduOpen, setEduOpen] = useState<{ open: boolean; item?: EducationItem }>({ open: false });
@@ -358,6 +373,50 @@ const Profile = () => {
   };
   */
 
+  /* ============ NEW: Workspace Audit Export (ZIP) ============ */
+  const handleExportWorkspaceAudit = async () => {
+    try {
+      setExporting(true);
+
+      const companyId = localStorage.getItem("activeCompanyId");
+      if (!companyId) throw new Error("No active workspace selected");
+
+      // NOTE: backend decides permission (owner/executive/admin)
+      const res = await api.exportWorkspaceZip();
+
+      if (!res.ok) {
+        // try to read error payload
+        let msg = "Export failed";
+        try {
+          const j = await res.json();
+          msg = j?.message || msg;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const blob = await res.blob();
+
+      // file naming: workspace + date (keep it simple)
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      const filename = `workspace-audit-export-${companyId}-${y}${m}${d}.zip`;
+
+      triggerBlobDownload(blob, filename);
+
+      toast({ title: "Export ready", description: "Your workspace export has been downloaded." });
+    } catch (err: any) {
+      toast({
+        title: "Export failed",
+        description: err.message || "Could not export workspace data",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   /* ============ generic save wrapper ============ */
   const runMutation = async (fn: () => Promise<any>, successMsg: string, after?: () => void) => {
     try {
@@ -386,6 +445,10 @@ const Profile = () => {
       </div>
     );
   }
+
+  // Show button for executive/admin on UI.
+  // Workspace owner permissions are enforced on backend anyway.
+  const canShowExportBtn = user.role === "executive" || user.role === "admin";
 
   return (
     <div className="min-h-screen bg-background py-6 px-4 sm:px-6">
@@ -485,6 +548,20 @@ const Profile = () => {
                 <Button variant="outline" onClick={() => setEditProfileOpen(true)}>
                   <Edit className="h-4 w-4 mr-1" /> Edit Profile
                 </Button>
+
+                {/* NEW: Workspace audit export button */}
+                {canShowExportBtn && (
+                  <Button
+                    variant="outline"
+                    onClick={handleExportWorkspaceAudit}
+                    disabled={exporting}
+                    title="Download a ZIP of workspace audit data"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    {exporting ? "Exporting..." : "Export workspace data"}
+                  </Button>
+                )}
+
                 {/* COMMENTED OUT Download CV
                 <Button onClick={handleDownloadCv}>
                   <Download className="h-4 w-4 mr-1" /> Download CV
@@ -509,288 +586,51 @@ const Profile = () => {
           </TabsList>
         */}
 
-          {/* OVERVIEW - COMMENTED OUT
+        {/* OVERVIEW - COMMENTED OUT
           <TabsContent value="overview" className="space-y-4 mt-4">
-            <Card className="rounded-xl">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" /> Professional Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                {profile.professionalSummary ? (
-                  <p className="whitespace-pre-wrap leading-6">{profile.professionalSummary}</p>
-                ) : (
-                  <p className="text-muted-foreground">No summary added yet.</p>
-                )}
-                {profile.careerObjective && (
-                  <div>
-                    <p className="font-semibold mb-1">Career Objective</p>
-                    <p className="whitespace-pre-wrap leading-6">{profile.careerObjective}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl">
-              <CardHeader>
-                <CardTitle className="text-lg">Contact & Links</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
-                <div><span className="text-muted-foreground">Email: </span>{profile.contactEmail || user.email}</div>
-                <div><span className="text-muted-foreground">Phone: </span>{profile.phoneNumber || "—"}</div>
-                <div><span className="text-muted-foreground">Website: </span>{profile.websiteUrl || "—"}</div>
-                <div><span className="text-muted-foreground">LinkedIn: </span>{profile.linkedinUrl || "—"}</div>
-                <div><span className="text-muted-foreground">GitHub: </span>{profile.githubUrl || "—"}</div>
-                <div><span className="text-muted-foreground">Twitter: </span>{profile.twitterUrl || "—"}</div>
-                <div><span className="text-muted-foreground">Portfolio: </span>{profile.portfolioUrl || "—"}</div>
-                <div><span className="text-muted-foreground">Location: </span>{profile.currentLocation || "—"}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl">
-              <CardHeader>
-                <CardTitle className="text-base text-muted-foreground">Demographics</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-3 text-xs text-muted-foreground">
-                <div>Nationality: {profile.nationality || "—"}</div>
-                <div>Gender: {profile.gender || "—"}</div>
-                <div>Date of birth: {profile.dateOfBirth ? fmtDate(profile.dateOfBirth) : "—"}</div>
-                <div>Visibility: {profile.profileVisibility || "private"}</div>
-              </CardContent>
-            </Card>
+            ...
           </TabsContent>
-          */}
+        */}
 
-          {/* EXPERIENCE - COMMENTED OUT
+        {/* EXPERIENCE - COMMENTED OUT
           <TabsContent value="experience" className="mt-4">
-            <Section
-              title="Work Experience"
-              icon={<Briefcase className="h-4 w-4 text-primary" />}
-              onAdd={() => setWorkOpen({ open: true })}
-              empty={!bundle?.workExperience?.length}
-            >
-              <div className="space-y-3">
-                {bundle?.workExperience?.map((it) => (
-                  <ItemCard
-                    key={it.id}
-                    title={it.jobTitle}
-                    subtitle={[it.companyName, it.employmentType].filter(Boolean).join(" · ")}
-                    meta={[dateRange(it.startDate, it.endDate, it.isCurrent), it.location]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    description={it.description}
-                    bullets={it.achievements}
-                    onEdit={() => setWorkOpen({ open: true, item: it })}
-                    onDelete={() =>
-                      confirm("work experience", () =>
-                        runMutation(() => api.deleteWorkExperience(it.id!), "Removed")
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            </Section>
+            ...
           </TabsContent>
-          */}
+        */}
 
-          {/* EDUCATION - COMMENTED OUT
+        {/* EDUCATION - COMMENTED OUT
           <TabsContent value="education" className="mt-4">
-            <Section
-              title="Education"
-              icon={<GraduationCap className="h-4 w-4 text-primary" />}
-              onAdd={() => setEduOpen({ open: true })}
-              empty={!bundle?.education?.length}
-            >
-              <div className="space-y-3">
-                {bundle?.education?.map((it) => (
-                  <ItemCard
-                    key={it.id}
-                    title={it.institution}
-                    subtitle={[it.degree, it.fieldOfStudy].filter(Boolean).join(" · ")}
-                    meta={[dateRange(it.startDate, it.endDate, it.isCurrent), it.location]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    description={it.description}
-                    onEdit={() => setEduOpen({ open: true, item: it })}
-                    onDelete={() =>
-                      confirm("education", () =>
-                        runMutation(() => api.deleteEducation(it.id!), "Removed")
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            </Section>
+            ...
           </TabsContent>
-          */}
+        */}
 
-          {/* SKILLS - COMMENTED OUT
+        {/* SKILLS - COMMENTED OUT
           <TabsContent value="skills" className="mt-4">
-            <Section
-              title="Skills"
-              icon={<Sparkles className="h-4 w-4 text-primary" />}
-              onAdd={() => setSkillOpen({ open: true })}
-              empty={!bundle?.skills?.length}
-            >
-              <div className="flex flex-wrap gap-2">
-                {bundle?.skills?.map((it) => (
-                  <div
-                    key={it.id}
-                    className="group inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm"
-                  >
-                    <span className="font-medium">{it.name}</span>
-                    {it.proficiency && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        {it.proficiency}
-                      </Badge>
-                    )}
-                    <button onClick={() => setSkillOpen({ open: true, item: it })} className="text-muted-foreground hover:text-primary">
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        confirm("skill", () => runMutation(() => api.deleteSkill(it.id!), "Removed"))
-                      }
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </Section>
+            ...
           </TabsContent>
-          */}
+        */}
 
-          {/* CERTIFICATIONS - COMMENTED OUT
+        {/* CERTIFICATIONS - COMMENTED OUT
           <TabsContent value="certifications" className="mt-4">
-            <Section
-              title="Certifications"
-              icon={<Award className="h-4 w-4 text-primary" />}
-              onAdd={() => setCertOpen({ open: true })}
-              empty={!bundle?.certifications?.length}
-            >
-              <div className="space-y-3">
-                {bundle?.certifications?.map((it) => (
-                  <ItemCard
-                    key={it.id}
-                    title={it.title}
-                    subtitle={it.issuingOrganization || ""}
-                    meta={[
-                      it.issueDate ? `Issued ${fmtDate(it.issueDate)}` : "",
-                      it.expiryDate ? `Expires ${fmtDate(it.expiryDate)}` : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    description={it.description}
-                    url={it.credentialUrl}
-                    onEdit={() => setCertOpen({ open: true, item: it })}
-                    onDelete={() =>
-                      confirm("certification", () =>
-                        runMutation(() => api.deleteCertification(it.id!), "Removed")
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            </Section>
+            ...
           </TabsContent>
-          */}
+        */}
 
-          {/* PROJECTS - COMMENTED OUT
+        {/* PROJECTS - COMMENTED OUT
           <TabsContent value="projects" className="mt-4">
-            <Section
-              title="Projects"
-              icon={<FolderKanban className="h-4 w-4 text-primary" />}
-              onAdd={() => setProjOpen({ open: true })}
-              empty={!bundle?.projects?.length}
-            >
-              <div className="space-y-3">
-                {bundle?.projects?.map((it) => (
-                  <ItemCard
-                    key={it.id}
-                    title={it.title}
-                    subtitle={[it.role, it.organization].filter(Boolean).join(" · ")}
-                    meta={dateRange(it.startDate, it.endDate, it.isCurrent)}
-                    description={it.description}
-                    bullets={it.achievements}
-                    url={it.projectUrl}
-                    onEdit={() => setProjOpen({ open: true, item: it })}
-                    onDelete={() =>
-                      confirm("project", () =>
-                        runMutation(() => api.deleteProfileProject(it.id!), "Removed")
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            </Section>
+            ...
           </TabsContent>
-          */}
+        */}
 
-          {/* LANGUAGES - COMMENTED OUT
+        {/* LANGUAGES - COMMENTED OUT
           <TabsContent value="languages" className="mt-4">
-            <Section
-              title="Languages"
-              icon={<Languages className="h-4 w-4 text-primary" />}
-              onAdd={() => setLangOpen({ open: true })}
-              empty={!bundle?.languages?.length}
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                {bundle?.languages?.map((it) => (
-                  <div key={it.id} className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <p className="font-medium text-sm">{it.language}</p>
-                      {it.proficiency && (
-                        <p className="text-xs text-muted-foreground">{it.proficiency}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setLangOpen({ open: true, item: it })}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() =>
-                          confirm("language", () =>
-                            runMutation(() => api.deleteLanguage(it.id!), "Removed")
-                          )
-                        }
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Section>
+            ...
           </TabsContent>
-          */}
+        */}
 
-          {/* SETTINGS - COMMENTED OUT
+        {/* SETTINGS - COMMENTED OUT
           <TabsContent value="settings" className="mt-4">
-            <SettingsTab
-              profile={profile}
-              onSave={(visibility) =>
-                runMutation(
-                  () => api.updateMyProfessionalProfile({ profileVisibility: visibility }),
-                  "Settings saved"
-                )
-              }
-            />
-            <Card className="rounded-xl mt-4">
-              <CardHeader>
-                <CardTitle className="text-lg">Account</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" onClick={logout}>
-                  <LogOut className="h-4 w-4 mr-1" /> Logout
-                </Button>
-              </CardContent>
-            </Card>
+            ...
           </TabsContent>
         </Tabs>
         */}
@@ -800,10 +640,18 @@ const Profile = () => {
           <CardHeader>
             <CardTitle className="text-lg">Account</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={logout}>
               <LogOut className="h-4 w-4 mr-1" /> Logout
             </Button>
+
+            {/* Optional: also show export here for executives/admins if you want */}
+            {/* {canShowExportBtn && (
+              <Button variant="outline" onClick={handleExportWorkspaceAudit} disabled={exporting}>
+                <Download className="h-4 w-4 mr-1" />
+                {exporting ? "Exporting..." : "Export workspace data"}
+              </Button>
+            )} */}
           </CardContent>
         </Card>
       </div>
@@ -829,107 +677,12 @@ const Profile = () => {
       />
 
       {/* COMMENTED OUT CV-related dialogs
-      <EducationDialog
-        open={eduOpen.open}
-        onOpenChange={(o) => setEduOpen({ open: o })}
-        initial={eduOpen.item}
-        submitting={submitting}
-        onSubmit={(payload) =>
-          runMutation(
-            () =>
-              eduOpen.item?.id
-                ? api.updateEducation(eduOpen.item.id, payload)
-                : api.createEducation(payload),
-            eduOpen.item ? "Updated" : "Added",
-            () => setEduOpen({ open: false })
-          )
-        }
-      />
-
-      <WorkDialog
-        open={workOpen.open}
-        onOpenChange={(o) => setWorkOpen({ open: o })}
-        initial={workOpen.item}
-        submitting={submitting}
-        onSubmit={(payload) =>
-          runMutation(
-            () =>
-              workOpen.item?.id
-                ? api.updateWorkExperience(workOpen.item.id, payload)
-                : api.createWorkExperience(payload),
-            workOpen.item ? "Updated" : "Added",
-            () => setWorkOpen({ open: false })
-          )
-        }
-      />
-
-      <SkillDialog
-        open={skillOpen.open}
-        onOpenChange={(o) => setSkillOpen({ open: o })}
-        initial={skillOpen.item}
-        submitting={submitting}
-        onSubmit={(payload) =>
-          runMutation(
-            () =>
-              skillOpen.item?.id
-                ? api.updateSkill(skillOpen.item.id, payload)
-                : api.createSkill(payload),
-            skillOpen.item ? "Updated" : "Added",
-            () => setSkillOpen({ open: false })
-          )
-        }
-      />
-
-      <CertDialog
-        open={certOpen.open}
-        onOpenChange={(o) => setCertOpen({ open: o })}
-        initial={certOpen.item}
-        submitting={submitting}
-        onSubmit={(payload) =>
-          runMutation(
-            () =>
-              certOpen.item?.id
-                ? api.updateCertification(certOpen.item.id, payload)
-                : api.createCertification(payload),
-            certOpen.item ? "Updated" : "Added",
-            () => setCertOpen({ open: false })
-          )
-        }
-      />
-
-      <ProjDialog
-        open={projOpen.open}
-        onOpenChange={(o) => setProjOpen({ open: o })}
-        initial={projOpen.item}
-        submitting={submitting}
-        onSubmit={(payload) =>
-          runMutation(
-            () =>
-              projOpen.item?.id
-                ? api.updateProfileProject(projOpen.item.id, payload)
-                : api.createProfileProject(payload),
-            projOpen.item ? "Updated" : "Added",
-            () => setProjOpen({ open: false })
-          )
-        }
-      />
-
-      <LangDialog
-        open={langOpen.open}
-        onOpenChange={(o) => setLangOpen({ open: o })}
-        initial={langOpen.item}
-        submitting={submitting}
-        onSubmit={(payload) =>
-          runMutation(
-            () =>
-              langOpen.item?.id
-                ? api.updateLanguage(langOpen.item.id, payload)
-                : api.createLanguage(payload),
-            langOpen.item ? "Updated" : "Added",
-            () => setLangOpen({ open: false })
-          )
-        }
-      />
+      <EducationDialog ... />
+      <WorkDialog ... />
+      <SkillDialog ... />
+      <CertDialog ... />
+      <ProjDialog ... />
+      <LangDialog ... />
       */}
 
       {confirmNode}
@@ -947,38 +700,7 @@ const SettingsTab = ({
   profile: ProfessionalProfileDetails;
   onSave: (v: ProfileVisibility) => void;
 }) => {
-  const [visibility, setVisibility] = useState<ProfileVisibility>(
-    (profile.profileVisibility as ProfileVisibility) || "private"
-  );
-  useEffect(() => {
-    setVisibility((profile.profileVisibility as ProfileVisibility) || "private");
-  }, [profile.profileVisibility]);
-
-  return (
-    <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle className="text-lg">Profile Visibility</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="max-w-sm">
-          <Label className="text-xs">Who can see your profile</Label>
-          <Select value={visibility} onValueChange={(v) => setVisibility(v as ProfileVisibility)}>
-            <SelectTrigger className="mt-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="private">Private — only me</SelectItem>
-              <SelectItem value="workspace">Workspace — my teammates</SelectItem>
-              <SelectItem value="public">Public — anyone with the link</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button onClick={() => onSave(visibility)}>
-          <Save className="h-4 w-4 mr-1" /> Save
-        </Button>
-      </CardContent>
-    </Card>
-  );
+  ...
 };
 */
 
@@ -1003,12 +725,15 @@ const ProfileEditDialog = ({
     names?: { firstName?: string; lastName?: string }
   ) => void;
 }) => {
-  const [s, setS] = useState<Partial<ProfessionalProfileDetails> & { firstName: string; lastName: string }>({
+  const [s, setS] = useState<
+    Partial<ProfessionalProfileDetails> & { firstName: string; lastName: string }
+  >({
     firstName: user.firstName,
     lastName: user.lastName,
     ...initial,
     dateOfBirth: toDateInput(initial?.dateOfBirth),
   });
+
   useEffect(() => {
     setS({
       firstName: user.firstName,
@@ -1032,11 +757,19 @@ const ProfileEditDialog = ({
       }}
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="First name"><Input value={s.firstName || ""} onChange={(e) => set("firstName", e.target.value)} /></Field>
-        <Field label="Last name"><Input value={s.lastName || ""} onChange={(e) => set("lastName", e.target.value)} /></Field>
+        <Field label="First name">
+          <Input value={s.firstName || ""} onChange={(e) => set("firstName", e.target.value)} />
+        </Field>
+        <Field label="Last name">
+          <Input value={s.lastName || ""} onChange={(e) => set("lastName", e.target.value)} />
+        </Field>
 
         <Field label="Professional headline" full>
-          <Input value={s.professionalHeadline || ""} onChange={(e) => set("professionalHeadline", e.target.value)} placeholder="e.g., Senior Product Designer" />
+          <Input
+            value={s.professionalHeadline || ""}
+            onChange={(e) => set("professionalHeadline", e.target.value)}
+            placeholder="e.g., Senior Product Designer"
+          />
         </Field>
 
         {/* COMMENTED OUT other fields
@@ -1049,16 +782,26 @@ const ProfileEditDialog = ({
         </Field>
         */}
 
-        <Field label="Contact email"><Input type="email" value={s.contactEmail || ""} onChange={(e) => set("contactEmail", e.target.value)} /></Field>
+        <Field label="Contact email">
+          <Input
+            type="email"
+            value={s.contactEmail || ""}
+            onChange={(e) => set("contactEmail", e.target.value)}
+          />
+        </Field>
+
         {/* COMMENTED OUT phone, location, nationality, links, etc.
         <Field label="Phone number"><Input value={s.phoneNumber || ""} onChange={(e) => set("phoneNumber", e.target.value)} /></Field>
         <Field label="Location"><Input value={s.currentLocation || ""} onChange={(e) => set("currentLocation", e.target.value)} /></Field>
         <Field label="Nationality"><Input value={s.nationality || ""} onChange={(e) => set("nationality", e.target.value)} /></Field>
         */}
-        <Field label="Gender"><Input value={s.gender || ""} onChange={(e) => set("gender", e.target.value)} /></Field>
+
+        <Field label="Gender">
+          <Input value={s.gender || ""} onChange={(e) => set("gender", e.target.value)} />
+        </Field>
+
         {/* COMMENTED OUT date of birth, links, etc.
         <Field label="Date of birth"><Input type="date" value={s.dateOfBirth || ""} onChange={(e) => set("dateOfBirth", e.target.value)} /></Field>
-
         <Field label="Website"><Input type="url" value={s.websiteUrl || ""} onChange={(e) => set("websiteUrl", e.target.value)} /></Field>
         <Field label="LinkedIn"><Input type="url" value={s.linkedinUrl || ""} onChange={(e) => set("linkedinUrl", e.target.value)} /></Field>
         <Field label="GitHub"><Input type="url" value={s.githubUrl || ""} onChange={(e) => set("githubUrl", e.target.value)} /></Field>
@@ -1069,373 +812,5 @@ const ProfileEditDialog = ({
     </FormDialog>
   );
 };
-
-/* ============================================================
-   EDUCATION DIALOG (COMMENTED OUT)
-============================================================
-const EducationDialog = ({
-  open,
-  onOpenChange,
-  initial,
-  submitting,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  initial?: EducationItem;
-  submitting?: boolean;
-  onSubmit: (p: Partial<EducationItem>) => void;
-}) => {
-  const [s, setS] = useState<Partial<EducationItem>>({});
-  useEffect(() => {
-    setS({
-      institution: initial?.institution || "",
-      degree: initial?.degree || "",
-      fieldOfStudy: initial?.fieldOfStudy || "",
-      location: initial?.location || "",
-      startDate: toDateInput(initial?.startDate),
-      endDate: toDateInput(initial?.endDate),
-      isCurrent: initial?.isCurrent || false,
-      description: initial?.description || "",
-      sortOrder: initial?.sortOrder ?? 0,
-    });
-  }, [open, initial]);
-  const set = (k: string, v: any) => setS((p) => ({ ...p, [k]: v }));
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={initial ? "Edit Education" : "Add Education"}
-      submitting={submitting}
-      onSubmit={() => {
-        if (!s.institution) return;
-        onSubmit(s);
-      }}
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Institution *" full>
-          <Input required value={s.institution || ""} onChange={(e) => set("institution", e.target.value)} />
-        </Field>
-        <Field label="Degree"><Input value={s.degree || ""} onChange={(e) => set("degree", e.target.value)} /></Field>
-        <Field label="Field of study"><Input value={s.fieldOfStudy || ""} onChange={(e) => set("fieldOfStudy", e.target.value)} /></Field>
-        <Field label="Location"><Input value={s.location || ""} onChange={(e) => set("location", e.target.value)} /></Field>
-        <Field label="Start date"><Input type="date" value={s.startDate || ""} onChange={(e) => set("startDate", e.target.value)} /></Field>
-        <Field label="End date"><Input type="date" value={s.endDate || ""} onChange={(e) => set("endDate", e.target.value)} disabled={!!s.isCurrent} /></Field>
-        <div className="flex items-center gap-2 sm:col-span-2">
-          <Switch checked={!!s.isCurrent} onCheckedChange={(v) => set("isCurrent", v)} />
-          <Label className="text-sm">I am currently studying here</Label>
-        </div>
-        <Field label="Description" full>
-          <Textarea rows={3} value={s.description || ""} onChange={(e) => set("description", e.target.value)} />
-        </Field>
-      </div>
-    </FormDialog>
-  );
-};
-*/
-
-/* ============================================================
-   WORK DIALOG (COMMENTED OUT)
-============================================================
-const WorkDialog = ({
-  open,
-  onOpenChange,
-  initial,
-  submitting,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  initial?: WorkExperienceItem;
-  submitting?: boolean;
-  onSubmit: (p: Partial<WorkExperienceItem>) => void;
-}) => {
-  const [s, setS] = useState<any>({});
-  useEffect(() => {
-    setS({
-      companyName: initial?.companyName || "",
-      jobTitle: initial?.jobTitle || "",
-      location: initial?.location || "",
-      employmentType: initial?.employmentType || "",
-      startDate: toDateInput(initial?.startDate),
-      endDate: toDateInput(initial?.endDate),
-      isCurrent: initial?.isCurrent || false,
-      description: initial?.description || "",
-      achievementsText: (initial?.achievements || []).join("\n"),
-      sortOrder: initial?.sortOrder ?? 0,
-    });
-  }, [open, initial]);
-  const set = (k: string, v: any) => setS((p: any) => ({ ...p, [k]: v }));
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={initial ? "Edit Experience" : "Add Experience"}
-      submitting={submitting}
-      onSubmit={() => {
-        if (!s.companyName || !s.jobTitle) return;
-        const { achievementsText, ...rest } = s;
-        onSubmit({
-          ...rest,
-          achievements: (achievementsText || "")
-            .split("\n")
-            .map((x: string) => x.trim())
-            .filter(Boolean),
-        });
-      }}
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Job title *"><Input required value={s.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} /></Field>
-        <Field label="Company *"><Input required value={s.companyName} onChange={(e) => set("companyName", e.target.value)} /></Field>
-        <Field label="Employment type"><Input value={s.employmentType} onChange={(e) => set("employmentType", e.target.value)} placeholder="Full-time, Contract..." /></Field>
-        <Field label="Location"><Input value={s.location} onChange={(e) => set("location", e.target.value)} /></Field>
-        <Field label="Start date"><Input type="date" value={s.startDate} onChange={(e) => set("startDate", e.target.value)} /></Field>
-        <Field label="End date"><Input type="date" value={s.endDate} onChange={(e) => set("endDate", e.target.value)} disabled={!!s.isCurrent} /></Field>
-        <div className="flex items-center gap-2 sm:col-span-2">
-          <Switch checked={!!s.isCurrent} onCheckedChange={(v) => set("isCurrent", v)} />
-          <Label className="text-sm">I currently work here</Label>
-        </div>
-        <Field label="Description" full><Textarea rows={3} value={s.description} onChange={(e) => set("description", e.target.value)} /></Field>
-        <Field label="Achievements (one per line)" full>
-          <Textarea rows={4} value={s.achievementsText} onChange={(e) => set("achievementsText", e.target.value)} />
-        </Field>
-      </div>
-    </FormDialog>
-  );
-};
-*/
-
-/* ============================================================
-   SKILL DIALOG (COMMENTED OUT)
-============================================================
-const SkillDialog = ({
-  open,
-  onOpenChange,
-  initial,
-  submitting,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  initial?: SkillItem;
-  submitting?: boolean;
-  onSubmit: (p: Partial<SkillItem>) => void;
-}) => {
-  const [s, setS] = useState<Partial<SkillItem>>({});
-  useEffect(() => {
-    setS({
-      name: initial?.name || "",
-      category: initial?.category || "",
-      proficiency: initial?.proficiency || "",
-      sortOrder: initial?.sortOrder ?? 0,
-    });
-  }, [open, initial]);
-  const set = (k: string, v: any) => setS((p) => ({ ...p, [k]: v }));
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={initial ? "Edit Skill" : "Add Skill"}
-      submitting={submitting}
-      onSubmit={() => s.name && onSubmit(s)}
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Skill name *" full><Input required value={s.name || ""} onChange={(e) => set("name", e.target.value)} /></Field>
-        <Field label="Category"><Input value={s.category || ""} onChange={(e) => set("category", e.target.value)} /></Field>
-        <Field label="Proficiency">
-          <Select value={s.proficiency || ""} onValueChange={(v) => set("proficiency", v)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Beginner">Beginner</SelectItem>
-              <SelectItem value="Intermediate">Intermediate</SelectItem>
-              <SelectItem value="Advanced">Advanced</SelectItem>
-              <SelectItem value="Expert">Expert</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
-    </FormDialog>
-  );
-};
-*/
-
-/* ============================================================
-   CERTIFICATION DIALOG (COMMENTED OUT)
-============================================================
-const CertDialog = ({
-  open,
-  onOpenChange,
-  initial,
-  submitting,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  initial?: CertificationItem;
-  submitting?: boolean;
-  onSubmit: (p: Partial<CertificationItem>) => void;
-}) => {
-  const [s, setS] = useState<Partial<CertificationItem>>({});
-  useEffect(() => {
-    setS({
-      title: initial?.title || "",
-      issuingOrganization: initial?.issuingOrganization || "",
-      issueDate: toDateInput(initial?.issueDate),
-      expiryDate: toDateInput(initial?.expiryDate),
-      credentialUrl: initial?.credentialUrl || "",
-      description: initial?.description || "",
-      sortOrder: initial?.sortOrder ?? 0,
-    });
-  }, [open, initial]);
-  const set = (k: string, v: any) => setS((p) => ({ ...p, [k]: v }));
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={initial ? "Edit Certification" : "Add Certification"}
-      submitting={submitting}
-      onSubmit={() => s.title && onSubmit(s)}
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Title *" full><Input required value={s.title || ""} onChange={(e) => set("title", e.target.value)} /></Field>
-        <Field label="Issuing organization" full><Input value={s.issuingOrganization || ""} onChange={(e) => set("issuingOrganization", e.target.value)} /></Field>
-        <Field label="Issue date"><Input type="date" value={s.issueDate || ""} onChange={(e) => set("issueDate", e.target.value)} /></Field>
-        <Field label="Expiry date"><Input type="date" value={s.expiryDate || ""} onChange={(e) => set("expiryDate", e.target.value)} /></Field>
-        <Field label="Credential URL" full><Input type="url" value={s.credentialUrl || ""} onChange={(e) => set("credentialUrl", e.target.value)} /></Field>
-        <Field label="Description" full><Textarea rows={3} value={s.description || ""} onChange={(e) => set("description", e.target.value)} /></Field>
-      </div>
-    </FormDialog>
-  );
-};
-*/
-
-/* ============================================================
-   PROJECT DIALOG (COMMENTED OUT)
-============================================================
-const ProjDialog = ({
-  open,
-  onOpenChange,
-  initial,
-  submitting,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  initial?: ProfileProjectItem;
-  submitting?: boolean;
-  onSubmit: (p: Partial<ProfileProjectItem>) => void;
-}) => {
-  const [s, setS] = useState<any>({});
-  useEffect(() => {
-    setS({
-      title: initial?.title || "",
-      role: initial?.role || "",
-      organization: initial?.organization || "",
-      startDate: toDateInput(initial?.startDate),
-      endDate: toDateInput(initial?.endDate),
-      isCurrent: initial?.isCurrent || false,
-      description: initial?.description || "",
-      achievementsText: (initial?.achievements || []).join("\n"),
-      projectUrl: initial?.projectUrl || "",
-      sortOrder: initial?.sortOrder ?? 0,
-    });
-  }, [open, initial]);
-  const set = (k: string, v: any) => setS((p: any) => ({ ...p, [k]: v }));
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={initial ? "Edit Project" : "Add Project"}
-      submitting={submitting}
-      onSubmit={() => {
-        if (!s.title) return;
-        const { achievementsText, ...rest } = s;
-        onSubmit({
-          ...rest,
-          achievements: (achievementsText || "")
-            .split("\n")
-            .map((x: string) => x.trim())
-            .filter(Boolean),
-        });
-      }}
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Project title *" full><Input required value={s.title} onChange={(e) => set("title", e.target.value)} /></Field>
-        <Field label="Role"><Input value={s.role} onChange={(e) => set("role", e.target.value)} /></Field>
-        <Field label="Organization"><Input value={s.organization} onChange={(e) => set("organization", e.target.value)} /></Field>
-        <Field label="Start date"><Input type="date" value={s.startDate} onChange={(e) => set("startDate", e.target.value)} /></Field>
-        <Field label="End date"><Input type="date" value={s.endDate} onChange={(e) => set("endDate", e.target.value)} disabled={!!s.isCurrent} /></Field>
-        <div className="flex items-center gap-2 sm:col-span-2">
-          <Switch checked={!!s.isCurrent} onCheckedChange={(v) => set("isCurrent", v)} />
-          <Label className="text-sm">Ongoing</Label>
-        </div>
-        <Field label="Project URL" full><Input type="url" value={s.projectUrl} onChange={(e) => set("projectUrl", e.target.value)} /></Field>
-        <Field label="Description" full><Textarea rows={3} value={s.description} onChange={(e) => set("description", e.target.value)} /></Field>
-        <Field label="Achievements (one per line)" full>
-          <Textarea rows={4} value={s.achievementsText} onChange={(e) => set("achievementsText", e.target.value)} />
-        </Field>
-      </div>
-    </FormDialog>
-  );
-};
-*/
-
-/* ============================================================
-   LANGUAGE DIALOG (COMMENTED OUT)
-============================================================
-const LangDialog = ({
-  open,
-  onOpenChange,
-  initial,
-  submitting,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  initial?: LanguageItem;
-  submitting?: boolean;
-  onSubmit: (p: Partial<LanguageItem>) => void;
-}) => {
-  const [s, setS] = useState<Partial<LanguageItem>>({});
-  useEffect(() => {
-    setS({
-      language: initial?.language || "",
-      proficiency: initial?.proficiency || "",
-      sortOrder: initial?.sortOrder ?? 0,
-    });
-  }, [open, initial]);
-  const set = (k: string, v: any) => setS((p) => ({ ...p, [k]: v }));
-
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={initial ? "Edit Language" : "Add Language"}
-      submitting={submitting}
-      onSubmit={() => s.language && onSubmit(s)}
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Language *"><Input required value={s.language || ""} onChange={(e) => set("language", e.target.value)} /></Field>
-        <Field label="Proficiency">
-          <Select value={s.proficiency || ""} onValueChange={(v) => set("proficiency", v)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Basic">Basic</SelectItem>
-              <SelectItem value="Conversational">Conversational</SelectItem>
-              <SelectItem value="Fluent">Fluent</SelectItem>
-              <SelectItem value="Native">Native</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
-    </FormDialog>
-  );
-};
-*/
 
 export default Profile;
