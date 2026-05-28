@@ -3408,22 +3408,60 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-
-  async exportWorkspaceZip(): Promise<Response> {
-    // use raw fetch because you need the binary stream
+  async exportWorkspaceWorkbookXlsx(): Promise<void> {
     const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
     const companyId = localStorage.getItem("activeCompanyId");
-
     if (!token) throw new Error("Not authenticated");
     if (!companyId) throw new Error("No active workspace selected");
 
-    return fetch(`${API_BASE_URL}/exports/workspace`, {
+    const res = await fetch(`${API_BASE_URL}/exports/workspace.xlsx`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "x-company-id": companyId,
       },
     });
+
+    if (!res.ok) {
+      let msg = "Export failed";
+      try {
+        const j = await res.json();
+        msg = j?.message || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const blob = await res.blob();
+    const filename = `workspace-export-${companyId}.xlsx`;
+    triggerBlobDownload(blob, filename);
+  }
+
+  async exportWorkspaceZip(): Promise<void> {
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    const companyId = localStorage.getItem("activeCompanyId");
+    if (!token) throw new Error("Not authenticated");
+    if (!companyId) throw new Error("No active workspace selected");
+
+    const res = await fetch(`${API_BASE_URL}/exports/workspace`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "x-company-id": companyId,
+      },
+    });
+
+    if (!res.ok) {
+      let msg = "Export failed";
+      try {
+        const j = await res.json();
+        msg = j?.message || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const blob = await res.blob();
+    const filename = `workspace-export-${companyId}.zip`;
+    triggerBlobDownload(blob, filename);
   }
   
 }

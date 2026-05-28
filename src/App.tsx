@@ -72,6 +72,9 @@ import ClientView from "@/pages/ClientView";
 import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 
 
+import AuditExport from "@/pages/AuditExport";
+
+
 const App = () => {
   const { user, loading } = useAuth();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -473,6 +476,15 @@ const App = () => {
         }
       />
 
+
+      <Route
+        path="/audit-exports"
+        element={
+          <ProtectedRoute>
+            <AuditExport />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="*" element={<NotFound />} />

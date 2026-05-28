@@ -27,3 +27,14 @@ export const canAdminWorkspace = (
   return effective === "owner" || effective === "admin";
 };
 
+
+export const canExportWorkspace = (
+  workspaceRole: WorkspaceRole | null | undefined,
+  globalRole: UserRole | null | undefined
+): boolean => {
+  if (globalRole === "admin") return true;
+  if (globalRole === "executive") return true;
+
+  const effective = inferWorkspaceRole(workspaceRole, globalRole);
+  return effective === "owner" || effective === "admin";
+};
