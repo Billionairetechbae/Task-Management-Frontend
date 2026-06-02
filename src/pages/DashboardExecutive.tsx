@@ -337,14 +337,14 @@ const DashboardExecutive = () => {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout fullWidth>
         <LoadingState message="Loading your dashboard..." />
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout fullWidth>
       <PageHeader
         title={`Welcome back, ${user?.firstName}!`}
         description={
