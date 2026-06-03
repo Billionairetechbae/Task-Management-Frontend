@@ -303,17 +303,19 @@ const CompanyProfile = () => {
           {/* Left Column - Company Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information Card */}
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
                 <CardTitle className="flex items-center gap-2">
-                  <Building className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Building className="w-4 h-4 text-primary" />
+                  </div>
                   Company Information
                 </CardTitle>
                 <CardDescription>
                   Basic details about your company
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="company">Company Name</Label>
