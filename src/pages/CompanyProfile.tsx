@@ -719,7 +719,7 @@ const CompanyProfile = () => {
             </Card>
           </div>
         </div>
-      </div>
+      </TooltipProvider>
     </DashboardLayout>
   );
 };
