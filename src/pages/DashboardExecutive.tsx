@@ -41,7 +41,6 @@ import {
 import {
   TaskTable,
   TaskFilters,
-  Pagination,
 } from "@/components/dashboard/TaskComponents";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
