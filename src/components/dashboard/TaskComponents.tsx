@@ -194,9 +194,9 @@ export const InlineStatusSelect = ({
     <Select value={value} onValueChange={handleChange} disabled={saving}>
       <SelectTrigger
         className={cn(
-          "h-7 px-2 text-[10px] font-medium border w-[124px]",
+          "h-7 px-2 text-[10px] font-medium border w-full min-w-0 max-w-[124px]",
           getStatusBadgeClass(value),
-          size === "xs" && "h-6 text-[10px] w-[112px]"
+          size === "xs" && "h-6 text-[10px] max-w-[112px]"
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -231,30 +231,30 @@ export const TaskTable = ({
         <table className="w-full table-fixed border-collapse">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left">
-              <th className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[26%]">
+              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[24%]">
                 Task
               </th>
               {showAssignee && (
-                <th className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[14%]">
+                <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
                   Assignee
                 </th>
               )}
               {showExecutive && (
-                <th className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[14%]">
+                <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
                   Executive
                 </th>
               )}
-              <th className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[10%]">
+              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[9%]">
                 Priority
               </th>
-              <th className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
+              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[11%]">
                 Deadline
               </th>
-              <th className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[12%] text-right">
-                Actions
-              </th>
-              <th className="px-4 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
+              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[15%]">
                 Status
+              </th>
+              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[10%] text-right">
+                Actions
               </th>
             </tr>
           </thead>
