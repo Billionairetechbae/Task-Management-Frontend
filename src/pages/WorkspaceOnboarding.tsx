@@ -71,7 +71,7 @@ const WorkspaceOnboarding = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto">
+      <div className="w-full">
         <div className="mb-6">
           <h2 className="text-3xl font-bold">Set up your workspace</h2>
           <p className="text-muted-foreground">Create a new workspace or join with an invite.</p>

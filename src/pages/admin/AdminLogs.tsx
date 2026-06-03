@@ -29,7 +29,7 @@ const AdminLogs = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
           <FileText className="w-8 h-8 text-primary" />
           System Logs

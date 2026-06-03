@@ -6,7 +6,7 @@ import Logo from "@/components/Logo";
 const Plans = () => {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="text-center mb-4">
           <Logo className="h-8" />
         </div>
@@ -18,7 +18,7 @@ const Plans = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 w-full">
           <div className="bg-card border-2 border-border rounded-3xl p-8">
             <div className="mb-6">
               <h3 className="text-2xl font-bold mb-2">Free Forever</h3>

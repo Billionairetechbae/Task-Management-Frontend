@@ -175,7 +175,7 @@ const ExecutiveAssistanceRequests = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {/* Hero */}
         <div className="mb-8">
           <Card className="overflow-hidden">

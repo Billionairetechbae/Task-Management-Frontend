@@ -34,7 +34,7 @@ const AdminDeletedCompanies = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <h2 className="text-3xl font-bold flex items-center gap-3 mb-8">
           <Trash2 className="w-8 h-8 text-destructive" />
           Deleted Companies

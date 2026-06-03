@@ -38,7 +38,7 @@ const aiAgents = [
 const AIHub = () => {
   return (
     <DashboardLayout>
-      {/* <div className="max-w-6xl mx-auto"> */}
+      {/* <div className="w-full"> */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center">

@@ -190,7 +190,7 @@ const TeamManagement = () => {
   return (
     <DashboardLayout>
       <TooltipProvider delayDuration={150}>
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
           <PageHeader
             title="Team Management"
             description="Manage team members, approvals, and access control"
