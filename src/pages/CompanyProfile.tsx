@@ -20,13 +20,23 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Building,
+  Building2,
   Mail,
   Users,
   Copy,
   CheckCircle2,
   Save,
   HelpCircle,
+  ShieldCheck,
+  Sparkles,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -253,49 +263,59 @@ const CompanyProfile = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Company Profile</h2>
-              <p className="text-muted-foreground">
-                Manage your company information and settings
-              </p>
+      <TooltipProvider delayDuration={150}>
+        {/* Hero header */}
+        <div className="relative mb-6 overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-6 animate-fade-in">
+          <div className="absolute -top-16 -right-16 w-64 h-64 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-10 w-56 h-56 bg-accent/15 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shrink-0">
+                <Building2 className="w-7 h-7 text-primary-foreground" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[11px] uppercase tracking-wider font-bold text-primary">Workspace</span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                  {formData.name || "Company Profile"}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage your company information, branding, and permissions.
+                </p>
+              </div>
             </div>
 
             <Button
               onClick={handleSaveProfile}
               disabled={savingProfile || !canEditCompanyInfo}
-              className="gap-2"
+              className="gap-2 hover-scale shadow-sm"
+              size="lg"
             >
-              {savingProfile ? (
-                <>Saving...</>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Save Company Info
-                </>
-              )}
+              {savingProfile ? <>Saving...</> : (<><Save className="w-4 h-4" />Save Company Info</>)}
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
           {/* Left Column - Company Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information Card */}
-            <Card>
-              <CardHeader>
+            <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
                 <CardTitle className="flex items-center gap-2">
-                  <Building className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Building className="w-4 h-4 text-primary" />
+                  </div>
                   Company Information
                 </CardTitle>
                 <CardDescription>
                   Basic details about your company
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="company">Company Name</Label>
@@ -701,7 +721,7 @@ const CompanyProfile = () => {
             </Card>
           </div>
         </div>
-      </div>
+      </TooltipProvider>
     </DashboardLayout>
   );
 };

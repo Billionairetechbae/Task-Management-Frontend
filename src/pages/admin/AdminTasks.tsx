@@ -73,7 +73,7 @@ const AdminTasks = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <h2 className="text-3xl font-bold flex items-center gap-2 mb-8">
           <Briefcase className="w-8 h-8 text-primary" />
           Manage Tasks

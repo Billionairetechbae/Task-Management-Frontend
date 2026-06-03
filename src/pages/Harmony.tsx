@@ -334,31 +334,38 @@ const Harmony = () => {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight">Harmony</h2>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Understand your natural work style and compare team collaboration patterns across the active workspace.
-              </p>
+      <div className="space-y-6 animate-fade-in">
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-fuchsia-500/5 p-6 shadow-sm">
+          <div className="absolute -top-16 -right-16 w-64 h-64 bg-primary/15 rounded-full blur-3xl pointer-events-none animate-pulse" />
+          <div className="absolute -bottom-20 -left-10 w-56 h-56 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-fuchsia-500 flex items-center justify-center shadow-lg shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-primary-foreground">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 3a9 9 0 0 0 0 18M3 12h18" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-bold text-primary mb-1">Work Style Intelligence</p>
+                <h2 className="text-3xl font-bold tracking-tight">Harmony</h2>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                  Understand your natural work style and compare team collaboration patterns across the active workspace.
+                </p>
+              </div>
             </div>
 
             {profile?.archetype && (
-              <div className="rounded-xl border bg-muted/40 px-4 py-3">
-                <p className="text-xs text-muted-foreground">Your current archetype</p>
-                <p className="text-lg font-semibold">{profile.archetype}</p>
-
-                {/* AI summary buttons (only when profile exists) */}
+              <div className="rounded-xl border border-primary/30 bg-card/80 backdrop-blur px-4 py-3 shadow-sm">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Your archetype</p>
+                <p className="mt-0.5 text-lg font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+                  {profile.archetype}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => generateAiSummary(false)}
-                    disabled={aiLoading || mode !== "report"}
-                  >
+                  <Button size="sm" onClick={() => generateAiSummary(false)} disabled={aiLoading || mode !== "report"} className="hover-scale">
                     {aiLoading ? "Generating…" : aiSummary ? "Refresh AI summary" : "Generate AI summary"}
                   </Button>
-
                   {aiSummary && (
                     <Button size="sm" variant="ghost" onClick={clearAiSummary} disabled={aiLoading}>
                       Clear

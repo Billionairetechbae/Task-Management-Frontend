@@ -207,7 +207,7 @@ const TeamMemberProfile = () => {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-10">
+      <main className="w-full px-6 py-10">
         {/* Back Button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/team-directory">

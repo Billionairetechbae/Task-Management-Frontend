@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Collapsible,
@@ -39,7 +41,6 @@ import {
 import {
   TaskTable,
   TaskFilters,
-  Pagination,
 } from "@/components/dashboard/TaskComponents";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
@@ -106,7 +107,7 @@ const DashboardExecutive = () => {
     workspaceRole === "owner" || workspaceRole === "admin";
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 6;
 
   const filteredTasks = statusFilter
     ? tasks.filter((task) => task.status === statusFilter)
@@ -534,7 +535,39 @@ const DashboardExecutive = () => {
               }
             />
 
-            <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0 flex-1 overflow-x-auto">
+                <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-end gap-1 shrink-0">
+                  <span className="text-[11px] text-muted-foreground mr-1">
+                    {startIndex + 1}–{Math.min(endIndex, totalItems)} / {totalItems}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="text-[11px] font-semibold px-2">
+                    {currentPage}/{totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {hasTaskViewFilter && (
               <p className="text-xs text-muted-foreground">
@@ -566,7 +599,7 @@ const DashboardExecutive = () => {
                 />
               </ContentCard>
             ) : (
-              <>
+              <div className="animate-fade-in">
                 <TaskTable
                   tasks={currentTasks}
                   showAssignee={workspaceRole !== "member"}
@@ -579,15 +612,7 @@ const DashboardExecutive = () => {
                   onAssign={workspaceRole !== "member" ? (task) => openDrawer(task, "assignees") : undefined}
                   onDelete={workspaceRole !== "member" ? (task) => openDrawer(task, "danger") : undefined}
                 />
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={totalItems}
-                  startIndex={startIndex}
-                  endIndex={endIndex}
-                  onPageChange={setCurrentPage}
-                />
-              </>
+              </div>
             )}
           </div>
         );

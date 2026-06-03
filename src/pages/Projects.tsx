@@ -75,7 +75,7 @@ export default function Projects() {
   return (
     <DashboardLayout>
       <TooltipProvider delayDuration={150}>
-        <div className="max-w-5xl mx-auto py-8 px-4 animate-fade-in">
+        <div className="w-full py-8 px-4 animate-fade-in">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>

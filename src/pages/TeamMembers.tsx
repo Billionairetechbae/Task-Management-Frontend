@@ -82,7 +82,7 @@ const TeamMembers = () => {
   return (
     <DashboardLayout>
       <TooltipProvider delayDuration={150}>
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
           <PageHeader
             title="Team Directory"
             description="Browse and connect with available team members"
