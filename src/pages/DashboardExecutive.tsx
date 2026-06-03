@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Collapsible,
