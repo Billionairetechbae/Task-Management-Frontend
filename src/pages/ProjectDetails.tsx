@@ -1542,6 +1542,193 @@ export default function ProjectDetails() {
               </ResizablePanel>
             </ResizablePanelGroup>
 
+            {/* Mobile / Tablet stacked layout */}
+            <div className="lg:hidden divide-y divide-border">
+              <CollapsiblePanel
+                title="Overview"
+                icon={<Info className="w-3.5 h-3.5" />}
+                open={openPanels.overview}
+                onToggle={() => togglePanel("overview")}
+              >
+                <div className="px-3 pb-3 space-y-3">
+                  <div className="grid grid-cols-4 gap-2">
+                    <MiniStat label="Tasks" value={taskStats.total} color="text-primary" />
+                    <MiniStat label="Done" value={taskStats.completed} color="text-success" />
+                    <MiniStat label="Active" value={taskStats.inProgress} color="text-info" />
+                    <MiniStat label="Pending" value={taskStats.pending} color="text-warning" />
+                  </div>
+                  {taskStats.total > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                        <span>Completion</span>
+                        <span>{Math.round((taskStats.completed / taskStats.total) * 100)}%</span>
+                      </div>
+                      <Progress value={(taskStats.completed / taskStats.total) * 100} className="h-1.5" />
+                    </div>
+                  )}
+                </div>
+              </CollapsiblePanel>
+
+              <CollapsiblePanel
+                title={`Tasks (${tasks.length})`}
+                icon={<ClipboardList className="w-3.5 h-3.5" />}
+                open={openPanels.tasks}
+                onToggle={() => togglePanel("tasks")}
+                action={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsCreateTaskOpen(true);
+                    }}
+                    disabled={!canCreateProjectTask}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                }
+              >
+                {tasks.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+                    No tasks yet
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {paginatedTasks.map((task) => (
+                      <button
+                        key={task.id}
+                        onClick={() => navigate(`/task-details/${task.id}`)}
+                        className="w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors active:bg-muted/50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-1.5 h-1.5 rounded-full shrink-0",
+                            task.status === "completed" ? "bg-success" :
+                            task.status === "in_progress" ? "bg-info" :
+                            task.status === "cancelled" ? "bg-destructive" : "bg-warning"
+                          )} />
+                          <p className="text-sm font-medium truncate flex-1">{task.title}</p>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 flex-wrap pl-3.5">
+                          <Badge variant="outline" className={cn("text-[9px] px-1.5 h-4", getStatusBadgeClass(task.status))}>
+                            {getStatusDisplay(task.status)}
+                          </Badge>
+                          {task.priority && (
+                            <Badge variant="outline" className={cn("text-[9px] px-1.5 h-4", getPriorityBadgeClass(task.priority))}>
+                              {getPriorityDisplay(task.priority)}
+                            </Badge>
+                          )}
+                          {task.deadline && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(task.deadline), "MMM d")}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {totalTaskPages > 1 && (
+                  <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
+                    <span className="text-[10px] text-muted-foreground">
+                      {(taskPage - 1) * tasksPerPage + 1}–
+                      {Math.min(taskPage * tasksPerPage, tasks.length)} of {tasks.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setTaskPage((p) => p - 1)} disabled={taskPage === 1}>
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </Button>
+                      <span className="text-[11px] px-1 font-medium">{taskPage}/{totalTaskPages}</span>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setTaskPage((p) => p + 1)} disabled={taskPage === totalTaskPages}>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CollapsiblePanel>
+
+              <CollapsiblePanel
+                title={`Checklists (${checklists.length})`}
+                icon={<ListChecks className="w-3.5 h-3.5" />}
+                open={openPanels.checklists}
+                onToggle={() => togglePanel("checklists")}
+                action={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsCreateChecklistOpen(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                }
+              >
+                {checklists.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-xs text-muted-foreground">No checklists yet</div>
+                ) : (
+                  checklists.map((cl) => (
+                    <ChecklistPanel
+                      key={cl.id}
+                      projectId={project.id}
+                      checklist={cl}
+                      onToggleItem={handleToggleItem}
+                      onDeleteItem={handleDeleteChecklistItem}
+                      onDeleteChecklist={handleDeleteChecklist}
+                      onRefresh={loadChecklists}
+                    />
+                  ))
+                )}
+              </CollapsiblePanel>
+
+              <CollapsiblePanel
+                title={`Members (${members.length})`}
+                icon={<Users className="w-3.5 h-3.5" />}
+                open={openPanels.members}
+                onToggle={() => togglePanel("members")}
+              >
+                <div className="px-3 pb-3 space-y-2">
+                  <div className="flex gap-1.5">
+                    <Input
+                      type="email"
+                      value={memberEmail}
+                      onChange={(e) => setMemberEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      className="h-8 text-xs"
+                      onKeyDown={(e) => e.key === "Enter" && addMember()}
+                    />
+                    <Button size="icon" className="h-8 w-8 shrink-0" onClick={addMember} disabled={inviting || !memberEmail.trim()}>
+                      {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                  <div className="space-y-1">
+                    {members.map((m) => (
+                      <div key={m.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-muted/20">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                            {m.firstName?.[0]}{m.lastName?.[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">{m.firstName} {m.lastName}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{m.role}</p>
+                          </div>
+                        </div>
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeMember(m.userId || m.id)}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    {members.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-3 italic">No members yet</p>
+                    )}
+                  </div>
+                </div>
+              </CollapsiblePanel>
+            </div>
+
             <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
