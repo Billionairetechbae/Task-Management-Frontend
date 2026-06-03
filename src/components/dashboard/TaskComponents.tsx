@@ -321,7 +321,11 @@ export const TaskTable = ({
                   {new Date(task.deadline).toLocaleDateString()}
                 </td>
 
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
+                  <InlineStatusSelect task={task} onChanged={onStatusChange} />
+                </td>
+
+                <td className="px-3 py-3">
                   <div className="flex items-center justify-end gap-0.5">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -361,10 +365,6 @@ export const TaskTable = ({
                       />
                     )}
                   </div>
-                </td>
-
-                <td className="px-4 py-3">
-                  <InlineStatusSelect task={task} onChanged={onStatusChange} />
                 </td>
               </tr>
             ))}
