@@ -71,7 +71,7 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({
   children,
-  fullWidth = false,
+  fullWidth = true,
   hidePadding = false,
 }: DashboardLayoutProps) => {
   const { user, logout, workspaceRole } = useAuth();
@@ -208,11 +208,6 @@ const DashboardLayout = ({
               href: "/team-management",
               icon: <Crown className="w-[18px] h-[18px]" />,
             },
-            {
-              label: "Team Members",
-              href: "/team_members",
-              icon: <UserCircle className="w-[18px] h-[18px]" />,
-            },
           ],
         },
         {
@@ -292,11 +287,6 @@ const DashboardLayout = ({
               label: "Team Directory",
               href: "/team-directory",
               icon: <Users className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Team Members",
-              href: "/team_members",
-              icon: <UserCircle className="w-[18px] h-[18px]" />,
             },
           ],
         },
