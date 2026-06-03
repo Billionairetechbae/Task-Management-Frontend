@@ -718,6 +718,7 @@ const CompanyProfile = () => {
               </CardContent>
             </Card>
           </div>
+          </div>
         </div>
       </TooltipProvider>
     </DashboardLayout>
