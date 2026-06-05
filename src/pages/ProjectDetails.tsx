@@ -115,6 +115,18 @@ export default function ProjectDetails() {
   const { workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
+  const [isDesktopLayout, setIsDesktopLayout] = useState<boolean>(
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : true
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktopLayout(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -829,9 +841,10 @@ export default function ProjectDetails() {
               </div>
             </div>
 
+            {isDesktopLayout && (
             <ResizablePanelGroup
               direction="horizontal"
-              className="hidden lg:flex h-[calc(100vh-56px-144px)]"
+              className="flex h-[calc(100vh-56px-144px)]"
             >
               <ResizablePanel
                 defaultSize={25}
@@ -1541,9 +1554,11 @@ export default function ProjectDetails() {
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
+            )}
 
             {/* Mobile / Tablet stacked layout */}
-            <div className="lg:hidden divide-y divide-border">
+            {!isDesktopLayout && (
+            <div className="divide-y divide-border">
               <CollapsiblePanel
                 title="Overview"
                 icon={<Info className="w-3.5 h-3.5" />}
@@ -1728,6 +1743,7 @@ export default function ProjectDetails() {
                 </div>
               </CollapsiblePanel>
             </div>
+            )}
 
             <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
               <DialogContent className="sm:max-w-md">
