@@ -1542,9 +1542,11 @@ export default function ProjectDetails() {
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
+            )}
 
             {/* Mobile / Tablet stacked layout */}
-            <div className="lg:hidden divide-y divide-border">
+            {!isDesktopLayout && (
+            <div className="divide-y divide-border">
               <CollapsiblePanel
                 title="Overview"
                 icon={<Info className="w-3.5 h-3.5" />}
