@@ -829,9 +829,10 @@ export default function ProjectDetails() {
               </div>
             </div>
 
+            {isDesktopLayout && (
             <ResizablePanelGroup
               direction="horizontal"
-              className="hidden lg:flex h-[calc(100vh-56px-144px)]"
+              className="flex h-[calc(100vh-56px-144px)]"
             >
               <ResizablePanel
                 defaultSize={25}
