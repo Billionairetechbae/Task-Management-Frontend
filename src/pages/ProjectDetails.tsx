@@ -1731,6 +1731,7 @@ export default function ProjectDetails() {
                 </div>
               </CollapsiblePanel>
             </div>
+            )}
 
             <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
               <DialogContent className="sm:max-w-md">
