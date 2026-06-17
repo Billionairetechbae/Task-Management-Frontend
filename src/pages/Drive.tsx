@@ -199,19 +199,40 @@ export default function Drive() {
     }
   };
 
-  const doUpload = async () => {
-    if (!selectedFolder || !pendingFiles || pendingFiles.length === 0) return;
+  const doUpload = async (filesOverride?: File[]) => {
+    const list = filesOverride ?? (pendingFiles ? Array.from(pendingFiles) : []);
+    if (!selectedFolder || list.length === 0) {
+      if (!selectedFolder && list.length > 0) {
+        toast({ title: "Select a folder first", variant: "destructive" });
+      }
+      return;
+    }
+    if (tabDisabled) {
+      toast({ title: "Uploads disabled", description: "Workspace uploads are disabled by policy.", variant: "destructive" });
+      return;
+    }
     try {
       setUploading(true);
-      await api.uploadFilesToFolder(selectedFolder.id, Array.from(pendingFiles));
+      setUploadProgress(list.map((f) => ({ name: f.name, size: f.size, done: false })));
+      await api.uploadFilesToFolder(selectedFolder.id, list);
+      setUploadProgress((prev) => prev.map((p) => ({ ...p, done: true })));
       await loadFiles(selectedFolder);
-      toast({ title: "Uploaded" });
+      toast({ title: `Uploaded ${list.length} file${list.length === 1 ? "" : "s"}` });
       setPendingFiles(null);
+      setTimeout(() => setUploadProgress([]), 800);
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      setUploadProgress([]);
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = Array.from(e.dataTransfer.files || []);
+    if (dropped.length > 0) doUpload(dropped);
   };
 
   useEffect(() => {
@@ -230,10 +251,26 @@ export default function Drive() {
   const folders = tab === "workspace" ? workspaceFolders : personalFolders;
 
   const filteredFiles = useMemo(() => {
-    if (!search.trim()) return files;
-    const q = search.toLowerCase();
-    return files.filter((f) => f.fileName.toLowerCase().includes(q));
-  }, [files, search]);
+    let arr = files;
+    if (typeFilter !== "all") arr = arr.filter((f) => matchesType(f, typeFilter));
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter((f) => f.fileName.toLowerCase().includes(q));
+    }
+    return arr;
+  }, [files, search, typeFilter]);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<FileTypeFilter, number> = {
+      all: files.length, pdf: 0, image: 0, word: 0, ppt: 0, excel: 0, video: 0, audio: 0, text: 0,
+    };
+    for (const f of files) {
+      for (const opt of FILTER_OPTIONS) {
+        if (opt.id !== "all" && matchesType(f, opt.id)) counts[opt.id]++;
+      }
+    }
+    return counts;
+  }, [files]);
 
   const totalSize = useMemo(() => files.reduce((sum, f) => sum + (f.fileSize || 0), 0), [files]);
 
