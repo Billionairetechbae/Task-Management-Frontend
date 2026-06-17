@@ -22,7 +22,68 @@ import {
   ChevronLeft,
   Loader2,
   Briefcase,
+  Files,
+  FileText,
+  Image as ImageIcon,
+  FileType,
+  Presentation,
+  FileSpreadsheet,
+  FileVideo,
+  FileAudio,
+  FileCode,
+  X,
 } from "lucide-react";
+
+type FileTypeFilter =
+  | "all"
+  | "pdf"
+  | "image"
+  | "word"
+  | "ppt"
+  | "excel"
+  | "video"
+  | "audio"
+  | "text";
+
+const FILTER_OPTIONS: { id: FileTypeFilter; label: string; icon: any }[] = [
+  { id: "all", label: "All", icon: Files },
+  { id: "pdf", label: "PDF", icon: FileText },
+  { id: "image", label: "Images", icon: ImageIcon },
+  { id: "word", label: "Word", icon: FileType },
+  { id: "ppt", label: "PPT", icon: Presentation },
+  { id: "excel", label: "Excel", icon: FileSpreadsheet },
+  { id: "video", label: "Video", icon: FileVideo },
+  { id: "audio", label: "Audio", icon: FileAudio },
+  { id: "text", label: "Text", icon: FileCode },
+];
+
+const matchesType = (file: { fileName: string; fileType: string }, filter: FileTypeFilter) => {
+  if (filter === "all") return true;
+  const ext = file.fileName.split(".").pop()?.toLowerCase() || "";
+  const mime = (file.fileType || "").toLowerCase();
+  switch (filter) {
+    case "pdf":
+      return mime === "application/pdf" || ext === "pdf";
+    case "image":
+      return mime.startsWith("image/") ||
+        ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"].includes(ext);
+    case "word":
+      return ["doc", "docx", "odt", "rtf"].includes(ext) || mime.includes("msword") || mime.includes("wordprocessingml");
+    case "ppt":
+      return ["ppt", "pptx", "odp", "key"].includes(ext) || mime.includes("presentation");
+    case "excel":
+      return ["xls", "xlsx", "csv", "ods"].includes(ext) || mime.includes("spreadsheet") || mime.includes("excel");
+    case "video":
+      return mime.startsWith("video/") || ["mp4", "webm", "mov", "m4v", "ogv", "mkv"].includes(ext);
+    case "audio":
+      return mime.startsWith("audio/") || ["mp3", "wav", "ogg", "flac", "m4a", "aac"].includes(ext);
+    case "text":
+      return mime.startsWith("text/") ||
+        ["txt", "md", "log", "json", "xml", "yml", "yaml", "js", "ts", "tsx", "jsx", "css", "html"].includes(ext);
+    default:
+      return true;
+  }
+};
 
 type Tab = "workspace" | "personal";
 
