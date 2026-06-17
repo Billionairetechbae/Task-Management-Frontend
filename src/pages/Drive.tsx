@@ -417,7 +417,33 @@ export default function Drive() {
               !showSidebarOnMobile ? "block" : "hidden"
             } lg:block`}
           >
-            <Card className="p-4 sm:p-5 border border-border">
+            <Card
+              className={`relative p-4 sm:p-5 border transition-colors ${
+                isDragging ? "border-primary border-2 bg-primary/5" : "border-border"
+              }`}
+              onDragOver={(e) => {
+                if (tabDisabled || !selectedFolder) return;
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                setIsDragging(false);
+              }}
+              onDrop={handleDrop}
+            >
+              {/* Drag overlay */}
+              {isDragging && (
+                <div className="absolute inset-0 z-20 rounded-lg bg-primary/10 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-fade-in">
+                  <div className="text-center">
+                    <Upload className="h-12 w-12 mx-auto text-primary mb-2 animate-bounce" />
+                    <p className="font-semibold text-primary">Drop files to upload</p>
+                    <p className="text-xs text-muted-foreground mt-1">to "{selectedFolder?.name}"</p>
+                  </div>
+                </div>
+              )}
+
               {/* Toolbar */}
               <div className="flex flex-col gap-3 mb-4">
                 <div className="flex items-center gap-2 min-w-0">
@@ -478,7 +504,76 @@ export default function Drive() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Type filters */}
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1">
+                  {FILTER_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    const active = typeFilter === opt.id;
+                    const count = typeCounts[opt.id];
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setTypeFilter(opt.id)}
+                        className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                          active
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{opt.label}</span>
+                        <span
+                          className={`ml-0.5 px-1.5 rounded-full text-[10px] ${
+                            active ? "bg-primary-foreground/20" : "bg-muted"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Upload progress */}
+                {uploadProgress.length > 0 && (
+                  <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium">
+                        {uploading ? "Uploading…" : "Upload complete"}
+                      </span>
+                      {!uploading && (
+                        <button
+                          onClick={() => setUploadProgress([])}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {uploadProgress.map((p, i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px] gap-2">
+                          <span className="truncate flex-1">{p.name}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {formatBytes(p.size)}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-background rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              p.done
+                                ? "bg-green-500 w-full"
+                                : "bg-primary animate-pulse w-2/3"
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
 
               {/* Files */}
               {!selectedFolder ? (
