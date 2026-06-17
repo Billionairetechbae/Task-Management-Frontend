@@ -22,7 +22,68 @@ import {
   ChevronLeft,
   Loader2,
   Briefcase,
+  Files,
+  FileText,
+  Image as ImageIcon,
+  FileType,
+  Presentation,
+  FileSpreadsheet,
+  FileVideo,
+  FileAudio,
+  FileCode,
+  X,
 } from "lucide-react";
+
+type FileTypeFilter =
+  | "all"
+  | "pdf"
+  | "image"
+  | "word"
+  | "ppt"
+  | "excel"
+  | "video"
+  | "audio"
+  | "text";
+
+const FILTER_OPTIONS: { id: FileTypeFilter; label: string; icon: any }[] = [
+  { id: "all", label: "All", icon: Files },
+  { id: "pdf", label: "PDF", icon: FileText },
+  { id: "image", label: "Images", icon: ImageIcon },
+  { id: "word", label: "Word", icon: FileType },
+  { id: "ppt", label: "PPT", icon: Presentation },
+  { id: "excel", label: "Excel", icon: FileSpreadsheet },
+  { id: "video", label: "Video", icon: FileVideo },
+  { id: "audio", label: "Audio", icon: FileAudio },
+  { id: "text", label: "Text", icon: FileCode },
+];
+
+const matchesType = (file: { fileName: string; fileType: string }, filter: FileTypeFilter) => {
+  if (filter === "all") return true;
+  const ext = file.fileName.split(".").pop()?.toLowerCase() || "";
+  const mime = (file.fileType || "").toLowerCase();
+  switch (filter) {
+    case "pdf":
+      return mime === "application/pdf" || ext === "pdf";
+    case "image":
+      return mime.startsWith("image/") ||
+        ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"].includes(ext);
+    case "word":
+      return ["doc", "docx", "odt", "rtf"].includes(ext) || mime.includes("msword") || mime.includes("wordprocessingml");
+    case "ppt":
+      return ["ppt", "pptx", "odp", "key"].includes(ext) || mime.includes("presentation");
+    case "excel":
+      return ["xls", "xlsx", "csv", "ods"].includes(ext) || mime.includes("spreadsheet") || mime.includes("excel");
+    case "video":
+      return mime.startsWith("video/") || ["mp4", "webm", "mov", "m4v", "ogv", "mkv"].includes(ext);
+    case "audio":
+      return mime.startsWith("audio/") || ["mp3", "wav", "ogg", "flac", "m4a", "aac"].includes(ext);
+    case "text":
+      return mime.startsWith("text/") ||
+        ["txt", "md", "log", "json", "xml", "yml", "yaml", "js", "ts", "tsx", "jsx", "css", "html"].includes(ext);
+    default:
+      return true;
+  }
+};
 
 type Tab = "workspace" | "personal";
 
@@ -51,6 +112,10 @@ export default function Drive() {
   const [search, setSearch] = useState("");
   const [previewFile, setPreviewFile] = useState<FolderFile | null>(null);
   const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<FileTypeFilter>("all");
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ name: string; size: number; done: boolean }[]>([]);
+
 
   const canUploadWorkspaceFiles = canPerformRoleOperation("upload_workspace_files", workspaceRole);
   const tabDisabled = tab === "workspace" && !canUploadWorkspaceFiles;
@@ -134,19 +199,40 @@ export default function Drive() {
     }
   };
 
-  const doUpload = async () => {
-    if (!selectedFolder || !pendingFiles || pendingFiles.length === 0) return;
+  const doUpload = async (filesOverride?: File[]) => {
+    const list = filesOverride ?? (pendingFiles ? Array.from(pendingFiles) : []);
+    if (!selectedFolder || list.length === 0) {
+      if (!selectedFolder && list.length > 0) {
+        toast({ title: "Select a folder first", variant: "destructive" });
+      }
+      return;
+    }
+    if (tabDisabled) {
+      toast({ title: "Uploads disabled", description: "Workspace uploads are disabled by policy.", variant: "destructive" });
+      return;
+    }
     try {
       setUploading(true);
-      await api.uploadFilesToFolder(selectedFolder.id, Array.from(pendingFiles));
+      setUploadProgress(list.map((f) => ({ name: f.name, size: f.size, done: false })));
+      await api.uploadFilesToFolder(selectedFolder.id, list);
+      setUploadProgress((prev) => prev.map((p) => ({ ...p, done: true })));
       await loadFiles(selectedFolder);
-      toast({ title: "Uploaded" });
+      toast({ title: `Uploaded ${list.length} file${list.length === 1 ? "" : "s"}` });
       setPendingFiles(null);
+      setTimeout(() => setUploadProgress([]), 800);
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      setUploadProgress([]);
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = Array.from(e.dataTransfer.files || []);
+    if (dropped.length > 0) doUpload(dropped);
   };
 
   useEffect(() => {
@@ -165,10 +251,26 @@ export default function Drive() {
   const folders = tab === "workspace" ? workspaceFolders : personalFolders;
 
   const filteredFiles = useMemo(() => {
-    if (!search.trim()) return files;
-    const q = search.toLowerCase();
-    return files.filter((f) => f.fileName.toLowerCase().includes(q));
-  }, [files, search]);
+    let arr = files;
+    if (typeFilter !== "all") arr = arr.filter((f) => matchesType(f, typeFilter));
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter((f) => f.fileName.toLowerCase().includes(q));
+    }
+    return arr;
+  }, [files, search, typeFilter]);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<FileTypeFilter, number> = {
+      all: files.length, pdf: 0, image: 0, word: 0, ppt: 0, excel: 0, video: 0, audio: 0, text: 0,
+    };
+    for (const f of files) {
+      for (const opt of FILTER_OPTIONS) {
+        if (opt.id !== "all" && matchesType(f, opt.id)) counts[opt.id]++;
+      }
+    }
+    return counts;
+  }, [files]);
 
   const totalSize = useMemo(() => files.reduce((sum, f) => sum + (f.fileSize || 0), 0), [files]);
 
@@ -315,7 +417,33 @@ export default function Drive() {
               !showSidebarOnMobile ? "block" : "hidden"
             } lg:block`}
           >
-            <Card className="p-4 sm:p-5 border border-border">
+            <Card
+              className={`relative p-4 sm:p-5 border transition-colors ${
+                isDragging ? "border-primary border-2 bg-primary/5" : "border-border"
+              }`}
+              onDragOver={(e) => {
+                if (tabDisabled || !selectedFolder) return;
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                setIsDragging(false);
+              }}
+              onDrop={handleDrop}
+            >
+              {/* Drag overlay */}
+              {isDragging && (
+                <div className="absolute inset-0 z-20 rounded-lg bg-primary/10 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-fade-in">
+                  <div className="text-center">
+                    <Upload className="h-12 w-12 mx-auto text-primary mb-2 animate-bounce" />
+                    <p className="font-semibold text-primary">Drop files to upload</p>
+                    <p className="text-xs text-muted-foreground mt-1">to "{selectedFolder?.name}"</p>
+                  </div>
+                </div>
+              )}
+
               {/* Toolbar */}
               <div className="flex flex-col gap-3 mb-4">
                 <div className="flex items-center gap-2 min-w-0">
@@ -357,7 +485,7 @@ export default function Drive() {
                       className="flex-1 sm:max-w-[220px]"
                     />
                     <Button
-                      onClick={doUpload}
+                      onClick={() => doUpload()}
                       disabled={
                         uploading ||
                         !selectedFolder ||
@@ -376,7 +504,76 @@ export default function Drive() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Type filters */}
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1">
+                  {FILTER_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    const active = typeFilter === opt.id;
+                    const count = typeCounts[opt.id];
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setTypeFilter(opt.id)}
+                        className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                          active
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{opt.label}</span>
+                        <span
+                          className={`ml-0.5 px-1.5 rounded-full text-[10px] ${
+                            active ? "bg-primary-foreground/20" : "bg-muted"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Upload progress */}
+                {uploadProgress.length > 0 && (
+                  <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium">
+                        {uploading ? "Uploading…" : "Upload complete"}
+                      </span>
+                      {!uploading && (
+                        <button
+                          onClick={() => setUploadProgress([])}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {uploadProgress.map((p, i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px] gap-2">
+                          <span className="truncate flex-1">{p.name}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {formatBytes(p.size)}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-background rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              p.done
+                                ? "bg-green-500 w-full"
+                                : "bg-primary animate-pulse w-2/3"
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
 
               {/* Files */}
               {!selectedFolder ? (
