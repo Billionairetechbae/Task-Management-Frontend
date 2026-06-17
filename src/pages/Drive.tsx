@@ -459,7 +459,7 @@ export default function Drive() {
                       className="flex-1 sm:max-w-[220px]"
                     />
                     <Button
-                      onClick={doUpload}
+                      onClick={() => doUpload()}
                       disabled={
                         uploading ||
                         !selectedFolder ||
