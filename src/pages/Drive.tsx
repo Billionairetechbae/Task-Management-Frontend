@@ -112,6 +112,10 @@ export default function Drive() {
   const [search, setSearch] = useState("");
   const [previewFile, setPreviewFile] = useState<FolderFile | null>(null);
   const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<FileTypeFilter>("all");
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ name: string; size: number; done: boolean }[]>([]);
+
 
   const canUploadWorkspaceFiles = canPerformRoleOperation("upload_workspace_files", workspaceRole);
   const tabDisabled = tab === "workspace" && !canUploadWorkspaceFiles;
