@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { api, AllTasksFilters } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, AllTasksFilters, Task } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import {
   PageHeader,
   ContentCard,
@@ -32,6 +33,21 @@ const AllTasks = () => {
   const location = useLocation();
   const { workspaces } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState("details");
+
+  const openDrawer = (task: Task, tab: string) => {
+    setDrawerTaskId(task.id);
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
+
+  const refetchTasks = () => {
+    queryClient.invalidateQueries({ queryKey: ["all-tasks-cross-workspace"] });
+  };
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -301,6 +317,10 @@ const AllTasks = () => {
               showAssignee={true}
               showExecutive={true}
               showActions={true}
+              onEdit={(task) => openDrawer(task, "details")}
+              onView={(task) => openDrawer(task, "details")}
+              onAssign={(task) => openDrawer(task, "assignees")}
+              onDelete={(task) => openDrawer(task, "danger")}
             />
             <Pagination
               currentPage={page}
@@ -313,6 +333,15 @@ const AllTasks = () => {
           </div>
         )}
       </div>
+
+      <TaskEditDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        taskId={drawerTaskId}
+        initialTab={drawerTab}
+        onTaskUpdated={refetchTasks}
+        onTaskDeleted={refetchTasks}
+      />
     </DashboardLayout>
   );
 };
