@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { api, AllTasksFilters } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, AllTasksFilters, Task } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import {
   PageHeader,
   ContentCard,
