@@ -33,6 +33,21 @@ const AllTasks = () => {
   const location = useLocation();
   const { workspaces } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState("details");
+
+  const openDrawer = (task: Task, tab: string) => {
+    setDrawerTaskId(task.id);
+    setDrawerTab(tab);
+    setDrawerOpen(true);
+  };
+
+  const refetchTasks = () => {
+    queryClient.invalidateQueries({ queryKey: ["all-tasks-cross-workspace"] });
+  };
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
