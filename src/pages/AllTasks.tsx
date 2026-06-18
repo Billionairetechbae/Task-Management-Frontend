@@ -333,6 +333,15 @@ const AllTasks = () => {
           </div>
         )}
       </div>
+
+      <TaskEditDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        taskId={drawerTaskId}
+        initialTab={drawerTab}
+        onTaskUpdated={refetchTasks}
+        onTaskDeleted={refetchTasks}
+      />
     </DashboardLayout>
   );
 };
