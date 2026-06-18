@@ -317,6 +317,10 @@ const AllTasks = () => {
               showAssignee={true}
               showExecutive={true}
               showActions={true}
+              onEdit={(task) => openDrawer(task, "details")}
+              onView={(task) => openDrawer(task, "details")}
+              onAssign={(task) => openDrawer(task, "assignees")}
+              onDelete={(task) => openDrawer(task, "danger")}
             />
             <Pagination
               currentPage={page}
