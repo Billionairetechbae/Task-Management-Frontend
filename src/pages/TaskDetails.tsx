@@ -19,7 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, ExternalLink, Download } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, Task, TaskComment } from "@/lib/api";
@@ -64,6 +64,7 @@ const TaskDetails = () => {
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [preview, setPreview] = useState<{
     url: string;
@@ -76,6 +77,8 @@ const TaskDetails = () => {
   const [pendingComments, setPendingComments] = useState<Map<string, {content: string, timestamp: number}>>(new Map());
   const [showChatSheet, setShowChatSheet] = useState(false);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const optimisticCommentRef = useRef<Map<string, any>>(new Map());
@@ -369,10 +372,69 @@ const TaskDetails = () => {
     }
   };
 
-  const handleSendComment = async () => {
-    if (!id || !newComment.trim() || sendingComment) return;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isChat = false) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !id) return;
+
+    try {
+      setUploadingFiles(true);
+      const response = await api.uploadTaskAttachments(id, files);
+      const updatedTask = response.data.task;
+      setTask(updatedTask);
+
+      toast({
+        title: "Success",
+        description: `${files.length} file(s) uploaded successfully`,
+      });
+
+      if (isChat) {
+        // Post a comment about the uploaded file(s)
+        const fileNames = files.map(f => f.name).join(", ");
+        const content = `📎 Uploaded ${files.length} file(s): ${fileNames}`;
+        
+        // Use the existing handleSendComment logic but with pre-filled content
+        setNewComment(content);
+        // We'll trigger send immediately after this state update in a timeout or just call send logic
+        setTimeout(() => handleSendComment(content), 100);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload files",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFiles(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!window.confirm("Are you sure you want to delete this attachment?")) return;
+
+    try {
+      await api.deleteTaskAttachment(attachmentId);
+      setTask(prev => prev ? {
+        ...prev,
+        attachments: prev.attachments?.filter(a => a.id !== attachmentId)
+      } : null);
+      toast({
+        title: "Success",
+        description: "Attachment deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete attachment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendComment = async (overrideContent?: string) => {
+    const content = (overrideContent || newComment).trim();
+    if (!id || !content || sendingComment) return;
     
-    const content = newComment.trim();
     // messageId will be determined by WebSocket send (preferred) or local fallback
     let messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -708,28 +770,49 @@ const TaskDetails = () => {
         {/* Chat input */}
         <div className="border-t pt-3">
           <div className="flex gap-2">
-            <Textarea
-              placeholder="Type a message..."
-              rows={2}
-              value={newComment}
-              onChange={(e) => {
-                setNewComment(e.target.value);
-                handleTyping();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendComment();
-                }
-              }}
-              className="flex-1 text-sm"
-              disabled={sendingComment}
-            />
+            <div className="flex flex-col gap-2 flex-1">
+              <Textarea
+                placeholder="Type a message..."
+                rows={2}
+                value={newComment}
+                onChange={(e) => {
+                  setNewComment(e.target.value);
+                  handleTyping();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendComment();
+                  }
+                }}
+                className="flex-1 text-sm"
+                disabled={sendingComment}
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  multiple
+                  ref={chatFileInputRef}
+                  className="hidden"
+                  onChange={(e) => handleFileUpload(e, true)}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5 text-muted-foreground"
+                  onClick={() => chatFileInputRef.current?.click()}
+                  disabled={uploadingFiles}
+                >
+                  <Paperclip className="w-3.5 h-3.5" />
+                  Attach File
+                </Button>
+              </div>
+            </div>
             <Button
               size="icon"
-              onClick={handleSendComment}
+              onClick={() => handleSendComment()}
               disabled={!newComment.trim() || sendingComment}
-              className="flex-shrink-0"
+              className="flex-shrink-0 self-end"
             >
               {sendingComment ? (
                 <Clock className="w-4 h-4 animate-spin" />
@@ -922,56 +1005,105 @@ const TaskDetails = () => {
                 <TaskActivityTimeline taskId={task.id} initialActivities={task.activities || []} />
               </div>
 
-              {task.attachments && task.attachments.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold mb-2">Attachments</h3>
-
-                  <div className="grid gap-2 sm:gap-3">
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-2 flex items-center justify-between">
+                  <span>Task Documents</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      multiple
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 text-xs gap-1"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingFiles}
+                    >
+                      {uploadingFiles ? (
+                        <Clock className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Upload className="w-3 h-3" />
+                      )}
+                      Upload
+                    </Button>
+                  </div>
+                </h3>
+                
+                {task.attachments && task.attachments.length > 0 ? (
+                  <div className="grid gap-2">
                     {task.attachments.map((file) => {
                       const Icon = getFileIcon(file.fileType, file.fileName);
+                      const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
 
                       return (
                         <div
                           key={file.id}
-                          className="p-2 sm:p-3 border rounded-lg flex flex-col sm:flex-row sm:gap-4 hover:bg-muted transition cursor-pointer"
-                          onClick={() =>
-                            setPreview({
-                              url: file.fileUrl,
-                              type: file.fileType,
-                              name: file.fileName,
-                            })
-                          }
+                          className="p-3 border rounded-lg flex items-center justify-between hover:bg-muted/50 transition group"
                         >
-                          <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-0">
-                            {/* ICON */}
-                            <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-
-                            {/* DETAILS */}
+                          <div 
+                            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                            onClick={() =>
+                              setPreview({
+                                url: file.fileUrl,
+                                type: file.fileType,
+                                name: file.fileName,
+                              })
+                            }
+                          >
+                            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                              <Icon className="w-5 h-5 text-primary" />
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm truncate">{file.fileName}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="font-medium text-sm truncate">{file.fileName}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase">
                                 {file.fileType}
                               </p>
                             </div>
                           </div>
 
-                          {/* DOWNLOAD BUTTON */}
-                          <div className="self-end sm:self-center">
-                            <a
-                              href={file.fileUrl}
-                              download={file.fileName}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-primary underline text-xs sm:text-sm"
-                            >
-                              Download
-                            </a>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                              <a href={file.fileUrl} download={file.fileName} onClick={(e) => e.stopPropagation()}>
+                                <Download className="w-4 h-4" />
+                              </a>
+                            </Button>
+                            {isOwner && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAttachment(file.id);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="py-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
+                    <FileText className="w-8 h-8 mb-2 opacity-20" />
+                    <p className="text-xs">No documents uploaded yet</p>
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      className="text-xs h-auto p-0 mt-1"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Click to upload
+                    </Button>
+                  </div>
+                )}
+              </div>
 
               {/* STATUS UPDATE - visible to any assignee, creator, manager, executive, admin */}
               {(user?.id === task.assigneeId ||
@@ -1112,6 +1244,29 @@ const TaskDetails = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
+                            
+                            {/* Attachment Link in Chat */}
+                            {comment.content.includes("📎 Uploaded") && (
+                              <div className="mt-2 pt-2 border-t border-primary-foreground/20 flex items-center justify-between gap-2">
+                                <span className="text-[10px] opacity-80 flex items-center gap-1 italic">
+                                  <FileText className="w-3 h-3" />
+                                  File attached to task docs
+                                </span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 px-2 text-[10px] bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground border-none"
+                                  onClick={() => {
+                                    // Smooth scroll to attachments section
+                                    const section = document.querySelector('.mb-6 h3 span');
+                                    section?.parentElement?.scrollIntoView({ behavior: 'smooth' });
+                                  }}
+                                >
+                                  View in Docs
+                                </Button>
+                              </div>
+                            )}
+                            
                             {renderDeliveryMark(comment)}
                           </div>
                         </div>
@@ -1125,27 +1280,49 @@ const TaskDetails = () => {
               {/* Chat input */}
               <div className="p-4 border-t bg-muted/40">
                 <div className="flex gap-3">
-                  <Textarea
-                    placeholder="Type a message..."
-                    rows={2}
-                    value={newComment}
-                    onChange={(e) => {
-                      setNewComment(e.target.value);
-                      handleTyping();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendComment();
-                      }
-                    }}
-                    className="flex-1"
-                    disabled={sendingComment}
-                  />
+                  <div className="flex flex-col gap-2 flex-1">
+                    <Textarea
+                      placeholder="Type a message..."
+                      rows={2}
+                      value={newComment}
+                      onChange={(e) => {
+                        setNewComment(e.target.value);
+                        handleTyping();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendComment();
+                        }
+                      }}
+                      className="flex-1"
+                      disabled={sendingComment}
+                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        multiple
+                        ref={chatFileInputRef}
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, true)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-primary"
+                        onClick={() => chatFileInputRef.current?.click()}
+                        disabled={uploadingFiles}
+                      >
+                        <Paperclip className="w-3.5 h-3.5" />
+                        Attach File
+                      </Button>
+                    </div>
+                  </div>
                   <Button
                     size="icon"
-                    onClick={handleSendComment}
+                    onClick={() => handleSendComment()}
                     disabled={!newComment.trim() || sendingComment}
+                    className="self-end"
                   >
                     {sendingComment ? (
                       <Clock className="w-5 h-5 animate-spin" />

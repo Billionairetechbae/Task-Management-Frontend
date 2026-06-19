@@ -1799,6 +1799,20 @@ class ApiClient {
     });
   }
 
+  async uploadTaskAttachments(
+    taskId: string,
+    files: File[]
+  ): Promise<{ status: string; message: string; data: { task: Task } }> {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f));
+
+    return this.request(`/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: fd,
+    });
+  }
+
   /* ============================
      DASHBOARDS
   ============================ */
