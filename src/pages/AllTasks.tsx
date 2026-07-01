@@ -224,6 +224,29 @@ const AllTasks = () => {
               </Select>
             </div>
 
+            {/* Status filter pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {STATUS_PILLS.map((p) => {
+                const active = status === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => {
+                      setStatus(p.value);
+                      setPage(1);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      active
+                        ? `${p.className || "bg-primary text-primary-foreground"} ring-2 ring-primary/30 shadow-sm`
+                        : "bg-background hover:bg-muted text-muted-foreground border-border"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <Button
