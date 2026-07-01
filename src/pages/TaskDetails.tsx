@@ -1288,29 +1288,46 @@ const TaskDetails = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
-                            
-                            {/* Attachment Link in Chat */}
-                            {comment.content.includes("📎 Uploaded") && (
-                              <div className="mt-2 pt-2 border-t border-primary-foreground/20 flex items-center justify-between gap-2">
-                                <span className="text-[10px] opacity-80 flex items-center gap-1 italic">
-                                  <FileText className="w-3 h-3" />
-                                  File attached to task docs
-                                </span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 px-2 text-[10px] bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground border-none"
-                                  onClick={() => {
-                                    // Smooth scroll to attachments section
-                                    const section = document.querySelector('.mb-6 h3 span');
-                                    section?.parentElement?.scrollIntoView({ behavior: 'smooth' });
-                                  }}
-                                >
-                                  View in Docs
-                                </Button>
-                              </div>
-                            )}
-                            
+
+                            {/* Attachment preview cards in chat */}
+                            {comment.content.includes("📎 Uploaded") && (() => {
+                              const names = parseUploadedFilenames(comment.content);
+                              const matched = names
+                                .map((n) => findAttachmentByName(n))
+                                .filter(Boolean) as NonNullable<Task["attachments"]>;
+                              if (matched.length === 0) return null;
+                              return (
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                  {matched.map((f) => (
+                                    <FilePreviewCard
+                                      key={f.id}
+                                      compact
+                                      className={
+                                        comment.userId === user?.id
+                                          ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground"
+                                          : ""
+                                      }
+                                      file={{
+                                        id: f.id,
+                                        name: f.fileName,
+                                        url: f.fileUrl,
+                                        type: f.fileType,
+                                      }}
+                                      onClick={() =>
+                                        setPreview({
+                                          url: f.fileUrl,
+                                          type: f.fileType,
+                                          name: f.fileName,
+                                          attachmentId: f.id,
+                                          alreadyInDocs: true,
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                              );
+                            })()}
+
                             {renderDeliveryMark(comment)}
                           </div>
                         </div>
