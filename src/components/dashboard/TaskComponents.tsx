@@ -106,26 +106,33 @@ const ActionButton = ({
   onClick,
   variant = "ghost",
   className: extraClass,
+  disabled,
+  disabledReason,
 }: {
   icon: typeof Eye;
   label: string;
   onClick?: () => void;
   variant?: "ghost" | "outline";
   className?: string;
+  disabled?: boolean;
+  disabledReason?: string;
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button
-        variant={variant}
-        size="icon"
-        className={cn("h-7 w-7 transition-all duration-200", extraClass)}
-        onClick={onClick}
-      >
-        <Icon className="h-3.5 w-3.5" />
-      </Button>
+      <span>
+        <Button
+          variant={variant}
+          size="icon"
+          className={cn("h-7 w-7 transition-all duration-200", extraClass)}
+          onClick={onClick}
+          disabled={disabled}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </Button>
+      </span>
     </TooltipTrigger>
     <TooltipContent side="top" className="text-xs">
-      {label}
+      {disabled && disabledReason ? disabledReason : label}
     </TooltipContent>
   </Tooltip>
 );
