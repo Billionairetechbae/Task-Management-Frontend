@@ -44,6 +44,11 @@ interface TaskTableProps {
   onAssign?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   onStatusChange?: (taskId: string, status: string) => void;
+  /** Optional per-row permission predicates. When provided and returning false, the corresponding action button renders disabled. */
+  canView?: (task: Task) => boolean;
+  canEdit?: (task: Task) => boolean;
+  canAssign?: (task: Task) => boolean;
+  canDelete?: (task: Task) => boolean;
 }
 
 export const getStatusDisplay = (status: string) => {
@@ -101,26 +106,33 @@ const ActionButton = ({
   onClick,
   variant = "ghost",
   className: extraClass,
+  disabled,
+  disabledReason,
 }: {
   icon: typeof Eye;
   label: string;
   onClick?: () => void;
   variant?: "ghost" | "outline";
   className?: string;
+  disabled?: boolean;
+  disabledReason?: string;
 }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button
-        variant={variant}
-        size="icon"
-        className={cn("h-7 w-7 transition-all duration-200", extraClass)}
-        onClick={onClick}
-      >
-        <Icon className="h-3.5 w-3.5" />
-      </Button>
+      <span>
+        <Button
+          variant={variant}
+          size="icon"
+          className={cn("h-7 w-7 transition-all duration-200", extraClass)}
+          onClick={onClick}
+          disabled={disabled}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </Button>
+      </span>
     </TooltipTrigger>
     <TooltipContent side="top" className="text-xs">
-      {label}
+      {disabled && disabledReason ? disabledReason : label}
     </TooltipContent>
   </Tooltip>
 );
@@ -223,6 +235,10 @@ export const TaskTable = ({
   onAssign,
   onDelete,
   onStatusChange,
+  canView,
+  canEdit,
+  canAssign,
+  canDelete,
 }: TaskTableProps) => (
   <TooltipProvider delayDuration={100}>
     <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -351,10 +367,22 @@ export const TaskTable = ({
                     </Tooltip>
 
                     {showActions && onEdit && (
-                      <ActionButton icon={Pencil} label="Edit" onClick={() => onEdit(task)} />
+                      <ActionButton
+                        icon={Pencil}
+                        label="Edit"
+                        onClick={() => onEdit(task)}
+                        disabled={canEdit ? !canEdit(task) : false}
+                        disabledReason="You don't have permission to edit this task"
+                      />
                     )}
                     {showActions && onAssign && (
-                      <ActionButton icon={UserPlus} label="Assign" onClick={() => onAssign(task)} />
+                      <ActionButton
+                        icon={UserPlus}
+                        label="Assign"
+                        onClick={() => onAssign(task)}
+                        disabled={canAssign ? !canAssign(task) : false}
+                        disabledReason="You don't have permission to assign this task"
+                      />
                     )}
                     {showActions && onDelete && (
                       <ActionButton
@@ -362,6 +390,8 @@ export const TaskTable = ({
                         label="Delete"
                         onClick={() => onDelete(task)}
                         className="text-destructive hover:text-destructive"
+                        disabled={canDelete ? !canDelete(task) : false}
+                        disabledReason="You don't have permission to delete this task"
                       />
                     )}
                   </div>
@@ -475,10 +505,22 @@ export const TaskTable = ({
               </Tooltip>
 
               {showActions && onEdit && (
-                <ActionButton icon={Pencil} label="Edit" onClick={() => onEdit(task)} />
+                <ActionButton
+                  icon={Pencil}
+                  label="Edit"
+                  onClick={() => onEdit(task)}
+                  disabled={canEdit ? !canEdit(task) : false}
+                  disabledReason="You don't have permission to edit this task"
+                />
               )}
               {showActions && onAssign && (
-                <ActionButton icon={UserPlus} label="Assign" onClick={() => onAssign(task)} />
+                <ActionButton
+                  icon={UserPlus}
+                  label="Assign"
+                  onClick={() => onAssign(task)}
+                  disabled={canAssign ? !canAssign(task) : false}
+                  disabledReason="You don't have permission to assign this task"
+                />
               )}
               {showActions && onDelete && (
                 <ActionButton
@@ -486,6 +528,8 @@ export const TaskTable = ({
                   label="Delete"
                   onClick={() => onDelete(task)}
                   className="text-destructive hover:text-destructive"
+                  disabled={canDelete ? !canDelete(task) : false}
+                  disabledReason="You don't have permission to delete this task"
                 />
               )}
             </div>

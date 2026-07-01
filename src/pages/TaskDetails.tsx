@@ -19,7 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, ExternalLink, Download } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, Task, TaskComment } from "@/lib/api";
@@ -27,14 +27,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 
-import { getFileIcon } from "@/utils/fileIcons";
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
+import FilePreviewCard from "@/components/tasks/FilePreviewCard";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -70,7 +71,10 @@ const TaskDetails = () => {
     url: string;
     type: string;
     name: string;
+    attachmentId?: string;
+    alreadyInDocs?: boolean;
   } | null>(null);
+  const [addingToDocs, setAddingToDocs] = useState(false);
   
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
@@ -656,6 +660,45 @@ const TaskDetails = () => {
     return date.toLocaleDateString();
   };
 
+  // Parse "📎 Uploaded N file(s): a.png, b.pdf" -> ["a.png", "b.pdf"]
+  const parseUploadedFilenames = (content: string): string[] => {
+    if (!content || !content.includes("📎 Uploaded")) return [];
+    const idx = content.indexOf(":");
+    if (idx < 0) return [];
+    return content
+      .slice(idx + 1)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  const findAttachmentByName = (name: string) => {
+    return task?.attachments?.find((a) => a.fileName === name);
+  };
+
+  // Re-upload a file (from a URL) into task attachments. Used for chat files not already in docs.
+  const handleAddToTaskDocsFromUrl = async (url: string, name: string, type: string) => {
+    if (!id) return;
+    try {
+      setAddingToDocs(true);
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const file = new File([blob], name, { type: type || blob.type });
+      const response = await api.uploadTaskAttachments(id, [file]);
+      setTask(response.data.task);
+      toast({ title: "Added", description: `${name} added to Task Documents.` });
+      setPreview((p) => (p ? { ...p, alreadyInDocs: true } : p));
+    } catch (err: any) {
+      toast({
+        title: "Failed",
+        description: err?.message || "Could not add file to Task Documents",
+        variant: "destructive",
+      });
+    } finally {
+      setAddingToDocs(false);
+    }
+  };
+
   // Mobile chat toggle
   const renderMobileChatButton = () => (
     <Button
@@ -757,6 +800,38 @@ const TaskDetails = () => {
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
+                      {comment.content.includes("📎 Uploaded") && (() => {
+                        const names = parseUploadedFilenames(comment.content);
+                        const matched = names
+                          .map((n) => findAttachmentByName(n))
+                          .filter(Boolean) as NonNullable<Task["attachments"]>;
+                        if (matched.length === 0) return null;
+                        return (
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            {matched.map((f) => (
+                              <FilePreviewCard
+                                key={f.id}
+                                compact
+                                file={{
+                                  id: f.id,
+                                  name: f.fileName,
+                                  url: f.fileUrl,
+                                  type: f.fileType,
+                                }}
+                                onClick={() =>
+                                  setPreview({
+                                    url: f.fileUrl,
+                                    type: f.fileType,
+                                    name: f.fileName,
+                                    attachmentId: f.id,
+                                    alreadyInDocs: true,
+                                  })
+                                }
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {renderDeliveryMark(comment)}
                     </div>
                   </div>
@@ -859,6 +934,13 @@ const TaskDetails = () => {
           type={preview.type}
           name={preview.name}
           onClose={() => setPreview(null)}
+          alreadyInTaskDocs={preview.alreadyInDocs}
+          addingToTaskDocs={addingToDocs}
+          onAddToTaskDocs={
+            preview.alreadyInDocs
+              ? undefined
+              : () => handleAddToTaskDocsFromUrl(preview.url, preview.name, preview.type)
+          }
         />
       )}
 
@@ -1034,58 +1116,51 @@ const TaskDetails = () => {
                 </h3>
                 
                 {task.attachments && task.attachments.length > 0 ? (
-                  <div className="grid gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     {task.attachments.map((file) => {
-                      const Icon = getFileIcon(file.fileType, file.fileName);
-                      const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
+                      const isOwner =
+                        user?.role === "admin" ||
+                        user?.role === "manager" ||
+                        user?.id === task.creator?.id;
 
                       return (
-                        <div
+                        <FilePreviewCard
                           key={file.id}
-                          className="p-3 border rounded-lg flex items-center justify-between hover:bg-muted/50 transition group"
-                        >
-                          <div 
-                            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-                            onClick={() =>
-                              setPreview({
-                                url: file.fileUrl,
-                                type: file.fileType,
-                                name: file.fileName,
-                              })
-                            }
-                          >
-                            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                              <Icon className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{file.fileName}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase">
-                                {file.fileType}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                              <a href={file.fileUrl} download={file.fileName} onClick={(e) => e.stopPropagation()}>
-                                <Download className="w-4 h-4" />
-                              </a>
-                            </Button>
-                            {isOwner && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteAttachment(file.id);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
+                          file={{
+                            id: file.id,
+                            name: file.fileName,
+                            url: file.fileUrl,
+                            type: file.fileType,
+                          }}
+                          onClick={() =>
+                            setPreview({
+                              url: file.fileUrl,
+                              type: file.fileType,
+                              name: file.fileName,
+                              attachmentId: file.id,
+                              alreadyInDocs: true,
+                            })
+                          }
+                          actions={
+                            <>
+                              <Button variant="secondary" size="icon" className="h-6 w-6" asChild>
+                                <a href={file.fileUrl} download={file.fileName}>
+                                  <Download className="w-3 h-3" />
+                                </a>
                               </Button>
-                            )}
-                          </div>
-                        </div>
+                              {isOwner && (
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive"
+                                  onClick={() => handleDeleteAttachment(file.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </>
+                          }
+                        />
                       );
                     })}
                   </div>
@@ -1093,9 +1168,9 @@ const TaskDetails = () => {
                   <div className="py-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
                     <FileText className="w-8 h-8 mb-2 opacity-20" />
                     <p className="text-xs">No documents uploaded yet</p>
-                    <Button 
-                      variant="link" 
-                      size="sm" 
+                    <Button
+                      variant="link"
+                      size="sm"
                       className="text-xs h-auto p-0 mt-1"
                       onClick={() => fileInputRef.current?.click()}
                     >
@@ -1244,29 +1319,46 @@ const TaskDetails = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
-                            
-                            {/* Attachment Link in Chat */}
-                            {comment.content.includes("📎 Uploaded") && (
-                              <div className="mt-2 pt-2 border-t border-primary-foreground/20 flex items-center justify-between gap-2">
-                                <span className="text-[10px] opacity-80 flex items-center gap-1 italic">
-                                  <FileText className="w-3 h-3" />
-                                  File attached to task docs
-                                </span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 px-2 text-[10px] bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground border-none"
-                                  onClick={() => {
-                                    // Smooth scroll to attachments section
-                                    const section = document.querySelector('.mb-6 h3 span');
-                                    section?.parentElement?.scrollIntoView({ behavior: 'smooth' });
-                                  }}
-                                >
-                                  View in Docs
-                                </Button>
-                              </div>
-                            )}
-                            
+
+                            {/* Attachment preview cards in chat */}
+                            {comment.content.includes("📎 Uploaded") && (() => {
+                              const names = parseUploadedFilenames(comment.content);
+                              const matched = names
+                                .map((n) => findAttachmentByName(n))
+                                .filter(Boolean) as NonNullable<Task["attachments"]>;
+                              if (matched.length === 0) return null;
+                              return (
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                  {matched.map((f) => (
+                                    <FilePreviewCard
+                                      key={f.id}
+                                      compact
+                                      className={
+                                        comment.userId === user?.id
+                                          ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground"
+                                          : ""
+                                      }
+                                      file={{
+                                        id: f.id,
+                                        name: f.fileName,
+                                        url: f.fileUrl,
+                                        type: f.fileType,
+                                      }}
+                                      onClick={() =>
+                                        setPreview({
+                                          url: f.fileUrl,
+                                          type: f.fileType,
+                                          name: f.fileName,
+                                          attachmentId: f.id,
+                                          alreadyInDocs: true,
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                              );
+                            })()}
+
                             {renderDeliveryMark(comment)}
                           </div>
                         </div>

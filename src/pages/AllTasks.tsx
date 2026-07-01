@@ -29,9 +29,18 @@ import { Badge } from "@/components/ui/badge";
 import { ListChecks, Search, RotateCcw, Bell, GitBranch } from "lucide-react";
 import { filterTopLevelTasks, getTaskSubtaskCount } from "@/lib/taskListUtils";
 
+const STATUS_PILLS: { value: string; label: string; className: string }[] = [
+  { value: "all", label: "All", className: "" },
+  { value: "pending", label: "Pending", className: "bg-warning/10 text-warning border-warning/20" },
+  { value: "in_progress", label: "In Progress", className: "bg-primary/10 text-primary border-primary/20" },
+  { value: "completed", label: "Completed", className: "bg-success/10 text-success border-success/20" },
+  { value: "delayed", label: "Delayed", className: "bg-destructive/10 text-destructive border-destructive/20" },
+  { value: "cancelled", label: "Cancelled", className: "bg-muted text-muted-foreground" },
+];
+
 const AllTasks = () => {
   const location = useLocation();
-  const { workspaces } = useAuth();
+  const { workspaces, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -215,6 +224,29 @@ const AllTasks = () => {
               </Select>
             </div>
 
+            {/* Status filter pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {STATUS_PILLS.map((p) => {
+                const active = status === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => {
+                      setStatus(p.value);
+                      setPage(1);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      active
+                        ? `${p.className || "bg-primary text-primary-foreground"} ring-2 ring-primary/30 shadow-sm`
+                        : "bg-background hover:bg-muted text-muted-foreground border-border"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -321,6 +353,29 @@ const AllTasks = () => {
               onView={(task) => openDrawer(task, "details")}
               onAssign={(task) => openDrawer(task, "assignees")}
               onDelete={(task) => openDrawer(task, "danger")}
+              canView={() => true}
+              canEdit={(task: any) => {
+                const role = user?.role;
+                if (role === "admin" || role === "executive" || role === "manager") return true;
+                const creatorId = task?.creator?.id || task?.createdBy;
+                if (creatorId && creatorId === user?.id) return true;
+                const isAssignee =
+                  task?.assigneeId === user?.id ||
+                  (Array.isArray(task?.assignees) && task.assignees.some((a: any) => a?.id === user?.id));
+                return isAssignee;
+              }}
+              canAssign={(task: any) => {
+                const role = user?.role;
+                if (role === "admin" || role === "executive" || role === "manager") return true;
+                const creatorId = task?.creator?.id || task?.createdBy;
+                return !!(creatorId && creatorId === user?.id);
+              }}
+              canDelete={(task: any) => {
+                const role = user?.role;
+                if (role === "admin" || role === "executive" || role === "manager") return true;
+                const creatorId = task?.creator?.id || task?.createdBy;
+                return !!(creatorId && creatorId === user?.id);
+              }}
             />
             <Pagination
               currentPage={page}
