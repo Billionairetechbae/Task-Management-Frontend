@@ -44,6 +44,11 @@ interface TaskTableProps {
   onAssign?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   onStatusChange?: (taskId: string, status: string) => void;
+  /** Optional per-row permission predicates. When provided and returning false, the corresponding action button renders disabled. */
+  canView?: (task: Task) => boolean;
+  canEdit?: (task: Task) => boolean;
+  canAssign?: (task: Task) => boolean;
+  canDelete?: (task: Task) => boolean;
 }
 
 export const getStatusDisplay = (status: string) => {
