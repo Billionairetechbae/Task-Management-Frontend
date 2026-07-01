@@ -1085,58 +1085,51 @@ const TaskDetails = () => {
                 </h3>
                 
                 {task.attachments && task.attachments.length > 0 ? (
-                  <div className="grid gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     {task.attachments.map((file) => {
-                      const Icon = getFileIcon(file.fileType, file.fileName);
-                      const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
+                      const isOwner =
+                        user?.role === "admin" ||
+                        user?.role === "manager" ||
+                        user?.id === task.creator?.id;
 
                       return (
-                        <div
+                        <FilePreviewCard
                           key={file.id}
-                          className="p-3 border rounded-lg flex items-center justify-between hover:bg-muted/50 transition group"
-                        >
-                          <div 
-                            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-                            onClick={() =>
-                              setPreview({
-                                url: file.fileUrl,
-                                type: file.fileType,
-                                name: file.fileName,
-                              })
-                            }
-                          >
-                            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                              <Icon className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{file.fileName}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase">
-                                {file.fileType}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                              <a href={file.fileUrl} download={file.fileName} onClick={(e) => e.stopPropagation()}>
-                                <Download className="w-4 h-4" />
-                              </a>
-                            </Button>
-                            {isOwner && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteAttachment(file.id);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
+                          file={{
+                            id: file.id,
+                            name: file.fileName,
+                            url: file.fileUrl,
+                            type: file.fileType,
+                          }}
+                          onClick={() =>
+                            setPreview({
+                              url: file.fileUrl,
+                              type: file.fileType,
+                              name: file.fileName,
+                              attachmentId: file.id,
+                              alreadyInDocs: true,
+                            })
+                          }
+                          actions={
+                            <>
+                              <Button variant="secondary" size="icon" className="h-6 w-6" asChild>
+                                <a href={file.fileUrl} download={file.fileName}>
+                                  <Download className="w-3 h-3" />
+                                </a>
                               </Button>
-                            )}
-                          </div>
-                        </div>
+                              {isOwner && (
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive"
+                                  onClick={() => handleDeleteAttachment(file.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </>
+                          }
+                        />
                       );
                     })}
                   </div>
@@ -1144,9 +1137,9 @@ const TaskDetails = () => {
                   <div className="py-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
                     <FileText className="w-8 h-8 mb-2 opacity-20" />
                     <p className="text-xs">No documents uploaded yet</p>
-                    <Button 
-                      variant="link" 
-                      size="sm" 
+                    <Button
+                      variant="link"
+                      size="sm"
                       className="text-xs h-auto p-0 mt-1"
                       onClick={() => fileInputRef.current?.click()}
                     >
