@@ -235,6 +235,10 @@ export const TaskTable = ({
   onAssign,
   onDelete,
   onStatusChange,
+  canView,
+  canEdit,
+  canAssign,
+  canDelete,
 }: TaskTableProps) => (
   <TooltipProvider delayDuration={100}>
     <div className="overflow-hidden rounded-xl border border-border bg-card">
