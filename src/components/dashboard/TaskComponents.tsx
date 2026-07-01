@@ -367,10 +367,22 @@ export const TaskTable = ({
                     </Tooltip>
 
                     {showActions && onEdit && (
-                      <ActionButton icon={Pencil} label="Edit" onClick={() => onEdit(task)} />
+                      <ActionButton
+                        icon={Pencil}
+                        label="Edit"
+                        onClick={() => onEdit(task)}
+                        disabled={canEdit ? !canEdit(task) : false}
+                        disabledReason="You don't have permission to edit this task"
+                      />
                     )}
                     {showActions && onAssign && (
-                      <ActionButton icon={UserPlus} label="Assign" onClick={() => onAssign(task)} />
+                      <ActionButton
+                        icon={UserPlus}
+                        label="Assign"
+                        onClick={() => onAssign(task)}
+                        disabled={canAssign ? !canAssign(task) : false}
+                        disabledReason="You don't have permission to assign this task"
+                      />
                     )}
                     {showActions && onDelete && (
                       <ActionButton
@@ -378,6 +390,8 @@ export const TaskTable = ({
                         label="Delete"
                         onClick={() => onDelete(task)}
                         className="text-destructive hover:text-destructive"
+                        disabled={canDelete ? !canDelete(task) : false}
+                        disabledReason="You don't have permission to delete this task"
                       />
                     )}
                   </div>
