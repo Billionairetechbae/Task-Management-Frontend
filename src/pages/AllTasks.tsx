@@ -29,9 +29,18 @@ import { Badge } from "@/components/ui/badge";
 import { ListChecks, Search, RotateCcw, Bell, GitBranch } from "lucide-react";
 import { filterTopLevelTasks, getTaskSubtaskCount } from "@/lib/taskListUtils";
 
+const STATUS_PILLS: { value: string; label: string; className: string }[] = [
+  { value: "all", label: "All", className: "" },
+  { value: "pending", label: "Pending", className: "bg-warning/10 text-warning border-warning/20" },
+  { value: "in_progress", label: "In Progress", className: "bg-primary/10 text-primary border-primary/20" },
+  { value: "completed", label: "Completed", className: "bg-success/10 text-success border-success/20" },
+  { value: "delayed", label: "Delayed", className: "bg-destructive/10 text-destructive border-destructive/20" },
+  { value: "cancelled", label: "Cancelled", className: "bg-muted text-muted-foreground" },
+];
+
 const AllTasks = () => {
   const location = useLocation();
-  const { workspaces } = useAuth();
+  const { workspaces, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
