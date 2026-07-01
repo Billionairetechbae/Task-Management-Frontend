@@ -35,7 +35,7 @@ import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
