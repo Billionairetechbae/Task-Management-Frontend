@@ -661,6 +661,45 @@ const TaskDetails = () => {
     return date.toLocaleDateString();
   };
 
+  // Parse "📎 Uploaded N file(s): a.png, b.pdf" -> ["a.png", "b.pdf"]
+  const parseUploadedFilenames = (content: string): string[] => {
+    if (!content || !content.includes("📎 Uploaded")) return [];
+    const idx = content.indexOf(":");
+    if (idx < 0) return [];
+    return content
+      .slice(idx + 1)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  const findAttachmentByName = (name: string) => {
+    return task?.attachments?.find((a) => a.fileName === name);
+  };
+
+  // Re-upload a file (from a URL) into task attachments. Used for chat files not already in docs.
+  const handleAddToTaskDocsFromUrl = async (url: string, name: string, type: string) => {
+    if (!id) return;
+    try {
+      setAddingToDocs(true);
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const file = new File([blob], name, { type: type || blob.type });
+      const response = await api.uploadTaskAttachments(id, [file]);
+      setTask(response.data.task);
+      toast({ title: "Added", description: `${name} added to Task Documents.` });
+      setPreview((p) => (p ? { ...p, alreadyInDocs: true } : p));
+    } catch (err: any) {
+      toast({
+        title: "Failed",
+        description: err?.message || "Could not add file to Task Documents",
+        variant: "destructive",
+      });
+    } finally {
+      setAddingToDocs(false);
+    }
+  };
+
   // Mobile chat toggle
   const renderMobileChatButton = () => (
     <Button
