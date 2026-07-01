@@ -19,7 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, ExternalLink, Download } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, Task, TaskComment } from "@/lib/api";
@@ -27,7 +27,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 
-import { getFileIcon } from "@/utils/fileIcons";
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
 import FilePreviewCard from "@/components/tasks/FilePreviewCard";
