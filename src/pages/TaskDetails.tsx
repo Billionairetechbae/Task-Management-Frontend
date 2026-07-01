@@ -72,7 +72,10 @@ const TaskDetails = () => {
     url: string;
     type: string;
     name: string;
+    attachmentId?: string;
+    alreadyInDocs?: boolean;
   } | null>(null);
+  const [addingToDocs, setAddingToDocs] = useState(false);
   
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
