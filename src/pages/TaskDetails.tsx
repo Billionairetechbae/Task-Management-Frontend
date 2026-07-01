@@ -903,6 +903,13 @@ const TaskDetails = () => {
           type={preview.type}
           name={preview.name}
           onClose={() => setPreview(null)}
+          alreadyInTaskDocs={preview.alreadyInDocs}
+          addingToTaskDocs={addingToDocs}
+          onAddToTaskDocs={
+            preview.alreadyInDocs
+              ? undefined
+              : () => handleAddToTaskDocsFromUrl(preview.url, preview.name, preview.type)
+          }
         />
       )}
 
