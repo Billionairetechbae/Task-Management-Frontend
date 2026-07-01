@@ -801,6 +801,38 @@ const TaskDetails = () => {
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
+                      {comment.content.includes("📎 Uploaded") && (() => {
+                        const names = parseUploadedFilenames(comment.content);
+                        const matched = names
+                          .map((n) => findAttachmentByName(n))
+                          .filter(Boolean) as NonNullable<Task["attachments"]>;
+                        if (matched.length === 0) return null;
+                        return (
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            {matched.map((f) => (
+                              <FilePreviewCard
+                                key={f.id}
+                                compact
+                                file={{
+                                  id: f.id,
+                                  name: f.fileName,
+                                  url: f.fileUrl,
+                                  type: f.fileType,
+                                }}
+                                onClick={() =>
+                                  setPreview({
+                                    url: f.fileUrl,
+                                    type: f.fileType,
+                                    name: f.fileName,
+                                    attachmentId: f.id,
+                                    alreadyInDocs: true,
+                                  })
+                                }
+                              />
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {renderDeliveryMark(comment)}
                     </div>
                   </div>
