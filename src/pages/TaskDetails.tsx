@@ -30,11 +30,13 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 import { getFileIcon } from "@/utils/fileIcons";
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
+import FilePreviewCard from "@/components/tasks/FilePreviewCard";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
