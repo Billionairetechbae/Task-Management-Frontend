@@ -353,6 +353,29 @@ const AllTasks = () => {
               onView={(task) => openDrawer(task, "details")}
               onAssign={(task) => openDrawer(task, "assignees")}
               onDelete={(task) => openDrawer(task, "danger")}
+              canView={() => true}
+              canEdit={(task: any) => {
+                const role = user?.role;
+                if (role === "admin" || role === "executive" || role === "manager") return true;
+                const creatorId = task?.creator?.id || task?.createdBy;
+                if (creatorId && creatorId === user?.id) return true;
+                const isAssignee =
+                  task?.assigneeId === user?.id ||
+                  (Array.isArray(task?.assignees) && task.assignees.some((a: any) => a?.id === user?.id));
+                return isAssignee;
+              }}
+              canAssign={(task: any) => {
+                const role = user?.role;
+                if (role === "admin" || role === "executive" || role === "manager") return true;
+                const creatorId = task?.creator?.id || task?.createdBy;
+                return !!(creatorId && creatorId === user?.id);
+              }}
+              canDelete={(task: any) => {
+                const role = user?.role;
+                if (role === "admin" || role === "executive" || role === "manager") return true;
+                const creatorId = task?.creator?.id || task?.createdBy;
+                return !!(creatorId && creatorId === user?.id);
+              }}
             />
             <Pagination
               currentPage={page}
