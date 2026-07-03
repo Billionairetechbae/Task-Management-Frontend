@@ -91,6 +91,37 @@ const TaskDetails = () => {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [pendingComments, setPendingComments] = useState<Map<string, {content: string, timestamp: number}>>(new Map());
   const [showChatSheet, setShowChatSheet] = useState(false);
+
+  // Workbench state
+  const isMobile = useIsMobile();
+  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity">("chat");
+  const [listSearch, setListSearch] = useState("");
+  const [listStatus, setListStatus] = useState<string>("all");
+  const [listPage, setListPage] = useState(1);
+  const [listSort, setListSort] = useState<"due" | "created" | "priority">("due");
+  const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
+
+  const listQuery = useQuery({
+    queryKey: ["task-workbench-list", { listSearch, listStatus, listPage }],
+    queryFn: () =>
+      api.getAllTasksCrossWorkspace({
+        page: listPage,
+        limit: 25,
+        search: listSearch || undefined,
+        status: listStatus === "all" ? undefined : listStatus,
+      }),
+  });
+  const listTasks: Task[] = (listQuery.data?.data?.tasks || []) as any;
+  const sortedListTasks = useMemo(() => {
+    const arr = [...listTasks];
+    if (listSort === "due") arr.sort((a: any, b: any) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+    else if (listSort === "created") arr.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    else if (listSort === "priority") {
+      const rank: any = { urgent: 0, high: 1, medium: 2, low: 3 };
+      arr.sort((a: any, b: any) => (rank[a.priority] ?? 9) - (rank[b.priority] ?? 9));
+    }
+    return arr;
+  }, [listTasks, listSort]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
