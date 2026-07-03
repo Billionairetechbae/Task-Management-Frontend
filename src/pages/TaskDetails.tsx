@@ -19,13 +19,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api, Task, TaskComment } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
@@ -35,6 +37,15 @@ import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 
 // Define the correct User type based on your database schema
@@ -80,6 +91,37 @@ const TaskDetails = () => {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [pendingComments, setPendingComments] = useState<Map<string, {content: string, timestamp: number}>>(new Map());
   const [showChatSheet, setShowChatSheet] = useState(false);
+
+  // Workbench state
+  const isMobile = useIsMobile();
+  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity">("chat");
+  const [listSearch, setListSearch] = useState("");
+  const [listStatus, setListStatus] = useState<string>("all");
+  const [listPage, setListPage] = useState(1);
+  const [listSort, setListSort] = useState<"due" | "created" | "priority">("due");
+  const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
+
+  const listQuery = useQuery({
+    queryKey: ["task-workbench-list", { listSearch, listStatus, listPage }],
+    queryFn: () =>
+      api.getAllTasksCrossWorkspace({
+        page: listPage,
+        limit: 25,
+        search: listSearch || undefined,
+        status: listStatus === "all" ? undefined : listStatus,
+      }),
+  });
+  const listTasks: Task[] = (listQuery.data?.data?.tasks || []) as any;
+  const sortedListTasks = useMemo(() => {
+    const arr = [...listTasks];
+    if (listSort === "due") arr.sort((a: any, b: any) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+    else if (listSort === "created") arr.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    else if (listSort === "priority") {
+      const rank: any = { urgent: 0, high: 1, medium: 2, low: 3 };
+      arr.sort((a: any, b: any) => (rank[a.priority] ?? 9) - (rank[b.priority] ?? 9));
+    }
+    return arr;
+  }, [listTasks, listSort]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
@@ -904,15 +946,19 @@ const TaskDetails = () => {
     </Sheet>
   );
 
-  if (loading) {
+  // ============================================================
+  // Workbench render helpers
+  // ============================================================
+
+  if (loading || !task) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        Loading task…
-      </div>
+      <DashboardLayout>
+        <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
+          {loading ? "Loading task…" : "Task not found"}
+        </div>
+      </DashboardLayout>
     );
   }
-
-  if (!task) return null;
 
   const canEditSubtasks =
     user?.role === "admin" ||
@@ -925,9 +971,523 @@ const TaskDetails = () => {
       ? canPerformRoleOperation("create_tasks", user?.role)
       : true;
 
+
+  const STATUS_PILLS: { value: string; label: string }[] = [
+    { value: "all", label: "All Statuses" },
+    { value: "pending", label: "Pending" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "completed", label: "Completed" },
+    { value: "delayed", label: "Delayed" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
+
+  const priorityDot = (p?: string) => {
+    const map: any = {
+      urgent: "bg-red-500",
+      high: "bg-orange-500",
+      medium: "bg-yellow-500",
+      low: "bg-blue-500",
+    };
+    return map[p || "medium"] || "bg-muted";
+  };
+
+  const daysLeft = (deadline?: string) => {
+    if (!deadline) return null;
+    const ms = new Date(deadline).getTime() - Date.now();
+    const d = Math.ceil(ms / 86400000);
+    if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive" };
+    if (d === 0) return { text: "Due today", tone: "text-warning" };
+    return { text: `${d} day${d === 1 ? "" : "s"} left`, tone: "text-warning" };
+  };
+
+  const TaskListPanel = (
+    <div className="flex h-full flex-col bg-background">
+      <div className="p-4 border-b space-y-3 shrink-0">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight">Task Workbench</h2>
+          <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
+            <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
+          </Button>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={listSearch}
+            onChange={(e) => {
+              setListSearch(e.target.value);
+              setListPage(1);
+            }}
+            placeholder="Search tasks..."
+            className="pl-9 h-9"
+          />
+        </div>
+        <Select value={listStatus} onValueChange={(v) => { setListStatus(v); setListPage(1); }}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {STATUS_PILLS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{listQuery.data?.pagination?.totalResults ?? sortedListTasks.length} tasks</span>
+          <Select value={listSort} onValueChange={(v: any) => setListSort(v)}>
+            <SelectTrigger className="h-7 w-[130px] text-xs border-none shadow-none px-2">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="due">Sort: Due Date</SelectItem>
+              <SelectItem value="created">Sort: Created</SelectItem>
+              <SelectItem value="priority">Sort: Priority</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+        {listQuery.isLoading ? (
+          [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)
+        ) : sortedListTasks.length === 0 ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">No tasks found.</div>
+        ) : (
+          sortedListTasks.map((t: any) => {
+            const isSelected = t.id === task.id;
+            const dl = daysLeft(t.deadline);
+            return (
+              <button
+                key={t.id}
+                onClick={() => navigate(`/task-details/${t.id}`)}
+                className={cn(
+                  "w-full text-left rounded-lg border p-3 transition-all group",
+                  "hover:border-primary/50 hover:shadow-sm",
+                  isSelected
+                    ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                    : "border-border bg-card"
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", priorityDot(t.priority))} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm truncate">{t.title}</p>
+                    {t.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{t.description}</p>
+                    )}
+                    <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                      <Badge className={cn("text-[10px] px-1.5 py-0", STATUS_COLORS[t.status as keyof typeof STATUS_COLORS])}>
+                        {STATUS_LABEL[t.status as keyof typeof STATUS_LABEL] || t.status}
+                      </Badge>
+                      {t.deadline && (
+                        <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(t.deadline).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        </span>
+                      )}
+                      {t.assignee && (
+                        <Avatar className="h-4 w-4 ml-auto">
+                          <AvatarImage src={(t.assignee as any).profilePictureUrl} />
+                          <AvatarFallback className="text-[8px]">
+                            {getInitials(t.assignee.firstName, t.assignee.lastName)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+                    {dl && isSelected && (
+                      <p className={cn("text-[10px] mt-1 font-medium", dl.tone)}>{dl.text}</p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      {listQuery.data?.pagination && listQuery.data.pagination.totalPages > 1 && (
+        <div className="p-2 border-t flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            Page {listQuery.data.pagination.currentPage} / {listQuery.data.pagination.totalPages}
+          </span>
+          <div className="flex gap-1">
+            <Button variant="outline" size="icon" className="h-7 w-7"
+              disabled={!listQuery.data.pagination.hasPrevPage}
+              onClick={() => setListPage((p) => Math.max(1, p - 1))}>
+              <ChevronRight className="h-3 w-3 rotate-180" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-7 w-7"
+              disabled={!listQuery.data.pagination.hasNextPage}
+              onClick={() => setListPage((p) => p + 1)}>
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const dl = daysLeft(task.deadline);
+  const subtaskCount = getTaskSubtaskCount(task);
+  const completedSub = (task.subtasks || []).filter((s: any) => s.status === "completed" || s.completed).length;
+  const progressPct = subtaskCount > 0 ? Math.round((completedSub / subtaskCount) * 100) : 0;
+
+  const DetailsPanel = (
+    <div className="flex h-full flex-col overflow-hidden bg-muted/20">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl md:text-2xl font-bold truncate">{task.title}</h1>
+              <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status]}</Badge>
+              <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority])}>{task.priority}</Badge>
+              <button className="text-muted-foreground hover:text-yellow-500 transition">
+                <Star className="h-4 w-4" />
+              </button>
+            </div>
+            {task.description && (
+              <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{task.description}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={() => fetchTask()} className="gap-1.5">
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            </Button>
+            <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+            <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
+              <Upload className="h-3.5 w-3.5" /> Upload File
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+        {/* Metadata cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-lg border bg-card p-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5" /> Deadline
+            </div>
+            <p className="font-semibold text-sm mt-1">{new Date(task.deadline).toLocaleDateString()}</p>
+            {dl && <p className={cn("text-[11px] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <User2 className="h-3.5 w-3.5" /> Assignee
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              {task.assignee ? (
+                <>
+                  <Avatar className="h-6 w-6"><AvatarImage src={(task.assignee as any).profilePictureUrl} /><AvatarFallback className="text-[10px]">{getInitials(task.assignee.firstName, task.assignee.lastName)}</AvatarFallback></Avatar>
+                  <p className="font-semibold text-sm truncate">{task.assignee.firstName} {task.assignee.lastName}</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Unassigned</p>
+              )}
+            </div>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5" /> Workspace
+            </div>
+            <p className="font-semibold text-sm mt-1 truncate">{task.company?.name || "—"}</p>
+            {task.category && <p className="text-[11px] text-muted-foreground truncate">{task.category}</p>}
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" /> Created
+            </div>
+            <p className="font-semibold text-sm mt-1">{new Date((task as any).createdAt || Date.now()).toLocaleDateString()}</p>
+            {task.creator && (
+              <p className="text-[11px] text-muted-foreground truncate">
+                by {task.creator.firstName} {task.creator.lastName}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Overview */}
+        <section className="rounded-lg border bg-card p-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+            <ListChecks className="h-4 w-4" /> Overview
+          </h3>
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+            {task.description || <span className="text-muted-foreground italic">No description provided.</span>}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t">
+            <div>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Subtasks</p>
+              <p className="font-bold text-lg">{completedSub}/{subtaskCount || 0}</p>
+              <p className="text-[10px] text-muted-foreground">{progressPct}% completed</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Attachments</p>
+              <p className="font-bold text-lg">{task.attachments?.length || 0}</p>
+              <p className="text-[10px] text-muted-foreground">Files</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Comments</p>
+              <p className="font-bold text-lg">{comments.length}</p>
+              <p className="text-[10px] text-muted-foreground">Total</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Watchers</p>
+              <p className="font-bold text-lg">{getTaskWatcherCount(task)}</p>
+              <p className="text-[10px] text-muted-foreground">Following</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Subtasks */}
+        <section className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <ListChecks className="h-4 w-4" /> Subtasks
+              <span className="text-xs text-muted-foreground font-normal">{completedSub} of {subtaskCount} completed</span>
+            </h3>
+            <div className="w-32 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="h-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+            </div>
+          </div>
+          {!canCreateSubtasksByPolicy && (
+            <p className="text-xs text-muted-foreground mb-2">Subtask creation is disabled by workspace policy.</p>
+          )}
+          <SubtaskList
+            taskId={task.id}
+            initialSubtasks={task.subtasks || []}
+            canEdit={canEditSubtasks && canCreateSubtasksByPolicy}
+            onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
+          />
+        </section>
+
+        {/* Watchers */}
+        <section className="rounded-lg border bg-card p-4">
+          <h3 className="text-sm font-semibold mb-2">Watchers</h3>
+          <TaskWatcherSection
+            taskId={task.id}
+            initialWatcherCount={task.watcherCount || 0}
+            initialIsWatching={!!task.isWatching}
+            initialRecentWatchers={task.recentWatchers || []}
+            onChanged={(next) =>
+              setTask((prev) => prev ? { ...prev, watcherCount: next.watcherCount, isWatching: next.isWatching, recentWatchers: next.recentWatchers } : prev)
+            }
+          />
+        </section>
+
+        {/* Status update */}
+        {(user?.id === task.assigneeId ||
+          (task as any).assignees?.some((a: any) => a.id === user?.id) ||
+          user?.id === task.creator?.id ||
+          ["manager", "executive", "admin", "team_member"].includes(user?.role || "")) && (
+          <section className="rounded-lg border bg-card p-4">
+            <p className="text-xs text-muted-foreground mb-2">Update Status</p>
+            <Select value={task.status} onValueChange={handleStatusChange} disabled={updating}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="delayed">Delayed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+
+  const ChatContent = (
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto p-4">
+        {loadingComments ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="w-8 h-8 rounded-full" />
+                <div className="flex-1 space-y-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-16 w-full" /></div>
+              </div>
+            ))}
+          </div>
+        ) : comments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+            <MessageSquare className="w-12 h-12 mb-2 opacity-40" />
+            <p>No comments yet</p>
+            <p className="text-sm">Start the conversation</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {comments.map((comment) => (
+              <div key={comment.id} className={cn("flex gap-3", comment.userId === user?.id && "flex-row-reverse")}>
+                <Avatar className="w-8 h-8 shrink-0">
+                  <AvatarImage src={comment.user?.profilePictureUrl} />
+                  <AvatarFallback className="text-xs">{getInitials(comment.user?.firstName || '', comment.user?.lastName || '')}</AvatarFallback>
+                </Avatar>
+                <div className={cn("max-w-[80%]", comment.userId === user?.id && "text-right")}>
+                  <div className={cn("flex items-center gap-2 mb-1", comment.userId === user?.id && "justify-end")}>
+                    <span className="text-xs font-medium">
+                      {comment.isSystemMessage ? (
+                        <span className="flex items-center gap-1 text-muted-foreground"><AlertCircle className="w-3 h-3" />System</span>
+                      ) : (
+                        `${comment.user?.firstName} ${comment.user?.lastName}`
+                      )}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{formatTime(comment.createdAt)}</span>
+                  </div>
+                  <div className={cn(
+                    "p-3 rounded-lg text-left",
+                    comment.isSystemMessage
+                      ? "bg-muted/50 border"
+                      : comment.userId === user?.id
+                        ? comment.id.startsWith('optimistic-') ? "bg-primary/70 text-primary-foreground" : "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                  )}>
+                    <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
+                    {comment.content.includes("📎 Uploaded") && (() => {
+                      const names = parseUploadedFilenames(comment.content);
+                      const matched = names.map((n) => findAttachmentByName(n)).filter(Boolean) as NonNullable<Task["attachments"]>;
+                      if (matched.length === 0) return null;
+                      return (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {matched.map((f) => (
+                            <FilePreviewCard
+                              key={f.id}
+                              compact
+                              className={comment.userId === user?.id ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground" : ""}
+                              file={{ id: f.id, name: f.fileName, url: f.fileUrl, type: f.fileType }}
+                              onClick={() => setPreview({ url: f.fileUrl, type: f.fileType, name: f.fileName, attachmentId: f.id, alreadyInDocs: true })}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    {renderDeliveryMark(comment)}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={commentsEndRef} />
+          </div>
+        )}
+      </div>
+      <div className="p-3 border-t bg-background">
+        <div className="flex gap-2 items-end">
+          <Textarea
+            placeholder="Type a message..."
+            rows={2}
+            value={newComment}
+            onChange={(e) => { setNewComment(e.target.value); handleTyping(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
+            className="flex-1 resize-none text-sm"
+            disabled={sendingComment}
+          />
+          <div className="flex flex-col gap-1.5">
+            <input type="file" multiple ref={chatFileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, true)} />
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={uploadingFiles}>
+              <Paperclip className="w-3.5 h-3.5" />
+            </Button>
+            <Button size="icon" className="h-8 w-8" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment}>
+              {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+        </div>
+        <div className="mt-1.5 text-[11px] text-muted-foreground flex justify-between">
+          <span>Enter to send · Shift+Enter for new line</span>
+          {!isConnected && <span className="text-yellow-600">Offline · HTTP fallback</span>}
+        </div>
+      </div>
+    </div>
+  );
+
+  const FilesContent = (
+    <div className="flex h-full flex-col">
+      <div className="p-3 border-b flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <FilesIcon className="h-4 w-4" />
+          <h3 className="font-semibold text-sm">Task Files</h3>
+          <Badge variant="outline" className="text-[10px]">{task.attachments?.length || 0}</Badge>
+        </div>
+        <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles}>
+          {uploadingFiles ? <Clock className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />} Upload
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3">
+        {task.attachments && task.attachments.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            {task.attachments.map((file) => {
+              const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
+              return (
+                <FilePreviewCard
+                  key={file.id}
+                  file={{ id: file.id, name: file.fileName, url: file.fileUrl, type: file.fileType }}
+                  onClick={() => setPreview({ url: file.fileUrl, type: file.fileType, name: file.fileName, attachmentId: file.id, alreadyInDocs: true })}
+                  actions={
+                    <>
+                      <Button variant="secondary" size="icon" className="h-6 w-6" asChild>
+                        <a href={file.fileUrl} download={file.fileName}><Download className="w-3 h-3" /></a>
+                      </Button>
+                      {isOwner && (
+                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file.id)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </>
+                  }
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-10 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
+            <FileText className="w-8 h-8 mb-2 opacity-30" />
+            <p className="text-xs">No files uploaded yet</p>
+            <Button variant="link" size="sm" className="text-xs h-auto p-0 mt-1" onClick={() => fileInputRef.current?.click()}>Click to upload</Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const ActivityContent = (
+    <div className="flex h-full flex-col">
+      <div className="p-3 border-b shrink-0 flex items-center gap-2">
+        <ActivityIcon className="h-4 w-4" />
+        <h3 className="font-semibold text-sm">Activity</h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3">
+        <TaskActivityTimeline taskId={task.id} initialActivities={task.activities || []} />
+      </div>
+    </div>
+  );
+
+  const CollaborationPanel = (
+    <div className="flex h-full flex-col bg-background">
+      <Tabs value={rightTab} onValueChange={(v: any) => setRightTab(v)} className="flex h-full flex-col">
+        <div className="border-b px-3 pt-2 shrink-0">
+          <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
+            <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5" /> Chat
+              {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
+              <FilesIcon className="h-3.5 w-3.5" /> Files
+              {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
+              <ActivityIcon className="h-3.5 w-3.5" /> Activity
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="chat" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ChatContent}</TabsContent>
+        <TabsContent value="files" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{FilesContent}</TabsContent>
+        <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ActivityContent}</TabsContent>
+      </Tabs>
+    </div>
+  );
+
   return (
     <>
-      {/* Preview Modal */}
       {preview && (
         <AttachmentPreview
           url={preview.url}
@@ -943,497 +1503,47 @@ const TaskDetails = () => {
           }
         />
       )}
-
-      {/* Mobile Chat Sheet */}
       {renderMobileChatSheet()}
 
-      {/* Main Overlay */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-        <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col my-auto">
-
-          {/* HEADER */}
-          <div className="p-4 sm:p-6 border-b flex justify-between items-start">
-            <div className="space-y-2 sm:space-y-3 pr-2">
-              <div className="flex items-center gap-2">
-                <CompanyBadge company={task.company} />
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">{task.title}</h1>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Badge className={`px-2 sm:px-3 py-1 text-xs sm:text-sm ${PRIORITY_COLORS[task.priority]}`}>
-                  {task.priority.toUpperCase()}
-                </Badge>
-
-                <Badge className={`px-2 sm:px-3 py-1 text-xs sm:text-sm ${STATUS_COLORS[task.status]}`}>
-                  {STATUS_LABEL[task.status]}
-                </Badge>
-                <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                  {getTaskSubtaskCount(task)} subtasks
-                </Badge>
-                <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                  {getTaskWatcherCount(task)} watchers
-                </Badge>
-                
-                {!isConnected && (
-                  <Badge variant="outline" className="text-xs">
-                    Offline
-                  </Badge>
-                )}
-              </div>
+      <DashboardLayout>
+        {isMobile ? (
+          <div className="h-[calc(100vh-4rem)] flex flex-col">
+            <div className="flex border-b bg-background shrink-0">
+              {(["list", "details", "chat"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => s === "chat" ? setShowChatSheet(true) : setMobileSection(s)}
+                  className={cn(
+                    "flex-1 py-3 text-xs font-medium capitalize transition",
+                    mobileSection === s ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  {s === "list" ? "Tasks" : s === "details" ? "Details" : "Chat"}
+                </button>
+              ))}
             </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {task && (
-                <ClientViewShareButton resourceType="task" resourceId={task.id} />
-              )}
-              <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-                <X className="w-5 h-5 sm:w-6 sm:h-6" />
-              </Button>
+            <div className="flex-1 overflow-hidden">
+              {mobileSection === "list" ? TaskListPanel : DetailsPanel}
             </div>
           </div>
-
-          {/* MAIN CONTENT */}
-          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-            {/* Left column - Task details */}
-            <div className="flex-1 p-4 sm:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r">
-              {/* GRID INFO */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
-                <div>
-                  <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="font-semibold text-sm sm:text-base">{task.category}</p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground">Deadline</p>
-                  <p className="font-semibold text-sm sm:text-base">
-                    {new Date(task.deadline).toLocaleDateString()}
-                    <span className="text-xs text-muted-foreground block sm:inline sm:ml-2">
-                      {new Date(task.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </p>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">
-                    {user?.role === "team_member"
-                      ? "Assigned By Executive"
-                      : "Assigned TeamMember"}
-                  </p>
-                  <div className="flex items-center gap-2 font-semibold text-sm sm:text-base">
-                    <User2 className="w-4 h-4 text-primary" />
-                    {user?.role === "team_member"
-                      ? `${task.creator?.firstName} ${task.creator?.lastName}`
-                      : task.assignee
-                      ? `${task.assignee.firstName} ${task.assignee.lastName}`
-                      : "Unassigned"}
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">Hours</p>
-                  <p className="font-semibold flex items-center gap-2 text-sm sm:text-base">
-                    <Clock className="w-4 h-4" />
-                    {task.actualHours ? `${task.actualHours}h logged` : "No hours logged"}
-                  </p>
-                </div>
-              </div>
-
-              {/* DESCRIPTION */}
-              <div className="mb-6">
-                <p className="text-xs text-muted-foreground mb-1">Description</p>
-                <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{task.description}</p>
-              </div>
-
-              {/* ATTACHMENTS */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-2">Watchers</h3>
-                <TaskWatcherSection
-                  taskId={task.id}
-                  initialWatcherCount={task.watcherCount || 0}
-                  initialIsWatching={!!task.isWatching}
-                  initialRecentWatchers={task.recentWatchers || []}
-                  onChanged={(next) =>
-                    setTask((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            watcherCount: next.watcherCount,
-                            isWatching: next.isWatching,
-                            recentWatchers: next.recentWatchers,
-                          }
-                        : prev
-                    )
-                  }
-                />
-              </div>
-
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-2">Subtasks</h3>
-                {!canCreateSubtasksByPolicy && (
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Subtask creation is disabled by workspace policy.
-                  </p>
-                )}
-                <SubtaskList
-                  taskId={task.id}
-                  initialSubtasks={task.subtasks || []}
-                  canEdit={canEditSubtasks && canCreateSubtasksByPolicy}
-                  onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
-                />
-              </div>
-
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-2">Activity</h3>
-                <TaskActivityTimeline taskId={task.id} initialActivities={task.activities || []} />
-              </div>
-
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-2 flex items-center justify-between">
-                  <span>Task Documents</span>
-                  <div className="flex gap-2">
-                    <input
-                      type="file"
-                      multiple
-                      ref={fileInputRef}
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-7 text-xs gap-1"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingFiles}
-                    >
-                      {uploadingFiles ? (
-                        <Clock className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Upload className="w-3 h-3" />
-                      )}
-                      Upload
-                    </Button>
-                  </div>
-                </h3>
-                
-                {task.attachments && task.attachments.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {task.attachments.map((file) => {
-                      const isOwner =
-                        user?.role === "admin" ||
-                        user?.role === "manager" ||
-                        user?.id === task.creator?.id;
-
-                      return (
-                        <FilePreviewCard
-                          key={file.id}
-                          file={{
-                            id: file.id,
-                            name: file.fileName,
-                            url: file.fileUrl,
-                            type: file.fileType,
-                          }}
-                          onClick={() =>
-                            setPreview({
-                              url: file.fileUrl,
-                              type: file.fileType,
-                              name: file.fileName,
-                              attachmentId: file.id,
-                              alreadyInDocs: true,
-                            })
-                          }
-                          actions={
-                            <>
-                              <Button variant="secondary" size="icon" className="h-6 w-6" asChild>
-                                <a href={file.fileUrl} download={file.fileName}>
-                                  <Download className="w-3 h-3" />
-                                </a>
-                              </Button>
-                              {isOwner && (
-                                <Button
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-6 w-6 text-destructive"
-                                  onClick={() => handleDeleteAttachment(file.id)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              )}
-                            </>
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="py-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
-                    <FileText className="w-8 h-8 mb-2 opacity-20" />
-                    <p className="text-xs">No documents uploaded yet</p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="text-xs h-auto p-0 mt-1"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      Click to upload
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* STATUS UPDATE - visible to any assignee, creator, manager, executive, admin */}
-              {(user?.id === task.assigneeId ||
-                (task as any).assignees?.some((a: any) => a.id === user?.id) ||
-                user?.id === task.creator?.id ||
-                user?.role === "manager" ||
-                user?.role === "executive" ||
-                user?.role === "admin" ||
-                user?.role === "team_member") && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Update Status</p>
-
-                  <Select
-                    value={task.status}
-                    onValueChange={handleStatusChange}
-                    disabled={updating}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="delayed">Delayed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Mobile Chat Button */}
-              {renderMobileChatButton()}
-            </div>
-
-            {/* Right column - Chat (Desktop Only) */}
-            <div className="hidden lg:flex flex-1 flex-col border-l">
-              {/* Chat header */}
-              <div className="p-4 border-b">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    <h3 className="font-semibold">Task Chat</h3>
-                    <Badge variant="outline" className="text-xs">
-                      {comments.length}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {typingUsers.size > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Clock4 className="w-3 h-3" />
-                        {typingUsers.size} user{typingUsers.size > 1 ? 's' : ''} typing...
-                      </span>
-                    )}
-                    {onlineUsers.size > 0 && (
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {onlineUsers.size} online
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Messages area */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {loadingComments ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex gap-3">
-                        <Skeleton className="w-8 h-8 rounded-full" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-4 w-20" />
-                          <Skeleton className="h-16 w-full" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : comments.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                    <MessageSquare className="w-12 h-12 mb-2" />
-                    <p>No comments yet</p>
-                    <p className="text-sm">Start the conversation</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className={`flex gap-3 ${
-                          comment.userId === user?.id ? 'flex-row-reverse' : ''
-                        }`}
-                      >
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={comment.user?.profilePictureUrl} />
-                          <AvatarFallback>
-                            {getInitials(
-                              comment.user?.firstName || '',
-                              comment.user?.lastName || ''
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div
-                          className={`max-w-[70%] ${
-                            comment.userId === user?.id ? 'text-right' : ''
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium">
-                              {comment.isSystemMessage ? (
-                                <span className="flex items-center gap-1 text-muted-foreground">
-                                  <AlertCircle className="w-3 h-3" />
-                                  System
-                                </span>
-                              ) : (
-                                `${comment.user?.firstName} ${comment.user?.lastName}`
-                              )}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatTime(comment.createdAt)}
-                            </span>
-                            {comment.isSystemMessage && (
-                              <Badge variant="outline" className="text-xs">
-                                {comment.systemEventType?.replace('_', ' ')}
-                              </Badge>
-                            )}
-                          </div>
-                          <div
-                            className={`p-3 rounded-lg ${
-                              comment.isSystemMessage
-                                ? 'bg-muted/50 border'
-                                : comment.userId === user?.id
-                                ? comment.id.startsWith('optimistic-')
-                                  ? 'bg-primary/70 text-primary-foreground'
-                                  : 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
-
-                            {/* Attachment preview cards in chat */}
-                            {comment.content.includes("📎 Uploaded") && (() => {
-                              const names = parseUploadedFilenames(comment.content);
-                              const matched = names
-                                .map((n) => findAttachmentByName(n))
-                                .filter(Boolean) as NonNullable<Task["attachments"]>;
-                              if (matched.length === 0) return null;
-                              return (
-                                <div className="mt-2 grid grid-cols-2 gap-2">
-                                  {matched.map((f) => (
-                                    <FilePreviewCard
-                                      key={f.id}
-                                      compact
-                                      className={
-                                        comment.userId === user?.id
-                                          ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground"
-                                          : ""
-                                      }
-                                      file={{
-                                        id: f.id,
-                                        name: f.fileName,
-                                        url: f.fileUrl,
-                                        type: f.fileType,
-                                      }}
-                                      onClick={() =>
-                                        setPreview({
-                                          url: f.fileUrl,
-                                          type: f.fileType,
-                                          name: f.fileName,
-                                          attachmentId: f.id,
-                                          alreadyInDocs: true,
-                                        })
-                                      }
-                                    />
-                                  ))}
-                                </div>
-                              );
-                            })()}
-
-                            {renderDeliveryMark(comment)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={commentsEndRef} />
-                  </div>
-                )}
-              </div>
-
-              {/* Chat input */}
-              <div className="p-4 border-t bg-muted/40">
-                <div className="flex gap-3">
-                  <div className="flex flex-col gap-2 flex-1">
-                    <Textarea
-                      placeholder="Type a message..."
-                      rows={2}
-                      value={newComment}
-                      onChange={(e) => {
-                        setNewComment(e.target.value);
-                        handleTyping();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendComment();
-                        }
-                      }}
-                      className="flex-1"
-                      disabled={sendingComment}
-                    />
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        multiple
-                        ref={chatFileInputRef}
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, true)}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-primary"
-                        onClick={() => chatFileInputRef.current?.click()}
-                        disabled={uploadingFiles}
-                      >
-                        <Paperclip className="w-3.5 h-3.5" />
-                        Attach File
-                      </Button>
-                    </div>
-                  </div>
-                  <Button
-                    size="icon"
-                    onClick={() => handleSendComment()}
-                    disabled={!newComment.trim() || sendingComment}
-                    className="self-end"
-                  >
-                    {sendingComment ? (
-                      <Clock className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </Button>
-                </div>
-                <div className="mt-2 text-xs text-muted-foreground flex justify-between">
-                  <span>Press Enter to send, Shift+Enter for new line</span>
-                  {!isConnected && (
-                    <span className="text-yellow-600">Connection lost - using HTTP fallback</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div> 
-        </div>
-      </div>
+        ) : (
+          <div className="h-[calc(100vh-4rem)]">
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel defaultSize={22} minSize={16} maxSize={32}>
+                {TaskListPanel}
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={50} minSize={35}>
+                {DetailsPanel}
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={28} minSize={22} maxSize={40}>
+                {CollaborationPanel}
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+        )}
+      </DashboardLayout>
     </>
   );
 };
