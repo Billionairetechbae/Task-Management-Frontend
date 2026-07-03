@@ -950,6 +950,28 @@ const TaskDetails = () => {
   // Workbench render helpers
   // ============================================================
 
+  if (loading || !task) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
+          {loading ? "Loading task…" : "Task not found"}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const canEditSubtasks =
+    user?.role === "admin" ||
+    user?.id === task.assigneeId ||
+    user?.id === task.creator?.id ||
+    user?.role === "executive" ||
+    user?.role === "manager";
+  const canCreateSubtasksByPolicy =
+    user?.role === "manager" || user?.role === "admin"
+      ? canPerformRoleOperation("create_tasks", user?.role)
+      : true;
+
+
   const STATUS_PILLS: { value: string; label: string }[] = [
     { value: "all", label: "All Statuses" },
     { value: "pending", label: "Pending" },
