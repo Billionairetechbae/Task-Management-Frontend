@@ -1507,27 +1507,64 @@ const TaskDetails = () => {
     </div>
   );
 
+  const EditContent = (
+    <div className="h-full overflow-hidden animate-fade-in">
+      <TaskEditDrawer
+        inline
+        taskId={task.id}
+        onTaskUpdated={(updated) => setTask(updated)}
+        onTaskDeleted={() => navigate("/tasks/all")}
+      />
+    </div>
+  );
+
   const CollaborationPanel = (
     <div className="flex h-full flex-col bg-background">
       <Tabs value={rightTab} onValueChange={(v: any) => setRightTab(v)} className="flex h-full flex-col">
         <div className="border-b px-3 pt-2 shrink-0">
-          <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
-            <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5" /> Chat
-              {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
-              <FilesIcon className="h-3.5 w-3.5" /> Files
-              {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
-              <ActivityIcon className="h-3.5 w-3.5" /> Activity
-            </TabsTrigger>
-          </TabsList>
+          <TooltipProvider delayDuration={150}>
+            <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <MessageSquare className="h-3.5 w-3.5" /> Chat
+                    {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Task discussion & real-time chat</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <FilesIcon className="h-3.5 w-3.5" /> Files
+                    {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Task documents & attachments</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <ActivityIcon className="h-3.5 w-3.5" /> Activity
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Full task activity timeline</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Edit task — details, assignees, files, danger zone</TooltipContent>
+              </Tooltip>
+            </TabsList>
+          </TooltipProvider>
         </div>
         <TabsContent value="chat" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ChatContent}</TabsContent>
         <TabsContent value="files" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{FilesContent}</TabsContent>
         <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ActivityContent}</TabsContent>
+        <TabsContent value="edit" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{EditContent}</TabsContent>
       </Tabs>
     </div>
   );
