@@ -16,6 +16,7 @@ import DashboardAdmin from "./pages/DashboardAdmin";
 import AIHub from "./pages/AIHub";
 import AllTasks from "./pages/AllTasks";
 import TaskDetails from "./pages/TaskDetails";
+import TaskWorkbench from "./pages/TaskWorkbench";
 import TeamManagement from "./pages/TeamManagement";
 import CompanyProfile from "./pages/CompanyProfile";
 import TeamDirectory from "./pages/TeamDirectory";
@@ -263,6 +264,15 @@ const App = () => {
         element={
           <ProtectedRoute>
             <AllTasks />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tasks/workbench"
+        element={
+          <ProtectedRoute>
+            <TaskWorkbench />
           </ProtectedRoute>
         }
       />
