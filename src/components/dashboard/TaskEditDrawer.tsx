@@ -45,12 +45,14 @@ import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 
 interface TaskEditDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   taskId: string | null;
   initialTab?: string;
   onTaskUpdated: (task: Task) => void;
   onTaskDeleted: (taskId: string) => void;
+  /** When true, renders the form inline (no Sheet wrapper) — for tabbed layouts. */
+  inline?: boolean;
 }
 
 const MAX_FILES = 10;
@@ -60,12 +62,13 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
 
 export default function TaskEditDrawer({
-  open,
+  open = false,
   onOpenChange,
   taskId,
   initialTab = "details",
   onTaskUpdated,
   onTaskDeleted,
+  inline = false,
 }: TaskEditDrawerProps) {
   const { user, workspaceRole } = useAuth();
   const { toast } = useToast();
@@ -111,18 +114,18 @@ export default function TaskEditDrawer({
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (open && taskId) {
+    if ((inline || open) && taskId) {
       fetchTask();
       if (isManager) fetchMembers();
       setActiveTab(initialTab);
     }
-    if (!open) {
+    if (!inline && !open) {
       setPendingFiles([]);
       setDeleteConfirmText("");
       setAddAssigneePick("select");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, taskId]);
+  }, [open, taskId, inline]);
 
   const fetchTask = async () => {
     if (!taskId) return;
