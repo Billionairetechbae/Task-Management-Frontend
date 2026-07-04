@@ -19,7 +19,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon, Pencil } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -94,7 +96,7 @@ const TaskDetails = () => {
 
   // Workbench state
   const isMobile = useIsMobile();
-  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity">("chat");
+  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity" | "edit">("chat");
   const [listSearch, setListSearch] = useState("");
   const [listStatus, setListStatus] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
@@ -1148,16 +1150,60 @@ const TaskDetails = () => {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={() => fetchTask()} className="gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </Button>
-            <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
-            <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
-              <Upload className="h-3.5 w-3.5" /> Upload File
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <X className="h-4 w-4" />
-            </Button>
+            <TooltipProvider delayDuration={150}>
+              <div className="hidden md:flex items-center gap-1.5 pr-1 border-r mr-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
+                <Select value={task.status} onValueChange={handleStatusChange} disabled={updating}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="delayed">Delayed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => fetchTask()} className="gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reload task from server</TooltipContent>
+              </Tooltip>
+
+              <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
+                    <Upload className="h-3.5 w-3.5" /> Upload File
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Attach files to this task</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => setRightTab("edit")} className="gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open the full task editor</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Close</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>
@@ -1461,27 +1507,64 @@ const TaskDetails = () => {
     </div>
   );
 
+  const EditContent = (
+    <div className="h-full overflow-hidden animate-fade-in">
+      <TaskEditDrawer
+        inline
+        taskId={task.id}
+        onTaskUpdated={(updated) => setTask(updated)}
+        onTaskDeleted={() => navigate("/tasks/all")}
+      />
+    </div>
+  );
+
   const CollaborationPanel = (
     <div className="flex h-full flex-col bg-background">
       <Tabs value={rightTab} onValueChange={(v: any) => setRightTab(v)} className="flex h-full flex-col">
         <div className="border-b px-3 pt-2 shrink-0">
-          <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
-            <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5" /> Chat
-              {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
-              <FilesIcon className="h-3.5 w-3.5" /> Files
-              {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5">
-              <ActivityIcon className="h-3.5 w-3.5" /> Activity
-            </TabsTrigger>
-          </TabsList>
+          <TooltipProvider delayDuration={150}>
+            <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <MessageSquare className="h-3.5 w-3.5" /> Chat
+                    {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Task discussion & real-time chat</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <FilesIcon className="h-3.5 w-3.5" /> Files
+                    {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Task documents & attachments</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <ActivityIcon className="h-3.5 w-3.5" /> Activity
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Full task activity timeline</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Edit task — details, assignees, files, danger zone</TooltipContent>
+              </Tooltip>
+            </TabsList>
+          </TooltipProvider>
         </div>
         <TabsContent value="chat" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ChatContent}</TabsContent>
         <TabsContent value="files" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{FilesContent}</TabsContent>
         <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ActivityContent}</TabsContent>
+        <TabsContent value="edit" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{EditContent}</TabsContent>
       </Tabs>
     </div>
   );

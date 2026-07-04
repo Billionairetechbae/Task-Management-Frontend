@@ -45,12 +45,14 @@ import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 
 interface TaskEditDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   taskId: string | null;
   initialTab?: string;
   onTaskUpdated: (task: Task) => void;
   onTaskDeleted: (taskId: string) => void;
+  /** When true, renders the form inline (no Sheet wrapper) — for tabbed layouts. */
+  inline?: boolean;
 }
 
 const MAX_FILES = 10;
@@ -60,12 +62,13 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
 
 export default function TaskEditDrawer({
-  open,
+  open = false,
   onOpenChange,
   taskId,
   initialTab = "details",
   onTaskUpdated,
   onTaskDeleted,
+  inline = false,
 }: TaskEditDrawerProps) {
   const { user, workspaceRole } = useAuth();
   const { toast } = useToast();
@@ -111,18 +114,18 @@ export default function TaskEditDrawer({
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (open && taskId) {
+    if ((inline || open) && taskId) {
       fetchTask();
       if (isManager) fetchMembers();
       setActiveTab(initialTab);
     }
-    if (!open) {
+    if (!inline && !open) {
       setPendingFiles([]);
       setDeleteConfirmText("");
       setAddAssigneePick("select");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, taskId]);
+  }, [open, taskId, inline]);
 
   const fetchTask = async () => {
     if (!taskId) return;
@@ -403,26 +406,26 @@ export default function TaskEditDrawer({
     return members.filter((m) => !assigneeIdSet.has(m.userId));
   }, [members, assigneeIdSet]);
 
-  return (
+  const body = (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle className="pr-8">
-              <div className="flex items-center gap-2 truncate">
-                <CompanyBadge company={task?.company} />
-                <span className="truncate">{loading ? "Loading..." : task?.title || "Task"}</span>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      {!inline && (
+        <SheetHeader className="mb-4">
+          <SheetTitle className="pr-8">
+            <div className="flex items-center gap-2 truncate">
+              <CompanyBadge company={task?.company} />
+              <span className="truncate">{loading ? "Loading..." : task?.title || "Task"}</span>
             </div>
-          ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full grid grid-cols-4 mb-4">
+          </SheetTitle>
+        </SheetHeader>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full animate-fade-in">
+          <TabsList className="w-full grid grid-cols-4 mb-4">
                 <TabsTrigger value="details" className="text-xs">
                   Details
                 </TabsTrigger>
@@ -820,37 +823,58 @@ export default function TaskEditDrawer({
               )}
             </Tabs>
           )}
+    </>
+  );
+
+  const deleteDialog = (
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Type <strong>DELETE</strong> to confirm. This will permanently remove the task and all data.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <Input
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          placeholder="Type DELETE to confirm"
+        />
+
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={deleteConfirmText !== "DELETE" || deleting}
+            onClick={handleDelete}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  if (inline) {
+    return (
+      <div className="h-full overflow-y-auto p-4">
+        {body}
+        {deleteDialog}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          {body}
         </SheetContent>
       </Sheet>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Type <strong>DELETE</strong> to confirm. This will permanently remove the task and all data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <Input
-            value={deleteConfirmText}
-            onChange={(e) => setDeleteConfirmText(e.target.value)}
-            placeholder="Type DELETE to confirm"
-          />
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={deleteConfirmText !== "DELETE" || deleting}
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {deleteDialog}
     </>
   );
 }
+
