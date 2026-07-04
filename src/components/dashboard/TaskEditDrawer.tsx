@@ -406,26 +406,26 @@ export default function TaskEditDrawer({
     return members.filter((m) => !assigneeIdSet.has(m.userId));
   }, [members, assigneeIdSet]);
 
-  return (
+  const body = (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle className="pr-8">
-              <div className="flex items-center gap-2 truncate">
-                <CompanyBadge company={task?.company} />
-                <span className="truncate">{loading ? "Loading..." : task?.title || "Task"}</span>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      {!inline && (
+        <SheetHeader className="mb-4">
+          <SheetTitle className="pr-8">
+            <div className="flex items-center gap-2 truncate">
+              <CompanyBadge company={task?.company} />
+              <span className="truncate">{loading ? "Loading..." : task?.title || "Task"}</span>
             </div>
-          ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full grid grid-cols-4 mb-4">
+          </SheetTitle>
+        </SheetHeader>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full animate-fade-in">
+          <TabsList className="w-full grid grid-cols-4 mb-4">
                 <TabsTrigger value="details" className="text-xs">
                   Details
                 </TabsTrigger>
