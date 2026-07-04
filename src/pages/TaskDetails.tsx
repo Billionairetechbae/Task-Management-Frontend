@@ -1150,16 +1150,60 @@ const TaskDetails = () => {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={() => fetchTask()} className="gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </Button>
-            <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
-            <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
-              <Upload className="h-3.5 w-3.5" /> Upload File
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <X className="h-4 w-4" />
-            </Button>
+            <TooltipProvider delayDuration={150}>
+              <div className="hidden md:flex items-center gap-1.5 pr-1 border-r mr-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
+                <Select value={task.status} onValueChange={handleStatusChange} disabled={updating}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="delayed">Delayed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => fetchTask()} className="gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reload task from server</TooltipContent>
+              </Tooltip>
+
+              <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
+                    <Upload className="h-3.5 w-3.5" /> Upload File
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Attach files to this task</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => setRightTab("edit")} className="gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open the full task editor</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Close</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>
