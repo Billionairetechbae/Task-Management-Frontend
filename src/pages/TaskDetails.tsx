@@ -19,7 +19,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon, Pencil } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -94,7 +96,7 @@ const TaskDetails = () => {
 
   // Workbench state
   const isMobile = useIsMobile();
-  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity">("chat");
+  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity" | "edit">("chat");
   const [listSearch, setListSearch] = useState("");
   const [listStatus, setListStatus] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
