@@ -168,6 +168,11 @@ const DashboardLayout = ({
               href: "/tasks/all",
               icon: <ListChecks className="w-[18px] h-[18px]" />,
             },
+            {
+              label: "Task Workbench",
+              href: "/tasks/workbench",
+              icon: <ClipboardList className="w-[18px] h-[18px]" />,
+            },
           ],
         },
         {
@@ -258,6 +263,11 @@ const DashboardLayout = ({
               href: "/tasks/all",
               icon: <ListChecks className="w-[18px] h-[18px]" />,
             },
+            {
+              label: "Task Workbench",
+              href: "/tasks/workbench",
+              icon: <ClipboardList className="w-[18px] h-[18px]" />,
+            },
           ],
         },
         {
@@ -325,6 +335,11 @@ const DashboardLayout = ({
           {
             label: "My Tasks",
             href: "/tasks/my",
+            icon: <ClipboardList className="w-[18px] h-[18px]" />,
+          },
+          {
+            label: "Task Workbench",
+            href: "/tasks/workbench",
             icon: <ClipboardList className="w-[18px] h-[18px]" />,
           },
         ],
