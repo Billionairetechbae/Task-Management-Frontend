@@ -664,7 +664,7 @@ export default function TaskEditDrawer({
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive"
-                              onClick={() => handleRemoveAssignee(u.id)}
+                              onClick={() => setAssigneeToRemove(u)}
                               disabled={saving}
                               title="Remove"
                             >
