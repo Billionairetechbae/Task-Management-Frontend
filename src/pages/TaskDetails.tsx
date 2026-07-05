@@ -1609,7 +1609,7 @@ const TaskDetails = () => {
                         <a href={file.fileUrl} download={file.fileName}><Download className="w-3 h-3" /></a>
                       </Button>
                       {isOwner && (
-                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file.id)}>
+                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file.id, file.name)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
