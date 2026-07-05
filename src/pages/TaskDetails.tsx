@@ -47,6 +47,16 @@ import {
 } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 
@@ -133,6 +143,49 @@ const TaskDetails = () => {
   const [listPage, setListPage] = useState(1);
   const [listSort, setListSort] = useState<"due" | "created" | "priority">("due");
   const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
+  const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const leftSearchRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcuts: "/" or Cmd/Ctrl+K to focus left search; 1-4 to switch right tabs.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const typing =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (target as any)?.isContentEditable;
+
+      // Cmd/Ctrl+K → focus search (works even while typing elsewhere)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        leftSearchRef.current?.focus();
+        leftSearchRef.current?.select();
+        return;
+      }
+
+      if (typing) return;
+
+      if (e.key === "/") {
+        e.preventDefault();
+        leftSearchRef.current?.focus();
+        return;
+      }
+
+      if (["1", "2", "3", "4"].includes(e.key)) {
+        const map: Record<string, "chat" | "files" | "activity" | "edit"> = {
+          "1": "chat",
+          "2": "files",
+          "3": "activity",
+          "4": "edit",
+        };
+        setRightTab(map[e.key]);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const listQuery = useQuery({
     queryKey: ["task-workbench-list", { listSearch, listStatus, listPage }],
@@ -446,9 +499,9 @@ const TaskDetails = () => {
     }
   };
 
-  const handleDeleteAttachment = async (attachmentId: string) => {
-    if (!window.confirm("Are you sure you want to delete this attachment?")) return;
-
+  const confirmDeleteAttachment = async () => {
+    const attachmentId = attachmentToDelete?.id;
+    if (!attachmentId) return;
     try {
       await api.deleteTaskAttachment(attachmentId);
       setTask(prev => prev ? {
@@ -465,7 +518,13 @@ const TaskDetails = () => {
         description: error.message || "Failed to delete attachment",
         variant: "destructive",
       });
+    } finally {
+      setAttachmentToDelete(null);
     }
+  };
+
+  const handleDeleteAttachment = (attachmentId: string, name?: string) => {
+    setAttachmentToDelete({ id: attachmentId, name });
   };
 
   const handleSendComment = async (overrideContent?: string) => {
@@ -1078,12 +1137,13 @@ const TaskDetails = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={leftSearchRef}
             value={listSearch}
             onChange={(e) => {
               setListSearch(e.target.value);
               setListPage(1);
             }}
-            placeholder="Search tasks..."
+            placeholder="Search tasks…  ( / or ⌘K )"
             className="pl-9 h-9"
           />
         </div>
@@ -1550,7 +1610,7 @@ const TaskDetails = () => {
                         <a href={file.fileUrl} download={file.fileName}><Download className="w-3 h-3" /></a>
                       </Button>
                       {isOwner && (
-                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file.id)}>
+                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file.id, (file as any).fileName || (file as any).name)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
@@ -1607,7 +1667,7 @@ const TaskDetails = () => {
                     {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Task discussion & real-time chat</TooltipContent>
+                <TooltipContent>Chat — press 1</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1616,7 +1676,7 @@ const TaskDetails = () => {
                     {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Task documents & attachments</TooltipContent>
+                <TooltipContent>Files — press 2</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1624,7 +1684,7 @@ const TaskDetails = () => {
                     <ActivityIcon className="h-3.5 w-3.5" /> Activity
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Full task activity timeline</TooltipContent>
+                <TooltipContent>Activity — press 3</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1632,7 +1692,7 @@ const TaskDetails = () => {
                     <Pencil className="h-3.5 w-3.5" /> Edit
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Edit task — details, assignees, files, danger zone</TooltipContent>
+                <TooltipContent>Edit — press 4</TooltipContent>
               </Tooltip>
             </TabsList>
           </TooltipProvider>
@@ -1663,6 +1723,32 @@ const TaskDetails = () => {
         />
       )}
       {renderMobileChatSheet()}
+
+      <AlertDialog
+        open={!!attachmentToDelete}
+        onOpenChange={(o) => !o && setAttachmentToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this attachment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {attachmentToDelete?.name
+                ? `"${attachmentToDelete.name}" will be permanently removed from this task.`
+                : "This attachment will be permanently removed from this task."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteAttachment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <DashboardLayout>
         {isMobile ? (

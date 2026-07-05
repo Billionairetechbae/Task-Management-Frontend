@@ -113,6 +113,10 @@ export default function TaskEditDrawer({
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Confirm dialogs for destructive assignee / attachment actions
+  const [assigneeToRemove, setAssigneeToRemove] = useState<any | null>(null);
+  const [attachmentToRemove, setAttachmentToRemove] = useState<TaskAttachment | null>(null);
+
   useEffect(() => {
     if ((inline || open) && taskId) {
       fetchTask();
@@ -660,7 +664,7 @@ export default function TaskEditDrawer({
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive"
-                              onClick={() => handleRemoveAssignee(u.id)}
+                              onClick={() => setAssigneeToRemove(u)}
                               disabled={saving}
                               title="Remove"
                             >
@@ -735,7 +739,7 @@ export default function TaskEditDrawer({
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-destructive"
-                                onClick={() => handleRemoveAttachment(att)}
+                                onClick={() => setAttachmentToRemove(att)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -827,34 +831,98 @@ export default function TaskEditDrawer({
   );
 
   const deleteDialog = (
-    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete this task?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Type <strong>DELETE</strong> to confirm. This will permanently remove the task and all data.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+    <>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Type <strong>DELETE</strong> to confirm. This will permanently remove the task and all data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
-        <Input
-          value={deleteConfirmText}
-          onChange={(e) => setDeleteConfirmText(e.target.value)}
-          placeholder="Type DELETE to confirm"
-        />
+          <Input
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="Type DELETE to confirm"
+          />
 
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={deleteConfirmText !== "DELETE" || deleting}
-            onClick={handleDelete}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteConfirmText !== "DELETE" || deleting}
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!assigneeToRemove}
+        onOpenChange={(o) => !o && setAssigneeToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove assignee?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {assigneeToRemove
+                ? `${assigneeToRemove.firstName || ""} ${assigneeToRemove.lastName || ""} will lose access to this task.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={saving}
+              onClick={async () => {
+                if (assigneeToRemove?.id) {
+                  await handleRemoveAssignee(assigneeToRemove.id);
+                }
+                setAssigneeToRemove(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!attachmentToRemove}
+        onOpenChange={(o) => !o && setAttachmentToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this file?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {attachmentToRemove
+                ? `"${attachmentToRemove.fileName}" will be permanently removed from this task.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (attachmentToRemove) {
+                  await handleRemoveAttachment(attachmentToRemove);
+                }
+                setAttachmentToRemove(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 
   if (inline) {
