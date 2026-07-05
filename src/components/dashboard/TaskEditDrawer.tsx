@@ -113,6 +113,10 @@ export default function TaskEditDrawer({
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Confirm dialogs for destructive assignee / attachment actions
+  const [assigneeToRemove, setAssigneeToRemove] = useState<any | null>(null);
+  const [attachmentToRemove, setAttachmentToRemove] = useState<TaskAttachment | null>(null);
+
   useEffect(() => {
     if ((inline || open) && taskId) {
       fetchTask();
