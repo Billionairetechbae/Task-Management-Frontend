@@ -1667,7 +1667,7 @@ const TaskDetails = () => {
                     {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Task discussion & real-time chat</TooltipContent>
+                <TooltipContent>Chat — press 1</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1676,7 +1676,7 @@ const TaskDetails = () => {
                     {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Task documents & attachments</TooltipContent>
+                <TooltipContent>Files — press 2</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1684,7 +1684,7 @@ const TaskDetails = () => {
                     <ActivityIcon className="h-3.5 w-3.5" /> Activity
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Full task activity timeline</TooltipContent>
+                <TooltipContent>Activity — press 3</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1692,7 +1692,7 @@ const TaskDetails = () => {
                     <Pencil className="h-3.5 w-3.5" /> Edit
                   </TabsTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Edit task — details, assignees, files, danger zone</TooltipContent>
+                <TooltipContent>Edit — press 4</TooltipContent>
               </Tooltip>
             </TabsList>
           </TooltipProvider>
