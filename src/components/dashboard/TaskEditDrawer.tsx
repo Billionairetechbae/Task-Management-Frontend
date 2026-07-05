@@ -739,7 +739,7 @@ export default function TaskEditDrawer({
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-destructive"
-                                onClick={() => handleRemoveAttachment(att)}
+                                onClick={() => setAttachmentToRemove(att)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
