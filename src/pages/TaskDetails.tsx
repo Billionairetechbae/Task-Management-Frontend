@@ -1724,6 +1724,32 @@ const TaskDetails = () => {
       )}
       {renderMobileChatSheet()}
 
+      <AlertDialog
+        open={!!attachmentToDelete}
+        onOpenChange={(o) => !o && setAttachmentToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this attachment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {attachmentToDelete?.name
+                ? `"${attachmentToDelete.name}" will be permanently removed from this task.`
+                : "This attachment will be permanently removed from this task."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteAttachment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
       <DashboardLayout>
         {isMobile ? (
           <div className="h-[calc(100vh-4rem)] flex flex-col">
