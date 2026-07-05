@@ -94,6 +94,8 @@ const TaskDetails = () => {
       return response.data.task;
     },
     enabled: !!id,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 
   const commentsQuery = useQuery({
@@ -104,6 +106,8 @@ const TaskDetails = () => {
       return response.comments.map(fixCommentProfilePicture);
     },
     enabled: !!id,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 
   // Sync state with query data

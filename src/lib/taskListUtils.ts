@@ -20,7 +20,8 @@ type SubtaskCountable = {
 };
 
 /** Prefer backend `subtaskCount`, then `subtasks.length`. */
-export function getTaskSubtaskCount(task: SubtaskCountable): number {
+export function getTaskSubtaskCount(task: SubtaskCountable | null | undefined): number {
+  if (!task) return 0;
   if (typeof task.subtaskCount === "number") return task.subtaskCount;
   const arr = task.subtasks;
   return Array.isArray(arr) ? arr.length : 0;
@@ -33,7 +34,8 @@ type WatcherCountable = {
 };
 
 /** Prefer backend `watcherCount`, then `watchers` / `recentWatchers` length. */
-export function getTaskWatcherCount(task: WatcherCountable): number {
+export function getTaskWatcherCount(task: WatcherCountable | null | undefined): number {
+  if (!task) return 0;
   if (typeof task.watcherCount === "number") return task.watcherCount;
   const list = task.watchers ?? task.recentWatchers;
   return Array.isArray(list) ? list.length : 0;

@@ -334,61 +334,61 @@ export type TaskPriority = "low" | "medium" | "high";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "delayed" | "cancelled";
 
 export interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  deadline: string;
-  category: string;
-  estimatedHours: number;
-  actualHours: number | null;
-  tier: string;
+  id?: string | null;
+  title?: string | null;
+  description?: string | null;
+  priority?: TaskPriority | null;
+  status?: TaskStatus | null;
+  deadline?: string | null;
+  category?: string | null;
+  estimatedHours?: number | null;
+  actualHours?: number | null;
+  tier?: string | null;
 
-  assignedAssistantId: string | null;
-  executiveId: string;
-  assigneeId: string | null;
+  assignedAssistantId?: string | null;
+  executiveId?: string | null;
+  assigneeId?: string | null;
   parentTaskId?: string | null;
 
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 
   company?: {
-    id: string;
-    name: string;
-    companyCode?: string;
-    industry?: string;
-  };
-
-  creator?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    role?: string;
-  };
-
-  assignee?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email?: string;
-    company?: string;
+    id?: string | null;
+    name?: string | null;
+    companyCode?: string | null;
+    industry?: string | null;
   } | null;
 
-  attachments?: TaskAttachment[];
+  creator?: {
+    id?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    role?: string | null;
+  } | null;
+
+  assignee?: {
+    id?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    company?: string | null;
+  } | null;
+
+  attachments?: TaskAttachment[] | null;
   parentTask?: Task | null;
-  subtasks?: TaskSubtask[];
-  subtaskCount?: number;
-  activities?: TaskActivity[];
-  watcherCount?: number;
-  isWatching?: boolean;
-  recentWatchers?: TaskWatcher[];
+  subtasks?: TaskSubtask[] | null;
+  subtaskCount?: number | null;
+  activities?: TaskActivity[] | null;
+  watcherCount?: number | null;
+  isWatching?: boolean | null;
+  recentWatchers?: TaskWatcher[] | null;
   /** Some APIs return full watcher list instead of only counts */
-  watchers?: TaskWatcher[];
+  watchers?: TaskWatcher[] | null;
 
   // Some backends return this
-  assignees?: any[];
+  assignees?: any[] | null;
 }
 
 export interface CreateTaskData {
@@ -1344,6 +1344,26 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
    API CLIENT
 ============================ */
 
+export class ApiError extends Error {
+  statusCode: number;
+  status: string;
+  constructor(
+    message: string,
+    statusCode: number
+  ) {
+    super(message);
+    this.statusCode = statusCode;
+    this.name = "ApiError";
+  }
+}
+
+export class NetworkError extends Error {
+  constructor(message = "Network error") {
+    super(message);
+    this.name = "NetworkError";
+  }
+}
+
 class ApiClient {
   getUserById: any;
   getTeamMembers: any;
@@ -1389,7 +1409,12 @@ class ApiClient {
       }
     } catch {}
 
-    const response = await fetch(url, { ...options, headers });
+    let response: Response;
+    try {
+      response = await fetch(url, { ...options, headers });
+    } catch (err) {
+      throw new NetworkError(err instanceof Error ? err.message : "Network error");
+    }
 
     let result: any;
     try {
@@ -1418,8 +1443,7 @@ class ApiClient {
 
       if (
         response.status === 403 &&
-        message.toLowerCase().includes("workspace")
-      ) {
+        message.toLowerCase().includes("workspace")) {
         if (typeof window !== "undefined") {
           window.dispatchEvent(
             new CustomEvent("workspace:missing", {
@@ -1429,7 +1453,7 @@ class ApiClient {
         }
       }
 
-      throw new Error(message);
+      throw new ApiError(message, response.status);
     }
 
     return result as T;
