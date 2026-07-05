@@ -499,9 +499,9 @@ const TaskDetails = () => {
     }
   };
 
-  const handleDeleteAttachment = async (attachmentId: string) => {
-    if (!window.confirm("Are you sure you want to delete this attachment?")) return;
-
+  const confirmDeleteAttachment = async () => {
+    const attachmentId = attachmentToDelete?.id;
+    if (!attachmentId) return;
     try {
       await api.deleteTaskAttachment(attachmentId);
       setTask(prev => prev ? {
@@ -518,7 +518,13 @@ const TaskDetails = () => {
         description: error.message || "Failed to delete attachment",
         variant: "destructive",
       });
+    } finally {
+      setAttachmentToDelete(null);
     }
+  };
+
+  const handleDeleteAttachment = (attachmentId: string, name?: string) => {
+    setAttachmentToDelete({ id: attachmentId, name });
   };
 
   const handleSendComment = async (overrideContent?: string) => {
