@@ -143,6 +143,49 @@ const TaskDetails = () => {
   const [listPage, setListPage] = useState(1);
   const [listSort, setListSort] = useState<"due" | "created" | "priority">("due");
   const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
+  const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const leftSearchRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcuts: "/" or Cmd/Ctrl+K to focus left search; 1-4 to switch right tabs.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const typing =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (target as any)?.isContentEditable;
+
+      // Cmd/Ctrl+K → focus search (works even while typing elsewhere)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        leftSearchRef.current?.focus();
+        leftSearchRef.current?.select();
+        return;
+      }
+
+      if (typing) return;
+
+      if (e.key === "/") {
+        e.preventDefault();
+        leftSearchRef.current?.focus();
+        return;
+      }
+
+      if (["1", "2", "3", "4"].includes(e.key)) {
+        const map: Record<string, "chat" | "files" | "activity" | "edit"> = {
+          "1": "chat",
+          "2": "files",
+          "3": "activity",
+          "4": "edit",
+        };
+        setRightTab(map[e.key]);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const listQuery = useQuery({
     queryKey: ["task-workbench-list", { listSearch, listStatus, listPage }],
