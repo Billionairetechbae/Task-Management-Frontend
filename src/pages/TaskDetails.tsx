@@ -103,7 +103,7 @@ const TaskDetails = () => {
     queryFn: async () => {
       if (!id) throw new Error("No task id");
       const response = await api.getTaskComments(id, { limit: 50 });
-      return response.comments.map(fixCommentProfilePicture);
+      return (response.comments || []).filter(Boolean).map(fixCommentProfilePicture);
     },
     enabled: !!id,
     refetchOnWindowFocus: false,
@@ -394,14 +394,14 @@ const TaskDetails = () => {
 
   // Helper function to fix profile picture field in comments
   const fixCommentProfilePicture = (comment: any): CorrectedTaskComment => {
-    if (!comment.user) return comment;
-    
     return {
       ...comment,
-      user: {
-        ...comment.user,
-        profilePictureUrl: comment.user.profilePicture || comment.user.profilePictureUrl || undefined
-      }
+      user: comment.user
+        ? {
+            ...comment.user,
+            profilePictureUrl: comment.user.profilePicture || comment.user.profilePictureUrl || undefined
+          }
+        : { id: "", firstName: "", lastName: "", email: "", role: "" }
     };
   };
 
@@ -1181,7 +1181,7 @@ const TaskDetails = () => {
           <div className="p-6 text-center text-sm text-muted-foreground">No tasks found.</div>
         ) : (
           sortedListTasks.map((t: any) => {
-            const isSelected = t.id === task.id;
+            const isSelected = t.id === task?.id;
             const dl = daysLeft(t.deadline);
             return (
               <button
@@ -1214,9 +1214,9 @@ const TaskDetails = () => {
                       )}
                       {t.assignee && (
                         <Avatar className="h-4 w-4 ml-auto">
-                          <AvatarImage src={(t.assignee as any).profilePictureUrl} />
+                          <AvatarImage src={(t.assignee as any)?.profilePictureUrl} />
                           <AvatarFallback className="text-[8px]">
-                            {getInitials(t.assignee.firstName, t.assignee.lastName)}
+                            {getInitials(t.assignee?.firstName || '', t.assignee?.lastName || '')}
                           </AvatarFallback>
                         </Avatar>
                       )}
@@ -1254,235 +1254,289 @@ const TaskDetails = () => {
     </div>
   );
 
-  const DetailsPanel = task ? (() => {
-    const dl = daysLeft(task.deadline);
-    const subtaskCount = getTaskSubtaskCount(task);
-    const completedSub = (task.subtasks || []).filter((s: any) => s.status === "completed" || s.completed).length;
-    const progressPct = subtaskCount > 0 ? Math.round((completedSub / subtaskCount) * 100) : 0;
-    const canEditSubtasks =
-      user?.role === "admin" ||
-      user?.id === task.assigneeId ||
-      user?.id === task.creator?.id ||
-      user?.role === "executive" ||
-      user?.role === "manager";
-    const canCreateSubtasksByPolicy =
-      user?.role === "manager" || user?.role === "admin"
-        ? canPerformRoleOperation("create_tasks", user?.role)
-        : true;
+  const getErrorState = () => {
+    if (!taskQuery.isError) return null;
+    const error = taskQuery.error as any;
+    if (error?.name === 'NetworkError') {
+      return {
+        title: "You're offline",
+        description: "Check your connection and try again.",
+        icon: AlertCircle,
+        tone: "text-muted-foreground"
+      };
+    }
+    if (error?.status === 403) {
+      return {
+        title: "You don't have permission to view this task",
+        description: "You can still browse other tasks in the list.",
+        icon: AlertCircle,
+        tone: "text-yellow-600"
+      };
+    }
+    if (error?.status === 404) {
+      return {
+        title: "Task not found",
+        description: "This task may have been deleted or you don't have access.",
+        icon: AlertCircle,
+        tone: "text-muted-foreground"
+      };
+    }
+    return {
+      title: "Something went wrong",
+      description: "Please try again later.",
+      icon: AlertCircle,
+      tone: "text-red-600"
+    };
+  };
 
+  const ErrorStatePanel = () => {
+    const state = getErrorState();
+    if (!state) return null;
+    const Icon = state.icon;
     return (
-      <div className="flex h-full flex-col overflow-hidden bg-muted/20">
-        {/* Sticky header */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl md:text-2xl font-bold truncate">{task.title}</h1>
-                <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status]}</Badge>
-                <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority])}>{task.priority}</Badge>
-                <button className="text-muted-foreground hover:text-yellow-500 transition">
-                  <Star className="h-4 w-4" />
-                </button>
-              </div>
-              {task.description && (
-                <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{task.description}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <TooltipProvider delayDuration={150}>
-                <div className="hidden md:flex items-center gap-1.5 pr-1 border-r mr-1">
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
-                  <Select value={task.status} onValueChange={handleStatusChange} disabled={updating}>
-                    <SelectTrigger className="h-8 w-[140px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="delayed">Delayed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
+      <div className="flex h-full flex-col items-center justify-center bg-muted/20 p-6 text-center">
+        <Icon className={cn("h-12 w-12 mb-4", state.tone)} />
+        <h3 className="text-lg font-semibold mb-2">{state.title}</h3>
+        <p className="text-sm text-muted-foreground mb-6">{state.description}</p>
+        <Button variant="outline" onClick={() => taskQuery.refetch()} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Try again
+        </Button>
+      </div>
+    );
+  };
+
+  const DetailsPanel = taskQuery.isLoading ? DetailsPanelSkeleton :
+    taskQuery.isError ? <ErrorStatePanel /> :
+    task ? (() => {
+      const dl = daysLeft(task.deadline);
+      const subtaskCount = getTaskSubtaskCount(task);
+      const completedSub = (task.subtasks || []).filter(Boolean).filter((s: any) => s.status === "completed" || s.completed).length;
+      const progressPct = subtaskCount > 0 ? Math.round((completedSub / subtaskCount) * 100) : 0;
+      const canEditSubtasks =
+        user?.role === "admin" ||
+        user?.id === task.assigneeId ||
+        user?.id === task.creator?.id ||
+        user?.role === "executive" ||
+        user?.role === "manager";
+      const canCreateSubtasksByPolicy =
+        user?.role === "manager" || user?.role === "admin"
+          ? canPerformRoleOperation("create_tasks", user?.role)
+          : true;
+
+      return (
+        <div className="flex h-full flex-col overflow-hidden bg-muted/20">
+          {/* Sticky header */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl md:text-2xl font-bold truncate">{task.title || "Untitled Task"}</h1>
+                  <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
+                  <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                  <button className="text-muted-foreground hover:text-yellow-500 transition">
+                    <Star className="h-4 w-4" />
+                  </button>
                 </div>
+                {task.description && (
+                  <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{task.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <TooltipProvider delayDuration={150}>
+                  <div className="hidden md:flex items-center gap-1.5 pr-1 border-r mr-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
+                    <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
+                      <SelectTrigger className="h-8 w-[140px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="delayed">Delayed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => taskQuery.refetch()} className="gap-1.5">
-                      <RefreshCw className={cn("h-3.5 w-3.5", taskQuery.isFetching && "animate-spin")} /> Refresh
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Reload task from server</TooltipContent>
-                </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => taskQuery.refetch()} className="gap-1.5">
+                        <RefreshCw className={cn("h-3.5 w-3.5", taskQuery.isFetching && "animate-spin")} /> Refresh
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reload task from server</TooltipContent>
+                  </Tooltip>
 
-                <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
-                      <Upload className="h-3.5 w-3.5" /> Upload File
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Attach files to this task</TooltipContent>
-                </Tooltip>
+                  <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
+                        <Upload className="h-3.5 w-3.5" /> Upload File
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Attach files to this task</TooltipContent>
+                  </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => setRightTab("edit")} className="gap-1.5">
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Open the full task editor</TooltipContent>
-                </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => setRightTab("edit")} className="gap-1.5">
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Open the full task editor</TooltipContent>
+                  </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Close</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Close</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-          {/* Metadata cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" /> Deadline
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+            {/* Metadata cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-lg border bg-card p-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" /> Deadline
+                </div>
+                <p className="font-semibold text-sm mt-1">{task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</p>
+                {dl && <p className={cn("text-[11px] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
               </div>
-              <p className="font-semibold text-sm mt-1">{new Date(task.deadline).toLocaleDateString()}</p>
-              {dl && <p className={cn("text-[11px] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
-            </div>
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <User2 className="h-3.5 w-3.5" /> Assignee
+              <div className="rounded-lg border bg-card p-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <User2 className="h-3.5 w-3.5" /> Assignee
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  {task.assignee ? (
+                    <>
+                      <Avatar className="h-6 w-6"><AvatarImage src={(task.assignee as any)?.profilePictureUrl} /><AvatarFallback className="text-[10px]">{getInitials(task.assignee?.firstName || '', task.assignee?.lastName || '')}</AvatarFallback></Avatar>
+                      <p className="font-semibold text-sm truncate">{task.assignee?.firstName || ''} {task.assignee?.lastName || ''}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Unassigned</p>
+                  )}
+                </div>
               </div>
-              <div className="mt-1 flex items-center gap-2">
-                {task.assignee ? (
-                  <>
-                    <Avatar className="h-6 w-6"><AvatarImage src={(task.assignee as any).profilePictureUrl} /><AvatarFallback className="text-[10px]">{getInitials(task.assignee.firstName, task.assignee.lastName)}</AvatarFallback></Avatar>
-                    <p className="font-semibold text-sm truncate">{task.assignee.firstName} {task.assignee.lastName}</p>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Unassigned</p>
+              <div className="rounded-lg border bg-card p-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Building2 className="h-3.5 w-3.5" /> Workspace
+                </div>
+                <p className="font-semibold text-sm mt-1 truncate">{task.company?.name || "—"}</p>
+                {task.category && <p className="text-[11px] text-muted-foreground truncate">{task.category}</p>}
+              </div>
+              <div className="rounded-lg border bg-card p-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" /> Created
+                </div>
+                <p className="font-semibold text-sm mt-1">{(task as any).createdAt ? new Date((task as any).createdAt).toLocaleDateString() : "—"}</p>
+                {task.creator && (
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    by {task.creator?.firstName || ''} {task.creator?.lastName || ''}
+                  </p>
                 )}
               </div>
             </div>
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Building2 className="h-3.5 w-3.5" /> Workspace
-              </div>
-              <p className="font-semibold text-sm mt-1 truncate">{task.company?.name || "—"}</p>
-              {task.category && <p className="text-[11px] text-muted-foreground truncate">{task.category}</p>}
-            </div>
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" /> Created
-              </div>
-              <p className="font-semibold text-sm mt-1">{new Date((task as any).createdAt || Date.now()).toLocaleDateString()}</p>
-              {task.creator && (
-                <p className="text-[11px] text-muted-foreground truncate">
-                  by {task.creator.firstName} {task.creator.lastName}
-                </p>
-              )}
-            </div>
-          </div>
 
-          {/* Overview */}
-          <section className="rounded-lg border bg-card p-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
-              <ListChecks className="h-4 w-4" /> Overview
-            </h3>
-            <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-              {task.description || <span className="text-muted-foreground italic">No description provided.</span>}
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t">
-              <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Subtasks</p>
-                <p className="font-bold text-lg">{completedSub}/{subtaskCount || 0}</p>
-                <p className="text-[10px] text-muted-foreground">{progressPct}% completed</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Attachments</p>
-                <p className="font-bold text-lg">{task.attachments?.length || 0}</p>
-                <p className="text-[10px] text-muted-foreground">Files</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Comments</p>
-                <p className="font-bold text-lg">{comments.length}</p>
-                <p className="text-[10px] text-muted-foreground">Total</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Watchers</p>
-                <p className="font-bold text-lg">{getTaskWatcherCount(task)}</p>
-                <p className="text-[10px] text-muted-foreground">Following</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Subtasks */}
-          <section className="rounded-lg border bg-card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <ListChecks className="h-4 w-4" /> Subtasks
-                <span className="text-xs text-muted-foreground font-normal">{completedSub} of {subtaskCount} completed</span>
-              </h3>
-              <div className="w-32 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
-              </div>
-            </div>
-            {!canCreateSubtasksByPolicy && (
-              <p className="text-xs text-muted-foreground mb-2">Subtask creation is disabled by workspace policy.</p>
-            )}
-            <SubtaskList
-              taskId={task.id}
-              initialSubtasks={task.subtasks || []}
-              canEdit={canEditSubtasks && canCreateSubtasksByPolicy}
-              onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
-            />
-          </section>
-
-          {/* Watchers */}
-          <section className="rounded-lg border bg-card p-4">
-            <h3 className="text-sm font-semibold mb-2">Watchers</h3>
-            <TaskWatcherSection
-              taskId={task.id}
-              initialWatcherCount={task.watcherCount || 0}
-              initialIsWatching={!!task.isWatching}
-              initialRecentWatchers={task.recentWatchers || []}
-              onChanged={(next) =>
-                setTask((prev) => prev ? { ...prev, watcherCount: next.watcherCount, isWatching: next.isWatching, recentWatchers: next.recentWatchers } : prev)
-              }
-            />
-          </section>
-
-          {/* Status update */}
-          {(user?.id === task.assigneeId ||
-            (task as any).assignees?.some((a: any) => a.id === user?.id) ||
-            user?.id === task.creator?.id ||
-            ["manager", "executive", "admin", "team_member"].includes(user?.role || "")) && (
+            {/* Overview */}
             <section className="rounded-lg border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-2">Update Status</p>
-              <Select value={task.status} onValueChange={handleStatusChange} disabled={updating}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="delayed">Delayed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                <ListChecks className="h-4 w-4" /> Overview
+              </h3>
+              <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                {task.description || <span className="text-muted-foreground italic">No description provided.</span>}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t">
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Subtasks</p>
+                  <p className="font-bold text-lg">{completedSub}/{subtaskCount || 0}</p>
+                  <p className="text-[10px] text-muted-foreground">{progressPct}% completed</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Attachments</p>
+                  <p className="font-bold text-lg">{task.attachments?.length || 0}</p>
+                  <p className="text-[10px] text-muted-foreground">Files</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Comments</p>
+                  <p className="font-bold text-lg">{comments.length}</p>
+                  <p className="text-[10px] text-muted-foreground">Total</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Watchers</p>
+                  <p className="font-bold text-lg">{getTaskWatcherCount(task)}</p>
+                  <p className="text-[10px] text-muted-foreground">Following</p>
+                </div>
+              </div>
             </section>
-          )}
+
+            {/* Subtasks */}
+            <section className="rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <ListChecks className="h-4 w-4" /> Subtasks
+                  <span className="text-xs text-muted-foreground font-normal">{completedSub} of {subtaskCount} completed</span>
+                </h3>
+                <div className="w-32 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+                </div>
+              </div>
+              {!canCreateSubtasksByPolicy && (
+                <p className="text-xs text-muted-foreground mb-2">Subtask creation is disabled by workspace policy.</p>
+              )}
+              <SubtaskList
+                taskId={task.id}
+                initialSubtasks={(task.subtasks || []).filter(Boolean)}
+                canEdit={canEditSubtasks && canCreateSubtasksByPolicy}
+                onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
+              />
+            </section>
+
+            {/* Watchers */}
+            <section className="rounded-lg border bg-card p-4">
+              <h3 className="text-sm font-semibold mb-2">Watchers</h3>
+              <TaskWatcherSection
+                taskId={task.id}
+                initialWatcherCount={task.watcherCount || 0}
+                initialIsWatching={!!task.isWatching}
+                initialRecentWatchers={(task.recentWatchers || []).filter(Boolean)}
+                onChanged={(next) =>
+                  setTask((prev) => prev ? { ...prev, watcherCount: next.watcherCount, isWatching: next.isWatching, recentWatchers: next.recentWatchers } : prev)
+                }
+              />
+            </section>
+
+            {/* Status update */}
+            {(user?.id === task.assigneeId ||
+              (task as any).assignees?.filter(Boolean).some((a: any) => a.id === user?.id) ||
+              user?.id === task.creator?.id ||
+              ["manager", "executive", "admin", "team_member"].includes(user?.role || "")) && (
+              <section className="rounded-lg border bg-card p-4">
+                <p className="text-xs text-muted-foreground mb-2">Update Status</p>
+                <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="delayed">Delayed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </section>
+            )}
+          </div>
         </div>
-      </div>
-    );
-  })() : DetailsPanelSkeleton;
+      );
+    })() : DetailsPanelSkeleton;
 
   const ChatContent = (
     <div className="flex h-full flex-col">
@@ -1599,22 +1653,22 @@ const TaskDetails = () => {
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
-        {task.attachments && task.attachments.length > 0 ? (
+        {task.attachments?.filter(Boolean).length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
-            {task.attachments.map((file) => {
+            {task.attachments.filter(Boolean).map((file) => {
               const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
               return (
                 <FilePreviewCard
-                  key={file.id}
-                  file={{ id: file.id, name: file.fileName, url: file.fileUrl, type: file.fileType }}
-                  onClick={() => setPreview({ url: file.fileUrl, type: file.fileType, name: file.fileName, attachmentId: file.id, alreadyInDocs: true })}
+                  key={file?.id}
+                  file={{ id: file?.id, name: file?.fileName || (file as any)?.name, url: file?.fileUrl, type: file?.fileType }}
+                  onClick={() => setPreview({ url: file?.fileUrl, type: file?.fileType, name: file?.fileName || (file as any)?.name, attachmentId: file?.id, alreadyInDocs: true })}
                   actions={
                     <>
                       <Button variant="secondary" size="icon" className="h-6 w-6" asChild>
-                        <a href={file.fileUrl} download={file.fileName}><Download className="w-3 h-3" /></a>
+                        <a href={file?.fileUrl} download={file?.fileName || (file as any)?.name}><Download className="w-3 h-3" /></a>
                       </Button>
                       {isOwner && (
-                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file.id, (file as any).fileName || (file as any).name)}>
+                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file?.id, (file as any)?.fileName || (file as any)?.name)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
@@ -1642,7 +1696,7 @@ const TaskDetails = () => {
         <h3 className="font-semibold text-sm">Activity</h3>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
-        <TaskActivityTimeline taskId={task.id} initialActivities={task.activities || []} />
+        <TaskActivityTimeline taskId={task?.id} initialActivities={(task.activities || []).filter(Boolean)} />
       </div>
     </div>
   ) : null;
@@ -1651,14 +1705,16 @@ const TaskDetails = () => {
     <div className="h-full overflow-hidden animate-fade-in">
       <TaskEditDrawer
         inline
-        taskId={task.id}
+        taskId={task?.id}
         onTaskUpdated={(updated) => setTask(updated)}
         onTaskDeleted={() => navigate("/tasks/all")}
       />
     </div>
   ) : null;
 
-  const CollaborationPanel = task ? (
+  const CollaborationPanel = taskQuery.isLoading ? CollaborationPanelSkeleton :
+    taskQuery.isError ? <div className="flex h-full items-center justify-center text-muted-foreground text-sm">Select a task to view details</div> :
+    task ? (
     <div className="flex h-full flex-col bg-background">
       <Tabs value={rightTab} onValueChange={(v: any) => setRightTab(v)} className="flex h-full flex-col">
         <div className="border-b px-3 pt-2 shrink-0">
@@ -1707,7 +1763,7 @@ const TaskDetails = () => {
         <TabsContent value="edit" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{EditContent}</TabsContent>
       </Tabs>
     </div>
-  ) : CollaborationPanelSkeleton;
+  ) : <div className="flex h-full items-center justify-center text-muted-foreground text-sm">Select a task to view details</div>;
 
   return (
     <>
