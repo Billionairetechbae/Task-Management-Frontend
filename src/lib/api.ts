@@ -1584,10 +1584,7 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    if (result.token) {
-      localStorage.setItem("auth_token", result.token);
-      localStorage.setItem("token", result.token);
-    }
+    // Do NOT automatically save the token - we will check accountType first
     return result;
   }
 

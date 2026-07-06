@@ -178,11 +178,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const response = await api.login({ email, password });
     const loggedInUser = response?.data?.user;
 
-    // Check if user is admin account type
+    // Check if user is admin account type FIRST, before saving ANYTHING
     if ((loggedInUser as any)?.accountType === "admin") {
-      // Clear any temporary tokens that might have been saved
+      // Ensure NO auth state is saved
       clearAllAuthState();
       return { isAdmin: true };
+    }
+
+    // Now that we know it's a workspace account, save the token
+    if (response.token) {
+      localStorage.setItem("auth_token", response.token);
+      localStorage.setItem("token", response.token);
     }
 
     // Normal workspace login flow
