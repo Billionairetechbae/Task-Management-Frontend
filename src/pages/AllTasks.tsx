@@ -40,7 +40,7 @@ const STATUS_PILLS: { value: string; label: string; className: string }[] = [
 
 const AllTasks = () => {
   const location = useLocation();
-  const { workspaces, user } = useAuth();
+  const { workspaces, user, activeCompanyId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -62,13 +62,23 @@ const AllTasks = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [priority, setPriority] = useState<string>("all");
-  const [companyId, setCompanyId] = useState<string>("all");
+  const [companyId, setCompanyId] = useState<string>(() => {
+    const isMyTasksRoute = location.pathname.includes("/tasks/my");
+    return isMyTasksRoute ? activeCompanyId || "all" : "all";
+  });
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [watchedOnly, setWatchedOnly] = useState(false);
   const [hasSubtasksOnly, setHasSubtasksOnly] = useState(false);
 
   const isMyTasksRoute = location.pathname.includes("/tasks/my");
+  
+  // When activeCompanyId changes and we're on /tasks/my, update the filter
+  useEffect(() => {
+    if (isMyTasksRoute && activeCompanyId) {
+      setCompanyId(activeCompanyId);
+    }
+  }, [activeCompanyId, isMyTasksRoute]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -86,6 +96,7 @@ const AllTasks = () => {
     status: status === "all" ? undefined : status,
     priority: priority === "all" ? undefined : priority,
     companyId: companyId === "all" ? undefined : companyId,
+    scope: isMyTasksRoute ? "workspace" : undefined,
   };
 
   const { data, isLoading, isError, error } = useQuery({

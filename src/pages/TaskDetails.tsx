@@ -77,7 +77,7 @@ interface CorrectedTaskComment extends Omit<TaskComment, 'user'> {
 const TaskDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, activeCompanyId } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
   const { isConnected, joinTaskRoom, leaveTaskRoom, sendComment, sendTypingIndicator, on, off } = useWebSocket();
@@ -90,8 +90,19 @@ const TaskDetails = () => {
     queryKey: ["task-details", id],
     queryFn: async () => {
       if (!id) throw new Error("No task id");
-      const response = await api.getTaskById(id);
-      return response.data.task;
+      try {
+        const response = await api.getTaskById(id);
+        return response.data.task;
+      } catch (err: any) {
+        if (err?.status === 403) {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to view this task.",
+            variant: "destructive"
+          });
+        }
+        throw err;
+      }
     },
     enabled: !!id,
     refetchOnWindowFocus: false,
@@ -146,6 +157,7 @@ const TaskDetails = () => {
   const [listStatus, setListStatus] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
   const [listSort, setListSort] = useState<"due" | "created" | "priority">("due");
+  const [listScope, setListScope] = useState<"workspace" | "all_workspaces">("workspace");
   const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
   const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
   const leftSearchRef = useRef<HTMLInputElement>(null);
@@ -192,13 +204,15 @@ const TaskDetails = () => {
   }, []);
 
   const listQuery = useQuery({
-    queryKey: ["task-workbench-list", { listSearch, listStatus, listPage }],
+    queryKey: ["task-workbench-list", { listSearch, listStatus, listPage, activeCompanyId, listScope }],
     queryFn: () =>
       api.getAllTasksCrossWorkspace({
         page: listPage,
         limit: 25,
         search: listSearch || undefined,
         status: listStatus === "all" ? undefined : listStatus,
+        companyId: activeCompanyId || undefined,
+        scope: listScope,
       }),
   });
   const listTasks: Task[] = (listQuery.data?.data?.tasks || []) as any;
@@ -1138,6 +1152,24 @@ const TaskDetails = () => {
             <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
           </Button>
         </div>
+        <div className="flex gap-2">
+          <Button
+            variant={listScope === "workspace" ? "default" : "ghost"}
+            size="sm"
+            className="flex-1 text-xs h-8"
+            onClick={() => { setListScope("workspace"); setListPage(1); }}
+          >
+            Active Workspace
+          </Button>
+          <Button
+            variant={listScope === "all_workspaces" ? "default" : "ghost"}
+            size="sm"
+            className="flex-1 text-xs h-8"
+            onClick={() => { setListScope("all_workspaces"); setListPage(1); }}
+          >
+            All My Tasks
+          </Button>
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -1713,7 +1745,13 @@ const TaskDetails = () => {
   ) : null;
 
   const CollaborationPanel = taskQuery.isLoading ? CollaborationPanelSkeleton :
-    taskQuery.isError ? <div className="flex h-full items-center justify-center text-muted-foreground text-sm">Select a task to view details</div> :
+    taskQuery.isError ? (
+      <div className="flex h-full items-center justify-center text-muted-foreground text-sm text-center p-4">
+        {(taskQuery.error as any)?.status === 403 
+          ? "You don't have permission to view this task." 
+          : "Failed to load task details. Please try again."}
+      </div>
+    ) :
     task ? (
     <div className="flex h-full flex-col bg-background">
       <Tabs value={rightTab} onValueChange={(v: any) => setRightTab(v)} className="flex h-full flex-col">

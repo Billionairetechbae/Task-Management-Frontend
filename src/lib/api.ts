@@ -426,6 +426,7 @@ export interface AllTasksFilters {
   status?: string;
   priority?: string;
   companyId?: string;
+  scope?: "workspace" | "all_workspaces" | "assigned_all" | "assigned_workspace";
 }
 
 export interface AllTasksResponse {
@@ -1659,7 +1660,8 @@ class ApiClient {
     filters?: AllTasksFilters
   ): Promise<AllTasksResponse> {
     const queryParams = new URLSearchParams();
-    queryParams.append("scope", "assigned_all");
+    const scope = filters?.scope || "assigned_all";
+    queryParams.append("scope", scope);
     if (filters?.page) queryParams.append("page", filters.page.toString());
     if (filters?.limit) queryParams.append("limit", filters.limit.toString());
     if (filters?.search) queryParams.append("search", filters.search);
@@ -1667,9 +1669,12 @@ class ApiClient {
     if (filters?.priority) queryParams.append("priority", filters.priority);
     if (filters?.companyId) queryParams.append("companyId", filters.companyId);
 
+    // For workspace scopes, we need to send x-company-id header
+    const useCompanyHeader = scope === "workspace" || scope === "assigned_workspace";
+
     return this.request(`/tasks?${queryParams.toString()}`, {
       method: "GET",
-      headers: this.getAuthHeaders(false),
+      headers: useCompanyHeader ? this.getAuthHeaders() : this.getAuthHeaders(false),
     });
   }
 
