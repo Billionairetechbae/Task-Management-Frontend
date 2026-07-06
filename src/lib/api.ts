@@ -272,6 +272,7 @@ export interface SignupAssistantData {
 export interface LoginData {
   email: string;
   password: string;
+  accountType?: "workspace" | "admin";
 }
 
 /* ============================
