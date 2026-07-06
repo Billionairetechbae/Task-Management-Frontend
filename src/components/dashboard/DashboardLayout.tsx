@@ -28,13 +28,9 @@ import {
   X,
   ChevronLeft,
   ChevronDown,
-  TrendingUp,
-  Search,
   Bot,
-  UserCircle,
   Crown,
   ListChecks,
-  Paperclip,
   Folder,
   FolderKanban,
   Activity,
@@ -81,58 +77,6 @@ const DashboardLayout = ({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const getNavItems = (): NavItemOrGroup[] => {
-    const role = user?.role;
-
-    if (role === "admin") {
-      return [
-        {
-          label: "Overview",
-          href: "/dashboard-admin",
-          icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workspaces",
-          href: "/admin/companies",
-          icon: <Building2 className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Users",
-          href: "/admin/users",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Assistance Requests",
-          href: "/admin/assistance-requests",
-          icon: <Paperclip className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Invites",
-          href: "/admin/invites",
-          icon: <Paperclip className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Tasks",
-          href: "/admin/tasks",
-          icon: <ClipboardList className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Analytics",
-          href: "/admin/analytics",
-          icon: <TrendingUp className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Search",
-          href: "/admin/search",
-          icon: <Search className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Logs",
-          href: "/admin/logs",
-          icon: <Settings className="w-[18px] h-[18px]" />,
-        },
-      ];
-    }
-
     if (workspaceRole === "owner" || workspaceRole === "admin") {
       return [
         {
@@ -226,7 +170,7 @@ const DashboardLayout = ({
           icon: <Building2 className="w-[18px] h-[18px]" />,
         },
         {
-          label: "AI Hub (Coming Soon)",
+          label: "AI Hub",
           href: "/ai-hub",
           icon: <Bot className="w-[18px] h-[18px]" />,
         },
@@ -395,8 +339,6 @@ const DashboardLayout = ({
   };
 
   const getRoleLabel = () => {
-    if (user?.role === "admin") return "Platform Admin";
-
     switch (workspaceRole) {
       case "owner":
         return "Owner";

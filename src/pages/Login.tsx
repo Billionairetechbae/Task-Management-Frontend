@@ -15,16 +15,12 @@ const Login = () => {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-
-    if (user.role === "admin") {
-      navigate("/dashboard-admin");
-      return;
-    }
 
     const ws = Array.isArray(workspaces) ? workspaces : [];
     if (ws.length === 0) {
@@ -50,7 +46,11 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
+      const { isAdmin: adminResult } = await login(formData.email, formData.password);
+      if (adminResult) {
+        setIsAdmin(true);
+        return;
+      }
       toast({
         title: "Welcome back!",
         description: "Signing you in...",
@@ -102,6 +102,52 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-10 h-10 text-destructive"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                ></path>
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold mb-4">This account belongs to the Admin Portal</h1>
+            <p className="text-muted-foreground text-lg mb-8">
+              The account you signed in with is an administrator account and cannot be used in the Workspace application.
+              <br />
+              <br />
+              Please sign in through the Admin Portal instead.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setIsAdmin(false);
+                setFormData({ email: "", password: "" });
+              }}
+            >
+              Return to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background grid lg:grid-cols-2">

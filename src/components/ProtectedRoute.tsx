@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('executive' | 'manager' | 'team_member' | 'admin')[];
+  allowedRoles?: ('executive' | 'manager' | 'team_member')[];
 }
 
 export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
@@ -24,15 +24,12 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/" replace />;
   }
 
-  // Admins bypass workspace-related assumptions; only enforce role gating
-  if (user.role === "admin") {
-    if (allowedRoles && !allowedRoles.includes("admin")) {
-      return <Navigate to="/unauthorized" replace />;
-    }
-    return <>{children}</>;
-    }
+  // Only allow workspace accounts
+  if ((user as any)?.accountType === "admin") {
+    return <Navigate to="/" replace />;
+  }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !allowedRoles.includes(user.role as any)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

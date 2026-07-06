@@ -34,7 +34,7 @@ interface Workspace {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ isAdmin: boolean }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -62,65 +62,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return workspaces.find((w) => w.id === activeCompanyId) || workspaces[0] || null;
   }, [workspaces, activeCompanyId]);
 
-  // const initializeWorkspaceState = (nextUser: User | null) => {
-  //   if (!nextUser) {
-  //     setActiveCompanyIdState(null);
-  //     setWorkspaceRole(null);
-  //     setWorkspaces([]);
-  //     localStorage.removeItem('activeCompanyId');
-  //     return;
-  //   }
-
-  //   const stored = localStorage.getItem('activeCompanyId');
-  //   const resolved = stored || nextUser.companyId || null;
-
-  //   if (resolved) {
-  //     localStorage.setItem('activeCompanyId', resolved);
-  //   } else {
-  //     localStorage.removeItem('activeCompanyId');
-  //   }
-
-  //   setActiveCompanyIdState(resolved);
-
-  //   let role: WorkspaceRole | null = null;
-  //   if (nextUser.role === 'admin') {
-  //     role = 'owner';
-  //   } else if (nextUser.role === 'executive') {
-  //     role = 'owner';
-  //   } else if (nextUser.role === 'manager') {
-  //     role = 'manager';
-  //   } else if (nextUser.role === 'team_member') {
-  //     role = 'member';
-  //   }
-
-  //   setWorkspaceRole(role);
-
-  //   if (nextUser.companyId || nextUser.company) {
-  //     const workspaceId = nextUser.companyId || nextUser.company?.id || resolved;
-  //     if (workspaceId) {
-  //       const workspaceName = nextUser.company?.name || 'Workspace';
-  //       setWorkspaces([
-  //         {
-  //           id: workspaceId,
-  //           name: workspaceName,
-  //           role: role || 'member',
-  //           status: nextUser.isActive ? 'active' : 'inactive',
-  //         },
-  //       ]);
-  //     } else {
-  //       setWorkspaces([]);
-  //     }
-  //   } else {
-  //     setWorkspaces([]);
-  //   }
-  // };
+  const clearAllAuthState = () => {
+    setUser(null);
+    setActiveCompanyIdState(null);
+    setWorkspaceRole(null);
+    setWorkspaces([]);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('activeCompanyId');
+    localStorage.removeItem(WS_STORAGE_KEY);
+  };
 
   const initializeWorkspaceState = (nextUser: User | null, nextWorkspaces: Workspace[] = []) => {
     if (!nextUser) {
-      setActiveCompanyIdState(null);
-      setWorkspaceRole(null);
-      setWorkspaces([]);
-      localStorage.removeItem("activeCompanyId");
+      clearAllAuthState();
       return;
     }
 
@@ -155,6 +110,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await api.getCurrentUser();
       const fetchedUser = response.data?.user;
+
+      // Check if user is admin account type
+      if ((fetchedUser as any)?.accountType === "admin") {
+        clearAllAuthState();
+        return;
+      }
 
       // Primary source: /me/workspaces
       let wsRaw: any[] = [];
@@ -203,10 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       initializeWorkspaceState(fetchedUser, ws);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('token');
-      setUser(null);
-      initializeWorkspaceState(null, []);
+      clearAllAuthState();
     } finally {
       setLoading(false);
     }
@@ -216,9 +174,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<{ isAdmin: boolean }> => {
     const response = await api.login({ email, password });
     const loggedInUser = response?.data?.user;
+
+    // Check if user is admin account type
+    if ((loggedInUser as any)?.accountType === "admin") {
+      // Clear any temporary tokens that might have been saved
+      clearAllAuthState();
+      return { isAdmin: true };
+    }
+
+    // Normal workspace login flow
     let ws: Workspace[] = [];
     try {
       const wsRes = await api.getMyWorkspaces();
@@ -258,13 +225,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     saveCachedWorkspaces(ws);
     setUser(loggedInUser);
     initializeWorkspaceState(loggedInUser, ws);
+    return { isAdmin: false };
   };
 
 
   const logout = () => {
     api.logout();
-    setUser(null);
-    initializeWorkspaceState(null, []);
+    clearAllAuthState();
   };
 
   const setActiveCompanyId = (id: string | null) => {
