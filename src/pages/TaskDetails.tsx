@@ -1134,8 +1134,10 @@ const TaskDetails = () => {
     return map[p || "medium"] || "bg-muted";
   };
 
-  const daysLeft = (deadline?: string) => {
+  const daysLeft = (deadline?: string, status?: string) => {
     if (!deadline) return null;
+    if (status === "completed") return { text: "Completed", tone: "text-green-600" };
+    if (status === "cancelled") return { text: "Cancelled", tone: "text-muted-foreground" };
     const ms = new Date(deadline).getTime() - Date.now();
     const d = Math.ceil(ms / 86400000);
     if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive" };
