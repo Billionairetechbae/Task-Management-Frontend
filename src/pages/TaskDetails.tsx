@@ -1152,9 +1152,21 @@ const TaskDetails = () => {
       <div className="p-4 border-b space-y-3 shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold tracking-tight">Task Workbench</h2>
-          <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
-            <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" onClick={() => setShowCreateTask(true)} className="h-8 w-8">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>New task</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
+              <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
+            </Button>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button
