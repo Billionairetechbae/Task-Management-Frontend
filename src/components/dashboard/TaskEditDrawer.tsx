@@ -687,16 +687,30 @@ export default function TaskEditDrawer({
                               )}
                             </div>
 
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => setAssigneeToRemove(u)}
-                              disabled={saving}
-                              title="Remove"
-                            >
-                              <UserMinus className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {task?.assigneeId !== u.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs"
+                                  onClick={() => handleMakePrimary(u.id)}
+                                  disabled={saving}
+                                  title="Make primary assignee"
+                                >
+                                  Make primary
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => setAssigneeToRemove(u)}
+                                disabled={saving}
+                                title="Remove"
+                              >
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
