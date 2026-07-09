@@ -161,6 +161,7 @@ const TaskDetails = () => {
   const [listScope, setListScope] = useState<"workspace" | "all_workspaces">("workspace");
   const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
   const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [showCreateTask, setShowCreateTask] = useState(false);
   const leftSearchRef = useRef<HTMLInputElement>(null);
 
   // Keyboard shortcuts: "/" or Cmd/Ctrl+K to focus left search; 1-4 to switch right tabs.
