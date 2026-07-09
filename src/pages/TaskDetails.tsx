@@ -1230,7 +1230,7 @@ const TaskDetails = () => {
         ) : (
           sortedListTasks.map((t: any) => {
             const isSelected = t.id === task?.id;
-            const dl = daysLeft(t.deadline);
+            const dl = daysLeft(t.deadline, t.status);
             return (
               <button
                 key={t.id}
