@@ -1357,7 +1357,7 @@ const TaskDetails = () => {
   const DetailsPanel = taskQuery.isLoading ? DetailsPanelSkeleton :
     taskQuery.isError ? <ErrorStatePanel /> :
     task ? (() => {
-      const dl = daysLeft(task.deadline);
+      const dl = daysLeft(task.deadline, task.status);
       const subtaskCount = getTaskSubtaskCount(task);
       const completedSub = (task.subtasks || []).filter(Boolean).filter((s: any) => s.status === "completed" || s.completed).length;
       const progressPct = subtaskCount > 0 ? Math.round((completedSub / subtaskCount) * 100) : 0;
