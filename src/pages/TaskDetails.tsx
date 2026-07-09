@@ -1421,6 +1421,15 @@ const TaskDetails = () => {
                     <TooltipContent>Reload task from server</TooltipContent>
                   </Tooltip>
 
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" variant="secondary" onClick={() => setShowCreateTask(true)} className="gap-1.5">
+                        <Plus className="h-3.5 w-3.5" /> New Task
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Create a new task</TooltipContent>
+                  </Tooltip>
+
                   <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
                   <Tooltip>
                     <TooltipTrigger asChild>
