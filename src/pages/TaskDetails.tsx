@@ -1845,6 +1845,15 @@ const TaskDetails = () => {
 
   return (
     <>
+      <CreateTaskDialog
+        open={showCreateTask}
+        onOpenChange={setShowCreateTask}
+        onSuccess={() => {
+          setShowCreateTask(false);
+          listQuery.refetch();
+        }}
+      />
+
       {preview && (
         <AttachmentPreview
           url={preview.url}
