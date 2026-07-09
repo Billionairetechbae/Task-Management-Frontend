@@ -323,6 +323,29 @@ export default function TaskEditDrawer({
     }
   };
 
+  // Promote an existing assignee to be the primary assignee.
+  // Uses the same updateTask endpoint by sending only `assigneeId` (no
+  // assigneeIds array + no appendAssignees flag) so the secondary list is
+  // preserved by the backend.
+  const handleMakePrimary = async (userId: string) => {
+    if (!task || !userId) return;
+    try {
+      setSaving(true);
+      const res = await api.updateTask(task.id, { assigneeId: userId } as any);
+      const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
+      setTask(updated);
+      const multiIds = (updated?.assignees || []).map((u: any) => u?.id).filter(Boolean);
+      const primaryId = updated?.assigneeId ? [updated.assigneeId] : [];
+      setSelectedAssigneeIds(uniq([...primaryId, ...multiIds]));
+      onTaskUpdated(updated);
+      toast({ title: "Primary assignee updated" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const valid: File[] = [];
