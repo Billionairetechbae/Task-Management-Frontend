@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 
 type Company = {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
   companyCode?: string;
   industry?: string;
 };

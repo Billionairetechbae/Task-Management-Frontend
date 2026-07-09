@@ -167,7 +167,11 @@ export default function TaskEditDrawer({
     try {
       setLoadingMembers(true);
 
-      const res = await api.getCompanyAssistants();
+      // Use the broader team endpoint (same one CreateTaskDialog uses) so
+      // managers/executives/team_members are all assignable. The narrower
+      // /team/team_members endpoint sometimes returns an empty list, which
+      // is why the assignee dropdown appeared blank.
+      const res = await api.getCompanyTeam();
       const data = (res as any)?.data || {};
 
       const list: CompanyMember[] = Array.isArray(data.members)
@@ -176,10 +180,10 @@ export default function TaskEditDrawer({
         ? data.team_members
         : [];
 
-      // active team members only (you can include managers if needed)
-      const usable = list.filter(
-        (m) => m.status !== "removed" && m.user?.role === "team_member"
-      );
+      const usable = list
+        .filter((m) => m.status !== "removed")
+        .filter((m) => m.isVerified === true)
+        .filter((m) => m.user && m.user.id);
 
       setMembers(usable);
     } catch (err) {
@@ -312,6 +316,29 @@ export default function TaskEditDrawer({
 
       onTaskUpdated(updated);
       toast({ title: "Team member removed" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Promote an existing assignee to be the primary assignee.
+  // Uses the same updateTask endpoint by sending only `assigneeId` (no
+  // assigneeIds array + no appendAssignees flag) so the secondary list is
+  // preserved by the backend.
+  const handleMakePrimary = async (userId: string) => {
+    if (!task || !userId) return;
+    try {
+      setSaving(true);
+      const res = await api.updateTask(task.id, { assigneeId: userId } as any);
+      const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
+      setTask(updated);
+      const multiIds = (updated?.assignees || []).map((u: any) => u?.id).filter(Boolean);
+      const primaryId = updated?.assigneeId ? [updated.assigneeId] : [];
+      setSelectedAssigneeIds(uniq([...primaryId, ...multiIds]));
+      onTaskUpdated(updated);
+      toast({ title: "Primary assignee updated" });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -660,16 +687,30 @@ export default function TaskEditDrawer({
                               )}
                             </div>
 
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => setAssigneeToRemove(u)}
-                              disabled={saving}
-                              title="Remove"
-                            >
-                              <UserMinus className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {task?.assigneeId !== u.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs"
+                                  onClick={() => handleMakePrimary(u.id)}
+                                  disabled={saving}
+                                  title="Make primary assignee"
+                                >
+                                  Make primary
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => setAssigneeToRemove(u)}
+                                disabled={saving}
+                                title="Remove"
+                              >
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>

@@ -19,9 +19,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon, Pencil } from "lucide-react";
+import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon, Pencil, Plus, FolderPlus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
+import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -160,6 +161,7 @@ const TaskDetails = () => {
   const [listScope, setListScope] = useState<"workspace" | "all_workspaces">("workspace");
   const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
   const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
+  const [showCreateTask, setShowCreateTask] = useState(false);
   const leftSearchRef = useRef<HTMLInputElement>(null);
 
   // Keyboard shortcuts: "/" or Cmd/Ctrl+K to focus left search; 1-4 to switch right tabs.
@@ -1134,8 +1136,10 @@ const TaskDetails = () => {
     return map[p || "medium"] || "bg-muted";
   };
 
-  const daysLeft = (deadline?: string) => {
+  const daysLeft = (deadline?: string, status?: string) => {
     if (!deadline) return null;
+    if (status === "completed") return { text: "Completed", tone: "text-green-600" };
+    if (status === "cancelled") return { text: "Cancelled", tone: "text-muted-foreground" };
     const ms = new Date(deadline).getTime() - Date.now();
     const d = Math.ceil(ms / 86400000);
     if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive" };
@@ -1148,9 +1152,21 @@ const TaskDetails = () => {
       <div className="p-4 border-b space-y-3 shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold tracking-tight">Task Workbench</h2>
-          <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
-            <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" onClick={() => setShowCreateTask(true)} className="h-8 w-8">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>New task</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
+              <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
+            </Button>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button
@@ -1214,7 +1230,7 @@ const TaskDetails = () => {
         ) : (
           sortedListTasks.map((t: any) => {
             const isSelected = t.id === task?.id;
-            const dl = daysLeft(t.deadline);
+            const dl = daysLeft(t.deadline, t.status);
             return (
               <button
                 key={t.id}
@@ -1341,7 +1357,7 @@ const TaskDetails = () => {
   const DetailsPanel = taskQuery.isLoading ? DetailsPanelSkeleton :
     taskQuery.isError ? <ErrorStatePanel /> :
     task ? (() => {
-      const dl = daysLeft(task.deadline);
+      const dl = daysLeft(task.deadline, task.status);
       const subtaskCount = getTaskSubtaskCount(task);
       const completedSub = (task.subtasks || []).filter(Boolean).filter((s: any) => s.status === "completed" || s.completed).length;
       const progressPct = subtaskCount > 0 ? Math.round((completedSub / subtaskCount) * 100) : 0;
@@ -1360,18 +1376,22 @@ const TaskDetails = () => {
         <div className="flex h-full flex-col overflow-hidden bg-muted/20">
           {/* Sticky header */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 py-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl md:text-2xl font-bold truncate">{task.title || "Untitled Task"}</h1>
-                  <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
-                  <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
-                  <button className="text-muted-foreground hover:text-yellow-500 transition">
-                    <Star className="h-4 w-4" />
-                  </button>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0 flex-1 basis-full md:basis-[55%]">
+                <div className="flex items-start gap-2 flex-wrap">
+                  <h1 className="text-xl md:text-2xl font-bold leading-tight break-words min-w-0 flex-1">
+                    {task.title || "Untitled Task"}
+                  </h1>
+                  <div className="flex items-center gap-1.5 flex-wrap shrink-0 pt-1">
+                    <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
+                    <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                    <button className="text-muted-foreground hover:text-yellow-500 transition">
+                      <Star className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 {task.description && (
-                  <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{task.description}</p>
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{task.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -1399,6 +1419,15 @@ const TaskDetails = () => {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Reload task from server</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" variant="secondary" onClick={() => setShowCreateTask(true)} className="gap-1.5">
+                        <Plus className="h-3.5 w-3.5" /> New Task
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Create a new task</TooltipContent>
                   </Tooltip>
 
                   <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
@@ -1629,6 +1658,17 @@ const TaskDetails = () => {
                               className={comment.userId === user?.id ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground" : ""}
                               file={{ id: f.id, name: f.fileName, url: f.fileUrl, type: f.fileType }}
                               onClick={() => setPreview({ url: f.fileUrl, type: f.fileType, name: f.fileName, attachmentId: f.id, alreadyInDocs: true })}
+                              actions={
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-6 px-2 text-[10px] gap-1"
+                                  disabled
+                                  title="Already in task documents"
+                                >
+                                  <Check className="w-3 h-3" /> In Files
+                                </Button>
+                              }
                             />
                           ))}
                         </div>
@@ -1805,6 +1845,15 @@ const TaskDetails = () => {
 
   return (
     <>
+      <CreateTaskDialog
+        open={showCreateTask}
+        onOpenChange={setShowCreateTask}
+        onSuccess={() => {
+          setShowCreateTask(false);
+          listQuery.refetch();
+        }}
+      />
+
       {preview && (
         <AttachmentPreview
           url={preview.url}

@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Loader2, ListChecks } from "lucide-react";
+import { Loader2, ListChecks, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import CreateTaskDialog from "@/components/CreateTaskDialog";
 
 /**
  * Task Workbench entry — sits under Tasks in the sidebar.
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
  */
 const TaskWorkbench = () => {
   const navigate = useNavigate();
+  const [showCreate, setShowCreate] = useState(false);
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["task-workbench-entry"],
     queryFn: () => api.getAllTasksCrossWorkspace({ page: 1, limit: 1 }),
@@ -42,10 +44,26 @@ const TaskWorkbench = () => {
           <>
             <ListChecks className="h-10 w-10 opacity-40" />
             <p className="text-sm">No tasks available yet.</p>
-            <Button size="sm" onClick={() => navigate("/tasks/all")}>Go to All Tasks</Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setShowCreate(true)} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Create Task
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/tasks/all")}>
+                Go to All Tasks
+              </Button>
+            </div>
           </>
         )}
       </div>
+
+      <CreateTaskDialog
+        open={showCreate}
+        onOpenChange={setShowCreate}
+        onSuccess={() => {
+          setShowCreate(false);
+          refetch();
+        }}
+      />
     </DashboardLayout>
   );
 };
