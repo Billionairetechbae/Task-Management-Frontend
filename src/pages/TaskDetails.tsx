@@ -1376,18 +1376,22 @@ const TaskDetails = () => {
         <div className="flex h-full flex-col overflow-hidden bg-muted/20">
           {/* Sticky header */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 py-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl md:text-2xl font-bold truncate">{task.title || "Untitled Task"}</h1>
-                  <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
-                  <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
-                  <button className="text-muted-foreground hover:text-yellow-500 transition">
-                    <Star className="h-4 w-4" />
-                  </button>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0 flex-1 basis-full md:basis-[55%]">
+                <div className="flex items-start gap-2 flex-wrap">
+                  <h1 className="text-xl md:text-2xl font-bold leading-tight break-words min-w-0 flex-1">
+                    {task.title || "Untitled Task"}
+                  </h1>
+                  <div className="flex items-center gap-1.5 flex-wrap shrink-0 pt-1">
+                    <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
+                    <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                    <button className="text-muted-foreground hover:text-yellow-500 transition">
+                      <Star className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 {task.description && (
-                  <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{task.description}</p>
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{task.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
