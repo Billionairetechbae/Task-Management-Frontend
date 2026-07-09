@@ -1658,6 +1658,17 @@ const TaskDetails = () => {
                               className={comment.userId === user?.id ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground" : ""}
                               file={{ id: f.id, name: f.fileName, url: f.fileUrl, type: f.fileType }}
                               onClick={() => setPreview({ url: f.fileUrl, type: f.fileType, name: f.fileName, attachmentId: f.id, alreadyInDocs: true })}
+                              actions={
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-6 px-2 text-[10px] gap-1"
+                                  disabled
+                                  title="Already in task documents"
+                                >
+                                  <Check className="w-3 h-3" /> In Files
+                                </Button>
+                              }
                             />
                           ))}
                         </div>
