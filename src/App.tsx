@@ -48,6 +48,7 @@ import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 import AuditExport from "@/pages/AuditExport";
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import OnboardingTour from "@/components/OnboardingTour";
+import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 
 const App = () => {
   const { user, loading } = useAuth();
@@ -86,6 +87,7 @@ const App = () => {
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Login />} />
+        <Route path="/auth/google/callback" element={<AuthGoogleCallback />} />
         <Route path="/signup-executive" element={<SignupExecutive />} />
         <Route path="/signup-team_member" element={<SignupTeamMember />} />
         <Route path="/signup-manager" element={<SignupManager />} />

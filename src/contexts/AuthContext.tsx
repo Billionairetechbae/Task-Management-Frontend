@@ -35,6 +35,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ isAdmin: boolean }>;
+  loginWithGoogleToken: (token: string) => Promise<{ isAdmin: boolean }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -174,6 +175,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser();
   }, []);
 
+  const loginWithGoogleToken = async (token: string): Promise<{ isAdmin: boolean }> => {
+    // Save the token first
+    localStorage.setItem("auth_token", token);
+    localStorage.setItem("token", token);
+
+    try {
+      // Use refreshUser logic to get current user and workspaces
+      const userResponse = await api.getCurrentUser();
+      const fetchedUser = userResponse.data?.user;
+
+      // Check if user is admin account type FIRST
+      if ((fetchedUser as any)?.accountType === "admin") {
+        clearAllAuthState();
+        return { isAdmin: true };
+      }
+
+      // Primary source: /me/workspaces
+      let ws: Workspace[] = [];
+      try {
+        const wsRes = await api.getMyWorkspaces();
+        const payload = (wsRes as any)?.data ?? {};
+        const wsRaw = (payload.workspaces ?? (wsRes as any)?.workspaces ?? []) as any[];
+        ws = (Array.isArray(wsRaw) ? wsRaw : []).map((w: any) => ({
+          id: w.companyId || w.company?.id || w.id,
+          name: w.company?.name ?? w.name ?? "Workspace",
+          role: (w.role || "member") as WorkspaceRole,
+          status: w.status || "active",
+          isVerified: !!w.isVerified,
+          company: w.company
+            ? {
+                id: w.company.id,
+                name: w.company.name,
+                companyCode: w.company.companyCode,
+                industry: w.company.industry ?? null,
+              }
+            : w.id
+            ? { id: w.id, name: w.name }
+            : null,
+        })).filter((w: Workspace) => !!w.id);
+      } catch {}
+
+      // Fallback: workspaces embedded in /auth/me or cached
+      if (!Array.isArray(ws) || ws.length === 0) {
+        const meWs = (userResponse.data as any)?.workspaces || (userResponse as any)?.workspaces || [];
+        const cachedWs = loadCachedWorkspaces();
+        const merged = [...meWs];
+        cachedWs.forEach((c: any) => {
+          const cId = c.id || c.companyId || c.company?.id;
+          if (!merged.find((m: any) => (m.companyId || m.company?.id || m.id) === cId)) {
+            merged.push(c);
+          }
+        });
+        ws = merged.map((w: any) => ({
+          id: w.companyId || w.company?.id || w.id,
+          name: w.company?.name ?? w.name ?? "Workspace",
+          role: (w.role || "member") as WorkspaceRole,
+          status: w.status || "active",
+          isVerified: !!w.isVerified,
+          company: w.company
+            ? {
+                id: w.company.id,
+                name: w.company.name,
+                companyCode: w.company.companyCode,
+                industry: w.company.industry ?? null,
+              }
+            : w.id
+            ? { id: w.id, name: w.name }
+            : null,
+        })).filter((w: Workspace) => !!w.id);
+      }
+
+      saveCachedWorkspaces(ws);
+      setUser(fetchedUser);
+      initializeWorkspaceState(fetchedUser, ws);
+      return { isAdmin: false };
+    } catch (error) {
+      console.error("Google login failed:", error);
+      clearAllAuthState();
+      throw error;
+    }
+  };
+
   const login = async (email: string, password: string): Promise<{ isAdmin: boolean }> => {
     const response = await api.login({ email, password });
     const loggedInUser = response?.data?.user;
@@ -257,6 +340,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         loading,
         login,
+        loginWithGoogleToken,
         logout,
         refreshUser,
         setUser,

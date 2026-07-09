@@ -1620,6 +1620,13 @@ class ApiClient {
     });
   }
 
+  async getGoogleAuthUrl(): Promise<{ status: string; data: { authUrl: string } }> {
+    return this.request("/auth/google", {
+      method: "GET",
+      headers: this.getAuthHeaders(false),
+    });
+  }
+
   /* ============================
      TASKS
   ============================ */

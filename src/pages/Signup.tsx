@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Logo from "@/components/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 
 const Signup = () => {
   const { toast } = useToast();
@@ -87,6 +88,18 @@ const Signup = () => {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Creating..." : "Create account"}
               </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-3 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+
+              <GoogleAuthButton />
+
               <div className="text-center text-sm text-muted-foreground">
                 <Link to="/signup-executive" className="underline">Legacy signup options</Link>
               </div>

@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
 import { api } from "@/lib/api";
+import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -252,6 +253,17 @@ const Login = () => {
                 {loading ? "Signing in..." : "Sign in"}
                 {!loading && <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />}
               </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-3 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+
+              <GoogleAuthButton />
             </form>
 
             <div className="mt-10 space-y-6">
