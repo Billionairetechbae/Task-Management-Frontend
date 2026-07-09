@@ -167,7 +167,11 @@ export default function TaskEditDrawer({
     try {
       setLoadingMembers(true);
 
-      const res = await api.getCompanyAssistants();
+      // Use the broader team endpoint (same one CreateTaskDialog uses) so
+      // managers/executives/team_members are all assignable. The narrower
+      // /team/team_members endpoint sometimes returns an empty list, which
+      // is why the assignee dropdown appeared blank.
+      const res = await api.getCompanyTeam();
       const data = (res as any)?.data || {};
 
       const list: CompanyMember[] = Array.isArray(data.members)
@@ -176,10 +180,10 @@ export default function TaskEditDrawer({
         ? data.team_members
         : [];
 
-      // active team members only (you can include managers if needed)
-      const usable = list.filter(
-        (m) => m.status !== "removed" && m.user?.role === "team_member"
-      );
+      const usable = list
+        .filter((m) => m.status !== "removed")
+        .filter((m) => m.isVerified === true)
+        .filter((m) => m.user && m.user.id);
 
       setMembers(usable);
     } catch (err) {
