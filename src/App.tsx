@@ -49,6 +49,7 @@ import AuditExport from "@/pages/AuditExport";
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import OnboardingTour from "@/components/OnboardingTour";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
+import Integrations from "./pages/Integrations";
 
 const App = () => {
   const { user, loading } = useAuth();
