@@ -52,7 +52,11 @@ const AuthGoogleCallback = () => {
         }
 
         // Redirect
-        if (redirect) {
+        const integrationReturn = sessionStorage.getItem("integration_return");
+        if (integrationReturn) {
+          sessionStorage.removeItem("integration_return");
+          navigate(`${integrationReturn}?connected=google`);
+        } else if (redirect) {
           navigate(redirect);
         } else {
           navigate("/dashboard");
