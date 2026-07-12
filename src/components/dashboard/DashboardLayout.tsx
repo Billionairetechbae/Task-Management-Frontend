@@ -35,7 +35,10 @@ import {
   FolderKanban,
   Activity,
   ShieldCheck,
+  Plug,
 } from "lucide-react";
+import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
+
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
 import { WebSocketStatus } from "@/components/WebSocketStatus";
@@ -123,6 +126,11 @@ const DashboardLayout = ({
           label: "Drive",
           href: "/drive",
           icon: <Folder className="w-[18px] h-[18px]" />,
+        },
+        {
+          label: "Integrations",
+          href: "/settings/integrations",
+          icon: <Plug className="w-[18px] h-[18px]" />,
         },
         {
           label: "Access & Permissions",
@@ -220,6 +228,11 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Integrations",
+          href: "/settings/integrations",
+          icon: <Plug className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Access & Permissions",
           items: [
             {
@@ -292,6 +305,11 @@ const DashboardLayout = ({
         label: "Drive",
         href: "/drive",
         icon: <Folder className="w-[18px] h-[18px]" />,
+      },
+      {
+        label: "Integrations",
+        href: "/settings/integrations",
+        icon: <Plug className="w-[18px] h-[18px]" />,
       },
       {
         label: "Access",
@@ -677,6 +695,8 @@ const DashboardLayout = ({
                 <div className="hidden sm:block">
                   <WebSocketStatus />
                 </div>
+
+                <IntegrationsDropdown />
 
                 <NotificationsDropdown />
 

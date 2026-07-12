@@ -1628,6 +1628,46 @@ class ApiClient {
   }
 
   /* ============================
+     INTEGRATIONS HUB
+  ============================ */
+
+  async listIntegrations(): Promise<any> {
+    return this.request("/integrations", {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getIntegrationConnectUrl(provider: string): Promise<any> {
+    return this.request(`/integrations/${provider}/connect`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  buildIntegrationConnectUrl(provider: string): string {
+    const base = API_BASE_URL || "";
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
+    const q = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${base}/integrations/${provider}/connect${q}`;
+  }
+
+  async disconnectIntegration(provider: string): Promise<any> {
+    return this.request(`/integrations/${provider}/disconnect`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+  }
+
+  async getIntegrationActivity(): Promise<any> {
+    return this.request(`/integrations/activity`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /* ============================
      TASKS
   ============================ */
 

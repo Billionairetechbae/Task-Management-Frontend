@@ -49,6 +49,7 @@ import AuditExport from "@/pages/AuditExport";
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import OnboardingTour from "@/components/OnboardingTour";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
+import Integrations from "./pages/Integrations";
 
 const App = () => {
   const { user, loading } = useAuth();
@@ -330,8 +331,26 @@ const App = () => {
           }
         />
 
+        <Route
+          path="/settings/integrations"
+          element={
+            <ProtectedRoute>
+              <Integrations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/integrations"
+          element={
+            <ProtectedRoute>
+              <Integrations />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </>
   );
