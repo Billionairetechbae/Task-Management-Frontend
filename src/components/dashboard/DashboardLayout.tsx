@@ -128,6 +128,11 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Integrations",
+          href: "/settings/integrations",
+          icon: <Plug className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Access & Permissions",
           items: [
             {
@@ -223,6 +228,11 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Integrations",
+          href: "/settings/integrations",
+          icon: <Plug className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Access & Permissions",
           items: [
             {
@@ -295,6 +305,11 @@ const DashboardLayout = ({
         label: "Drive",
         href: "/drive",
         icon: <Folder className="w-[18px] h-[18px]" />,
+      },
+      {
+        label: "Integrations",
+        href: "/settings/integrations",
+        icon: <Plug className="w-[18px] h-[18px]" />,
       },
       {
         label: "Access",
@@ -680,6 +695,8 @@ const DashboardLayout = ({
                 <div className="hidden sm:block">
                   <WebSocketStatus />
                 </div>
+
+                <IntegrationsDropdown />
 
                 <NotificationsDropdown />
 
