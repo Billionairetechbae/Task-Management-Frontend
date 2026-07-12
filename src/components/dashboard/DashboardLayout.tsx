@@ -36,6 +36,8 @@ import {
   Activity,
   ShieldCheck,
   Plug,
+} from "lucide-react";
+import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
