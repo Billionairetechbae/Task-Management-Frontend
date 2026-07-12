@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 const AuthGoogleCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { loginWithGoogleToken } = useAuth();
+  const { loginWithGoogleToken, user } = useAuth();
   const { toast } = useToast();
   const [processing, setProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,11 +24,34 @@ const AuthGoogleCallback = () => {
             "state_expired": "Authentication session expired",
             "google_auth_failed": "Google authentication failed",
           };
+          // Check if this is an integration error
+          const integrationReturn = sessionStorage.getItem("integration_return");
+          if (integrationReturn) {
+            sessionStorage.removeItem("integration_return");
+            navigate(`${integrationReturn}?error=${encodeURIComponent(errorParam)}`);
+            return;
+          }
           throw new Error(errorMessages[errorParam] || "Authentication failed");
+        }
+
+        // Check if this is an integration success (has connected param or integration_return exists without token)
+        const connectedParam = searchParams.get("connected");
+        const integrationReturn = sessionStorage.getItem("integration_return");
+        if (connectedParam && integrationReturn) {
+          sessionStorage.removeItem("integration_return");
+          navigate(`${integrationReturn}?connected=${encodeURIComponent(connectedParam)}`);
+          return;
         }
 
         const token = searchParams.get("token");
         const redirect = searchParams.get("redirect");
+
+        // If no token but integration_return, treat as integration success and go back
+        if (!token && integrationReturn) {
+          sessionStorage.removeItem("integration_return");
+          navigate(`${integrationReturn}?connected=google`);
+          return;
+        }
 
         if (!token) {
           throw new Error("No authentication token received");
@@ -42,7 +65,20 @@ const AuthGoogleCallback = () => {
         url.searchParams.delete("error");
         window.history.replaceState({}, "", url.toString());
 
-        // Login with the token
+        // If user is already logged in, just redirect (don't try to re-login)
+        if (user) {
+          if (integrationReturn) {
+            sessionStorage.removeItem("integration_return");
+            navigate(`${integrationReturn}?connected=google`);
+          } else if (redirect) {
+            navigate(redirect);
+          } else {
+            navigate("/dashboard");
+          }
+          return;
+        }
+
+        // Login with the token (only if not already logged in)
         const { isAdmin } = await loginWithGoogleToken(token);
 
         if (isAdmin) {
@@ -52,7 +88,6 @@ const AuthGoogleCallback = () => {
         }
 
         // Redirect
-        const integrationReturn = sessionStorage.getItem("integration_return");
         if (integrationReturn) {
           sessionStorage.removeItem("integration_return");
           navigate(`${integrationReturn}?connected=google`);
@@ -63,6 +98,12 @@ const AuthGoogleCallback = () => {
         }
       } catch (err: any) {
         console.error("Google callback error:", err);
+        const integrationReturn = sessionStorage.getItem("integration_return");
+        if (integrationReturn) {
+          sessionStorage.removeItem("integration_return");
+          navigate(`${integrationReturn}?error=${encodeURIComponent(err.message || "Integration failed")}`);
+          return;
+        }
         setError(err.message || "Failed to complete authentication");
         toast({
           title: "Authentication failed",
@@ -75,7 +116,7 @@ const AuthGoogleCallback = () => {
     };
 
     handleCallback();
-  }, [searchParams, navigate, loginWithGoogleToken, toast]);
+  }, [searchParams, navigate, loginWithGoogleToken, toast, user]);
 
   if (processing) {
     return (

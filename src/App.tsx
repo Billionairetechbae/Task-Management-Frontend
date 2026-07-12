@@ -89,6 +89,7 @@ const App = () => {
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Login />} />
         <Route path="/auth/google/callback" element={<AuthGoogleCallback />} />
+        <Route path="/integrations/google/callback" element={<AuthGoogleCallback />} />
         <Route path="/signup-executive" element={<SignupExecutive />} />
         <Route path="/signup-team_member" element={<SignupTeamMember />} />
         <Route path="/signup-manager" element={<SignupManager />} />
