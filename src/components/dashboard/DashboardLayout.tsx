@@ -35,7 +35,8 @@ import {
   FolderKanban,
   Activity,
   ShieldCheck,
-} from "lucide-react";
+  Plug,
+
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
 import { WebSocketStatus } from "@/components/WebSocketStatus";
