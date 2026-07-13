@@ -26,6 +26,7 @@ import {
   Bell,
   ListTodo,
 } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { useState } from "react";
 import { Task, api } from "@/lib/api";
 import CompanyBadge from "@/components/CompanyBadge";
@@ -334,7 +335,12 @@ export const TaskTable = ({
                 </td>
 
                 <td className="px-4 py-3 text-[12px] text-muted-foreground">
-                  {new Date(task.deadline).toLocaleDateString()}
+                  <div className="flex items-center gap-2">
+                    <span>{new Date(task.deadline).toLocaleDateString()}</span>
+                    {task.calendarSynced ? (
+                      <Calendar className="w-3 h-3 text-muted-foreground" />
+                    ) : null}
+                  </div>
                 </td>
 
                 <td className="px-3 py-3">
@@ -476,7 +482,10 @@ export const TaskTable = ({
 
               <div>
                 <p className="text-[10px] uppercase tracking-wide">Deadline</p>
-                <p>{new Date(task.deadline).toLocaleDateString()}</p>
+                <div className="flex items-center gap-1">
+                  <p>{new Date(task.deadline).toLocaleDateString()}</p>
+                  {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
+                </div>
               </div>
             </div>
 
@@ -590,8 +599,9 @@ export const CompactTaskTable = ({
                   {task.priority}
                 </Badge>
                 {task.deadline && (
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
                     Due {new Date(task.deadline).toLocaleDateString()}
+                    {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
                   </span>
                 )}
               </div>

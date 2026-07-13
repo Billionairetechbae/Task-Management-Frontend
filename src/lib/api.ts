@@ -390,6 +390,11 @@ export interface Task {
 
   // Some backends return this
   assignees?: any[] | null;
+
+  // Google calendar sync info (read-only)
+  calendarSynced?: boolean;
+  googleCalendarEventId?: string | null;
+  googleCalendarId?: string | null;
 }
 
 export interface CreateTaskData {
@@ -1662,6 +1667,13 @@ class ApiClient {
 
   async getIntegrationActivity(): Promise<any> {
     return this.request(`/integrations/activity`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getGoogleIntegrationStatus(): Promise<any> {
+    return this.request(`/integrations/google/status`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });

@@ -1470,6 +1470,9 @@ const TaskDetails = () => {
                   <Calendar className="h-3.5 w-3.5" /> Deadline
                 </div>
                 <p className="font-semibold text-sm mt-1">{task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</p>
+                {task.calendarSynced ? (
+                  <p className="text-[11px] mt-1 text-muted-foreground flex items-center gap-2">📅 Synced to Google Calendar</p>
+                ) : null}
                 {dl && <p className={cn("text-[11px] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
               </div>
               <div className="rounded-lg border bg-card p-3">

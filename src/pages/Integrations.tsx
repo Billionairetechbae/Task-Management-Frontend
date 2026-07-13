@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Activity, CheckCircle2, Loader2, Plug, RefreshCw, Search, Settings2, X,
 } from "lucide-react";
+import useGoogleIntegrationStatus from "@/hooks/use-google-integration";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ const Integrations = () => {
   const [selected, setSelected] = useState<Integration | null>(null);
   const [disconnectTarget, setDisconnectTarget] = useState<Integration | null>(null);
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
+  // Ensure Google integration status is fetched and cached when this page loads
+  useGoogleIntegrationStatus();
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -443,9 +446,22 @@ const IntegrationCard = ({
               {style.label}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-            {integration.description || `Integrate ${integration.name} with your workspace.`}
-          </p>
+          {integration.id === "google" ? (
+            <div className="mt-0.5">
+              {integration.connected ? (
+                <p className="text-sm font-medium">✓ Connected</p>
+              ) : (
+                <p className="text-sm font-medium">Not Connected</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {integration.connected ? "Calendar Sync Enabled" : "Connect Google Calendar"}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+              {integration.description || `Integrate ${integration.name} with your workspace.`}
+            </p>
+          )}
         </div>
       </div>
 

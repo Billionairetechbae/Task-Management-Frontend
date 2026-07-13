@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { api, CompanyMember } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import useGoogleIntegrationStatus from "@/hooks/use-google-integration";
 
 import { User, Clock, X, Plus, Paperclip } from "lucide-react";
 import { getFileIcon } from "@/utils/fileIcons";
@@ -27,6 +28,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
   const { toast } = useToast();
   const { workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
+  const googleStatus = useGoogleIntegrationStatus();
 
   const [loading, setLoading] = useState(false);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -341,6 +343,10 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
               onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
               required
             />
+            {/* Informational helper when Google Calendar is connected and a deadline is selected */}
+            {formData.deadline && googleStatus.data?.connected ? (
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-2">📅 This task will automatically be added to your Google Calendar.</p>
+            ) : null}
           </div>
 
           <div>
