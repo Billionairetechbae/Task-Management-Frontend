@@ -78,7 +78,7 @@ const WorkspaceSwitcher = () => {
                 key={workspace.id}
                 onClick={() => {
                   setActiveCompanyId(workspace.id);
-                  window.location.reload();
+                  setOpen(false);
                 }}
                 className={cn(
                   "flex items-center gap-3 py-2.5 cursor-pointer transition-colors duration-150",

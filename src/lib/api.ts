@@ -1,5 +1,6 @@
 // src/lib/api.ts
 import { envOr } from "@/lib/env";
+import type { CalendarResponse, CalendarEvent } from "../types/calendar";
 
 /* ============================
    SHARED TYPES
@@ -1372,6 +1373,48 @@ export class NetworkError extends Error {
 }
 
 class ApiClient {
+  async get<T>(
+      path: string,
+      options?: {
+          params?: Record<string, any>;
+          includeWorkspace?: boolean;
+      }
+  ): Promise<T> {
+
+      let url = path;
+
+      if (options?.params) {
+
+          const search = new URLSearchParams();
+
+          Object.entries(options.params).forEach(([key, value]) => {
+
+              if (
+                  value !== undefined &&
+                  value !== null &&
+                  value !== ""
+              ) {
+                  search.append(key, String(value));
+              }
+
+          });
+
+          const qs = search.toString();
+
+          if (qs) {
+              url += `?${qs}`;
+          }
+
+      }
+
+      return this.request<T>(url, {
+          method: "GET",
+          headers: this.getAuthHeaders(
+              options?.includeWorkspace ?? true
+          ),
+      });
+
+  }
   getUserById: any;
   getTeamMembers: any;
   private getAuthHeaders(includeWorkspace: boolean = true): HeadersInit {
@@ -1390,6 +1433,26 @@ class ApiClient {
       (headers as any)["x-company-id"] = activeCompanyId;
     }
     return headers;
+  }
+
+  async getCalendarEvents(
+    start: Date,
+    end: Date,
+    scope: "company" | "my" | "team" = "company"
+  ): Promise<CalendarResponse> {
+    const params = new URLSearchParams({
+      start: start.toISOString(),
+      end: end.toISOString(),
+      scope,
+    });
+
+    return this.request<CalendarResponse>(
+      `/calendar/events?${params.toString()}`,
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
   }
 
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {

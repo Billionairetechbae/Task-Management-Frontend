@@ -21,6 +21,7 @@ import {
   Users,
   ClipboardList,
   Building2,
+  CalendarDays,
   Settings,
   User,
   LogOut,
@@ -128,6 +129,11 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Calendar",
+          href: "/calendar",
+          icon: <CalendarDays className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Integrations",
           href: "/settings/integrations",
           icon: <Plug className="w-[18px] h-[18px]" />,
@@ -228,6 +234,11 @@ const DashboardLayout = ({
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Calendar",
+          href: "/calendar",
+          icon: <CalendarDays className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Integrations",
           href: "/settings/integrations",
           icon: <Plug className="w-[18px] h-[18px]" />,
@@ -305,6 +316,11 @@ const DashboardLayout = ({
         label: "Drive",
         href: "/drive",
         icon: <Folder className="w-[18px] h-[18px]" />,
+      },
+      {
+        label: "Calendar",
+        href: "/calendar",
+        icon: <CalendarDays className="w-[18px] h-[18px]" />,
       },
       {
         label: "Integrations",

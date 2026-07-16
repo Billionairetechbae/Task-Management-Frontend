@@ -51,6 +51,8 @@ import OnboardingTour from "@/components/OnboardingTour";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import Integrations from "./pages/Integrations";
 
+import Calendar from "./pages/Calendar";
+
 const App = () => {
   const { user, loading } = useAuth();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -102,6 +104,7 @@ const App = () => {
         <Route path="/reset-password/:token" element={<Login />} />
         <Route path="/project-invite/:token" element={<ProjectInvite />} />
         <Route path="/client-view/:token" element={<ClientView />} />
+        <Route path="/calendar" element={<Calendar />} />
 
         {/* TeamMembers Page */}
         <Route
