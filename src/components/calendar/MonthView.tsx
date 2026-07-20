@@ -6,6 +6,7 @@ import {
     getDay,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { Loader2 } from "lucide-react";
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
@@ -41,14 +42,15 @@ export default function MonthView({
 }: Props) {
     if (loading) {
         return (
-            <div className="flex h-full items-center justify-center">
-                Loading calendar...
+            <div className="flex h-full items-center justify-center gap-3 text-gray-500">
+                <Loader2 size={24} className="animate-spin text-blue-600" />
+                <span>Loading calendar...</span>
             </div>
         );
     }
 
     return (
-        <div className="h-[calc(100vh-170px)] rounded-lg bg-white p-4">
+        <div className="h-full p-2">
             <Calendar
                 localizer={localizer}
                 view="month"
@@ -74,6 +76,7 @@ export default function MonthView({
                         />
                     ),
                 }}
+                className="rbc-custom"
             />
         </div>
     );
