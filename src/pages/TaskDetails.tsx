@@ -19,7 +19,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, Files as FilesIcon, Pencil, Plus, FolderPlus } from "lucide-react";
+import { 
+  X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, 
+  MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, 
+  Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, 
+  Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, 
+  Files as FilesIcon, Pencil, Plus, FolderPlus, ChevronDown, ChevronUp,
+  ChevronLeft as ChevronLeftIcon
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
@@ -60,7 +67,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
-
 // Define the correct User type based on your database schema
 interface CorrectedUser {
   id: string;
@@ -68,7 +74,7 @@ interface CorrectedUser {
   lastName: string;
   email: string;
   role: string;
-  profilePictureUrl?: string; // Changed from profilePicture to profilePictureUrl
+  profilePictureUrl?: string;
 }
 
 interface CorrectedTaskComment extends Omit<TaskComment, 'user'> {
@@ -86,6 +92,12 @@ const TaskDetails = () => {
   const [task, setTask] = useState<Task | null>(null);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
+  
+  // NEW: State for description expansion
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  
+  // NEW: State for collapsible collaboration panel
+  const [collabPanelOpen, setCollabPanelOpen] = useState(true);
 
   const taskQuery = useQuery({
     queryKey: ["task-details", id],
@@ -134,6 +146,7 @@ const TaskDetails = () => {
       setComments(commentsQuery.data);
     }
   }, [commentsQuery.data]);
+  
   const [sendingComment, setSendingComment] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -157,7 +170,7 @@ const TaskDetails = () => {
   const [listSearch, setListSearch] = useState("");
   const [listStatus, setListStatus] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
-  const [listSort, setListSort] = useState<"due" | "created" | "priority">("due");
+  const [listSort, setListSort] = useState<"due" | "created" | "priority">("created"); // CHANGED: default to "created"
   const [listScope, setListScope] = useState<"workspace" | "all_workspaces">("workspace");
   const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
   const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
@@ -234,8 +247,6 @@ const TaskDetails = () => {
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const optimisticCommentRef = useRef<Map<string, any>>(new Map());
-
-
 
   // WebSocket setup
   useEffect(() => {
@@ -450,8 +461,6 @@ const TaskDetails = () => {
     
     return () => clearInterval(interval);
   }, []);
-
-
 
   const handleStatusChange = async (newStatus: string) => {
     if (!task) return;
@@ -1054,24 +1063,15 @@ const TaskDetails = () => {
           ))}
         </div>
 
-        {/* Overview */}
+        {/* Overview skeleton */}
         <section className="rounded-lg border bg-card p-4">
           <Skeleton className="h-5 w-32 mb-3" />
           <Skeleton className="h-4 w-full mb-1" />
           <Skeleton className="h-4 w-full mb-1" />
-          <Skeleton className="h-4 w-2/3 mb-4" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t">
-            {[1,2,3,4].map(i => (
-              <div key={i}>
-                <Skeleton className="h-3 w-20 mb-1" />
-                <Skeleton className="h-8 w-12 mb-1" />
-                <Skeleton className="h-3 w-16" />
-              </div>
-            ))}
-          </div>
+          <Skeleton className="h-4 w-2/3" />
         </section>
 
-        {/* Subtasks */}
+        {/* Subtasks skeleton */}
         <section className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-4">
             <Skeleton className="h-5 w-32" />
@@ -1085,7 +1085,7 @@ const TaskDetails = () => {
           ))}
         </section>
 
-        {/* Watchers */}
+        {/* Watchers skeleton */}
         <section className="rounded-lg border bg-card p-4">
           <Skeleton className="h-5 w-24 mb-3" />
           <div className="flex gap-2">
@@ -1449,6 +1449,23 @@ const TaskDetails = () => {
                     <TooltipContent>Open the full task editor</TooltipContent>
                   </Tooltip>
 
+                  {/* NEW: Toggle collaboration panel */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setCollabPanelOpen(!collabPanelOpen)}
+                        className="h-8 w-8"
+                      >
+                        {collabPanelOpen ? <ChevronRight size={18} /> : <ChevronLeftIcon size={18} />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {collabPanelOpen ? "Hide collaboration panel" : "Show collaboration panel"}
+                    </TooltipContent>
+                  </Tooltip>
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -1510,39 +1527,68 @@ const TaskDetails = () => {
               </div>
             </div>
 
-            {/* Overview */}
+            {/* Overview with Expand/Collapse - ENHANCED */}
             <section className="rounded-lg border bg-card p-4">
               <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
                 <ListChecks className="h-4 w-4" /> Overview
               </h3>
-              <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-                {task.description || <span className="text-muted-foreground italic">No description provided.</span>}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t">
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Subtasks</p>
-                  <p className="font-bold text-lg">{completedSub}/{subtaskCount || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">{progressPct}% completed</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Attachments</p>
-                  <p className="font-bold text-lg">{task.attachments?.length || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">Files</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Comments</p>
-                  <p className="font-bold text-lg">{comments.length}</p>
-                  <p className="text-[10px] text-muted-foreground">Total</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Watchers</p>
-                  <p className="font-bold text-lg">{getTaskWatcherCount(task)}</p>
-                  <p className="text-[10px] text-muted-foreground">Following</p>
-                </div>
+              {task.description ? (
+                <>
+                  <div className="relative">
+                    <p className={cn(
+                      "text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed",
+                      !showFullDescription && "line-clamp-3"
+                    )}>
+                      {task.description}
+                    </p>
+                    {task.description.length > 100 && (
+                      <button
+                        onClick={() => setShowFullDescription(!showFullDescription)}
+                        className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
+                      >
+                        {showFullDescription ? (
+                          <>
+                            See less <ChevronUp size={14} />
+                          </>
+                        ) : (
+                          <>
+                            See more <ChevronDown size={14} />
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No description provided.</p>
+              )}
+            </section>
+
+            {/* Stats Cards - MOVED OUTSIDE Overview */}
+            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-lg border bg-card p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Subtasks</p>
+                <p className="font-bold text-lg">{completedSub}/{subtaskCount || 0}</p>
+                <p className="text-[10px] text-muted-foreground">{progressPct}% completed</p>
+              </div>
+              <div className="rounded-lg border bg-card p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Attachments</p>
+                <p className="font-bold text-lg">{task.attachments?.length || 0}</p>
+                <p className="text-[10px] text-muted-foreground">Files</p>
+              </div>
+              <div className="rounded-lg border bg-card p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Comments</p>
+                <p className="font-bold text-lg">{comments.length}</p>
+                <p className="text-[10px] text-muted-foreground">Total</p>
+              </div>
+              <div className="rounded-lg border bg-card p-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Watchers</p>
+                <p className="font-bold text-lg">{getTaskWatcherCount(task)}</p>
+                <p className="text-[10px] text-muted-foreground">Following</p>
               </div>
             </section>
 
-            {/* Subtasks */}
+            {/* Subtasks - ENHANCED with scrollable list */}
             <section className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -1928,13 +1974,17 @@ const TaskDetails = () => {
                 {TaskListPanel}
               </ResizablePanel>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={50} minSize={35}>
+              <ResizablePanel defaultSize={collabPanelOpen ? 50 : 78} minSize={35}>
                 {DetailsPanel}
               </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={28} minSize={22} maxSize={40}>
-                {CollaborationPanel}
-              </ResizablePanel>
+              {collabPanelOpen && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={28} minSize={22} maxSize={40}>
+                    {CollaborationPanel}
+                  </ResizablePanel>
+                </>
+              )}
             </ResizablePanelGroup>
           </div>
         )}

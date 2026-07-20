@@ -1,10 +1,13 @@
+// src/components/tasks/SubtaskList.tsx - Updated version
+
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Plus, Trash2 } from "lucide-react";
+import { Check, Loader2, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { api, TaskSubtask } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type Props = {
   taskId: string;
@@ -37,16 +40,23 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     setSubtasks(initialSubtasks);
   }, [initialSubtasks]);
 
-  const completion = useMemo(() => {
+  const { total, completed, incomplete } = useMemo(() => {
     const total = subtasks.length;
     const completed = subtasks.filter((s) => s.status === "completed").length;
-    return { total, completed };
+    const incomplete = subtasks.filter((s) => s.status !== "completed");
+    return { total, completed, incomplete };
   }, [subtasks]);
+
+  const visibleSubtasks = useMemo(() => {
+    if (showCompleted) return subtasks;
+    return incomplete;
+  }, [subtasks, showCompleted, incomplete]);
 
   const sync = (next: TaskSubtask[]) => {
     setSubtasks(next);
@@ -128,22 +138,51 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
 
   return (
     <div className="space-y-3">
+      {/* Header with progress */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {completion.completed}/{completion.total} completed
-        </p>
-        <Button variant="ghost" size="sm" onClick={loadSubtasks}>
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">
+            {completed}/{total} completed
+          </p>
+          {total > 0 && (
+            <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-300" 
+                style={{ width: `${total > 0 ? (completed / total) * 100 : 0}%` }} 
+              />
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {subtasks.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setShowCompleted(!showCompleted)}
+            >
+              {showCompleted ? (
+                <>Hide completed <ChevronUp size={14} /></>
+              ) : (
+                <>Show completed ({completed}) <ChevronDown size={14} /></>
+              )}
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={loadSubtasks} className="h-7 text-xs">
+            Refresh
+          </Button>
+        </div>
       </div>
 
+      {/* Create input */}
       {canEdit && (
         <div className="flex gap-2">
           <Input
-            placeholder="Create a subtask"
+            placeholder="Create a subtask..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && createSubtask()}
+            className="flex-1"
           />
           <Button size="sm" onClick={createSubtask} disabled={!title.trim() || saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -151,18 +190,26 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
         </div>
       )}
 
+      {/* Subtasks list - scrollable */}
       {subtasks.length === 0 ? (
-        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground text-center">
           No subtasks yet.
         </div>
       ) : (
-        <div className="space-y-2">
-          {subtasks.map((subtask) => (
-            <div key={subtask.id} className="flex items-center gap-2 rounded-md border p-2">
+        <div className="max-h-[300px] overflow-y-auto pr-1 space-y-1.5">
+          {visibleSubtasks.map((subtask) => (
+            <div 
+              key={subtask.id} 
+              className={cn(
+                "flex items-center gap-2 rounded-md border p-2 transition-all",
+                subtask.status === "completed" && "bg-muted/30 opacity-70"
+              )}
+            >
               <Checkbox
                 checked={subtask.status === "completed"}
                 onCheckedChange={(checked) => toggleStatus(subtask, !!checked)}
                 disabled={!canEdit}
+                className="shrink-0"
               />
               {editingId === subtask.id ? (
                 <Input
@@ -173,11 +220,15 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
                     if (e.key === "Enter") saveInlineTitle(subtask);
                     if (e.key === "Escape") setEditingId(null);
                   }}
+                  className="flex-1 h-7 text-sm"
                 />
               ) : (
                 <button
                   type="button"
-                  className={`flex-1 text-left text-sm ${subtask.status === "completed" ? "line-through text-muted-foreground" : ""}`}
+                  className={cn(
+                    "flex-1 text-left text-sm truncate transition-all",
+                    subtask.status === "completed" && "line-through text-muted-foreground"
+                  )}
                   onClick={() => {
                     if (!canEdit) return;
                     setEditingId(subtask.id);
@@ -187,16 +238,23 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
                   {subtask.title}
                 </button>
               )}
-              {editingId === subtask.id && (
-                <Button size="icon" variant="ghost" onClick={() => saveInlineTitle(subtask)}>
-                  <Check className="w-4 h-4" />
-                </Button>
-              )}
-              {canEdit && (
-                <Button size="icon" variant="ghost" onClick={() => deleteSubtask(subtask)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              )}
+              <div className="flex items-center gap-0.5 shrink-0">
+                {editingId === subtask.id && (
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => saveInlineTitle(subtask)}>
+                    <Check className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => deleteSubtask(subtask)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -206,4 +264,3 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
 };
 
 export default SubtaskList;
-
