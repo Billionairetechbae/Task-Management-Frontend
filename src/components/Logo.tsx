@@ -1,5 +1,3 @@
-import logo from "@/assets/logo.png";
-
 interface LogoProps {
   className?: string;
 }
@@ -7,10 +5,10 @@ interface LogoProps {
 const Logo = ({ className = "h-8" }: LogoProps) => {
   return (
     <img 
-      src={logo} 
+      src="/logo.png" 
       alt="Admiino" 
       className={className}
-    />
+    /> 
   );
 };
 
