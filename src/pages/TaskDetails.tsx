@@ -25,7 +25,7 @@ import {
   Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, 
   Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, 
   Files as FilesIcon, Pencil, Plus, FolderPlus, ChevronDown, ChevronUp,
-  ChevronLeft as ChevronLeftIcon
+  ChevronLeft as ChevronLeftIcon, Eye, ExternalLink, Loader2
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
@@ -45,8 +45,10 @@ import FilePreviewCard from "@/components/tasks/FilePreviewCard";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
+import GoogleDrivePickerDialog from "@/components/tasks/GoogleDrivePickerDialog";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { useGoogleDriveFiles } from "@/hooks/useGoogleDriveFiles";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   ResizablePanelGroup,
@@ -163,6 +165,8 @@ const TaskDetails = () => {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [pendingComments, setPendingComments] = useState<Map<string, {content: string, timestamp: number}>>(new Map());
   const [showChatSheet, setShowChatSheet] = useState(false);
+  const [showDrivePicker, setShowDrivePicker] = useState(false);
+  const [savingToDrive, setSavingToDrive] = useState<string | null>(null);
 
   // Workbench state
   const isMobile = useIsMobile();
@@ -245,6 +249,8 @@ const TaskDetails = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const { uploadToGoogleDrive, uploadLoading } = useGoogleDriveFiles({ enabled: false });
+  const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "";
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const optimisticCommentRef = useRef<Map<string, any>>(new Map());
 
@@ -554,6 +560,62 @@ const TaskDetails = () => {
 
   const handleDeleteAttachment = (attachmentId: string, name?: string) => {
     setAttachmentToDelete({ id: attachmentId, name });
+  };
+
+  const handleAttachGoogleDriveFile = async (driveAttachment: {
+    fileId: string;
+    name: string;
+    mimeType: string;
+    webViewLink?: string;
+    thumbnailLink?: string;
+    source: "google-drive";
+  }) => {
+    if (!id) return;
+    try {
+      setUpdating(true);
+      const fd = new FormData();
+      fd.append("googleDriveAttachments", JSON.stringify([driveAttachment]));
+      const res = await api.updateTask(id, fd);
+      setTask(res.data.task);
+      toast({ title: "Success", description: `"${driveAttachment.name}" attached from Google Drive` });
+    } catch (err: any) {
+      toast({
+        title: "Failed to attach Google Drive file",
+        description: err?.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSaveToGoogleDrive = async (attachment: { id: string; fileName: string; fileUrl: string; fileType?: string }) => {
+    if (!attachment.fileUrl || !attachment.fileName) return;
+    setSavingToDrive(attachment.id);
+    try {
+      const resolvedUrl = attachment.fileUrl.startsWith("http")
+        ? attachment.fileUrl
+        : `${API_BASE_URL}${attachment.fileUrl}`;
+
+      const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
+      const headers: Record<string, string> = {};
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+      const resp = await fetch(resolvedUrl, { headers });
+      if (!resp.ok) throw new Error("Could not fetch file for upload");
+      const blob = await resp.blob();
+      const file = new File([blob], attachment.fileName, {
+        type: attachment.fileType || blob.type || "application/octet-stream",
+      });
+
+      uploadToGoogleDrive({ file, fileName: attachment.fileName });
+    } catch (err: any) {
+      toast({
+        title: "Failed to save to Google Drive",
+        description: err?.message || "Please try again",
+        variant: "destructive",
+      });
+      setSavingToDrive(null);
+    }
   };
 
   const handleSendComment = async (overrideContent?: string) => {
@@ -1746,47 +1808,193 @@ const TaskDetails = () => {
 
   const FilesContent = task ? (
     <div className="flex h-full flex-col">
-      <div className="p-3 border-b flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <FilesIcon className="h-4 w-4" />
-          <h3 className="font-semibold text-sm">Task Files</h3>
-          <Badge variant="outline" className="text-[10px]">{task.attachments?.length || 0}</Badge>
+      <div className="p-3 border-b shrink-0 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FilesIcon className="h-4 w-4" />
+            <h3 className="font-semibold text-sm">Attachments</h3>
+            <Badge variant="outline" className="text-[10px]">{task.attachments?.length || 0}</Badge>
+          </div>
         </div>
-        <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles}>
-          {uploadingFiles ? <Clock className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />} Upload
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 text-xs justify-center"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingFiles}
+          >
+            {uploadingFiles ? <Clock className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+            Upload from Device
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 text-xs justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
+            onClick={() => setShowDrivePicker(true)}
+            disabled={uploadingFiles}
+          >
+            <svg viewBox="0 0 24 24" className="w-3 h-3 text-[#4285F4] fill-current" aria-hidden>
+              <path d="M7.71 3.5h8.58l3.71 6.43H4L7.71 3.5zM3.5 10l3.71 6.43L7.43 20.5h-.72L2.79 11.5l.71-1.5zM20.5 10l.71.5-3.92 9h-.72l-.21-4.07L20.5 10zM3.71 10.5h13.29l-3.29 7.62h-6.72L3.71 10.5z" />
+            </svg>
+            Choose from Google Drive
+          </Button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         {task.attachments?.filter(Boolean).length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {task.attachments.filter(Boolean).map((file) => {
               const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
+              const isGoogleDrive = (file as any)?.source === "google-drive";
+              const driveViewLink = (file as any)?.webViewLink;
+              const fileName = file?.fileName || (file as any)?.name;
+              const fileType = file?.fileType || (file as any)?.mimeType || "";
+              const currentlySaving = savingToDrive === file?.id;
+
               return (
-                <FilePreviewCard
-                  key={file?.id}
-                  file={{ id: file?.id, name: file?.fileName || (file as any)?.name, url: file?.fileUrl, type: file?.fileType }}
-                  onClick={() => setPreview({ url: file?.fileUrl, type: file?.fileType, name: file?.fileName || (file as any)?.name, attachmentId: file?.id, alreadyInDocs: true })}
-                  actions={
-                    <>
-                      <Button variant="secondary" size="icon" className="h-6 w-6" asChild>
-                        <a href={file?.fileUrl} download={file?.fileName || (file as any)?.name}><Download className="w-3 h-3" /></a>
-                      </Button>
-                      {isOwner && (
-                        <Button variant="secondary" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAttachment(file?.id, (file as any)?.fileName || (file as any)?.name)}>
-                          <Trash2 className="w-3 h-3" />
+                <div key={file?.id} className="space-y-1.5">
+                  <FilePreviewCard
+                    file={{
+                      id: file?.id,
+                      name: fileName,
+                      url: file?.fileUrl || driveViewLink || "",
+                      type: fileType,
+                      source: (file as any)?.source,
+                      thumbnailLink: (file as any)?.thumbnailLink,
+                      webViewLink: driveViewLink,
+                    }}
+                    onClick={() => {
+                      if (isGoogleDrive && driveViewLink) {
+                        window.open(driveViewLink, "_blank", "noopener,noreferrer");
+                      } else if (file?.fileUrl) {
+                        setPreview({ url: file.fileUrl, type: fileType, name: fileName, attachmentId: file?.id, alreadyInDocs: true });
+                      }
+                    }}
+                    actions={
+                      <>
+                        {!isGoogleDrive && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-6 w-6"
+                            asChild
+                            title="Open"
+                          >
+                            <a href={file?.fileUrl} download={fileName}><Download className="w-3 h-3" /></a>
+                          </Button>
+                        )}
+                        {isGoogleDrive && driveViewLink && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-6 w-6"
+                            asChild
+                            title="Open in Drive"
+                          >
+                            <a href={driveViewLink} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </Button>
+                        )}
+                        {isOwner && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-6 w-6 text-destructive"
+                            onClick={() => handleDeleteAttachment(file?.id, fileName)}
+                            title="Remove"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </>
+                    }
+                  />
+                  <div className="flex flex-col gap-1">
+                    {isGoogleDrive ? (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
+                          asChild
+                          disabled={!driveViewLink}
+                        >
+                          <a href={driveViewLink || "#"} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-3 h-3" /> Open in Drive
+                          </a>
                         </Button>
-                      )}
-                    </>
-                  }
-                />
+                        {isOwner && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[11px] flex-1 gap-1 justify-center text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteAttachment(file?.id, fileName)}
+                          >
+                            <Trash2 className="w-3 h-3" /> Remove
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] flex-1 gap-1 justify-center"
+                          onClick={() => file?.fileUrl && setPreview({ url: file.fileUrl, type: fileType, name: fileName, attachmentId: file?.id, alreadyInDocs: true })}
+                          disabled={!file?.fileUrl}
+                        >
+                          <Eye className="w-3 h-3" /> Open
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
+                          onClick={() => handleSaveToGoogleDrive({
+                            id: file?.id || "",
+                            fileName: fileName || "",
+                            fileUrl: file?.fileUrl || "",
+                            fileType,
+                          })}
+                          disabled={currentlySaving || uploadLoading || !file?.fileUrl}
+                        >
+                          {currentlySaving || (uploadLoading && savingToDrive === file?.id) ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <svg viewBox="0 0 24 24" className="w-3 h-3 text-[#4285F4] fill-current" aria-hidden>
+                              <path d="M7.71 3.5h8.58l3.71 6.43H4L7.71 3.5zM3.71 10.5h13.29l-3.29 7.62h-6.72L3.71 10.5z" />
+                            </svg>
+                          )}
+                          Save to Google Drive
+                        </Button>
+                        {isOwner && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[11px] w-7 shrink-0 justify-center text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteAttachment(file?.id, fileName)}
+                            title="Remove"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
         ) : (
           <div className="py-10 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
             <FileText className="w-8 h-8 mb-2 opacity-30" />
-            <p className="text-xs">No files uploaded yet</p>
-            <Button variant="link" size="sm" className="text-xs h-auto p-0 mt-1" onClick={() => fileInputRef.current?.click()}>Click to upload</Button>
+            <p className="text-xs">No files attached yet</p>
+            <div className="flex gap-2 mt-2">
+              <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => fileInputRef.current?.click()}>Upload from device</Button>
+              <span className="text-xs opacity-40">or</span>
+              <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => setShowDrivePicker(true)}>Choose from Google Drive</Button>
+            </div>
           </div>
         )}
       </div>
@@ -1927,6 +2135,12 @@ const TaskDetails = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <GoogleDrivePickerDialog
+        open={showDrivePicker}
+        onOpenChange={setShowDrivePicker}
+        onSelect={handleAttachGoogleDriveFile}
+      />
 
 
       <DashboardLayout>

@@ -287,6 +287,11 @@ export interface TaskAttachment {
   fileName: string;
   fileType: string;
   fileSize: number;
+  fileId?: string;
+  mimeType?: string;
+  webViewLink?: string;
+  thumbnailLink?: string;
+  source?: "device" | "google-drive" | string;
 }
 
 export interface TaskSubtask {

@@ -1,5 +1,6 @@
 import { getFileIcon } from "@/utils/fileIcons";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 export interface FilePreviewCardData {
   id?: string;
@@ -7,6 +8,9 @@ export interface FilePreviewCardData {
   url: string;
   type: string;
   sizeLabel?: string;
+  source?: "device" | "google-drive" | string;
+  thumbnailLink?: string;
+  webViewLink?: string;
 }
 
 interface Props {
@@ -24,6 +28,8 @@ const isImageFile = (type: string, name: string) =>
 const FilePreviewCard = ({ file, onClick, compact = false, actions, className }: Props) => {
   const Icon = getFileIcon(file.type, file.name);
   const isImage = isImageFile(file.type, file.name);
+  const isGoogleDrive = file.source === "google-drive";
+  const useThumbnail = Boolean(file.thumbnailLink);
 
   return (
     <div
@@ -48,7 +54,17 @@ const FilePreviewCard = ({ file, onClick, compact = false, actions, className }:
           compact ? "h-20" : "h-28 sm:h-32"
         )}
       >
-        {isImage ? (
+        {useThumbnail ? (
+          <img
+            src={file.thumbnailLink!}
+            alt={file.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            onError={(e) => {
+              const el = e.currentTarget as HTMLImageElement;
+              el.style.display = "none";
+            }}
+          />
+        ) : isImage && file.url ? (
           <img
             src={file.url}
             alt={file.name}
@@ -59,6 +75,17 @@ const FilePreviewCard = ({ file, onClick, compact = false, actions, className }:
           />
         ) : (
           <Icon className={cn("text-primary/70", compact ? "w-8 h-8" : "w-10 h-10 sm:w-12 sm:h-12")} />
+        )}
+
+        {isGoogleDrive && (
+          <div className="absolute top-1 left-1 z-10">
+            <Badge
+              className="h-5 px-1.5 text-[9px] font-bold bg-[#4285F4] hover:bg-[#4285F4] text-white border-none shadow"
+              title="Google Drive file"
+            >
+              Drive
+            </Badge>
+          </div>
         )}
       </div>
 

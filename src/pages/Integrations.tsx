@@ -3,9 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import {
-  Activity, CheckCircle2, Loader2, Plug, RefreshCw, Search, Settings2, X,
+  Activity, CheckCircle2, Loader2, Plug, RefreshCw, Search, Settings2,
 } from "lucide-react";
 import useGoogleIntegrationStatus from "@/hooks/use-google-integration";
+import { useGoogleIntegration } from "@/hooks/useGoogleIntegration";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ const Integrations = () => {
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
   // Ensure Google integration status is fetched and cached when this page loads
   useGoogleIntegrationStatus();
+  const google = useGoogleIntegration();
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -118,6 +120,12 @@ const Integrations = () => {
   const handleConnect = (integration: Integration) => {
     if (!integration.available) return;
     sessionStorage.setItem("integration_return", "/settings/integrations");
+
+    if (integration.id === "google") {
+      google.connect();
+      return;
+    }
+
     // Prefer backend-provided authUrl when available; fall back to a direct redirect.
     setBusyProvider(integration.id);
     api
@@ -136,7 +144,13 @@ const Integrations = () => {
     const provider = disconnectTarget.id;
     setBusyProvider(provider);
     try {
-      await api.disconnectIntegration(provider);
+      if (provider === "google") {
+        google.disconnect();
+        // wait briefly for the mutation to start since we can't directly await useMutation callbacks
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      } else {
+        await api.disconnectIntegration(provider);
+      }
       toast.success(`${disconnectTarget.name} disconnected`);
       setDisconnectTarget(null);
       setSelected(null);
@@ -226,6 +240,12 @@ const Integrations = () => {
                   onManage={() => setSelected(i)}
                   onDisconnect={() => setDisconnectTarget(i)}
                   onConnect={() => handleConnect(i)}
+                  googleState={{
+                    isConnected: google.isConnected,
+                    status: google.status as { connected: boolean; email?: string; scopes?: any[] },
+                    connectLoading: google.connectLoading,
+                    disconnectLoading: google.disconnectLoading,
+                  }}
                 />
               ))}
             </div>
@@ -249,6 +269,12 @@ const Integrations = () => {
                   onManage={() => setSelected(i)}
                   onDisconnect={() => setDisconnectTarget(i)}
                   onConnect={() => handleConnect(i)}
+                  googleState={{
+                    isConnected: google.isConnected,
+                    status: google.status as { connected: boolean; email?: string; scopes?: any[] },
+                    connectLoading: google.connectLoading,
+                    disconnectLoading: google.disconnectLoading,
+                  }}
                 />
               ))}
             </div>
@@ -302,7 +328,9 @@ const Integrations = () => {
                   <div className="flex-1 min-w-0">
                     <SheetTitle className="text-xl">{selected.name}</SheetTitle>
                     <SheetDescription className="truncate">
-                      {selected.accountEmail || selected.description}
+                      {selected.id === "google" && (google.status as any).email
+                        ? (google.status as any).email
+                        : selected.accountEmail || selected.description}
                     </SheetDescription>
                   </div>
                   <Badge variant="outline" className={STATUS_STYLES[selected.status].className}>
@@ -312,7 +340,14 @@ const Integrations = () => {
               </SheetHeader>
 
               <div className="mt-6 space-y-6">
-                <DetailRow label="Connected account" value={selected.accountEmail || "—"} />
+                <DetailRow
+                  label="Connected account"
+                  value={
+                    selected.id === "google" && (google.status as any).email
+                      ? (google.status as any).email
+                      : selected.accountEmail || "—"
+                  }
+                />
                 <DetailRow
                   label="Connection date"
                   value={selected.connectedAt ? new Date(selected.connectedAt).toLocaleString() : "—"}
@@ -349,21 +384,34 @@ const Integrations = () => {
                         variant="outline"
                         className="flex-1"
                         onClick={() => handleConnect(selected)}
-                        disabled={busyProvider === selected.id}
+                        disabled={selected.id === "google" ? google.connectLoading : busyProvider === selected.id}
                       >
-                        {busyProvider === selected.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                        {(selected.id === "google" ? google.connectLoading : busyProvider === selected.id)
+                          ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          : null}
                         Reconnect
                       </Button>
                       <Button
                         variant="destructive"
                         className="flex-1"
                         onClick={() => setDisconnectTarget(selected)}
+                        disabled={selected.id === "google" ? google.disconnectLoading : false}
                       >
+                        {(selected.id === "google" && google.disconnectLoading)
+                          ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          : null}
                         Disconnect
                       </Button>
                     </>
                   ) : selected.available ? (
-                    <Button className="flex-1" onClick={() => handleConnect(selected)}>
+                    <Button
+                      className="flex-1"
+                      onClick={() => handleConnect(selected)}
+                      disabled={selected.id === "google" ? google.connectLoading : false}
+                    >
+                      {(selected.id === "google" ? google.connectLoading : busyProvider === selected.id)
+                        ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        : null}
                       Connect {selected.name}
                     </Button>
                   ) : (
@@ -426,15 +474,23 @@ const SectionSkeleton = ({ title, count = 3 }: { title: string; count?: number }
 );
 
 const IntegrationCard = ({
-  integration, busy, onManage, onDisconnect, onConnect,
+  integration, busy, onManage, onDisconnect, onConnect, googleState,
 }: {
   integration: Integration;
   busy: boolean;
   onManage: () => void;
   onDisconnect: () => void;
   onConnect: () => void;
+  googleState: {
+    isConnected: boolean;
+    status: { connected: boolean; email?: string; scopes?: any[] };
+    connectLoading: boolean;
+    disconnectLoading: boolean;
+  };
 }) => {
   const style = STATUS_STYLES[integration.status];
+  const googleConnected = integration.connected || googleState.isConnected;
+  const googleEmail = googleState.status?.email;
   return (
     <Card className="p-5 flex flex-col gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
       <div className="flex items-start gap-3">
@@ -448,13 +504,22 @@ const IntegrationCard = ({
           </div>
           {integration.id === "google" ? (
             <div className="mt-0.5">
-              {integration.connected ? (
-                <p className="text-sm font-medium">✓ Connected</p>
+              {googleConnected ? (
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Connected
+                  {googleEmail ? (
+                    <span className="text-muted-foreground font-normal ml-1 truncate max-w-[180px]">
+                      · {googleEmail}
+                    </span>
+                  ) : null}
+                </p>
               ) : (
                 <p className="text-sm font-medium">Not Connected</p>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                {integration.connected ? "Calendar Sync Enabled" : "Connect Google Calendar"}
+                {googleConnected
+                  ? "Calendar, Meet, and Google Drive access enabled"
+                  : "Connect Google Workspace for Calendar, Meetings, and Drive File Picking"}
               </p>
             </div>
           ) : (
@@ -468,14 +533,14 @@ const IntegrationCard = ({
       {integration.capabilities.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {integration.capabilities.slice(0, 6).map((c) => (
-            <Badge
-              key={c.name}
-              variant="secondary"
-              className={`text-[10px] font-normal ${c.enabled ? "" : "opacity-60"}`}
-            >
-              {c.name}
-            </Badge>
-          ))}
+          <Badge
+            key={c.name}
+            variant="secondary"
+            className={`text-[10px] font-normal ${c.enabled ? "" : "opacity-60"}`}
+          >
+            {c.name}
+          </Badge>
+        ))}
         </div>
       )}
 
@@ -483,13 +548,29 @@ const IntegrationCard = ({
         {integration.connected ? (
           <>
             <Button size="sm" variant="outline" className="flex-1" onClick={onManage}>Manage</Button>
-            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={onDisconnect}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={onDisconnect}
+              disabled={integration.id === "google" ? googleState.disconnectLoading : false}
+            >
+              {(integration.id === "google" && googleState.disconnectLoading)
+                ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                : null}
               Disconnect
             </Button>
           </>
         ) : integration.available ? (
-          <Button size="sm" className="flex-1" onClick={onConnect} disabled={busy}>
-            {busy ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : null}
+          <Button
+            size="sm"
+            className="flex-1"
+            onClick={onConnect}
+            disabled={integration.id === "google" ? googleState.connectLoading : busy}
+          >
+            {(integration.id === "google" ? googleState.connectLoading : busy)
+              ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+              : null}
             Connect
           </Button>
         ) : (
