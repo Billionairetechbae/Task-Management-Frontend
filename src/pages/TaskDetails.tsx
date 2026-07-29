@@ -1449,23 +1449,6 @@ const TaskDetails = () => {
                     <TooltipContent>Open the full task editor</TooltipContent>
                   </Tooltip>
 
-                  {/* NEW: Toggle collaboration panel */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setCollabPanelOpen(!collabPanelOpen)}
-                        className="h-8 w-8"
-                      >
-                        {collabPanelOpen ? <ChevronRight size={18} /> : <ChevronLeftIcon size={18} />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {collabPanelOpen ? "Hide collaboration panel" : "Show collaboration panel"}
-                    </TooltipContent>
-                  </Tooltip>
-
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -1968,7 +1951,7 @@ const TaskDetails = () => {
             </div>
           </div>
         ) : (
-          <div className="h-[calc(100vh-4rem)]">
+          <div className="h-[calc(100vh-4rem)] relative">
             <ResizablePanelGroup direction="horizontal" className="h-full">
               <ResizablePanel defaultSize={22} minSize={16} maxSize={32}>
                 {TaskListPanel}
@@ -1986,6 +1969,35 @@ const TaskDetails = () => {
                 </>
               )}
             </ResizablePanelGroup>
+
+            {/* Floating collaboration panel toggle at right edge */}
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCollabPanelOpen(!collabPanelOpen)}
+                    className={cn(
+                      "absolute top-1/2 -translate-y-1/2 z-20 h-14 w-7 shadow-lg transition-all duration-200",
+                      "bg-background hover:bg-primary hover:text-primary-foreground",
+                      collabPanelOpen
+                        ? "right-0 rounded-r-none rounded-l-lg border-r-0"
+                        : "right-0 rounded-r-none rounded-l-lg border-r-0"
+                    )}
+                  >
+                    {collabPanelOpen ? (
+                      <ChevronRight className="h-4 w-4" />
+                    ) : (
+                      <ChevronLeftIcon className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  {collabPanelOpen ? "Hide collaboration panel" : "Show collaboration panel"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
       </DashboardLayout>

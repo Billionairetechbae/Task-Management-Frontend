@@ -125,7 +125,10 @@ const ActionButton = ({
           variant={variant}
           size="icon"
           className={cn("h-7 w-7 transition-all duration-200", extraClass)}
-          onClick={onClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
           disabled={disabled}
         >
           <Icon className="h-3.5 w-3.5" />
@@ -280,7 +283,14 @@ export const TaskTable = ({
             {tasks.map((task) => (
               <tr
                 key={task.id}
-                className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors duration-150 align-middle"
+                className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors duration-150 align-middle cursor-pointer"
+                onClick={() => {
+                  if (onView) {
+                    onView(task);
+                  } else {
+                    window.location.href = `/task-details/${task.id}`;
+                  }
+                }}
               >
                 <td className="px-4 py-3">
                   <div className="min-w-0">
@@ -343,11 +353,11 @@ export const TaskTable = ({
                   </div>
                 </td>
 
-                <td className="px-3 py-3">
+                <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <InlineStatusSelect task={task} onChanged={onStatusChange} />
                 </td>
 
-                <td className="px-3 py-3">
+                <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-0.5">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -357,6 +367,7 @@ export const TaskTable = ({
                           className="h-7 w-7" 
                           onClick={(e) => {
                             e.preventDefault();
+                            e.stopPropagation();
                             if (onView) {
                               onView(task);
                             } else {
@@ -413,7 +424,14 @@ export const TaskTable = ({
         {tasks.map((task) => (
           <div
             key={task.id}
-            className="space-y-3 px-3.5 py-3 transition-colors duration-150 hover:bg-muted/20 sm:px-4"
+            className="space-y-3 px-3.5 py-3 transition-colors duration-150 hover:bg-muted/20 sm:px-4 cursor-pointer"
+            onClick={() => {
+              if (onView) {
+                onView(task);
+              } else {
+                window.location.href = `/task-details/${task.id}`;
+              }
+            }}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -440,7 +458,7 @@ export const TaskTable = ({
                 </div>
               </div>
 
-              <div className="shrink-0">
+              <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                 <InlineStatusSelect task={task} onChanged={onStatusChange} size="xs" />
               </div>
             </div>
@@ -489,7 +507,7 @@ export const TaskTable = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-1">
+            <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
@@ -498,6 +516,7 @@ export const TaskTable = ({
                   className="h-8 w-8" 
                   onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     if (onView) {
                       onView(task);
                     } else {
@@ -563,7 +582,14 @@ export const CompactTaskTable = ({
       {tasks.map((task) => (
         <div
           key={task.id}
-          className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-2.5 text-xs transition-all duration-150 hover:bg-muted/20"
+          className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-2.5 text-xs transition-all duration-150 hover:bg-muted/20 cursor-pointer"
+          onClick={() => {
+            if (onView) {
+              onView(task);
+            } else {
+              window.location.href = `/task-details/${task.id}`;
+            }
+          }}
         >
           <div className="flex min-w-0 items-center gap-2">
             <Tooltip>
@@ -608,7 +634,7 @@ export const CompactTaskTable = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200" onClick={(e) => e.stopPropagation()}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
@@ -617,6 +643,7 @@ export const CompactTaskTable = ({
                 className="h-7 w-7" 
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   if (onView) {
                     onView(task);
                   } else {
@@ -639,7 +666,10 @@ export const CompactTaskTable = ({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => onEdit(task)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(task);
+                    }}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>

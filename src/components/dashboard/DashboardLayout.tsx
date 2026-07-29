@@ -482,7 +482,7 @@ const DashboardLayout = ({
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 w-full text-left",
               isAnyActive
-                ? "bg-sidebar-primary/10 text-sidebar-primary"
+                ? "bg-primary/10 text-primary"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
@@ -564,8 +564,8 @@ const DashboardLayout = ({
             !sidebarOpen && "justify-center"
           )}
         >
-          <div className="w-8 h-8 bg-sidebar-primary/20 rounded-full flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-sidebar-primary" />
+          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+            <User className="w-4 h-4 text-primary" />
           </div>
 
           {sidebarOpen && (
