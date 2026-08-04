@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import type { GoogleDriveFile } from "@/types/googleDrive";
 
-const API_PREFIX = "/api/v1/integrations/google";
+const API_PREFIX = "/integrations/google";
 
 export interface GoogleIntegrationStatus {
   connected: boolean;
