@@ -2,6 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useAppBootstrap } from "@/hooks/useAppBootstrap";
+
 
 import Login from "./pages/Login";
 import SignupExecutive from "./pages/SignupExecutive";
@@ -56,6 +58,11 @@ import Calendar from "./pages/Calendar";
 const App = () => {
   const { user, loading } = useAuth();
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
+  // Warm caches for dashboard / projects / tasks right after login.
+  useAppBootstrap();
+
+
 
   useEffect(() => {
     if (loading || !user) return;
