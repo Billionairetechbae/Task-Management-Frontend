@@ -512,8 +512,9 @@ const DashboardExecutive = () => {
                   showExecutive
                   showActions={workspaceRole !== "member"}
                   onStatusChange={(taskId, status) =>
-                    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: status as any } : t)))
+                    patchTaskEverywhere(taskId, { status: status as any })
                   }
+
                   onEdit={workspaceRole !== "member" ? (task) => openDrawer(task, "details") : undefined}
                   onAssign={workspaceRole !== "member" ? (task) => openDrawer(task, "assignees") : undefined}
                   onDelete={workspaceRole !== "member" ? (task) => openDrawer(task, "danger") : undefined}
