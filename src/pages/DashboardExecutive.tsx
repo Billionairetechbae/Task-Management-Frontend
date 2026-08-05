@@ -260,7 +260,9 @@ const DashboardExecutive = () => {
             : "Manage your team, monitor execution, and control workspace access."
         }
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <RefreshingIndicator active={isRefreshing} className="mr-1" />
+
             <Button variant="outline" asChild className="gap-2">
               <Link to="/workspace-access">
                 <ShieldCheck className="w-4 h-4" />
