@@ -29,7 +29,11 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
 
+  // Keep the React Query cache in sync with realtime events.
+  useRealtimeCacheSync(isConnected);
+
   useEffect(() => {
+
     // Get token from localStorage
     const token =
       localStorage.getItem('auth_token') || localStorage.getItem('token');
