@@ -1,76 +1,58 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { api, Project } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, Plus, FolderKanban, Calendar, ChevronRight } from "lucide-react";
+import { Plus, FolderKanban, Calendar, ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { useProjectsQuery } from "@/hooks/useCoreQueries";
+import { queryKeys } from "@/lib/queryKeys";
+import { SkeletonProjectGrid, RefreshingIndicator } from "@/components/skeletons/AppSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Projects() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { workspaceRole } = useAuth();
+  const { workspaceRole, activeCompanyId } = useAuth();
+  const queryClient = useQueryClient();
   const { canPerformRoleOperation } = useWorkspaceSettings();
-  const [loading, setLoading] = useState(true);
   const canCreateProject = canPerformRoleOperation("create_projects", workspaceRole);
   const hasProjectViewFilter =
     (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
     !canPerformRoleOperation("view_all_projects", workspaceRole);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      const res = await api.getProjects();
-      const arr = (res as any)?.data?.projects || (res as any)?.projects || (res as any)?.data || [];
-      const list = Array.isArray(arr) ? arr : [];
-      setProjects(list);
-
-      // Auto-redirect to last project for returning users
-      const searchParams = new URLSearchParams(window.location.search);
-      const isCreating = searchParams.get("create") === "true";
-
-      if (isCreating) {
-        setIsCreateOpen(true);
-      } else if (list.length > 0) {
-        // Redirect to last accessed or first project
-        const lastProjectId = localStorage.getItem("lastProjectId");
-        const target = list.find((p: Project) => p.id === lastProjectId) || list[0];
-        navigate(`/projects/${target.id}`, { replace: true });
-      }
-    } catch (err: any) {
-      toast({ title: "Failed to load projects", description: err.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isPending, isFetching, isError, error } = useProjectsQuery();
+  const projects: Project[] = data ?? [];
+  const showSkeleton = isPending && projects.length === 0;
 
   useEffect(() => {
-    load();
+    if (isError) {
+      toast({
+        title: "Failed to load projects",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      });
+    }
+  }, [isError, error, toast]);
+
+  // Only auto-open the create drawer when explicitly requested (?create=true).
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get("create") === "true") setIsCreateOpen(true);
   }, []);
 
   const handleProjectCreated = () => {
-    load();
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeCompanyId) });
   };
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground font-medium animate-pulse">Loading projects...</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
@@ -80,9 +62,14 @@ export default function Projects() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {projects.length} project{projects.length !== 1 ? "s" : ""} in your workspace
-              </p>
+              {showSkeleton ? (
+                <Skeleton className="h-3 w-48 mt-2" />
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                  {projects.length} project{projects.length !== 1 ? "s" : ""} in your workspace
+                  <RefreshingIndicator active={isFetching && !showSkeleton} />
+                </p>
+              )}
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -94,6 +81,7 @@ export default function Projects() {
               <TooltipContent>Create a new project</TooltipContent>
             </Tooltip>
           </div>
+
           {hasProjectViewFilter && (
             <p className="text-xs text-muted-foreground mb-4">
               Your project list is filtered by workspace policy.
