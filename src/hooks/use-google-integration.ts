@@ -10,7 +10,7 @@ export const useGoogleIntegrationStatus = () => {
       return { connected };
     },
     staleTime: Infinity,
-    cacheTime: Infinity,
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
     retry: false,
   });

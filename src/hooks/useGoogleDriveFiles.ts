@@ -133,7 +133,7 @@ export const useGoogleDriveFiles = (
     refresh,
     reset,
     uploadToGoogleDrive: uploadMutation.mutate,
-    uploadLoading: uploadMutation.isLoading,
+    uploadLoading: uploadMutation.isPending,
     uploadData: uploadMutation.data,
     uploadReset: uploadMutation.reset,
   };
