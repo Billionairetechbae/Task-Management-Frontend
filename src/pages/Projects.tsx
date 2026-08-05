@@ -88,7 +88,10 @@ export default function Projects() {
             </p>
           )}
 
-          {projects.length === 0 ? (
+          {showSkeleton ? (
+            <SkeletonProjectGrid />
+          ) : projects.length === 0 ? (
+
             /* Empty state */
             <Card className="p-12 text-center border-dashed border-2 border-border">
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
