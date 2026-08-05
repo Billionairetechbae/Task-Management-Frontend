@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { websocketService } from '@/lib/websocket';
+import { useRealtimeCacheSync } from '@/hooks/useRealtimeCacheSync';
+
 
 interface WebSocketContextType {
   isConnected: boolean;
