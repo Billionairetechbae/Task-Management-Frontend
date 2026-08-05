@@ -572,7 +572,10 @@ const DashboardExecutive = () => {
             }
           />
           {teamLoading ? (
-            <LoadingState message="Loading verifications..." />
+            <div className="mt-4">
+              <SkeletonList rows={3} />
+            </div>
+
           ) : (
             <div className="space-y-3 mt-4">
               {pendingAssistants.map((teamMember) => (
