@@ -320,10 +320,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     api.logout();
+    clearAllQueryCache();
     clearAllAuthState();
   };
 
   const setActiveCompanyId = (id: string | null) => {
+    const previous = activeCompanyId;
     setActiveCompanyIdState(id);
     if (id) {
       localStorage.setItem('activeCompanyId', id);
@@ -332,7 +334,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const active = id ? workspaces.find((w) => w.id === id) : workspaces[0] || null;
     setWorkspaceRole(active?.role || null);
+    // Never let one workspace show another workspace's cached data.
+    if (previous && previous !== id) {
+      clearWorkspaceQueryCache(previous);
+    }
   };
+
 
   return (
     <AuthContext.Provider
