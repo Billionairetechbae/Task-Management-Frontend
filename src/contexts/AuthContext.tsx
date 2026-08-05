@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { api, User, WorkspaceRole } from '@/lib/api';
+import { clearAllQueryCache, clearWorkspaceQueryCache } from '@/lib/queryClient';
+
 
 const WS_STORAGE_KEY = "workspaces_cache";
 
