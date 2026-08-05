@@ -51,31 +51,55 @@ import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import {
+  useDashboardData,
+  usePendingVerificationsQuery,
+  useTaskCacheUpdater,
+  type DashboardTaskStats,
+  type DashboardTeamStats,
+} from "@/hooks/useCoreQueries";
+import {
+  SkeletonDashboard,
+  SkeletonTable,
+  SkeletonList,
+  RefreshingIndicator,
+} from "@/components/skeletons/AppSkeletons";
+
+
 
 const DashboardExecutive = () => {
   const { user, workspaceRole } = useAuth();
   const { toast } = useToast();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [teamLoading, setTeamLoading] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [drawerTab, setDrawerTab] = useState("details");
 
-  const [teamStats, setTeamStats] = useState({
+  const canSeeTeamAdmin =
+    workspaceRole === "owner" ||
+    workspaceRole === "admin" ||
+    workspaceRole === "manager";
+
+  const dashboardQuery = useDashboardData();
+  const pendingQuery = usePendingVerificationsQuery(canSeeTeamAdmin);
+  const { patchTaskEverywhere, removeTaskEverywhere, invalidateTasks } =
+    useTaskCacheUpdater();
+
+  const tasks: Task[] = dashboardQuery.data?.tasks ?? [];
+
+  const teamStats: DashboardTeamStats = dashboardQuery.data?.teamStats ?? {
     totalAssistants: 0,
     availableAssistants: 0,
     pendingVerifications: 0,
     totalExecutives: 0,
-  });
+  };
 
-  const [taskStats, setTaskStats] = useState({
+  const taskStats: DashboardTaskStats = dashboardQuery.data?.taskStats ?? {
     totalTasks: 0,
     pendingTasks: 0,
     inProgressTasks: 0,
@@ -83,9 +107,15 @@ const DashboardExecutive = () => {
     overdueTasks: 0,
     urgentTasks: 0,
     completionRate: 0,
-  });
+  };
 
-  const [pendingAssistants, setPendingAssistants] = useState<TeamMember[]>([]);
+  const pendingAssistants: TeamMember[] = pendingQuery.data ?? [];
+
+  // Cached data stays visible: only show the skeleton on a true cold start.
+  const loading = dashboardQuery.isPending && !dashboardQuery.data;
+  const teamLoading = pendingQuery.isPending && !pendingQuery.data;
+  const isRefreshing = dashboardQuery.isFetching && !loading;
+
 
   const canCreateTask = canPerformRoleOperation("create_tasks", workspaceRole);
 
@@ -123,156 +153,28 @@ const DashboardExecutive = () => {
     setCurrentPage(1);
   }, [statusFilter]);
 
-  const fetchDashboard = async () => {
-    try {
-      setLoading(true);
-
-      if (workspaceRole === "member") {
-        const res = await api.getTasks();
-        const wsTasks = (res as any)?.data?.tasks || [];
-
-        const mine = filterTopLevelTasks(
-          wsTasks.filter((task: any) => {
-            if (task.assigneeId && task.assigneeId === user?.id) return true;
-
-            if (
-              Array.isArray(task.assignees) &&
-              task.assignees.some((assignee: any) => assignee?.id === user?.id)
-            ) {
-              return true;
-            }
-
-            return false;
-          })
-        ) as Task[];
-
-        setTasks(mine);
-
-        const counts = {
-          total: mine.length,
-          pending: mine.filter((task: any) => task.status === "pending").length,
-          inProgress: mine.filter(
-            (task: any) => task.status === "in_progress"
-          ).length,
-          completed: mine.filter(
-            (task: any) => task.status === "completed"
-          ).length,
-          overdue: mine.filter((task: any) => {
-            if (!task.deadline) return false;
-
-            return (
-              task.status !== "completed" &&
-              new Date(task.deadline).getTime() < Date.now()
-            );
-          }).length,
-          urgent: mine.filter((task: any) => task.priority === "urgent").length,
-        };
-
-        const completionRate =
-          counts.total > 0
-            ? Math.round((counts.completed / counts.total) * 100)
-            : 0;
-
-        setTeamStats({
-          totalAssistants: 0,
-          availableAssistants: 0,
-          pendingVerifications: 0,
-          totalExecutives: 0,
-        });
-
-        setTaskStats({
-          totalTasks: counts.total,
-          pendingTasks: counts.pending,
-          inProgressTasks: counts.inProgress,
-          completedTasks: counts.completed,
-          overdueTasks: counts.overdue,
-          urgentTasks: counts.urgent,
-          completionRate,
-        });
-
-        return;
-      }
-
-      const response = await api.getExecutiveDashboard();
-
-      const {
-        overview = {
-          team: {
-            totalAssistants: 0,
-            availableAssistants: 0,
-            pendingVerifications: 0,
-            totalExecutives: 0,
-          },
-          tasks: {
-            totalTasks: 0,
-            pendingTasks: 0,
-            inProgressTasks: 0,
-            completedTasks: 0,
-            overdueTasks: 0,
-            urgentTasks: 0,
-            completionRate: 0,
-          },
-        },
-        recentActivity = { tasks: [] as Task[] },
-      } = response.data || {};
-
-      const { team, tasks: taskOverview } = overview;
-
-      setTasks(filterTopLevelTasks(recentActivity.tasks || []));
-
-      setTeamStats({
-        totalAssistants: team.totalAssistants || 0,
-        availableAssistants: team.availableAssistants || 0,
-        pendingVerifications: team.pendingVerifications || 0,
-        totalExecutives: team.totalExecutives || 0,
-      });
-
-      setTaskStats({
-        totalTasks: taskOverview.totalTasks || 0,
-        pendingTasks: taskOverview.pendingTasks || 0,
-        inProgressTasks: taskOverview.inProgressTasks || 0,
-        completedTasks: taskOverview.completedTasks || 0,
-        overdueTasks: taskOverview.overdueTasks || 0,
-        urgentTasks: taskOverview.urgentTasks || 0,
-        completionRate: taskOverview.completionRate || 0,
-      });
-    } catch (error) {
-      console.error("Failed to fetch dashboard:", error);
-
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to load dashboard",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const fetchDashboard = () => {
+    invalidateTasks();
+    dashboardQuery.refetch();
   };
 
-  const fetchPendingAssistants = async () => {
-    if (!canViewTeamAdminSections) {
-      setPendingAssistants([]);
-      return;
-    }
-
-    try {
-      setTeamLoading(true);
-
-      const response = await api.getPendingVerifications();
-      setPendingAssistants(response.data.pendingAssistants || []);
-    } catch (error) {
-      console.error("Failed to fetch pending team members:", error);
-    } finally {
-      setTeamLoading(false);
-    }
+  const fetchPendingAssistants = () => {
+    pendingQuery.refetch();
   };
 
   useEffect(() => {
-    fetchDashboard();
-    fetchPendingAssistants();
+    if (!dashboardQuery.isError) return;
+    toast({
+      title: "Error",
+      description:
+        dashboardQuery.error instanceof Error
+          ? dashboardQuery.error.message
+          : "Failed to load dashboard",
+      variant: "destructive",
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceRole, user?.id]);
+  }, [dashboardQuery.isError]);
+
 
   const handleTaskCreated = () => {
     fetchDashboard();
@@ -327,22 +229,26 @@ const DashboardExecutive = () => {
   };
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    setTasks((prev) =>
-      prev.map((task) => (task.id === updatedTask.id ? updatedTask : task))
-    );
+    // Optimistic: patch every cached list instantly, then refresh in background.
+    patchTaskEverywhere(updatedTask.id, updatedTask as any);
+    dashboardQuery.refetch();
   };
 
   const handleTaskDeleted = (taskId: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    removeTaskEverywhere(taskId);
+    dashboardQuery.refetch();
   };
 
   if (loading) {
     return (
       <DashboardLayout fullWidth>
-        <LoadingState message="Loading your dashboard..." />
+        <div className="px-4 py-6">
+          <SkeletonDashboard />
+        </div>
       </DashboardLayout>
     );
   }
+
 
   return (
     <DashboardLayout fullWidth>
