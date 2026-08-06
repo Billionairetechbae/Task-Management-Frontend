@@ -2087,7 +2087,7 @@ const TaskDetails = () => {
           }
         />
       )}
-      {renderMobileChatSheet()}
+      
 
       <AlertDialog
         open={!!attachmentToDelete}
