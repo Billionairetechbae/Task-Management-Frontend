@@ -52,6 +52,7 @@ import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { cn } from "@/lib/utils";
 import {
   useDashboardData,
   usePendingVerificationsQuery,
