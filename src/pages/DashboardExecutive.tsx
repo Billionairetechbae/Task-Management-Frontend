@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
