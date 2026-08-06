@@ -344,7 +344,7 @@ export default function GoogleDrivePage() {
                         </div>
                         <div className="p-2.5">
                           <p className="text-xs font-medium truncate" title={file.name}>{file.name}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{formatBytes(file.size)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{formatBytes(Number(file.size) || 0)}</p>
                         </div>
                       </div>
                     );
