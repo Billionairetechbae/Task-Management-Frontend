@@ -170,17 +170,27 @@ const TaskDetails = () => {
   const [savingToDrive, setSavingToDrive] = useState<string | null>(null);
 
   // Workbench state
-  const isMobile = useIsMobile();
+  const { isMobile, isTablet } = useBreakpoint();
   const [rightTab, setRightTab] = useState<"chat" | "files" | "activity" | "edit">("chat");
   const [listSearch, setListSearch] = useState("");
   const [listStatus, setListStatus] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
   const [listSort, setListSort] = useState<"due" | "created" | "priority">("created"); // CHANGED: default to "created"
   const [listScope, setListScope] = useState<"workspace" | "all_workspaces">("workspace");
-  const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
   const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const leftSearchRef = useRef<HTMLInputElement>(null);
+
+  // Responsive panel state
+  const [listPanelOpen, setListPanelOpen] = useState(true);
+  const [collabSheetOpen, setCollabSheetOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<null | "list" | "chat" | "files" | "activity" | "edit">(null);
+
+  // Close mobile/tablet overlays whenever the selected task changes
+  useEffect(() => {
+    setMobilePanel(null);
+    setCollabSheetOpen(false);
+  }, [id]);
 
   // Keyboard shortcuts: "/" or Cmd/Ctrl+K to focus left search; 1-4 to switch right tabs.
   useEffect(() => {
