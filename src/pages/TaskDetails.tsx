@@ -1059,11 +1059,11 @@ const TaskDetails = () => {
   };
 
   const TaskListPanel = (
-    <div className="flex h-full flex-col bg-background">
-      <div className="p-4 border-b space-y-3 shrink-0">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight">Task Workbench</h2>
-          <div className="flex items-center gap-1">
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <div className="p-3 sm:p-4 border-b space-y-3 shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base sm:text-lg font-bold tracking-tight truncate">Task Workbench</h2>
+          <div className="flex items-center gap-1 shrink-0">
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1073,11 +1073,28 @@ const TaskDetails = () => {
                 </TooltipTrigger>
                 <TooltipContent>New task</TooltipContent>
               </Tooltip>
+              <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
+                <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
+              </Button>
+              {!isMobile && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label="Collapse task list"
+                      onClick={() => setListPanelOpen(false)}
+                    >
+                      <ChevronLeftIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Collapse task list</TooltipContent>
+                </Tooltip>
+              )}
             </TooltipProvider>
-            <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
-              <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
-            </Button>
           </div>
+
         </div>
         <div className="flex gap-2">
           <Button
