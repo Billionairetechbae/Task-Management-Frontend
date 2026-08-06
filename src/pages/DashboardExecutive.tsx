@@ -75,6 +75,7 @@ const DashboardExecutive = () => {
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [sideColumnOpen, setSideColumnOpen] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
 
