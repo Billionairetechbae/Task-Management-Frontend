@@ -5,24 +5,27 @@ export interface GoogleDriveOwner {
 }
 
 export interface GoogleDriveFile {
-  id: string;
+  fileId: string;
   name: string;
   mimeType: string;
-  size?: number;
-  webViewLink?: string;
-  webContentLink?: string;
-  thumbnailLink?: string;
-  modifiedTime: string;
-  createdTime?: string;
+  webViewLink?: string | null;
+  webContentLink?: string | null;
+  thumbnailLink?: string | null;
+  iconLink?: string | null;
+  size?: string | null;
+  modifiedTime?: string | null;
+  // Legacy fields still tolerated from partial raw payloads pre-normalization
+  id?: string;
+  createdTime?: string | null;
   parents?: string[];
   owners?: GoogleDriveOwner[];
-  iconLink?: string;
   starred?: boolean;
   trashed?: boolean;
 }
 
 export interface DriveFolder {
-  id: string;
+  fileId: string;
+  id?: string;
   name: string;
   mimeType?: string;
   parents?: string[];
@@ -31,14 +34,14 @@ export interface DriveFolder {
 }
 
 export interface DrivePagination {
-  nextPageToken?: string;
-  pageToken?: string;
+  nextPageToken?: string | null;
+  pageToken?: string | null;
   totalItems?: number;
 }
 
 export interface DriveSearchResponse {
   files: GoogleDriveFile[];
-  nextPageToken?: string;
+  nextPageToken?: string | null;
 }
 
 export interface DriveUploadResponse {

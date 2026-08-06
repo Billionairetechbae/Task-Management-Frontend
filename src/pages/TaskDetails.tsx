@@ -32,7 +32,7 @@ import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, Task, TaskComment } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -90,6 +90,7 @@ const TaskDetails = () => {
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
   const { isConnected, joinTaskRoom, leaveTaskRoom, sendComment, sendTypingIndicator, on, off } = useWebSocket();
+  const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
   const [newComment, setNewComment] = useState("");
@@ -573,17 +574,52 @@ const TaskDetails = () => {
     if (!id) return;
     try {
       setUpdating(true);
-      const fd = new FormData();
-      fd.append("googleDriveAttachments", JSON.stringify([driveAttachment]));
-      const res = await api.updateTask(id, fd);
-      setTask(res.data.task);
+
+      const attachment = await api.attachGoogleDriveFile(id, {
+        fileId: driveAttachment.fileId,
+        name: driveAttachment.name,
+        mimeType: driveAttachment.mimeType,
+        webViewLink: driveAttachment.webViewLink || "",
+        thumbnailLink: driveAttachment.thumbnailLink ?? null,
+      });
+
+      console.log("Drive attachment response:", {
+        attachmentId: attachment?.id,
+        taskId: attachment?.taskId,
+        fileId: attachment?.fileId,
+        source: attachment?.source,
+      });
+
+      setTask((prevTask) => {
+        if (!prevTask || !attachment) return prevTask;
+        const existingAttachments = (prevTask.attachments || []).filter(Boolean);
+        const alreadyExists = existingAttachments.some((a) => a.id === attachment.id);
+        const nextAttachments = alreadyExists
+          ? existingAttachments
+          : [...existingAttachments, attachment as NonNullable<typeof existingAttachments>[number]];
+        return {
+          ...prevTask,
+          attachments: nextAttachments,
+        };
+      });
+
       toast({ title: "Success", description: `"${driveAttachment.name}" attached from Google Drive` });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["task-details", id],
+      });
+
+      await queryClient.refetchQueries({
+        queryKey: ["task-details", id],
+        type: "active",
+      });
     } catch (err: any) {
       toast({
         title: "Failed to attach Google Drive file",
         description: err?.message || "Please try again",
         variant: "destructive",
       });
+      throw err;
     } finally {
       setUpdating(false);
     }
@@ -856,7 +892,9 @@ const TaskDetails = () => {
   };
 
   const findAttachmentByName = (name: string) => {
-    return task?.attachments?.find((a) => a.fileName === name);
+    return task?.attachments?.find((a) => 
+      a.fileName === name || (a as any).name === name
+    );
   };
 
   // Re-upload a file (from a URL) into task attachments. Used for chat files not already in docs.
@@ -991,27 +1029,51 @@ const TaskDetails = () => {
                         if (matched.length === 0) return null;
                         return (
                           <div className="mt-2 grid grid-cols-2 gap-2">
-                            {matched.map((f) => (
-                              <FilePreviewCard
-                                key={f.id}
-                                compact
-                                file={{
-                                  id: f.id,
-                                  name: f.fileName,
-                                  url: f.fileUrl,
-                                  type: f.fileType,
-                                }}
-                                onClick={() =>
-                                  setPreview({
-                                    url: f.fileUrl,
-                                    type: f.fileType,
-                                    name: f.fileName,
-                                    attachmentId: f.id,
-                                    alreadyInDocs: true,
-                                  })
-                                }
-                              />
-                            ))}
+                            {matched.map((f) => {
+                              const fAny = f as any;
+                              const displayName =
+                                f.fileName || fAny.name || "";
+                              const displayUrl =
+                                fAny.webViewLink ||
+                                fAny.externalUrl ||
+                                f.fileUrl ||
+                                "";
+                              const displayType =
+                                fAny.mimeType ||
+                                f.fileType ||
+                                "";
+                              const isDrive = fAny.source === "google-drive";
+                              return (
+                                <FilePreviewCard
+                                  key={f.id}
+                                  compact
+                                  file={{
+                                    id: f.id,
+                                    name: displayName,
+                                    url: displayUrl,
+                                    type: displayType,
+                                    source: fAny.source,
+                                    thumbnailLink: fAny.thumbnailLink || fAny.thumbnailUrl,
+                                    webViewLink: fAny.webViewLink,
+                                  }}
+                                  onClick={() => {
+                                    if (isDrive && displayUrl) {
+                                      window.open(displayUrl, "_blank", "noopener,noreferrer");
+                                    } else if (f.fileUrl) {
+                                      setPreview({
+                                        url: f.fileUrl,
+                                        type: displayType,
+                                        name: displayName,
+                                        attachmentId: f.id,
+                                        alreadyInDocs: true,
+                                      });
+                                    } else if (displayUrl) {
+                                      window.open(displayUrl, "_blank", "noopener,noreferrer");
+                                    }
+                                  }}
+                                />
+                              );
+                            })}
                           </div>
                         );
                       })()}
@@ -1745,26 +1807,57 @@ const TaskDetails = () => {
                       if (matched.length === 0) return null;
                       return (
                         <div className="mt-2 grid grid-cols-2 gap-2">
-                          {matched.map((f) => (
-                            <FilePreviewCard
-                              key={f.id}
-                              compact
-                              className={comment.userId === user?.id ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground" : ""}
-                              file={{ id: f.id, name: f.fileName, url: f.fileUrl, type: f.fileType }}
-                              onClick={() => setPreview({ url: f.fileUrl, type: f.fileType, name: f.fileName, attachmentId: f.id, alreadyInDocs: true })}
-                              actions={
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-6 px-2 text-[10px] gap-1"
-                                  disabled
-                                  title="Already in task documents"
-                                >
-                                  <Check className="w-3 h-3" /> In Files
-                                </Button>
-                              }
-                            />
-                          ))}
+                          {matched.map((f) => {
+                            const fAny = f as any;
+                            const displayName =
+                              f.fileName || fAny.name || "";
+                            const displayUrl =
+                              fAny.webViewLink ||
+                              fAny.externalUrl ||
+                              f.fileUrl ||
+                              "";
+                            const displayType =
+                              fAny.mimeType ||
+                              f.fileType ||
+                              "";
+                            const isDrive = fAny.source === "google-drive";
+                            return (
+                              <FilePreviewCard
+                                key={f.id}
+                                compact
+                                className={comment.userId === user?.id ? "bg-primary-foreground/10 border-primary-foreground/20 text-foreground" : ""}
+                                file={{
+                                  id: f.id,
+                                  name: displayName,
+                                  url: displayUrl,
+                                  type: displayType,
+                                  source: fAny.source,
+                                  thumbnailLink: fAny.thumbnailLink || fAny.thumbnailUrl,
+                                  webViewLink: fAny.webViewLink,
+                                }}
+                                onClick={() => {
+                                  if (isDrive && displayUrl) {
+                                    window.open(displayUrl, "_blank", "noopener,noreferrer");
+                                  } else if (f.fileUrl) {
+                                    setPreview({ url: f.fileUrl, type: displayType, name: displayName, attachmentId: f.id, alreadyInDocs: true });
+                                  } else if (displayUrl) {
+                                    window.open(displayUrl, "_blank", "noopener,noreferrer");
+                                  }
+                                }}
+                                actions={
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-6 px-2 text-[10px] gap-1"
+                                    disabled
+                                    title="Already in task documents"
+                                  >
+                                    <Check className="w-3 h-3" /> In Files
+                                  </Button>
+                                }
+                              />
+                            );
+                          })}
                         </div>
                       );
                     })()}
@@ -1846,10 +1939,25 @@ const TaskDetails = () => {
           <div className="grid grid-cols-2 gap-2">
             {task.attachments.filter(Boolean).map((file) => {
               const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
-              const isGoogleDrive = (file as any)?.source === "google-drive";
-              const driveViewLink = (file as any)?.webViewLink;
-              const fileName = file?.fileName || (file as any)?.name;
-              const fileType = file?.fileType || (file as any)?.mimeType || "";
+              const attachmentFile = file as any;
+              const isGoogleDrive =
+                attachmentFile.source === "google-drive";
+              const attachmentUrl =
+                attachmentFile.webViewLink ||
+                attachmentFile.externalUrl ||
+                attachmentFile.fileUrl ||
+                "";
+              const thumbnail =
+                attachmentFile.thumbnailLink ||
+                attachmentFile.thumbnailUrl;
+              const mimeType =
+                attachmentFile.mimeType ||
+                attachmentFile.fileType ||
+                "";
+              const fileName =
+                attachmentFile.fileName ||
+                attachmentFile.name ||
+                "";
               const currentlySaving = savingToDrive === file?.id;
 
               return (
@@ -1858,17 +1966,19 @@ const TaskDetails = () => {
                     file={{
                       id: file?.id,
                       name: fileName,
-                      url: file?.fileUrl || driveViewLink || "",
-                      type: fileType,
-                      source: (file as any)?.source,
-                      thumbnailLink: (file as any)?.thumbnailLink,
-                      webViewLink: driveViewLink,
+                      url: attachmentUrl,
+                      type: mimeType,
+                      source: attachmentFile.source,
+                      thumbnailLink: thumbnail,
+                      webViewLink: attachmentFile.webViewLink,
                     }}
                     onClick={() => {
-                      if (isGoogleDrive && driveViewLink) {
-                        window.open(driveViewLink, "_blank", "noopener,noreferrer");
-                      } else if (file?.fileUrl) {
-                        setPreview({ url: file.fileUrl, type: fileType, name: fileName, attachmentId: file?.id, alreadyInDocs: true });
+                      if (isGoogleDrive && attachmentUrl) {
+                        window.open(attachmentUrl, "_blank", "noopener,noreferrer");
+                      } else if (attachmentFile.fileUrl) {
+                        setPreview({ url: attachmentFile.fileUrl, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true });
+                      } else if (attachmentUrl) {
+                        window.open(attachmentUrl, "_blank", "noopener,noreferrer");
                       }
                     }}
                     actions={
@@ -1881,10 +1991,10 @@ const TaskDetails = () => {
                             asChild
                             title="Open"
                           >
-                            <a href={file?.fileUrl} download={fileName}><Download className="w-3 h-3" /></a>
+                            <a href={attachmentFile.fileUrl} download={fileName}><Download className="w-3 h-3" /></a>
                           </Button>
                         )}
-                        {isGoogleDrive && driveViewLink && (
+                        {isGoogleDrive && attachmentUrl && (
                           <Button
                             variant="secondary"
                             size="icon"
@@ -1892,7 +2002,7 @@ const TaskDetails = () => {
                             asChild
                             title="Open in Drive"
                           >
-                            <a href={driveViewLink} target="_blank" rel="noopener noreferrer">
+                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           </Button>
@@ -1919,9 +2029,9 @@ const TaskDetails = () => {
                           variant="outline"
                           className="h-7 text-[11px] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
                           asChild
-                          disabled={!driveViewLink}
+                          disabled={!attachmentUrl}
                         >
-                          <a href={driveViewLink || "#"} target="_blank" rel="noopener noreferrer">
+                          <a href={attachmentUrl || "#"} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="w-3 h-3" /> Open in Drive
                           </a>
                         </Button>
@@ -1942,8 +2052,8 @@ const TaskDetails = () => {
                           size="sm"
                           variant="outline"
                           className="h-7 text-[11px] flex-1 gap-1 justify-center"
-                          onClick={() => file?.fileUrl && setPreview({ url: file.fileUrl, type: fileType, name: fileName, attachmentId: file?.id, alreadyInDocs: true })}
-                          disabled={!file?.fileUrl}
+                          onClick={() => attachmentFile.fileUrl && setPreview({ url: attachmentFile.fileUrl, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true })}
+                          disabled={!attachmentFile.fileUrl}
                         >
                           <Eye className="w-3 h-3" /> Open
                         </Button>
@@ -1954,10 +2064,10 @@ const TaskDetails = () => {
                           onClick={() => handleSaveToGoogleDrive({
                             id: file?.id || "",
                             fileName: fileName || "",
-                            fileUrl: file?.fileUrl || "",
-                            fileType,
+                            fileUrl: attachmentFile.fileUrl || "",
+                            fileType: mimeType,
                           })}
-                          disabled={currentlySaving || uploadLoading || !file?.fileUrl}
+                          disabled={currentlySaving || uploadLoading || !attachmentFile.fileUrl}
                         >
                           {currentlySaving || (uploadLoading && savingToDrive === file?.id) ? (
                             <Loader2 className="w-3 h-3 animate-spin" />

@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 export interface GoogleDrivePickerDialogProps {
   open: boolean;
+  taskId?: string | undefined;
   onOpenChange: (open: boolean) => void;
   onSelect: (attachment: {
     fileId: string;
@@ -27,7 +28,7 @@ export interface GoogleDrivePickerDialogProps {
     webViewLink?: string;
     thumbnailLink?: string;
     source: "google-drive";
-  }) => void;
+  }) => Promise<void> | void;
 }
 
 const isFolder = (f: GoogleDriveFile) =>
@@ -35,21 +36,22 @@ const isFolder = (f: GoogleDriveFile) =>
 
 const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePickerDialogProps) => {
   const { isConnected, statusLoading, connect, connectLoading } = useGoogleIntegration();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [folderStack, setFolderStack] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedFile, setSelectedFile] = useState<GoogleDriveFile | null>(null);
+  const [folderStack, setFolderStack] = useState<Array<{ fileId: string; name: string }>>([]);
   const [selecting, setSelecting] = useState(false);
+  const [attachPending, setAttachPending] = useState(false);
 
   const drive = useGoogleDriveFiles({
     enabled: open && isConnected,
   });
 
+  // Clear only the selection when the dialog opens (i.e. new attach context).
+  // Do NOT reset Drive files/folder state so files persist across task switches.
   useEffect(() => {
     if (open) {
-      setSelectedId(null);
-      setFolderStack([]);
-      drive.reset();
+      setSelectedFile(null);
+      setAttachPending(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const files = drive.files;
@@ -62,40 +64,42 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
     : "My Drive";
 
   const handleOpenFolder = (folder: GoogleDriveFile) => {
-    setFolderStack((s) => [...s, { id: folder.id, name: folder.name }]);
-    drive.setFolderId(folder.id);
-    setSelectedId(null);
+    setFolderStack((s) => [...s, { fileId: folder.fileId, name: folder.name }]);
+    drive.setFolderId(folder.fileId);
+    setSelectedFile(null);
   };
 
   const handleBack = () => {
     if (!folderStack.length) {
       drive.setFolderId(undefined);
-      setSelectedId(null);
+      setSelectedFile(null);
       return;
     }
     const next = folderStack.slice(0, -1);
     setFolderStack(next);
-    const parentId = next[next.length - 1]?.id;
-    drive.setFolderId(parentId || undefined);
-    setSelectedId(null);
+    const parent = next[next.length - 1];
+    drive.setFolderId(parent?.fileId || undefined);
+    setSelectedFile(null);
   };
 
-  const handleConfirm = () => {
-    const chosen = files.find((f) => f.id === selectedId && !isFolder(f));
-    if (!chosen) return;
+  const handleConfirm = async () => {
+    if (!selectedFile || isFolder(selectedFile) || attachPending) return;
     setSelecting(true);
+    setAttachPending(true);
     try {
-      onSelect({
-        fileId: chosen.id,
-        name: chosen.name,
-        mimeType: chosen.mimeType,
-        webViewLink: chosen.webViewLink,
-        thumbnailLink: chosen.thumbnailLink || chosen.iconLink,
+      await onSelect({
+        fileId: selectedFile.fileId,
+        name: selectedFile.name,
+        mimeType: selectedFile.mimeType,
+        webViewLink: selectedFile.webViewLink ?? undefined,
+        thumbnailLink: selectedFile.thumbnailLink ?? selectedFile.iconLink ?? undefined,
         source: "google-drive",
       });
+      setSelectedFile(null);
       onOpenChange(false);
     } catch (err: any) {
       toast.error("Could not attach file", { description: err?.message });
+      setAttachPending(false);
     } finally {
       setSelecting(false);
     }
@@ -198,7 +202,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                       My Drive
                     </Badge>
                     {folderStack.map((f, i) => (
-                      <span key={f.id} className="inline-flex items-center gap-1">
+                      <span key={f.fileId} className="inline-flex items-center gap-1">
                         <ChevronRight className="w-3 h-3 opacity-40" />
                         <Badge
                           variant="secondary"
@@ -209,7 +213,8 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                           onClick={() => {
                             const next = folderStack.slice(0, i + 1);
                             setFolderStack(next);
-                            drive.setFolderId(next[next.length - 1].id);
+                            const parent = next[next.length - 1];
+                            drive.setFolderId(parent?.fileId);
                           }}
                         >
                           {f.name}
@@ -252,15 +257,15 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                   {sorted.map((f) => {
                     const folder = isFolder(f);
                     const FileTypeIcon = getFileIcon(f.mimeType, f.name);
-                    const selected = selectedId === f.id;
+                    const selected = selectedFile?.fileId === f.fileId;
                     const showThumb = Boolean(f.thumbnailLink);
                     return (
                       <button
                         type="button"
-                        key={f.id}
+                        key={f.fileId}
                         onClick={() => {
                           if (folder) return handleOpenFolder(f);
-                          setSelectedId(selected ? null : f.id);
+                          setSelectedFile((prev) => (prev?.fileId === f.fileId ? null : f));
                         }}
                         className={cn(
                           "group relative rounded-lg border p-2 text-left transition-all duration-150",
@@ -355,10 +360,10 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={!selectedId || selecting || !isConnected}
+            disabled={!selectedFile || attachPending || selecting || !isConnected}
             className="gap-2"
           >
-            {selecting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {(selecting || attachPending) && <Loader2 className="w-4 h-4 animate-spin" />}
             Attach to task
           </Button>
         </DialogFooter>

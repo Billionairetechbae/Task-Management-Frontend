@@ -30,13 +30,15 @@ export const useGoogleDriveFiles = (
     return () => window.clearTimeout(t);
   }, [query]);
 
+  // Reset pagination cursor + accumulator when query or folder change.
+  // Do NOT reset when taskId or dialog open state change → files persist across tasks.
   useEffect(() => {
     setNextPageToken(undefined);
     setAccumulatedFiles([]);
   }, [debouncedQuery, folderId]);
 
   const pageQuery = useQuery({
-    queryKey: [...QUERY_ROOT, "page", { q: debouncedQuery, folderId, pageToken: nextPageToken ?? "__first__", pageSize }],
+    queryKey: [...QUERY_ROOT, { folderId, debouncedQuery, pageToken: nextPageToken ?? "__first__", pageSize }],
     queryFn: async () => {
       return googleIntegrationService.listFiles({
         query: debouncedQuery || undefined,
@@ -45,19 +47,33 @@ export const useGoogleDriveFiles = (
         pageSize,
       });
     },
-    enabled: enabled && !nextPageToken ? enabled : false,
-    staleTime: 1000 * 30,
+    // Only auto-run the "first page" query. Next pages are triggered via setNextPageToken.
+    enabled: !nextPageToken ? enabled : false,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
     retry: (f, err: any) => {
       if (err?.status === 401 || err?.status === 403) return false;
       return f < 1;
     },
+    // Preserve previous rendered data across refetches / cached 304 responses.
+    placeholderData: (previousData: any) => previousData,
   });
 
   useEffect(() => {
     if (!pageQuery.data) return;
     const newFiles = pageQuery.data.files ?? [];
+    if (!Array.isArray(newFiles) || newFiles.length === 0) {
+      // Empty payload from backend (e.g. 304 not modified) → do NOT overwrite with []
+      return;
+    }
     if (nextPageToken) {
-      setAccumulatedFiles((prev) => [...prev, ...newFiles]);
+      // Append to avoid duplicates by fileId
+      setAccumulatedFiles((prev) => {
+        const seen = new Set(prev.map((p) => p.fileId));
+        const extra = newFiles.filter((f) => f.fileId && !seen.has(f.fileId));
+        return extra.length ? [...prev, ...extra] : prev;
+      });
     } else {
       setAccumulatedFiles(newFiles);
     }
@@ -88,6 +104,8 @@ export const useGoogleDriveFiles = (
   }, [queryClient]);
 
   const reset = useCallback(() => {
+    // Note: this does NOT touch the global query cache so other consumers
+    // (e.g. other tasks) keep their cached Drive files.
     setQuery("");
     setDebouncedQuery("");
     setFolderId(undefined);
@@ -98,7 +116,15 @@ export const useGoogleDriveFiles = (
   const uploadMutation = useMutation({
     mutationFn: (payload: { file: File | Blob; fileName?: string }) =>
       googleIntegrationService.uploadAdmiinoFile(payload.file, payload.fileName),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Invalidate all Drive file queries so pickers show the new file immediately.
+      try {
+        await queryClient.invalidateQueries({ queryKey: QUERY_ROOT });
+        await queryClient.refetchQueries({ queryKey: QUERY_ROOT, type: "active" });
+      } catch {
+        /* ignore */
+      }
+
       if (data?.webViewLink) {
         toast.success("Saved to Google Drive", {
           description: `"${data.name}" uploaded successfully`,

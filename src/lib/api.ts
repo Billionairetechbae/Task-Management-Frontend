@@ -423,6 +423,24 @@ export interface UpdateTaskData {
   estimatedHours?: number;
   actualHours?: number;
   assigneeId?: string | null;
+  googleDriveAttachments?: Array<{
+    fileId: string;
+    name: string;
+    mimeType: string;
+    webViewLink?: string;
+    thumbnailLink?: string;
+    source: "google-drive";
+  }>;
+  attachments?: Array<{
+    fileId?: string;
+    name?: string;
+    fileName?: string;
+    mimeType?: string;
+    fileType?: string;
+    webViewLink?: string;
+    thumbnailLink?: string;
+    source?: "device" | "google-drive" | string;
+  }>;
 }
 
 export interface TaskFilters {
@@ -1965,6 +1983,28 @@ class ApiClient {
       headers: this.getAuthHeaders(true),
       body: fd,
     });
+  }
+
+  async attachGoogleDriveFile(
+    taskId: string,
+    file: {
+      fileId: string;
+      name: string;
+      mimeType?: string;
+      webViewLink: string;
+      thumbnailLink?: string | null;
+    }
+  ): Promise<TaskAttachment> {
+    const response = await this.request<{ status: string; attachment: TaskAttachment; data?: { attachment: TaskAttachment } }>(
+      `/tasks/${taskId}/attachments/google-drive`,
+      {
+        method: "POST",
+        headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+        body: JSON.stringify(file),
+      }
+    );
+
+    return response?.data?.attachment ?? response?.attachment ?? (response as any)?.attachment;
   }
 
   /* ============================

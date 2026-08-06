@@ -101,24 +101,53 @@ export const googleIntegrationService = {
     pageToken?: string;
     pageSize?: number;
   }): Promise<GoogleDriveFilesResponse> {
-    const queryParams: Record<string, string> = {};
-    if (params.query) queryParams.q = params.query;
-    if (params.folderId) queryParams.folderId = params.folderId;
-    if (params.pageToken) queryParams.pageToken = params.pageToken;
-    if (params.pageSize) queryParams.pageSize = String(params.pageSize);
+    const queryParams = new URLSearchParams();
+    if (params.query) queryParams.set("query", params.query);
+    if (params.folderId) queryParams.set("folderId", params.folderId);
+    if (params.pageToken) queryParams.set("pageToken", params.pageToken);
+    if (params.pageSize) queryParams.set("pageSize", String(params.pageSize));
 
-    const qs = Object.keys(queryParams).length
-      ? `?${new URLSearchParams(queryParams).toString()}`
-      : "";
+    const qs = queryParams.toString();
+    const res = await api.get<any>(`${API_PREFIX}/files${qs ? `?${qs}` : ""}`);
 
-    const res = await api.get<any>(`${API_PREFIX}/files${qs}`);
-    const data = (res as any)?.data ?? res ?? {};
-    const files: GoogleDriveFile[] = data.files ?? data.items ?? [];
+    const payload = (res as any)?.data ?? res ?? {};
+    const rawFiles: any[] = payload?.files ?? payload?.items ?? [];
+
+    const files: GoogleDriveFile[] = rawFiles.map((raw) => ({
+      fileId: String(raw?.fileId ?? raw?.id ?? ""),
+      name: String(raw?.name ?? ""),
+      mimeType: String(raw?.mimeType ?? raw?.fileType ?? "application/octet-stream"),
+      webViewLink: raw?.webViewLink ?? null,
+      webContentLink: raw?.webContentLink ?? null,
+      thumbnailLink: raw?.thumbnailLink ?? null,
+      iconLink: raw?.iconLink ?? null,
+      size: raw?.size != null ? String(raw.size) : null,
+      modifiedTime: raw?.modifiedTime ?? raw?.updatedAt ?? null,
+      createdTime: raw?.createdTime ?? raw?.createdAt ?? null,
+      parents: raw?.parents ?? undefined,
+      owners: raw?.owners ?? undefined,
+      starred: raw?.starred ?? undefined,
+      trashed: raw?.trashed ?? undefined,
+      id: raw?.id ?? undefined,
+    }));
+
+    // TEMPORARY diagnostic log: never logs credentials.
+    // eslint-disable-next-line no-console
+    console.log("Normalized Drive files:", files);
+
     return {
       files,
-      nextPageToken: data.nextPageToken,
-      hasMore: typeof data.hasMore === "boolean" ? data.hasMore : Boolean(data.nextPageToken),
-      totalItems: data.totalItems,
+      nextPageToken: payload?.nextPageToken ?? null,
+      hasMore:
+        typeof payload?.hasMore === "boolean"
+          ? payload.hasMore
+          : Boolean(payload?.nextPageToken),
+      totalItems:
+        typeof payload?.total === "number"
+          ? payload.total
+          : typeof payload?.totalItems === "number"
+          ? payload.totalItems
+          : files.length,
     };
   },
 
