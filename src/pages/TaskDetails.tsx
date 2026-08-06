@@ -37,7 +37,7 @@ import { api, Task, TaskComment } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useBreakpoint } from "@/hooks/use-breakpoint";
 
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
@@ -170,17 +170,27 @@ const TaskDetails = () => {
   const [savingToDrive, setSavingToDrive] = useState<string | null>(null);
 
   // Workbench state
-  const isMobile = useIsMobile();
+  const { isMobile, isTablet } = useBreakpoint();
   const [rightTab, setRightTab] = useState<"chat" | "files" | "activity" | "edit">("chat");
   const [listSearch, setListSearch] = useState("");
   const [listStatus, setListStatus] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
   const [listSort, setListSort] = useState<"due" | "created" | "priority">("created"); // CHANGED: default to "created"
   const [listScope, setListScope] = useState<"workspace" | "all_workspaces">("workspace");
-  const [mobileSection, setMobileSection] = useState<"list" | "details" | "chat">("details");
   const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name?: string } | null>(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const leftSearchRef = useRef<HTMLInputElement>(null);
+
+  // Responsive panel state
+  const [listPanelOpen, setListPanelOpen] = useState(true);
+  const [collabSheetOpen, setCollabSheetOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<null | "list" | "chat" | "files" | "activity" | "edit">(null);
+
+  // Close mobile/tablet overlays whenever the selected task changes
+  useEffect(() => {
+    setMobilePanel(null);
+    setCollabSheetOpen(false);
+  }, [id]);
 
   // Keyboard shortcuts: "/" or Cmd/Ctrl+K to focus left search; 1-4 to switch right tabs.
   useEffect(() => {
@@ -920,234 +930,11 @@ const TaskDetails = () => {
     }
   };
 
-  // Mobile chat toggle
-  const renderMobileChatButton = () => (
-    <Button
-      onClick={() => setShowChatSheet(true)}
-      className="w-full mt-4 sm:hidden flex items-center justify-center gap-2"
-    >
-      <MessageCircle className="w-4 h-4" />
-      View Chat ({comments.length})
-      <ChevronRight className="w-4 h-4" />
-    </Button>
-  );
+  // NOTE: the legacy mobile-only chat sheet was replaced by the unified
+  // responsive panel sheet at the bottom of this file, which reuses the same
+  // Chat / Files / Activity / Edit content as desktop.
 
-  // Mobile chat sheet
-  const renderMobileChatSheet = () => (
-    <Sheet open={showChatSheet} onOpenChange={setShowChatSheet}>
-      <SheetContent side="bottom" className="h-[95vh] sm:hidden">
-        <SheetHeader className="text-left">
-          <SheetTitle className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Task Chat
-            <span className="text-xs text-muted-foreground">
-              {comments.length} messages
-            </span>
-          </SheetTitle>
-        </SheetHeader>
-        
-        {/* Messages area */}
-      <div className="flex-1 overflow-y-auto py-4 h-[calc(90vh-120px)]">
-        {commentsQuery.isFetching ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex gap-3">
-                <Skeleton className="w-8 h-8 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : comments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <MessageSquare className="w-12 h-12 mb-2" />
-              <p>No comments yet</p>
-              <p className="text-sm">Start the conversation</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`flex gap-3 ${
-                    comment.userId === user?.id ? 'flex-row-reverse' : ''
-                  }`}
-                >
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={comment.user?.profilePictureUrl} />
-                    <AvatarFallback>
-                      {getInitials(
-                        comment.user?.firstName || '',
-                        comment.user?.lastName || ''
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div
-                    className={`max-w-[70%] ${
-                      comment.userId === user?.id ? 'text-right' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium">
-                        {comment.isSystemMessage ? (
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <AlertCircle className="w-3 h-3" />
-                            System
-                          </span>
-                        ) : (
-                          `${comment.user?.firstName} ${comment.user?.lastName}`
-                        )}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTime(comment.createdAt)}
-                      </span>
-                      {comment.isSystemMessage && (
-                        <Badge variant="outline" className="text-xs">
-                          {comment.systemEventType?.replace('_', ' ')}
-                        </Badge>
-                      )}
-                    </div>
-                    <div
-                      className={`p-3 rounded-lg ${
-                        comment.isSystemMessage
-                          ? 'bg-muted/50 border'
-                          : comment.userId === user?.id
-                          ? comment.id.startsWith('optimistic-')
-                            ? 'bg-primary/70 text-primary-foreground'
-                            : 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
-                      {comment.content.includes("📎 Uploaded") && (() => {
-                        const names = parseUploadedFilenames(comment.content);
-                        const matched = names
-                          .map((n) => findAttachmentByName(n))
-                          .filter(Boolean) as NonNullable<Task["attachments"]>;
-                        if (matched.length === 0) return null;
-                        return (
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            {matched.map((f) => {
-                              const fAny = f as any;
-                              const displayName =
-                                f.fileName || fAny.name || "";
-                              const displayUrl =
-                                fAny.webViewLink ||
-                                fAny.externalUrl ||
-                                f.fileUrl ||
-                                "";
-                              const displayType =
-                                fAny.mimeType ||
-                                f.fileType ||
-                                "";
-                              const isDrive = fAny.source === "google-drive";
-                              return (
-                                <FilePreviewCard
-                                  key={f.id}
-                                  compact
-                                  file={{
-                                    id: f.id,
-                                    name: displayName,
-                                    url: displayUrl,
-                                    type: displayType,
-                                    source: fAny.source,
-                                    thumbnailLink: fAny.thumbnailLink || fAny.thumbnailUrl,
-                                    webViewLink: fAny.webViewLink,
-                                  }}
-                                  onClick={() => {
-                                    if (isDrive && displayUrl) {
-                                      window.open(displayUrl, "_blank", "noopener,noreferrer");
-                                    } else if (f.fileUrl) {
-                                      setPreview({
-                                        url: f.fileUrl,
-                                        type: displayType,
-                                        name: displayName,
-                                        attachmentId: f.id,
-                                        alreadyInDocs: true,
-                                      });
-                                    } else if (displayUrl) {
-                                      window.open(displayUrl, "_blank", "noopener,noreferrer");
-                                    }
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                      {renderDeliveryMark(comment)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div ref={commentsEndRef} />
-            </div>
-          )}
-        </div>
 
-        {/* Chat input */}
-        <div className="border-t pt-3">
-          <div className="flex gap-2">
-            <div className="flex flex-col gap-2 flex-1">
-              <Textarea
-                placeholder="Type a message..."
-                rows={2}
-                value={newComment}
-                onChange={(e) => {
-                  setNewComment(e.target.value);
-                  handleTyping();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendComment();
-                  }
-                }}
-                className="flex-1 text-sm"
-                disabled={sendingComment}
-              />
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  multiple
-                  ref={chatFileInputRef}
-                  className="hidden"
-                  onChange={(e) => handleFileUpload(e, true)}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs gap-1.5 text-muted-foreground"
-                  onClick={() => chatFileInputRef.current?.click()}
-                  disabled={uploadingFiles}
-                >
-                  <Paperclip className="w-3.5 h-3.5" />
-                  Attach File
-                </Button>
-              </div>
-            </div>
-            <Button
-              size="icon"
-              onClick={() => handleSendComment()}
-              disabled={!newComment.trim() || sendingComment}
-              className="flex-shrink-0 self-end"
-            >
-              {sendingComment ? (
-                <Clock className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Press Enter to send, Shift+Enter for new line
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
 
   // ============================================================
   // Workbench render helpers
@@ -1272,11 +1059,11 @@ const TaskDetails = () => {
   };
 
   const TaskListPanel = (
-    <div className="flex h-full flex-col bg-background">
-      <div className="p-4 border-b space-y-3 shrink-0">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight">Task Workbench</h2>
-          <div className="flex items-center gap-1">
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <div className="p-3 sm:p-4 border-b space-y-3 shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base sm:text-lg font-bold tracking-tight truncate">Task Workbench</h2>
+          <div className="flex items-center gap-1 shrink-0">
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1286,11 +1073,28 @@ const TaskDetails = () => {
                 </TooltipTrigger>
                 <TooltipContent>New task</TooltipContent>
               </Tooltip>
+              <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
+                <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
+              </Button>
+              {!isMobile && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label="Collapse task list"
+                      onClick={() => setListPanelOpen(false)}
+                    >
+                      <ChevronLeftIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Collapse task list</TooltipContent>
+                </Tooltip>
+              )}
             </TooltipProvider>
-            <Button variant="ghost" size="icon" onClick={() => listQuery.refetch()} className="h-8 w-8">
-              <RefreshCw className={cn("h-4 w-4", listQuery.isFetching && "animate-spin")} />
-            </Button>
           </div>
+
         </div>
         <div className="flex gap-2">
           <Button
@@ -1497,33 +1301,50 @@ const TaskDetails = () => {
           : true;
 
       return (
-        <div className="flex h-full flex-col overflow-hidden bg-muted/20">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/20">
           {/* Sticky header */}
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 py-4">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-3 py-3 sm:px-5 sm:py-4">
             <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div className="min-w-0 flex-1 basis-full md:basis-[55%]">
-                <div className="flex items-start gap-2 flex-wrap">
-                  <h1 className="text-xl md:text-2xl font-bold leading-tight break-words min-w-0 flex-1">
-                    {task.title || "Untitled Task"}
-                  </h1>
-                  <div className="flex items-center gap-1.5 flex-wrap shrink-0 pt-1">
-                    <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
-                    <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
-                    <button className="text-muted-foreground hover:text-yellow-500 transition">
-                      <Star className="h-4 w-4" />
-                    </button>
+              <div className="min-w-0 flex-1 basis-full xl:basis-[52%]">
+                <div className="flex items-start gap-2">
+                  {isMobile && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 -ml-1.5 shrink-0"
+                      aria-label="Back to task list"
+                      onClick={() => setMobilePanel("list")}
+                    >
+                      <ChevronLeftIcon className="h-5 w-5" />
+                    </Button>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-base sm:text-xl xl:text-2xl font-bold leading-snug break-words">
+                      {task.title || "Untitled Task"}
+                    </h1>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                      <Badge className={cn("text-[10px] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
+                      <Badge className={cn("text-[10px] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                      <button className="text-muted-foreground hover:text-yellow-500 transition">
+                        <Star className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
                 {task.description && (
                   <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{task.description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+
+              <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+
+              {/* Desktop / tablet toolbar */}
+              <div className="hidden md:flex items-center gap-2 shrink-0">
                 <TooltipProvider delayDuration={150}>
-                  <div className="hidden md:flex items-center gap-1.5 pr-1 border-r mr-1">
+                  <div className="hidden lg:flex items-center gap-1.5 pr-1 border-r mr-1">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
                     <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
-                      <SelectTrigger className="h-8 w-[140px] text-xs">
+                      <SelectTrigger className="h-8 w-[130px] text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1538,7 +1359,15 @@ const TaskDetails = () => {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => taskQuery.refetch()} className="gap-1.5">
+                      <Button variant="outline" size="icon" onClick={() => taskQuery.refetch()} className="h-8 w-8 xl:hidden">
+                        <RefreshCw className={cn("h-3.5 w-3.5", taskQuery.isFetching && "animate-spin")} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reload task</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => taskQuery.refetch()} className="gap-1.5 hidden xl:inline-flex">
                         <RefreshCw className={cn("h-3.5 w-3.5", taskQuery.isFetching && "animate-spin")} /> Refresh
                       </Button>
                     </TooltipTrigger>
@@ -1548,17 +1377,16 @@ const TaskDetails = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="sm" variant="secondary" onClick={() => setShowCreateTask(true)} className="gap-1.5">
-                        <Plus className="h-3.5 w-3.5" /> New Task
+                        <Plus className="h-3.5 w-3.5" /> <span className="hidden xl:inline">New Task</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Create a new task</TooltipContent>
                   </Tooltip>
 
-                  <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
-                        <Upload className="h-3.5 w-3.5" /> Upload File
+                        <Upload className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Upload File</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Attach files to this task</TooltipContent>
@@ -1566,8 +1394,21 @@ const TaskDetails = () => {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => setRightTab("edit")} className="gap-1.5">
-                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (isTablet) {
+                            setRightTab("edit");
+                            setCollabSheetOpen(true);
+                          } else {
+                            setCollabPanelOpen(true);
+                            setRightTab("edit");
+                          }
+                        }}
+                        className="gap-1.5"
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Edit</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Open the full task editor</TooltipContent>
@@ -1575,7 +1416,7 @@ const TaskDetails = () => {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)}>
                         <X className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -1583,10 +1424,54 @@ const TaskDetails = () => {
                   </Tooltip>
                 </TooltipProvider>
               </div>
+
+              {/* Mobile toolbar — status is the primary action */}
+              <div className="flex md:hidden items-center gap-2 w-full">
+                <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
+                  <SelectTrigger className="h-9 flex-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="delayed">Delayed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  aria-label="Upload file"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFiles}
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  aria-label="Refresh task"
+                  onClick={() => taskQuery.refetch()}
+                >
+                  <RefreshCw className={cn("h-4 w-4", taskQuery.isFetching && "animate-spin")} />
+                </Button>
+                <Button
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  aria-label="New task"
+                  onClick={() => setShowCreateTask(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5 space-y-4 sm:space-y-5">
+
             {/* Metadata cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="rounded-lg border bg-card p-3">
@@ -2219,7 +2104,7 @@ const TaskDetails = () => {
           }
         />
       )}
-      {renderMobileChatSheet()}
+      
 
       <AlertDialog
         open={!!attachmentToDelete}
@@ -2253,41 +2138,130 @@ const TaskDetails = () => {
       />
 
 
-      <DashboardLayout>
+      {/* Unified responsive panel sheet (mobile) */}
+      <Sheet open={!!mobilePanel} onOpenChange={(o) => !o && setMobilePanel(null)}>
+        <SheetContent
+          side="bottom"
+          className="h-[92dvh] p-0 gap-0 flex flex-col rounded-t-2xl"
+        >
+          <SheetHeader className="shrink-0 border-b px-2 py-2.5 text-left">
+            <SheetTitle className="flex items-center gap-1.5 text-base">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Back"
+                onClick={() => setMobilePanel(null)}
+              >
+                <ChevronLeftIcon className="h-5 w-5" />
+              </Button>
+              {mobilePanel === "list" && <><ListChecks className="h-4 w-4" /> Tasks</>}
+              {mobilePanel === "chat" && <><MessageSquare className="h-4 w-4" /> Chat</>}
+              {mobilePanel === "files" && <><FilesIcon className="h-4 w-4" /> Files</>}
+              {mobilePanel === "activity" && <><ActivityIcon className="h-4 w-4" /> Activity</>}
+              {mobilePanel === "edit" && <><Pencil className="h-4 w-4" /> Edit Task</>}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 min-h-0 overflow-hidden pb-[env(safe-area-inset-bottom)]">
+            {mobilePanel === "list" && TaskListPanel}
+            {mobilePanel === "chat" && ChatContent}
+            {mobilePanel === "files" && FilesContent}
+            {mobilePanel === "activity" && ActivityContent}
+            {mobilePanel === "edit" && EditContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Collaboration sheet (tablet) */}
+      <Sheet open={collabSheetOpen} onOpenChange={setCollabSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-[460px] p-0 gap-0 flex flex-col">
+          <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
+            <SheetTitle className="text-base">Collaboration</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 min-h-0 overflow-hidden">{CollaborationPanel}</div>
+        </SheetContent>
+      </Sheet>
+
+      <DashboardLayout hidePadding>
         {isMobile ? (
-          <div className="h-[calc(100vh-4rem)] flex flex-col">
-            <div className="flex border-b bg-background shrink-0">
-              {(["list", "details", "chat"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => s === "chat" ? setShowChatSheet(true) : setMobileSection(s)}
-                  className={cn(
-                    "flex-1 py-3 text-xs font-medium capitalize transition",
-                    mobileSection === s ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {s === "list" ? "Tasks" : s === "details" ? "Details" : "Chat"}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              {mobileSection === "list" ? TaskListPanel : DetailsPanel}
-            </div>
+          <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">{DetailsPanel}</div>
+
+            {/* Bottom action bar — respects browser safe area */}
+            <nav className="shrink-0 border-t bg-background/95 backdrop-blur px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))]">
+              <div className="grid grid-cols-5 gap-0.5">
+                {([
+                  { key: "list", label: "Tasks", Icon: ListChecks, count: 0 },
+                  { key: "chat", label: "Chat", Icon: MessageSquare, count: comments.length },
+                  { key: "files", label: "Files", Icon: FilesIcon, count: task?.attachments?.length || 0 },
+                  { key: "activity", label: "Activity", Icon: ActivityIcon, count: 0 },
+                  { key: "edit", label: "Edit", Icon: Pencil, count: 0 },
+                ] as const).map(({ key, label, Icon, count }) => (
+                  <button
+                    key={key}
+                    onClick={() => setMobilePanel(key as any)}
+                    className={cn(
+                      "relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-medium transition-colors active:scale-[0.97]",
+                      mobilePanel === key ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    <Icon className="h-[18px] w-[18px]" />
+                    {label}
+                    {count > 0 && (
+                      <span className="absolute top-1 right-1.5 min-w-[14px] rounded-full bg-primary px-1 text-[9px] leading-[14px] text-primary-foreground">
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </nav>
           </div>
         ) : (
-          <div className="h-[calc(100vh-4rem)] relative">
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={22} minSize={16} maxSize={32}>
-                {TaskListPanel}
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={collabPanelOpen ? 50 : 78} minSize={35}>
+          <div className="flex h-[calc(100dvh-3.5rem)] relative">
+            {/* Collapsed task-list rail */}
+            {!listPanelOpen && (
+              <div className="w-11 shrink-0 border-r bg-background flex flex-col items-center gap-2 py-3">
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setListPanelOpen(true)}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Show task list</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" className="h-8 w-8" onClick={() => setShowCreateTask(true)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">New task</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
+                  Tasks
+                </span>
+              </div>
+            )}
+
+            <ResizablePanelGroup direction="horizontal" className="h-full flex-1">
+              {listPanelOpen && (
+                <>
+                  <ResizablePanel id="list" order={1} defaultSize={22} minSize={16} maxSize={34}>
+                    {TaskListPanel}
+                  </ResizablePanel>
+                  <ResizableHandle withHandle />
+                </>
+              )}
+              <ResizablePanel id="details" order={2} defaultSize={collabPanelOpen && !isTablet ? 50 : 78} minSize={30}>
                 {DetailsPanel}
               </ResizablePanel>
-              {collabPanelOpen && (
+              {!isTablet && collabPanelOpen && (
                 <>
                   <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={28} minSize={22} maxSize={40}>
+                  <ResizablePanel id="collab" order={3} defaultSize={28} minSize={22} maxSize={45}>
                     {CollaborationPanel}
                   </ResizablePanel>
                 </>
@@ -2301,16 +2275,17 @@ const TaskDetails = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setCollabPanelOpen(!collabPanelOpen)}
+                    onClick={() => {
+                      if (isTablet) setCollabSheetOpen(true);
+                      else setCollabPanelOpen(!collabPanelOpen);
+                    }}
                     className={cn(
-                      "absolute top-1/2 -translate-y-1/2 z-20 h-14 w-7 shadow-lg transition-all duration-200",
+                      "absolute right-0 top-1/2 -translate-y-1/2 z-20 h-14 w-7 shadow-lg transition-all duration-200",
                       "bg-background hover:bg-primary hover:text-primary-foreground",
-                      collabPanelOpen
-                        ? "right-0 rounded-r-none rounded-l-lg border-r-0"
-                        : "right-0 rounded-r-none rounded-l-lg border-r-0"
+                      "rounded-r-none rounded-l-lg border-r-0"
                     )}
                   >
-                    {collabPanelOpen ? (
+                    {!isTablet && collabPanelOpen ? (
                       <ChevronRight className="h-4 w-4" />
                     ) : (
                       <ChevronLeftIcon className="h-4 w-4" />
@@ -2318,13 +2293,18 @@ const TaskDetails = () => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left">
-                  {collabPanelOpen ? "Hide collaboration panel" : "Show collaboration panel"}
+                  {isTablet
+                    ? "Open chat, files & editing"
+                    : collabPanelOpen
+                      ? "Hide collaboration panel"
+                      : "Show collaboration panel"}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         )}
       </DashboardLayout>
+
     </>
   );
 };

@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -51,6 +52,7 @@ import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { cn } from "@/lib/utils";
 import {
   useDashboardData,
   usePendingVerificationsQuery,
@@ -73,6 +75,7 @@ const DashboardExecutive = () => {
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [sideColumnOpen, setSideColumnOpen] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
 
@@ -532,31 +535,91 @@ const DashboardExecutive = () => {
 
         return (
           <>
-            {/* Mobile / tablet stacked */}
+            {/* Mobile / tablet stacked — overview + quick actions collapsible */}
             <div className="space-y-4 lg:hidden">
-              {teamOverview}
-              {quickActions}
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Overview
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setSideColumnOpen((v) => !v)}
+                >
+                  {sideColumnOpen ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5" /> Hide
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3.5 w-3.5" /> Show
+                    </>
+                  )}
+                </Button>
+              </div>
+              {sideColumnOpen && (
+                <div className="space-y-4 animate-fade-in">
+                  {teamOverview}
+                  {quickActions}
+                </div>
+              )}
               {tasksSection}
             </div>
 
-            {/* Desktop resizable */}
+            {/* Desktop resizable with collapsible side column */}
             <div className="hidden lg:block">
-              <ResizablePanelGroup
-                direction="horizontal"
-                className="h-[calc(100vh-120px)] rounded-xl"
-              >
-                <ResizablePanel defaultSize={35} minSize={22} maxSize={55}>
-                  <div className="pr-3 space-y-4 h-full overflow-y-auto">
-                    {teamOverview}
-                    {quickActions}
+              <div className="flex h-[calc(100vh-120px)] gap-1">
+                {!sideColumnOpen && (
+                  <div className="w-11 shrink-0 flex flex-col items-center gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label="Show overview column"
+                      onClick={() => setSideColumnOpen(true)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <span className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
+                      Overview
+                    </span>
                   </div>
-                </ResizablePanel>
-                <ResizableHandle withHandle className="bg-transparent mx-1" />
-                <ResizablePanel defaultSize={65} minSize={45}>
-                  <div className="pl-3 h-full overflow-y-auto">{tasksSection}</div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
+                )}
+                <ResizablePanelGroup
+                  direction="horizontal"
+                  className="h-full flex-1 rounded-xl"
+                >
+                  {sideColumnOpen && (
+                    <>
+                      <ResizablePanel id="side" order={1} defaultSize={35} minSize={22} maxSize={55}>
+                        <div className="pr-3 space-y-4 h-full overflow-y-auto">
+                          <div className="flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5 text-xs"
+                              onClick={() => setSideColumnOpen(false)}
+                            >
+                              <ChevronLeft className="h-3.5 w-3.5" /> Collapse
+                            </Button>
+                          </div>
+                          {teamOverview}
+                          {quickActions}
+                        </div>
+                      </ResizablePanel>
+                      <ResizableHandle withHandle className="bg-transparent mx-1" />
+                    </>
+                  )}
+                  <ResizablePanel id="main" order={2} defaultSize={sideColumnOpen ? 65 : 100} minSize={45}>
+                    <div className={cn("h-full overflow-y-auto", sideColumnOpen && "pl-3")}>
+                      {tasksSection}
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </div>
             </div>
+
           </>
         );
       })()}
