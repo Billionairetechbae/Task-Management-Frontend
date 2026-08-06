@@ -1284,33 +1284,50 @@ const TaskDetails = () => {
           : true;
 
       return (
-        <div className="flex h-full flex-col overflow-hidden bg-muted/20">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/20">
           {/* Sticky header */}
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 py-4">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-3 py-3 sm:px-5 sm:py-4">
             <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div className="min-w-0 flex-1 basis-full md:basis-[55%]">
-                <div className="flex items-start gap-2 flex-wrap">
-                  <h1 className="text-xl md:text-2xl font-bold leading-tight break-words min-w-0 flex-1">
-                    {task.title || "Untitled Task"}
-                  </h1>
-                  <div className="flex items-center gap-1.5 flex-wrap shrink-0 pt-1">
-                    <Badge className={cn("text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
-                    <Badge className={cn("text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
-                    <button className="text-muted-foreground hover:text-yellow-500 transition">
-                      <Star className="h-4 w-4" />
-                    </button>
+              <div className="min-w-0 flex-1 basis-full xl:basis-[52%]">
+                <div className="flex items-start gap-2">
+                  {isMobile && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 -ml-1.5 shrink-0"
+                      aria-label="Back to task list"
+                      onClick={() => setMobilePanel("list")}
+                    >
+                      <ChevronLeftIcon className="h-5 w-5" />
+                    </Button>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-base sm:text-xl xl:text-2xl font-bold leading-snug break-words">
+                      {task.title || "Untitled Task"}
+                    </h1>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                      <Badge className={cn("text-[10px] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
+                      <Badge className={cn("text-[10px] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                      <button className="text-muted-foreground hover:text-yellow-500 transition">
+                        <Star className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
                 {task.description && (
                   <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{task.description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+
+              <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+
+              {/* Desktop / tablet toolbar */}
+              <div className="hidden md:flex items-center gap-2 shrink-0">
                 <TooltipProvider delayDuration={150}>
-                  <div className="hidden md:flex items-center gap-1.5 pr-1 border-r mr-1">
+                  <div className="hidden lg:flex items-center gap-1.5 pr-1 border-r mr-1">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
                     <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
-                      <SelectTrigger className="h-8 w-[140px] text-xs">
+                      <SelectTrigger className="h-8 w-[130px] text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1325,7 +1342,15 @@ const TaskDetails = () => {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => taskQuery.refetch()} className="gap-1.5">
+                      <Button variant="outline" size="icon" onClick={() => taskQuery.refetch()} className="h-8 w-8 xl:hidden">
+                        <RefreshCw className={cn("h-3.5 w-3.5", taskQuery.isFetching && "animate-spin")} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reload task</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => taskQuery.refetch()} className="gap-1.5 hidden xl:inline-flex">
                         <RefreshCw className={cn("h-3.5 w-3.5", taskQuery.isFetching && "animate-spin")} /> Refresh
                       </Button>
                     </TooltipTrigger>
@@ -1335,17 +1360,16 @@ const TaskDetails = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="sm" variant="secondary" onClick={() => setShowCreateTask(true)} className="gap-1.5">
-                        <Plus className="h-3.5 w-3.5" /> New Task
+                        <Plus className="h-3.5 w-3.5" /> <span className="hidden xl:inline">New Task</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Create a new task</TooltipContent>
                   </Tooltip>
 
-                  <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
-                        <Upload className="h-3.5 w-3.5" /> Upload File
+                        <Upload className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Upload File</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Attach files to this task</TooltipContent>
@@ -1353,8 +1377,21 @@ const TaskDetails = () => {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => setRightTab("edit")} className="gap-1.5">
-                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (isTablet) {
+                            setRightTab("edit");
+                            setCollabSheetOpen(true);
+                          } else {
+                            setCollabPanelOpen(true);
+                            setRightTab("edit");
+                          }
+                        }}
+                        className="gap-1.5"
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Edit</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Open the full task editor</TooltipContent>
@@ -1362,7 +1399,7 @@ const TaskDetails = () => {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)}>
                         <X className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -1370,10 +1407,54 @@ const TaskDetails = () => {
                   </Tooltip>
                 </TooltipProvider>
               </div>
+
+              {/* Mobile toolbar — status is the primary action */}
+              <div className="flex md:hidden items-center gap-2 w-full">
+                <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
+                  <SelectTrigger className="h-9 flex-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="delayed">Delayed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  aria-label="Upload file"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFiles}
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  aria-label="Refresh task"
+                  onClick={() => taskQuery.refetch()}
+                >
+                  <RefreshCw className={cn("h-4 w-4", taskQuery.isFetching && "animate-spin")} />
+                </Button>
+                <Button
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  aria-label="New task"
+                  onClick={() => setShowCreateTask(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5 space-y-4 sm:space-y-5">
+
             {/* Metadata cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="rounded-lg border bg-card p-3">
