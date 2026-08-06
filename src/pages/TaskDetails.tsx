@@ -2121,41 +2121,130 @@ const TaskDetails = () => {
       />
 
 
-      <DashboardLayout>
+      {/* Unified responsive panel sheet (mobile) */}
+      <Sheet open={!!mobilePanel} onOpenChange={(o) => !o && setMobilePanel(null)}>
+        <SheetContent
+          side="bottom"
+          className="h-[92dvh] p-0 gap-0 flex flex-col rounded-t-2xl"
+        >
+          <SheetHeader className="shrink-0 border-b px-2 py-2.5 text-left">
+            <SheetTitle className="flex items-center gap-1.5 text-base">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Back"
+                onClick={() => setMobilePanel(null)}
+              >
+                <ChevronLeftIcon className="h-5 w-5" />
+              </Button>
+              {mobilePanel === "list" && <><ListChecks className="h-4 w-4" /> Tasks</>}
+              {mobilePanel === "chat" && <><MessageSquare className="h-4 w-4" /> Chat</>}
+              {mobilePanel === "files" && <><FilesIcon className="h-4 w-4" /> Files</>}
+              {mobilePanel === "activity" && <><ActivityIcon className="h-4 w-4" /> Activity</>}
+              {mobilePanel === "edit" && <><Pencil className="h-4 w-4" /> Edit Task</>}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 min-h-0 overflow-hidden pb-[env(safe-area-inset-bottom)]">
+            {mobilePanel === "list" && TaskListPanel}
+            {mobilePanel === "chat" && ChatContent}
+            {mobilePanel === "files" && FilesContent}
+            {mobilePanel === "activity" && ActivityContent}
+            {mobilePanel === "edit" && EditContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Collaboration sheet (tablet) */}
+      <Sheet open={collabSheetOpen} onOpenChange={setCollabSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-[460px] p-0 gap-0 flex flex-col">
+          <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
+            <SheetTitle className="text-base">Collaboration</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 min-h-0 overflow-hidden">{CollaborationPanel}</div>
+        </SheetContent>
+      </Sheet>
+
+      <DashboardLayout hidePadding>
         {isMobile ? (
-          <div className="h-[calc(100vh-4rem)] flex flex-col">
-            <div className="flex border-b bg-background shrink-0">
-              {(["list", "details", "chat"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => s === "chat" ? setShowChatSheet(true) : setMobileSection(s)}
-                  className={cn(
-                    "flex-1 py-3 text-xs font-medium capitalize transition",
-                    mobileSection === s ? "border-b-2 border-primary text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {s === "list" ? "Tasks" : s === "details" ? "Details" : "Chat"}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              {mobileSection === "list" ? TaskListPanel : DetailsPanel}
-            </div>
+          <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">{DetailsPanel}</div>
+
+            {/* Bottom action bar — respects browser safe area */}
+            <nav className="shrink-0 border-t bg-background/95 backdrop-blur px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))]">
+              <div className="grid grid-cols-5 gap-0.5">
+                {([
+                  { key: "list", label: "Tasks", Icon: ListChecks, count: 0 },
+                  { key: "chat", label: "Chat", Icon: MessageSquare, count: comments.length },
+                  { key: "files", label: "Files", Icon: FilesIcon, count: task?.attachments?.length || 0 },
+                  { key: "activity", label: "Activity", Icon: ActivityIcon, count: 0 },
+                  { key: "edit", label: "Edit", Icon: Pencil, count: 0 },
+                ] as const).map(({ key, label, Icon, count }) => (
+                  <button
+                    key={key}
+                    onClick={() => setMobilePanel(key as any)}
+                    className={cn(
+                      "relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-medium transition-colors active:scale-[0.97]",
+                      mobilePanel === key ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    <Icon className="h-[18px] w-[18px]" />
+                    {label}
+                    {count > 0 && (
+                      <span className="absolute top-1 right-1.5 min-w-[14px] rounded-full bg-primary px-1 text-[9px] leading-[14px] text-primary-foreground">
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </nav>
           </div>
         ) : (
-          <div className="h-[calc(100vh-4rem)] relative">
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={22} minSize={16} maxSize={32}>
-                {TaskListPanel}
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={collabPanelOpen ? 50 : 78} minSize={35}>
+          <div className="flex h-[calc(100dvh-3.5rem)] relative">
+            {/* Collapsed task-list rail */}
+            {!listPanelOpen && (
+              <div className="w-11 shrink-0 border-r bg-background flex flex-col items-center gap-2 py-3">
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setListPanelOpen(true)}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Show task list</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" className="h-8 w-8" onClick={() => setShowCreateTask(true)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">New task</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
+                  Tasks
+                </span>
+              </div>
+            )}
+
+            <ResizablePanelGroup direction="horizontal" className="h-full flex-1">
+              {listPanelOpen && (
+                <>
+                  <ResizablePanel id="list" order={1} defaultSize={22} minSize={16} maxSize={34}>
+                    {TaskListPanel}
+                  </ResizablePanel>
+                  <ResizableHandle withHandle />
+                </>
+              )}
+              <ResizablePanel id="details" order={2} defaultSize={collabPanelOpen && !isTablet ? 50 : 78} minSize={30}>
                 {DetailsPanel}
               </ResizablePanel>
-              {collabPanelOpen && (
+              {!isTablet && collabPanelOpen && (
                 <>
                   <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={28} minSize={22} maxSize={40}>
+                  <ResizablePanel id="collab" order={3} defaultSize={28} minSize={22} maxSize={45}>
                     {CollaborationPanel}
                   </ResizablePanel>
                 </>
@@ -2169,16 +2258,17 @@ const TaskDetails = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setCollabPanelOpen(!collabPanelOpen)}
+                    onClick={() => {
+                      if (isTablet) setCollabSheetOpen(true);
+                      else setCollabPanelOpen(!collabPanelOpen);
+                    }}
                     className={cn(
-                      "absolute top-1/2 -translate-y-1/2 z-20 h-14 w-7 shadow-lg transition-all duration-200",
+                      "absolute right-0 top-1/2 -translate-y-1/2 z-20 h-14 w-7 shadow-lg transition-all duration-200",
                       "bg-background hover:bg-primary hover:text-primary-foreground",
-                      collabPanelOpen
-                        ? "right-0 rounded-r-none rounded-l-lg border-r-0"
-                        : "right-0 rounded-r-none rounded-l-lg border-r-0"
+                      "rounded-r-none rounded-l-lg border-r-0"
                     )}
                   >
-                    {collabPanelOpen ? (
+                    {!isTablet && collabPanelOpen ? (
                       <ChevronRight className="h-4 w-4" />
                     ) : (
                       <ChevronLeftIcon className="h-4 w-4" />
@@ -2186,13 +2276,18 @@ const TaskDetails = () => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left">
-                  {collabPanelOpen ? "Hide collaboration panel" : "Show collaboration panel"}
+                  {isTablet
+                    ? "Open chat, files & editing"
+                    : collabPanelOpen
+                      ? "Hide collaboration panel"
+                      : "Show collaboration panel"}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         )}
       </DashboardLayout>
+
     </>
   );
 };
