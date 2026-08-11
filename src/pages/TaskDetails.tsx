@@ -25,7 +25,7 @@ import {
   Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, 
   Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, 
   Files as FilesIcon, Pencil, Plus, FolderPlus, ChevronDown, ChevronUp,
-  ChevronLeft as ChevronLeftIcon, Eye, ExternalLink, Loader2
+  ChevronLeft as ChevronLeftIcon, Eye, ExternalLink, Loader2, Lock
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
@@ -33,7 +33,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Task, TaskComment } from "@/lib/api";
+import { api, Task, TaskComment, TaskAccess } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -93,6 +93,7 @@ const TaskDetails = () => {
   const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
+  const [taskAccess, setTaskAccess] = useState<TaskAccess | null>(null);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
   
@@ -108,7 +109,7 @@ const TaskDetails = () => {
       if (!id) throw new Error("No task id");
       try {
         const response = await api.getTaskById(id);
-        return response.data.task;
+        return response.data;
       } catch (err: any) {
         if (err?.status === 403) {
           toast({
@@ -140,9 +141,16 @@ const TaskDetails = () => {
   // Sync state with query data
   useEffect(() => {
     if (taskQuery.data) {
-      setTask(taskQuery.data);
+      setTask(taskQuery.data.task ?? null);
+      setTaskAccess(taskQuery.data.access ?? null);
     }
   }, [taskQuery.data]);
+
+  // The backend access object is the final authority: treat the task as
+  // read-only whenever editing is not explicitly permitted.
+  const isReadOnly = taskAccess
+    ? taskAccess.readOnly === true || taskAccess.canEdit === false
+    : false;
 
   useEffect(() => {
     if (commentsQuery.data) {
@@ -185,6 +193,11 @@ const TaskDetails = () => {
   const [listPanelOpen, setListPanelOpen] = useState(true);
   const [collabSheetOpen, setCollabSheetOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<null | "list" | "chat" | "files" | "activity" | "edit">(null);
+
+  // Read-only tasks expose no edit surface — keep the panel on a viewable tab.
+  useEffect(() => {
+    if (isReadOnly && rightTab === "edit") setRightTab("chat");
+  }, [isReadOnly, rightTab]);
 
   // Close mobile/tablet overlays whenever the selected task changes
   useEffect(() => {
@@ -480,7 +493,7 @@ const TaskDetails = () => {
   }, []);
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!task) return;
+    if (!task || isReadOnly) return;
 
     try {
       setUpdating(true);
@@ -510,7 +523,7 @@ const TaskDetails = () => {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isChat = false) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0 || !id) return;
+    if (files.length === 0 || !id || isReadOnly) return;
 
     try {
       setUploadingFiles(true);
@@ -547,7 +560,7 @@ const TaskDetails = () => {
 
   const confirmDeleteAttachment = async () => {
     const attachmentId = attachmentToDelete?.id;
-    if (!attachmentId) return;
+    if (!attachmentId || isReadOnly) return;
     try {
       await api.deleteTaskAttachment(attachmentId);
       setTask(prev => prev ? {
@@ -581,7 +594,7 @@ const TaskDetails = () => {
     thumbnailLink?: string;
     source: "google-drive";
   }) => {
-    if (!id) return;
+    if (!id || isReadOnly) return;
     try {
       setUpdating(true);
 
@@ -666,7 +679,7 @@ const TaskDetails = () => {
 
   const handleSendComment = async (overrideContent?: string) => {
     const content = (overrideContent || newComment).trim();
-    if (!id || !content || sendingComment) return;
+    if (!id || !content || sendingComment || isReadOnly) return;
     
     // messageId will be determined by WebSocket send (preferred) or local fallback
     let messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1325,6 +1338,15 @@ const TaskDetails = () => {
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                       <Badge className={cn("text-[10px] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
                       <Badge className={cn("text-[10px] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                      {isReadOnly && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] sm:text-xs gap-1 text-muted-foreground border-border bg-muted/40"
+                          title="You can view this task but not modify it"
+                        >
+                          <Lock className="h-3 w-3" /> Read only
+                        </Badge>
+                      )}
                       <button className="text-muted-foreground hover:text-yellow-500 transition">
                         <Star className="h-4 w-4" />
                       </button>
@@ -1343,7 +1365,7 @@ const TaskDetails = () => {
                 <TooltipProvider delayDuration={150}>
                   <div className="hidden lg:flex items-center gap-1.5 pr-1 border-r mr-1">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
-                    <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
+                    <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating || isReadOnly}>
                       <SelectTrigger className="h-8 w-[130px] text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -1374,45 +1396,51 @@ const TaskDetails = () => {
                     <TooltipContent>Reload task from server</TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="sm" variant="secondary" onClick={() => setShowCreateTask(true)} className="gap-1.5">
-                        <Plus className="h-3.5 w-3.5" /> <span className="hidden xl:inline">New Task</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Create a new task</TooltipContent>
-                  </Tooltip>
+                  {!isReadOnly && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="secondary" onClick={() => setShowCreateTask(true)} className="gap-1.5">
+                          <Plus className="h-3.5 w-3.5" /> <span className="hidden xl:inline">New Task</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Create a new task</TooltipContent>
+                    </Tooltip>
+                  )}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
-                        <Upload className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Upload File</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Attach files to this task</TooltipContent>
-                  </Tooltip>
+                  {!isReadOnly && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingFiles} className="gap-1.5">
+                          <Upload className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Upload File</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Attach files to this task</TooltipContent>
+                    </Tooltip>
+                  )}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (isTablet) {
-                            setRightTab("edit");
-                            setCollabSheetOpen(true);
-                          } else {
-                            setCollabPanelOpen(true);
-                            setRightTab("edit");
-                          }
-                        }}
-                        className="gap-1.5"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Edit</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Open the full task editor</TooltipContent>
-                  </Tooltip>
+                  {!isReadOnly && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (isTablet) {
+                              setRightTab("edit");
+                              setCollabSheetOpen(true);
+                            } else {
+                              setCollabPanelOpen(true);
+                              setRightTab("edit");
+                            }
+                          }}
+                          className="gap-1.5"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> <span className="hidden xl:inline">Edit</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Open the full task editor</TooltipContent>
+                    </Tooltip>
+                  )}
 
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1427,7 +1455,7 @@ const TaskDetails = () => {
 
               {/* Mobile toolbar — status is the primary action */}
               <div className="flex md:hidden items-center gap-2 w-full">
-                <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
+                <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating || isReadOnly}>
                   <SelectTrigger className="h-9 flex-1 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -1439,16 +1467,18 @@ const TaskDetails = () => {
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  aria-label="Upload file"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingFiles}
-                >
-                  <Upload className="h-4 w-4" />
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    aria-label="Upload file"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFiles || isReadOnly}
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="icon"
@@ -1458,14 +1488,16 @@ const TaskDetails = () => {
                 >
                   <RefreshCw className={cn("h-4 w-4", taskQuery.isFetching && "animate-spin")} />
                 </Button>
-                <Button
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  aria-label="New task"
-                  onClick={() => setShowCreateTask(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    aria-label="New task"
+                    onClick={() => setShowCreateTask(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -1597,7 +1629,7 @@ const TaskDetails = () => {
               <SubtaskList
                 taskId={task.id}
                 initialSubtasks={(task.subtasks || []).filter(Boolean)}
-                canEdit={canEditSubtasks && canCreateSubtasksByPolicy}
+                canEdit={canEditSubtasks && canCreateSubtasksByPolicy && !isReadOnly}
                 onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
               />
             </section>
@@ -1616,8 +1648,8 @@ const TaskDetails = () => {
               />
             </section>
 
-            {/* Status update */}
-            {(user?.id === task.assigneeId ||
+            {/* Status update — hidden entirely in read-only mode */}
+            {!isReadOnly && (user?.id === task.assigneeId ||
               (task as any).assignees?.filter(Boolean).some((a: any) => a.id === user?.id) ||
               user?.id === task.creator?.id ||
               ["manager", "executive", "admin", "team_member"].includes(user?.role || "")) && (
@@ -1758,20 +1790,20 @@ const TaskDetails = () => {
       <div className="p-3 border-t bg-background">
         <div className="flex gap-2 items-end">
           <Textarea
-            placeholder="Type a message..."
+            placeholder={isReadOnly ? "You can't comment on read-only tasks" : "Type a message..."}
             rows={2}
             value={newComment}
             onChange={(e) => { setNewComment(e.target.value); handleTyping(); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
             className="flex-1 resize-none text-sm"
-            disabled={sendingComment}
+            disabled={sendingComment || isReadOnly}
           />
           <div className="flex flex-col gap-1.5">
             <input type="file" multiple ref={chatFileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, true)} />
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={uploadingFiles}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={uploadingFiles || isReadOnly}>
               <Paperclip className="w-3.5 h-3.5" />
             </Button>
-            <Button size="icon" className="h-8 w-8" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment}>
+            <Button size="icon" className="h-8 w-8" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || isReadOnly}>
               {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
           </div>
@@ -1823,7 +1855,7 @@ const TaskDetails = () => {
         {task.attachments?.filter(Boolean).length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {task.attachments.filter(Boolean).map((file) => {
-              const isOwner = user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id;
+              const isOwner = !isReadOnly && (user?.role === "admin" || user?.role === "manager" || user?.id === task.creator?.id);
               const attachmentFile = file as any;
               const isGoogleDrive =
                 attachmentFile.source === "google-drive";
@@ -1985,11 +2017,13 @@ const TaskDetails = () => {
           <div className="py-10 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
             <FileText className="w-8 h-8 mb-2 opacity-30" />
             <p className="text-xs">No files attached yet</p>
-            <div className="flex gap-2 mt-2">
-              <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => fileInputRef.current?.click()}>Upload from device</Button>
-              <span className="text-xs opacity-40">or</span>
-              <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => setShowDrivePicker(true)}>Choose from Google Drive</Button>
-            </div>
+            {!isReadOnly && (
+              <div className="flex gap-2 mt-2">
+                <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => fileInputRef.current?.click()}>Upload from device</Button>
+                <span className="text-xs opacity-40">or</span>
+                <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => setShowDrivePicker(true)}>Choose from Google Drive</Button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2059,14 +2093,16 @@ const TaskDetails = () => {
                 </TooltipTrigger>
                 <TooltipContent>Activity — press 3</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
-                    <Pencil className="h-3.5 w-3.5" /> Edit
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Edit — press 4</TooltipContent>
-              </Tooltip>
+              {!isReadOnly && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                      <Pencil className="h-3.5 w-3.5" /> Edit
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit — press 4</TooltipContent>
+                </Tooltip>
+              )}
             </TabsList>
           </TooltipProvider>
         </div>
@@ -2189,14 +2225,16 @@ const TaskDetails = () => {
 
             {/* Bottom action bar — respects browser safe area */}
             <nav className="shrink-0 border-t bg-background/95 backdrop-blur px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))]">
-              <div className="grid grid-cols-5 gap-0.5">
+              <div className={cn("grid gap-0.5", isReadOnly ? "grid-cols-4" : "grid-cols-5")}>
                 {([
                   { key: "list", label: "Tasks", Icon: ListChecks, count: 0 },
                   { key: "chat", label: "Chat", Icon: MessageSquare, count: comments.length },
                   { key: "files", label: "Files", Icon: FilesIcon, count: task?.attachments?.length || 0 },
                   { key: "activity", label: "Activity", Icon: ActivityIcon, count: 0 },
                   { key: "edit", label: "Edit", Icon: Pencil, count: 0 },
-                ] as const).map(({ key, label, Icon, count }) => (
+                ] as const)
+                  .filter(({ key }) => !(isReadOnly && key === "edit"))
+                  .map(({ key, label, Icon, count }) => (
                   <button
                     key={key}
                     onClick={() => setMobilePanel(key as any)}

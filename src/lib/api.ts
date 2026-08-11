@@ -342,6 +342,17 @@ export interface TaskWatcher {
 export type TaskPriority = "low" | "medium" | "high";
 export type TaskStatus = "pending" | "in_progress" | "completed" | "delayed" | "cancelled";
 
+/**
+ * Per-user access info for a task, returned by GET /tasks/:id (and optionally
+ * embedded on list items). The task-detail endpoint is the final authority —
+ * list-level inference is only a hint for badges/disabled controls.
+ */
+export interface TaskAccess {
+  canView: boolean;
+  canEdit: boolean;
+  readOnly: boolean;
+}
+
 export interface Task {
   id?: string | null;
   title?: string | null;
@@ -403,6 +414,9 @@ export interface Task {
   calendarSynced?: boolean;
   googleCalendarEventId?: string | null;
   googleCalendarId?: string | null;
+
+  /** Optional per-user access hint (list items). GET /tasks/:id is authoritative. */
+  access?: TaskAccess | null;
 }
 
 export interface CreateTaskData {
@@ -1827,7 +1841,7 @@ class ApiClient {
 
   async getTaskById(
     taskId: string
-  ): Promise<{ status: string; data: { task: Task } }> {
+  ): Promise<{ status: string; data: { task: Task; access?: TaskAccess | null } }> {
     return this.request(`/tasks/${taskId}`, {
       method: "GET",
       headers: this.getAuthHeaders(),

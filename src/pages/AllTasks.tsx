@@ -27,7 +27,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListChecks, Search, RotateCcw, Bell, GitBranch } from "lucide-react";
-import { filterTopLevelTasks, getTaskSubtaskCount } from "@/lib/taskListUtils";
+import { filterTopLevelTasks, getTaskSubtaskCount, isUserInvolvedInTask } from "@/lib/taskListUtils";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+
+// Lightweight in-session persistence for the My Tasks / All Tasks toggle —
+// survives navigation between routes without adding new storage infrastructure.
+let sessionTaskScope: "my" | "all" | null = null;
 
 const STATUS_PILLS: { value: string; label: string; className: string }[] = [
   { value: "all", label: "All", className: "" },
@@ -40,8 +45,9 @@ const STATUS_PILLS: { value: string; label: string; className: string }[] = [
 
 const AllTasks = () => {
   const location = useLocation();
-  const { workspaces, user, activeCompanyId } = useAuth();
+  const { workspaces, user, activeCompanyId, workspaceRole } = useAuth();
   const { toast } = useToast();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
   const queryClient = useQueryClient();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -71,6 +77,29 @@ const AllTasks = () => {
   const [watchedOnly, setWatchedOnly] = useState(false);
   const [hasSubtasksOnly, setHasSubtasksOnly] = useState(false);
 
+  // My Tasks | All Tasks segmented control. Defaults to the route intent,
+  // then remembers the user's pick for the rest of the session.
+  const [taskScope, setTaskScope] = useState<"my" | "all">(
+    () => sessionTaskScope ?? (location.pathname.includes("/tasks/my") ? "my" : "all")
+  );
+
+  const canViewAllTasks = canPerformRoleOperation("view_all_tasks", workspaceRole);
+
+  // Without view_all_tasks there is no "All Tasks" to show — pin to My Tasks.
+  useEffect(() => {
+    if (!canViewAllTasks && taskScope === "all") {
+      sessionTaskScope = "my";
+      setTaskScope("my");
+    }
+  }, [canViewAllTasks, taskScope]);
+
+  const selectTaskScope = (next: "my" | "all") => {
+    if (next === "all" && !canViewAllTasks) return;
+    sessionTaskScope = next;
+    setTaskScope(next);
+    setPage(1);
+  };
+
   const isMyTasksRoute = location.pathname.includes("/tasks/my");
   
   // When activeCompanyId changes and we're on /tasks/my, update the filter
@@ -96,7 +125,14 @@ const AllTasks = () => {
     status: status === "all" ? undefined : status,
     priority: priority === "all" ? undefined : priority,
     companyId: companyId === "all" ? undefined : companyId,
-    scope: isMyTasksRoute ? "workspace" : undefined,
+    scope:
+      taskScope === "my"
+        ? companyId === "all"
+          ? "assigned_all"
+          : "assigned_workspace"
+        : companyId === "all"
+          ? "all_workspaces"
+          : "workspace",
   };
 
   const { data, isLoading, isError, error } = useQuery({
@@ -127,6 +163,7 @@ const AllTasks = () => {
 
   const tasks = filterTopLevelTasks(data?.data?.tasks || []);
   const filteredTasks = tasks.filter((task: any) => {
+    if (taskScope === "my" && !isUserInvolvedInTask(task, user?.id)) return false;
     if (watchedOnly && !task.isWatching) return false;
     if (hasSubtasksOnly && getTaskSubtaskCount(task) <= 0) return false;
     return true;
@@ -155,13 +192,49 @@ const AllTasks = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <PageHeader
-          title={isMyTasksRoute ? "My Tasks" : "All Tasks"}
+          title={taskScope === "my" ? "My Tasks" : "All Tasks"}
           description={
-            isMyTasksRoute
-              ? "Focus on tasks assigned to you, including watched and subtask-heavy work."
+            taskScope === "my"
+              ? "Focus on tasks you created or that are assigned to you."
               : "View and manage tasks across all your workspaces."
           }
         />
+
+        {/* My Tasks | All Tasks segmented control — hidden for users without view_all_tasks */}
+        <div
+          className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5"
+          role="tablist"
+          aria-label="Task scope"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={taskScope === "my"}
+            onClick={() => selectTaskScope("my")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+              taskScope === "my"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            My Tasks
+          </button>
+          {canViewAllTasks && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={taskScope === "all"}
+              onClick={() => selectTaskScope("all")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                taskScope === "all"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Tasks
+            </button>
+          )}
+        </div>
 
         <ContentCard className="shadow-soft">
           <div className="flex flex-col gap-4">

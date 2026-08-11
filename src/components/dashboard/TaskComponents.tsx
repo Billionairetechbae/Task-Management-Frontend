@@ -25,13 +25,14 @@ import {
   Trash2,
   Bell,
   ListTodo,
+  Lock,
 } from "lucide-react";
 import { Calendar } from "lucide-react";
 import { useState } from "react";
 import { Task, api } from "@/lib/api";
 import CompanyBadge from "@/components/CompanyBadge";
 import { cn } from "@/lib/utils";
-import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
+import { getTaskSubtaskCount, getTaskWatcherCount, isTaskReadOnlyForUser } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -243,7 +244,9 @@ export const TaskTable = ({
   canEdit,
   canAssign,
   canDelete,
-}: TaskTableProps) => (
+}: TaskTableProps) => {
+  const { user } = useAuth();
+  return (
   <TooltipProvider delayDuration={100}>
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       {/* Desktop table */}
@@ -297,6 +300,15 @@ export const TaskTable = ({
                     <div className="flex items-center gap-2">
                       <CompanyBadge company={task.company} />
                       <p className="truncate text-[13px] font-medium">{task.title}</p>
+                      {isTaskReadOnlyForUser(task, user?.id) && (
+                        <Badge
+                          variant="outline"
+                          title="You can view this task but not modify it"
+                          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground border-border bg-muted/40"
+                        >
+                          <Lock className="h-2.5 w-2.5" /> Read only
+                        </Badge>
+                      )}
                     </div>
 
                     {task.description && (
@@ -388,7 +400,7 @@ export const TaskTable = ({
                         icon={Pencil}
                         label="Edit"
                         onClick={() => onEdit(task)}
-                        disabled={canEdit ? !canEdit(task) : false}
+                        disabled={isTaskReadOnlyForUser(task, user?.id) || (canEdit ? !canEdit(task) : false)}
                         disabledReason="You don't have permission to edit this task"
                       />
                     )}
@@ -397,7 +409,7 @@ export const TaskTable = ({
                         icon={UserPlus}
                         label="Assign"
                         onClick={() => onAssign(task)}
-                        disabled={canAssign ? !canAssign(task) : false}
+                        disabled={isTaskReadOnlyForUser(task, user?.id) || (canAssign ? !canAssign(task) : false)}
                         disabledReason="You don't have permission to assign this task"
                       />
                     )}
@@ -407,7 +419,7 @@ export const TaskTable = ({
                         label="Delete"
                         onClick={() => onDelete(task)}
                         className="text-destructive hover:text-destructive"
-                        disabled={canDelete ? !canDelete(task) : false}
+                        disabled={isTaskReadOnlyForUser(task, user?.id) || (canDelete ? !canDelete(task) : false)}
                         disabledReason="You don't have permission to delete this task"
                       />
                     )}
@@ -438,6 +450,15 @@ export const TaskTable = ({
                 <div className="flex items-center gap-2">
                   <CompanyBadge company={task.company} />
                   <h4 className="truncate text-sm font-semibold">{task.title}</h4>
+                  {isTaskReadOnlyForUser(task, user?.id) && (
+                    <Badge
+                      variant="outline"
+                      title="You can view this task but not modify it"
+                      className="shrink-0 inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground border-border bg-muted/40"
+                    >
+                      <Lock className="h-2.5 w-2.5" /> Read only
+                    </Badge>
+                  )}
                 </div>
 
                 {task.description && (
@@ -537,7 +558,7 @@ export const TaskTable = ({
                   icon={Pencil}
                   label="Edit"
                   onClick={() => onEdit(task)}
-                  disabled={canEdit ? !canEdit(task) : false}
+                  disabled={isTaskReadOnlyForUser(task, user?.id) || (canEdit ? !canEdit(task) : false)}
                   disabledReason="You don't have permission to edit this task"
                 />
               )}
@@ -546,7 +567,7 @@ export const TaskTable = ({
                   icon={UserPlus}
                   label="Assign"
                   onClick={() => onAssign(task)}
-                  disabled={canAssign ? !canAssign(task) : false}
+                  disabled={isTaskReadOnlyForUser(task, user?.id) || (canAssign ? !canAssign(task) : false)}
                   disabledReason="You don't have permission to assign this task"
                 />
               )}
@@ -556,7 +577,7 @@ export const TaskTable = ({
                   label="Delete"
                   onClick={() => onDelete(task)}
                   className="text-destructive hover:text-destructive"
-                  disabled={canDelete ? !canDelete(task) : false}
+                  disabled={isTaskReadOnlyForUser(task, user?.id) || (canDelete ? !canDelete(task) : false)}
                   disabledReason="You don't have permission to delete this task"
                 />
               )}
@@ -566,7 +587,8 @@ export const TaskTable = ({
       </div>
     </div>
   </TooltipProvider>
-);
+  );
+};
 
 export const CompactTaskTable = ({
   tasks,

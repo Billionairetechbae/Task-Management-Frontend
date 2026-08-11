@@ -1,4 +1,4 @@
-import type { TaskWatcher } from "@/lib/api";
+import type { Task, TaskWatcher } from "@/lib/api";
 
 /** True when the task is a top-level task (not a subtask row). */
 export function isTopLevelTask(task: { parentTaskId?: string | null }): boolean {
@@ -12,6 +12,38 @@ export function filterTopLevelTasks<T extends { parentTaskId?: string | null }>(
 ): T[] {
   if (!tasks?.length) return [];
   return tasks.filter(isTopLevelTask);
+}
+
+/** True when the user is directly involved in the task: creator, primary assignee, or in multi-assignees. */
+export function isUserInvolvedInTask(
+  task: Task | null | undefined,
+  userId?: string | null
+): boolean {
+  if (!task || !userId) return false;
+  if (task.creator?.id && task.creator.id === userId) return true;
+  if (task.assigneeId && task.assigneeId === userId) return true;
+  if (task.assignee?.id && task.assignee.id === userId) return true;
+  if (task.assignedAssistantId === userId || task.executiveId === userId) return true;
+  return Array.isArray(task.assignees)
+    ? task.assignees.some((a: any) => a?.id === userId || a?.user?.id === userId)
+    : false;
+}
+
+/**
+ * List-level read-only hint for badges/disabled row actions.
+ * Prefers the backend-provided `task.access`; otherwise infers from
+ * involvement — tasks the user is not part of are read-only.
+ * GET /tasks/:id remains the final authority for the detail page.
+ */
+export function isTaskReadOnlyForUser(
+  task: Task | null | undefined,
+  userId?: string | null
+): boolean {
+  if (!task) return false;
+  if (task.access) {
+    return task.access.readOnly === true || task.access.canEdit === false;
+  }
+  return !isUserInvolvedInTask(task, userId);
 }
 
 type SubtaskCountable = {

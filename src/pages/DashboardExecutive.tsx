@@ -47,7 +47,7 @@ import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, TeamMember } from "@/lib/api";
-import { filterTopLevelTasks } from "@/lib/taskListUtils";
+import { filterTopLevelTasks, isUserInvolvedInTask } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -68,6 +68,9 @@ import {
 } from "@/components/skeletons/AppSkeletons";
 
 
+
+// Keeps the My Tasks / All Tasks selection for the duration of the session.
+let sessionDashTaskScope: "my" | "all" | null = null;
 
 const DashboardExecutive = () => {
   const { user, workspaceRole } = useAuth();
@@ -122,11 +125,13 @@ const DashboardExecutive = () => {
 
   const canCreateTask = canPerformRoleOperation("create_tasks", workspaceRole);
 
+  const canViewAllTasks = canPerformRoleOperation("view_all_tasks", workspaceRole);
+
   const hasTaskViewFilter =
     (workspaceRole === "admin" ||
       workspaceRole === "manager" ||
       workspaceRole === "member") &&
-    !canPerformRoleOperation("view_all_tasks", workspaceRole);
+    !canViewAllTasks;
 
   const canViewTeamAdminSections =
     workspaceRole === "owner" ||
@@ -142,9 +147,27 @@ const DashboardExecutive = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  const filteredTasks = statusFilter
-    ? tasks.filter((task) => task.status === statusFilter)
-    : tasks;
+  const showTaskScopeToggle = workspaceRole !== "member" && canViewAllTasks;
+  const [taskScope, setTaskScope] = useState<"my" | "all">(
+    () => sessionDashTaskScope ?? "all"
+  );
+  const selectTaskScope = (next: "my" | "all") => {
+    sessionDashTaskScope = next;
+    setTaskScope(next);
+    setCurrentPage(1);
+  };
+
+  const filteredTasks = tasks.filter((task) => {
+    if (statusFilter && task.status !== statusFilter) return false;
+    if (
+      showTaskScopeToggle &&
+      taskScope === "my" &&
+      !isUserInvolvedInTask(task, user?.id)
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const totalItems = filteredTasks.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -430,7 +453,13 @@ const DashboardExecutive = () => {
         const tasksSection = (
           <div className="space-y-4">
             <SectionHeader
-              title={workspaceRole === "member" ? "My Tasks" : "Recent Tasks"}
+              title={
+                workspaceRole === "member"
+                  ? "My Tasks"
+                  : showTaskScopeToggle && taskScope === "my"
+                    ? "My Tasks"
+                    : "Recent Tasks"
+              }
               description={
                 totalItems > 0
                   ? `${totalItems} ${workspaceRole === "member" ? "assigned tasks" : "total tasks"}`
@@ -447,7 +476,43 @@ const DashboardExecutive = () => {
             />
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0 flex-1 overflow-x-auto">
+              <div className="min-w-0 flex-1 overflow-x-auto flex flex-wrap items-center gap-2">
+                {showTaskScopeToggle && (
+                  <div
+                    role="tablist"
+                    aria-label="Task scope"
+                    className="inline-flex shrink-0 items-center rounded-lg border border-border bg-muted/50 p-0.5"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={taskScope === "my"}
+                      onClick={() => selectTaskScope("my")}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 text-xs font-medium transition",
+                        taskScope === "my"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      My Tasks
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={taskScope === "all"}
+                      onClick={() => selectTaskScope("all")}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 text-xs font-medium transition",
+                        taskScope === "all"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      All Tasks
+                    </button>
+                  </div>
+                )}
                 <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
               </div>
               {totalPages > 1 && (

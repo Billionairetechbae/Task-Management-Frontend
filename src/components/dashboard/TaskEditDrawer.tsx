@@ -32,6 +32,7 @@ import {
   Trash2,
   UserMinus,
   AlertTriangle,
+  Lock,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -85,6 +86,20 @@ export default function TaskEditDrawer({
     workspaceRole === "manager";
   const isAssistant =
     !isManager;
+
+  // Per-user access from GET /tasks/:id — read-only users keep the view
+  // experience but lose every modification control.
+  const [readOnly, setReadOnly] = useState(false);
+  const canModify = isManager && !readOnly;
+
+  // If the task turns out to be read-only, any mutation-only tab (assignees /
+  // danger) disappears, so fall back to the details view.
+  useEffect(() => {
+    if (readOnly && (activeTab === "danger" || activeTab === "assignees")) {
+      setActiveTab("details");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly]);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -142,8 +157,10 @@ export default function TaskEditDrawer({
 
       const res = await api.getTaskById(taskId);
       const t = res.data.task;
+      const access = res.data.access;
 
       setTask(t);
+      setReadOnly(access ? access.readOnly === true || access.canEdit === false : false);
 
       setTitle(t.title);
       setDescription(t.description || "");
@@ -198,7 +215,7 @@ export default function TaskEditDrawer({
   };
 
   const handleSaveDetails = async () => {
-    if (!task) return;
+    if (!task || readOnly) return;
 
     try {
       setSaving(true);
@@ -259,7 +276,7 @@ export default function TaskEditDrawer({
 
   // Add assignee (append mode)
   const handleAddAssignee = async (userId: string) => {
-    if (!task) return;
+    if (!task || readOnly) return;
     if (!userId || userId === "select") return;
 
     if (selectedAssigneeIds.includes(userId)) {
@@ -296,7 +313,7 @@ export default function TaskEditDrawer({
 
   // Remove assignee (replace mode)
   const handleRemoveAssignee = async (removeUserId: string) => {
-    if (!task) return;
+    if (!task || readOnly) return;
 
     // remove from selected list, but keep primary if backend forces it
     const nextIds = selectedAssigneeIds.filter((id) => id !== removeUserId);
@@ -332,7 +349,7 @@ export default function TaskEditDrawer({
   // assigneeIds array + no appendAssignees flag) so the secondary list is
   // preserved by the backend.
   const handleMakePrimary = async (userId: string) => {
-    if (!task || !userId) return;
+    if (!task || !userId || readOnly) return;
     try {
       setSaving(true);
       const res = await api.updateTask(task.id, { assigneeId: userId } as any);
@@ -351,6 +368,7 @@ export default function TaskEditDrawer({
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const files = Array.from(e.target.files || []);
     const valid: File[] = [];
 
@@ -381,6 +399,7 @@ export default function TaskEditDrawer({
   };
 
   const handleRemoveAttachment = async (att: TaskAttachment) => {
+    if (readOnly) return;
     try {
       await api.deleteTaskAttachment(att.id);
       setTask((prev) =>
@@ -393,7 +412,7 @@ export default function TaskEditDrawer({
   };
 
   const handleDelete = async () => {
-    if (!task) return;
+    if (!task || readOnly) return;
     try {
       setDeleting(true);
       await api.deleteTask(task.id);
@@ -449,6 +468,15 @@ export default function TaskEditDrawer({
             <div className="flex items-center gap-2 truncate">
               <CompanyBadge company={task?.company} />
               <span className="truncate">{loading ? "Loading..." : task?.title || "Task"}</span>
+              {readOnly && (
+                <Badge
+                  variant="outline"
+                  title="You can view this task but not modify it"
+                  className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground border-border bg-muted/40"
+                >
+                  <Lock className="h-3 w-3" /> Read only
+                </Badge>
+              )}
             </div>
           </SheetTitle>
         </SheetHeader>
@@ -464,7 +492,7 @@ export default function TaskEditDrawer({
                 <TabsTrigger value="details" className="text-xs">
                   Details
                 </TabsTrigger>
-                {isManager && (
+                {canModify && (
                   <TabsTrigger value="assignees" className="text-xs">
                     Assignees
                   </TabsTrigger>
@@ -474,7 +502,7 @@ export default function TaskEditDrawer({
                     Files
                   </TabsTrigger>
                 )}
-                {isManager ? (
+                {canModify ? (
                   <TabsTrigger value="danger" className="text-xs text-destructive">
                     Danger
                   </TabsTrigger>
@@ -487,7 +515,7 @@ export default function TaskEditDrawer({
 
               {/* Details */}
               <TabsContent value="details" className="space-y-4">
-                {isManager ? (
+                {canModify ? (
                   <>
                     {task && (
                       <div className="rounded-lg border p-3 space-y-4">
@@ -609,6 +637,7 @@ export default function TaskEditDrawer({
                             taskId={task.id}
                             initialSubtasks={task.subtasks || []}
                             canEdit={
+                              !readOnly &&
                               !!user?.id &&
                               ((task as any).assigneeId === user.id ||
                                 (Array.isArray((task as any).assignees) &&
@@ -633,7 +662,7 @@ export default function TaskEditDrawer({
 
                     <div className="space-y-2">
                       <Label>Status</Label>
-                      <Select value={status} onValueChange={setStatus}>
+                      <Select value={status} onValueChange={setStatus} disabled={readOnly}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -655,19 +684,22 @@ export default function TaskEditDrawer({
                         step={0.5}
                         value={actualHours}
                         onChange={(e) => setActualHours(Number(e.target.value))}
+                        disabled={readOnly}
                       />
                     </div>
                   </>
                 )}
 
-                <Button onClick={handleSaveDetails} disabled={saving} className="w-full">
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
+                {!readOnly && (
+                  <Button onClick={handleSaveDetails} disabled={saving} className="w-full">
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </Button>
+                )}
               </TabsContent>
 
               {/* Assignees */}
-              {isManager && canAssignOthers && (
+              {canModify && canAssignOthers && (
                 <TabsContent value="assignees" className="space-y-4">
                   <div className="space-y-2">
                     <Label>Assigned team members</Label>
@@ -779,7 +811,7 @@ export default function TaskEditDrawer({
                                 <Download className="h-3.5 w-3.5" />
                               </a>
                             </Button>
-                            {isManager && (
+                            {canModify && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -796,7 +828,7 @@ export default function TaskEditDrawer({
                   </div>
                 )}
 
-                {isManager && (
+                {canModify && (
                   <div className="space-y-2">
                     <Label>Upload New</Label>
                     <input
@@ -843,13 +875,13 @@ export default function TaskEditDrawer({
                   </div>
                 )}
 
-                {!isManager && (!task?.attachments || task.attachments.length === 0) && (
+                {!canModify && (!task?.attachments || task.attachments.length === 0) && (
                   <p className="text-sm text-muted-foreground py-4 text-center">No attachments</p>
                 )}
               </TabsContent>
 
               {/* Danger */}
-              {isManager && (
+              {canModify && (
                 <TabsContent value="danger" className="space-y-4">
                   <div className="border border-destructive/30 rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-2 text-destructive">
@@ -990,4 +1022,6 @@ export default function TaskEditDrawer({
     </>
   );
 }
+
+
 
