@@ -58,15 +58,17 @@ export const fetchDashboardData = async (
   if (workspaceRole === "member") {
     const res = await api.getTasks();
     const wsTasks = (res as any)?.data?.tasks || [];
-    const mine = filterTopLevelTasks(
-      wsTasks.filter((task: any) => {
-        if (task.assigneeId && task.assigneeId === userId) return true;
-        if (Array.isArray(task.assignees) && task.assignees.some((a: any) => a?.id === userId)) {
-          return true;
-        }
-        return false;
-      })
-    ) as Task[];
+    
+    // Filter for assigned tasks, then remove subtasks
+    const assignedTasks = wsTasks.filter((task: any) => {
+      if (task.assigneeId && task.assigneeId === userId) return true;
+      if (Array.isArray(task.assignees) && task.assignees.some((a: any) => a?.id === userId)) {
+        return true;
+      }
+      return false;
+    });
+    
+    const mine = filterTopLevelTasks(assignedTasks) as Task[];
 
     return { tasks: mine, teamStats: emptyTeamStats, taskStats: computeMemberStats(mine) };
   }
@@ -80,8 +82,11 @@ export const fetchDashboardData = async (
   const team = overview.team || emptyTeamStats;
   const taskOverview = overview.tasks || computeMemberStats([]);
 
+  // Filter to remove subtasks only - project tasks are workspace tasks and should appear
+  const dashboardTasks = filterTopLevelTasks(recentActivity.tasks || []) as Task[];
+
   return {
-    tasks: filterTopLevelTasks(recentActivity.tasks || []) as Task[],
+    tasks: dashboardTasks,
     teamStats: {
       totalAssistants: team.totalAssistants || 0,
       availableAssistants: team.availableAssistants || 0,

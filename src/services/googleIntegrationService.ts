@@ -45,6 +45,11 @@ const getAuthHeaders = (): HeadersInit => {
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "";
 
+export interface GooglePickerTokenResponse {
+  accessToken: string;
+  expiresAt?: string;
+}
+
 export const googleIntegrationService = {
   /* ======= INTEGRATION LIFECYCLE ======= */
 
@@ -93,6 +98,26 @@ export const googleIntegrationService = {
     });
   },
 
+  /**
+   * Request a short-lived Google OAuth access token from the backend.
+   * The backend uses the stored refresh token to mint a fresh access token
+   * and returns it here. The refresh token is NEVER sent to the frontend.
+   *
+   * Backend endpoint: GET /integrations/google/picker-token
+   */
+  async getPickerToken(): Promise<GooglePickerTokenResponse> {
+    const res = await api.get<any>(`${API_PREFIX}/picker-token`);
+    const data = (res as any)?.data ?? res ?? {};
+    const token = data.accessToken ?? data.access_token;
+    if (!token || typeof token !== "string") {
+      throw new Error("Picker token unavailable. Please reconnect Google Drive.");
+    }
+    return {
+      accessToken: token,
+      expiresAt: data.expiresAt ?? data.expires_at ?? undefined,
+    };
+  },
+
   /* ======= GOOGLE DRIVE FILES ======= */
 
   async listFiles(params: {
@@ -130,10 +155,6 @@ export const googleIntegrationService = {
       trashed: raw?.trashed ?? undefined,
       id: raw?.id ?? undefined,
     }));
-
-    // TEMPORARY diagnostic log: never logs credentials.
-    // eslint-disable-next-line no-console
-    console.log("Normalized Drive files:", files);
 
     return {
       files,

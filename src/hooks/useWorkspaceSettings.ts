@@ -33,6 +33,8 @@ export const workspacePermissionKeys: WorkspaceRolePermissionKey[] = [
   "view_all_projects",
   "create_project_tasks",
   "upload_workspace_files",
+  "view_workspace_members",
+  "assign_workspace_members",
 ];
 
 const defaultAllTruePermissionSet: RolePermissionSet = {
@@ -42,6 +44,8 @@ const defaultAllTruePermissionSet: RolePermissionSet = {
   view_all_projects: true,
   create_project_tasks: true,
   upload_workspace_files: true,
+  view_workspace_members: true,
+  assign_workspace_members: true,
 };
 
 const defaultMemberPermissionSet: RolePermissionSet = {
@@ -51,6 +55,8 @@ const defaultMemberPermissionSet: RolePermissionSet = {
   view_all_projects: true,
   create_project_tasks: false,
   upload_workspace_files: false,
+  view_workspace_members: false,
+  assign_workspace_members: false,
 };
 
 const defaultRoleOperationPermissions: RoleOperationPermissions = {
@@ -159,34 +165,47 @@ export const useWorkspaceSettings = () => {
   const { activeCompanyId, user, workspaceRole } = useAuth();
   const queryClient = useQueryClient();
 
+  // Determine whether the current user may call the owner/admin-only
+  // /company/:id/settings endpoint BEFORE the query runs.
+  // We compute this from the roles already in AuthContext — no extra fetch.
+  const effectiveRoleForGating = resolveEffectiveRoleForUI(user?.role, workspaceRole);
+  const canReadCompanySettings =
+    effectiveRoleForGating === "owner" || effectiveRoleForGating === "admin";
+
   const query = useQuery({
     queryKey: ["workspaceSettings", activeCompanyId],
     enabled: !!activeCompanyId,
     queryFn: async () => {
-      const [settingsResponse, effectiveResponse] = await Promise.allSettled([
-        api.getWorkspaceSettings(activeCompanyId!),
+      // Only fetch company settings for roles that are authorised to read them.
+      // Members, managers, and viewers must NOT hit /company/:id/settings.
+      // Their effective permissions come exclusively from the effective-permissions
+      // endpoint which is open to all active workspace members.
+      const settingsPromise = canReadCompanySettings
+        ? api.getWorkspaceSettings(activeCompanyId!)
+        : Promise.resolve(null);
+
+      const [settingsResult, effectiveResult] = await Promise.allSettled([
+        settingsPromise,
         api.getMyEffectiveWorkspacePermissions(),
       ]);
 
+      // Settings — only populated for owner/admin; null/empty for everyone else.
       const settingsRaw =
-        settingsResponse.status === "fulfilled"
-          ? settingsResponse.value.data
+        settingsResult.status === "fulfilled" && settingsResult.value !== null
+          ? (settingsResult.value as any)?.data
           : {};
 
       const normalized = normalizeSettings(settingsRaw);
 
-      const effectiveRole = resolveEffectiveRoleForUI(
-        user?.role,
-        workspaceRole
-      );
+      const effectiveRole = resolveEffectiveRoleForUI(user?.role, workspaceRole);
 
       const fallbackRole =
         effectiveRole === "owner"
           ? "admin"
           : (effectiveRole as "admin" | "manager" | "member");
 
-      if (effectiveResponse.status === "fulfilled") {
-        const effectiveData = effectiveResponse.value.data;
+      if (effectiveResult.status === "fulfilled") {
+        const effectiveData = (effectiveResult.value as any).data;
 
         return {
           ...normalized,
@@ -199,6 +218,9 @@ export const useWorkspaceSettings = () => {
         };
       }
 
+      // effective-permissions fetch failed — fall back to role defaults.
+      // Owner always gets all-true; others get the role default from settings
+      // (which may be empty/default for non-admin since we skipped the fetch).
       return {
         ...normalized,
         effectiveOperationPermissions:

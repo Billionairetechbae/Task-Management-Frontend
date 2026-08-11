@@ -51,10 +51,13 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     ? canPerformRoleOperation("create_project_tasks", workspaceRole)
     : canPerformRoleOperation("create_tasks", workspaceRole);
 
+  const canAssignOthers = canPerformRoleOperation("assign_workspace_members");
+  const { user } = useAuth();
+
   useEffect(() => {
-    if (open) fetchMembers();
+    if (open && canAssignOthers) fetchMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, canAssignOthers]);
 
   const fetchMembers = async () => {
     try {
@@ -352,7 +355,22 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
           <div>
             <Label>Assign to Team Member (Optional)</Label>
 
-            {membersLoading ? (
+            {!canAssignOthers ? (
+              <div className="space-y-2 mt-2">
+                <div className="text-sm text-muted-foreground border border-dashed rounded-lg p-4 text-center">
+                  <User className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                  <p>You can only assign tasks to yourself</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setFormData({ ...formData, assigneeId: user?.id || "" })}
+                >
+                  {formData.assigneeId === user?.id ? "✓ " : ""}Assign to Me
+                </Button>
+              </div>
+            ) : membersLoading ? (
               <div className="text-sm flex items-center gap-2 opacity-70 mt-2">
                 <Clock className="w-4 h-4 animate-spin" /> Loading...
               </div>

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, CompanyMember } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
@@ -20,7 +20,7 @@ interface CreateProjectTaskDialogProps {
 
 const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: CreateProjectTaskDialogProps) => {
   const { toast } = useToast();
-  const { workspaceRole } = useAuth();
+  const { user, workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CompanyMember[]>([]);
@@ -33,13 +33,18 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
     category: "",
   });
   const canCreateProjectTask = canPerformRoleOperation("create_project_tasks", workspaceRole);
+  const canAssignOthers = canPerformRoleOperation("assign_workspace_members");
 
   useEffect(() => {
     if (open) {
       setForm({ title: "", description: "", priority: "medium", deadline: "", assigneeId: "", category: "" });
-      api.getCompanyTeam().then(r => setMembers(r.data.members || [])).catch(() => {});
+      if (canAssignOthers) {
+        api.getCompanyTeam().then(r => setMembers(r.data.members || [])).catch(() => {});
+      } else {
+        setMembers([]);
+      }
     }
-  }, [open]);
+  }, [open, canAssignOthers]);
 
   const handleSubmit = async () => {
     if (!form.title.trim()) {
@@ -105,19 +110,37 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
             </div>
           </div>
 
-          {members.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Assignee</Label>
-              <Select value={form.assigneeId} onValueChange={v => setForm(p => ({ ...p, assigneeId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
-                <SelectContent>
-                  {members.map(m => (
-                    <SelectItem key={m.userId} value={m.userId}>
-                      {m.user.firstName} {m.user.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {canAssignOthers ? (
+            members.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Assignee</Label>
+                <Select value={form.assigneeId} onValueChange={v => setForm(p => ({ ...p, assigneeId: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                  <SelectContent>
+                    {members.map(m => (
+                      <SelectItem key={m.userId} value={m.userId}>
+                        {m.user.firstName} {m.user.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )
+          ) : (
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground border border-dashed rounded-lg p-3 text-center">
+                <User className="w-4 h-4 mx-auto mb-1 opacity-50" />
+                You can only assign tasks to yourself
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setForm(p => ({ ...p, assigneeId: user?.id || "" }))}
+              >
+                {form.assigneeId === user?.id ? "✓ " : ""}Assign to Me
+              </Button>
             </div>
           )}
 

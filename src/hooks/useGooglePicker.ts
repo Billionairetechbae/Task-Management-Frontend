@@ -1,0 +1,201 @@
+/**
+ * useGooglePicker
+ *
+ * Opens the official Google Picker API so the user can browse their full
+ * Google Drive and select a file to attach.
+ *
+ * Architecture:
+ *  1. Lazy-loads https://apis.google.com/js/api.js once per page lifetime.
+ *  2. Calls gapi.load("picker") once, caches readiness on window._gapiPickerReady.
+ *  3. Requests a short-lived access token from the backend (never a refresh token).
+ *  4. Opens the Picker; resolves the promise with a normalized GoogleDriveFile.
+ *  5. Returns null when the user cancels.
+ *
+ * Required environment variable (browser-safe, NOT a secret):
+ *   VITE_GOOGLE_API_KEY — a Google Cloud API key restricted to the Picker API.
+ *
+ * Backend dependency:
+ *   GET /api/v1/integrations/google/picker-token
+ *   → { data: { accessToken: string, expiresAt?: string } }
+ *
+ * The access token is held only in a JS local variable during the Picker
+ * session and is never written to localStorage / sessionStorage.
+ */
+
+import { useCallback, useRef } from "react";
+import { googleIntegrationService } from "@/services/googleIntegrationService";
+import type { GoogleDriveFile } from "@/types/googleDrive";
+
+// ─── Folder MIME type — must never be attachable ────────────────────────────
+const FOLDER_MIME = "application/vnd.google-apps.folder";
+
+// ─── GAPI script URL ─────────────────────────────────────────────────────────
+const GAPI_SCRIPT_SRC = "https://apis.google.com/js/api.js";
+
+// ─── Normalise a raw Google Picker document into Admiino's canonical shape ──
+function normalizePickerDocument(doc: google.picker.PickerDocument): GoogleDriveFile {
+  const D = google.picker.Document;
+  const thumbnails: any[] = doc[D.THUMBNAILS] ?? [];
+  return {
+    fileId: String(doc[D.ID] ?? ""),
+    name: String(doc[D.NAME] ?? ""),
+    mimeType: String(doc[D.MIME_TYPE] ?? "application/octet-stream"),
+    // Picker returns the file's Drive URL in Document.URL
+    webViewLink: (doc[D.URL] as string) ?? null,
+    thumbnailLink: (thumbnails[thumbnails.length - 1]?.url as string) ?? null,
+    iconLink: null,
+    size: null,
+    modifiedTime: null,
+  };
+}
+
+// ─── Inject the gapi script tag exactly once ─────────────────────────────────
+function injectGapiScript(): Promise<void> {
+  if (window._gapiScriptInjected) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = GAPI_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      window._gapiScriptInjected = true;
+      resolve();
+    };
+    script.onerror = () =>
+      reject(new Error("Failed to load Google API script. Check your network connection."));
+    document.head.appendChild(script);
+  });
+}
+
+// ─── Load the picker module via gapi.load exactly once ───────────────────────
+function loadPickerModule(): Promise<void> {
+  if (window._gapiPickerReady) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    try {
+      window.gapi.load("picker", () => {
+        window._gapiPickerReady = true;
+        resolve();
+      });
+    } catch (err) {
+      reject(new Error("gapi.load failed — Google API may not have loaded correctly."));
+    }
+  });
+}
+
+// ─── Hook ────────────────────────────────────────────────────────────────────
+
+export interface GooglePickerResult {
+  fileId: string;
+  name: string;
+  mimeType: string;
+  webViewLink?: string;
+  thumbnailLink?: string;
+  source: "google-drive";
+}
+
+export interface UseGooglePickerOptions {
+  /** Called when the user cancels the Picker without selecting. */
+  onCancel?: () => void;
+  /** Called when the Picker or token request fails. */
+  onError?: (err: Error) => void;
+}
+
+export function useGooglePicker(options: UseGooglePickerOptions = {}) {
+  const { onCancel, onError } = options;
+  // Keep a ref to the live picker instance so we can dispose on unmount.
+  const pickerRef = useRef<google.picker.Picker | null>(null);
+
+  const openGooglePicker = useCallback((): Promise<GooglePickerResult | null> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 1. Get the browser-safe API key from Vite env
+        const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY as string | undefined;
+        if (!apiKey) {
+          throw new Error(
+            "VITE_GOOGLE_API_KEY is not set. Add it to your .env file."
+          );
+        }
+
+        // 2. Lazy-load gapi script + picker module
+        await injectGapiScript();
+        await loadPickerModule();
+
+        // 3. Request a short-lived access token from backend (never refresh token)
+        const { accessToken } = await googleIntegrationService.getPickerToken();
+
+        // 4. Build the Picker
+        const { PickerBuilder, DocsView, Feature, Action, Response, Document } =
+          google.picker;
+
+        // All-Drive view: allows browsing My Drive + Shared Drives
+        const allDriveView = new DocsView()
+          .setIncludeFolders(true)
+          // Folders are browsable but NOT selectable (handled in callback)
+          .setSelectFolderEnabled(false);
+
+        // Shared-with-me view
+        const sharedView = new DocsView(google.picker.ViewId.DOCS);
+
+        const picker = new PickerBuilder()
+          .addView(allDriveView)
+          .addView(sharedView)
+          .enableFeature(Feature.SUPPORT_DRIVES)   // include Shared Drives
+          .setOAuthToken(accessToken)
+          .setDeveloperKey(apiKey)
+          .setTitle("Select a file from Google Drive")
+          .setCallback((data: google.picker.PickerResponse) => {
+            const action = data[Response.ACTION];
+
+            if (action === Action.PICKED) {
+              const docs: google.picker.PickerDocument[] =
+                data[Response.DOCUMENTS] ?? [];
+              const doc = docs[0];
+
+              if (!doc) {
+                // Defensive: no document in payload
+                onCancel?.();
+                resolve(null);
+                return;
+              }
+
+              const mimeType = String(doc[Document.MIME_TYPE] ?? "");
+
+              // Hard-block folder attachments
+              if (mimeType === FOLDER_MIME) {
+                onError?.(new Error("Folders cannot be attached. Please select a file."));
+                resolve(null);
+                return;
+              }
+
+              const normalized = normalizePickerDocument(doc);
+              resolve({
+                fileId: normalized.fileId,
+                name: normalized.name,
+                mimeType: normalized.mimeType,
+                webViewLink: normalized.webViewLink ?? undefined,
+                thumbnailLink: normalized.thumbnailLink ?? undefined,
+                source: "google-drive",
+              });
+            } else if (action === Action.CANCEL) {
+              onCancel?.();
+              resolve(null);
+            }
+            // Any other action (e.g. navigation) does not resolve/reject
+          })
+          .build();
+
+        pickerRef.current = picker;
+        picker.setVisible(true);
+      } catch (err: any) {
+        const error =
+          err instanceof Error ? err : new Error(String(err?.message ?? err));
+        onError?.(error);
+        reject(error);
+      }
+    });
+  }, [onCancel, onError]);
+
+  return { openGooglePicker };
+}
+
+export default useGooglePicker;

@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Star, Search, UserPlus, Eye, Mail, Briefcase } from "lucide-react";
+import { Star, Search, UserPlus, Eye, Mail, Briefcase, ShieldCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api, TeamMember, CompanyMember } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { PageHeader, LoadingState, EmptyState } from "@/components/dashboard/DashboardComponents";
 import { Pagination } from "@/components/dashboard/TaskComponents";
@@ -47,6 +49,7 @@ const TeamMembers = () => {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const itemsPerPage = 12;
   const { toast } = useToast();
+  const { canPerformRoleOperation, isLoading: settingsLoading } = useWorkspaceSettings();
 
   useEffect(() => { fetchTeam(); }, []);
 
@@ -74,6 +77,33 @@ const TeamMembers = () => {
   const paginatedMembers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+
+  const canViewMembers = canPerformRoleOperation("view_workspace_members");
+
+  if (settingsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-20 text-muted-foreground animate-fade-in">
+          <div className="w-10 h-10 mx-auto mb-3 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          Loading workspace settings...
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!canViewMembers) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-24 animate-fade-in">
+          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive/60" />
+          <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            You don't have permission to view workspace members. Contact your workspace administrator if you need access.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (loading) {
     return <DashboardLayout><LoadingState message="Loading team members..." /></DashboardLayout>;

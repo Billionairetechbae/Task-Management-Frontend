@@ -113,7 +113,9 @@ export type WorkspaceRolePermissionKey =
   | "create_projects"
   | "view_all_projects"
   | "create_project_tasks"
-  | "upload_workspace_files";
+  | "upload_workspace_files"
+  | "view_workspace_members"
+  | "assign_workspace_members";
 
 export type RolePermissionSet = Record<WorkspaceRolePermissionKey, boolean>;
 
@@ -1144,7 +1146,9 @@ export type WorkspaceAccessPermissionKey =
   | "create_projects"
   | "view_all_projects"
   | "create_project_tasks"
-  | "upload_workspace_files";
+  | "upload_workspace_files"
+  | "view_workspace_members"
+  | "assign_workspace_members";
 
 export interface WorkspaceAccessRequest {
   id: string;
@@ -3119,6 +3123,22 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     return this.request(`/projects/${projectId}/members/${userId}`, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
+    });
+  }
+
+  async addProjectMemberDirect(projectId: string, userId: string, role: "owner" | "admin" | "member" | "viewer" = "member"): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/projects/${projectId}/members/direct`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, role }),
+    });
+  }
+
+  async updateProjectMemberRole(projectId: string, userId: string, role: "owner" | "admin" | "member" | "viewer"): Promise<{ status: string; message?: string; data?: any }> {
+    return this.request(`/projects/${projectId}/members/${userId}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
     });
   }
 

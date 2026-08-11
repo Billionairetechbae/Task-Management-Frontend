@@ -8,12 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search, FileIcon, Folder as FolderIcon, ChevronLeft, ChevronRight, Loader2,
-  ExternalLink, Check, AlertTriangle, FolderUp, RefreshCw,
+  ExternalLink, Check, AlertTriangle, FolderUp, RefreshCw, HardDrive,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { GoogleDriveFile } from "@/types/googleDrive";
 import { useGoogleIntegration } from "@/hooks/useGoogleIntegration";
 import { useGoogleDriveFiles } from "@/hooks/useGoogleDriveFiles";
+import { useGooglePicker } from "@/hooks/useGooglePicker";
 import { getFileIcon } from "@/utils/fileIcons";
 import { cn } from "@/lib/utils";
 
@@ -36,21 +37,33 @@ const isFolder = (f: GoogleDriveFile) =>
 
 const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePickerDialogProps) => {
   const { isConnected, statusLoading, connect, connectLoading } = useGoogleIntegration();
+
   const [selectedFile, setSelectedFile] = useState<GoogleDriveFile | null>(null);
   const [folderStack, setFolderStack] = useState<Array<{ fileId: string; name: string }>>([]);
   const [selecting, setSelecting] = useState(false);
   const [attachPending, setAttachPending] = useState(false);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
 
   const drive = useGoogleDriveFiles({
     enabled: open && isConnected,
   });
 
-  // Clear only the selection when the dialog opens (i.e. new attach context).
-  // Do NOT reset Drive files/folder state so files persist across task switches.
+  const { openGooglePicker } = useGooglePicker({
+    onCancel: () => setPickerLoading(false),
+    onError: (err) => {
+      setPickerLoading(false);
+      setPickerError(err.message);
+    },
+  });
+
+  // Clear only selection + picker state when dialog opens.
+  // Do NOT reset Drive files/folder state — files persist across task switches.
   useEffect(() => {
     if (open) {
       setSelectedFile(null);
       setAttachPending(false);
+      setPickerError(null);
     }
   }, [open]);
 
@@ -82,6 +95,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
     setSelectedFile(null);
   };
 
+  // Confirm selection from the Admiino file list (existing flow)
   const handleConfirm = async () => {
     if (!selectedFile || isFolder(selectedFile) || attachPending) return;
     setSelecting(true);
@@ -105,8 +119,44 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
     }
   };
 
+  // Open official Google Picker and feed the result through the same onSelect flow
+  const handleBrowseWithPicker = async () => {
+    if (pickerLoading || !isConnected) return;
+    setPickerLoading(true);
+    setPickerError(null);
+
+    let result: Awaited<ReturnType<typeof openGooglePicker>>;
+    try {
+      result = await openGooglePicker();
+    } catch (err: any) {
+      // Error already passed to onError callback; loading flag cleared there
+      return;
+    } finally {
+      setPickerLoading(false);
+    }
+
+    if (!result) {
+      // User cancelled — nothing to do
+      return;
+    }
+
+    // Feed through the same attachment flow as the custom list
+    setSelecting(true);
+    try {
+      await onSelect(result);
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error("Could not attach file", { description: err?.message });
+    } finally {
+      setSelecting(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !selecting && !drive.uploadLoading && onOpenChange(o)}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !o && !selecting && !pickerLoading && !drive.uploadLoading && onOpenChange(o)}
+    >
       <DialogContent className="sm:max-w-3xl md:max-w-4xl w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 pt-5 pb-3 border-b shrink-0">
           <div className="flex items-start justify-between gap-3">
@@ -120,7 +170,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                 <DialogTitle className="text-lg">Choose from Google Drive</DialogTitle>
                 <DialogDescription className="text-xs mt-0.5">
                   {isConnected
-                    ? "Select a file to attach it to the task."
+                    ? "Browse your Drive or pick from recent Admiino files below."
                     : "Connect Google Drive to browse and attach files."}
                 </DialogDescription>
               </div>
@@ -128,7 +178,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
           </div>
         </DialogHeader>
 
-        {/* Not connected state */}
+        {/* ── Not-connected / loading state ── */}
         {statusLoading && !isConnected ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-10">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -156,8 +206,57 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
           </div>
         ) : (
           <>
-            {/* Toolbar */}
-            <div className="px-5 py-3 border-b shrink-0 space-y-2">
+            {/* ── Google Picker primary action ── */}
+            <div className="px-5 pt-4 pb-3 border-b shrink-0 space-y-2">
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={handleBrowseWithPicker}
+                  disabled={pickerLoading || selecting}
+                  className="bg-[#4285F4] hover:bg-[#3b78e0] text-white shadow-sm h-9 px-4 gap-2 shrink-0"
+                >
+                  {pickerLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <HardDrive className="w-4 h-4" />
+                  )}
+                  {pickerLoading ? "Opening…" : "Browse Google Drive"}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Opens Google's file picker — browse your full Drive and Shared Drives.
+                </p>
+              </div>
+              {pickerError && (
+                <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/5 rounded-md px-3 py-2">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span className="flex-1">{pickerError}</span>
+                  {/reconnect|connect/i.test(pickerError) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs px-2 shrink-0"
+                      onClick={() => connect()}
+                    >
+                      Reconnect
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── Divider label ── */}
+            <div className="px-5 pt-3 pb-1 shrink-0">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Recent files
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Files already accessible to Admiino
+              </p>
+            </div>
+
+            {/* ── Existing custom file list toolbar ── */}
+            <div className="px-5 py-2 border-b shrink-0 space-y-2">
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -174,7 +273,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                   <Input
                     value={drive.query}
                     onChange={(e) => drive.setQuery(e.target.value)}
-                    placeholder="Search Drive…"
+                    placeholder="Search recent files…"
                     className="pl-9 h-9"
                   />
                 </div>
@@ -208,7 +307,9 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                           variant="secondary"
                           className={cn(
                             "h-5 px-1.5 text-[10px] font-medium",
-                            i === folderStack.length - 1 ? "bg-primary/10 text-primary" : "cursor-pointer"
+                            i === folderStack.length - 1
+                              ? "bg-primary/10 text-primary"
+                              : "cursor-pointer"
                           )}
                           onClick={() => {
                             const next = folderStack.slice(0, i + 1);
@@ -231,7 +332,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
               </div>
             </div>
 
-            {/* File list */}
+            {/* ── File grid ── */}
             <div className="flex-1 overflow-y-auto px-3 py-3">
               {drive.loading && drive.files.length === 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -251,6 +352,9 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                       ? `No files match "${drive.query}"`
                       : `${currentFolderName} is empty`}
                   </p>
+                  <p className="text-xs opacity-60">
+                    Use "Browse Google Drive" above to find any file in your Drive.
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -265,7 +369,9 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                         key={f.fileId}
                         onClick={() => {
                           if (folder) return handleOpenFolder(f);
-                          setSelectedFile((prev) => (prev?.fileId === f.fileId ? null : f));
+                          setSelectedFile((prev) =>
+                            prev?.fileId === f.fileId ? null : f
+                          );
                         }}
                         className={cn(
                           "group relative rounded-lg border p-2 text-left transition-all duration-150",
@@ -281,7 +387,9 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                               src={f.thumbnailLink!}
                               alt={f.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = "none";
+                              }}
                             />
                           ) : folder ? (
                             <FolderIcon className="w-9 h-9 text-[#FBBC04]" />
@@ -299,7 +407,9 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs font-medium truncate" title={f.name}>{f.name}</p>
+                        <p className="text-xs font-medium truncate" title={f.name}>
+                          {f.name}
+                        </p>
                         <div className="flex items-center justify-between mt-0.5">
                           <span className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
                             {folder ? "Folder" : (f.mimeType || "").split("/").pop() || "file"}
@@ -332,7 +442,11 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                     disabled={drive.loadingMore}
                     className="gap-2"
                   >
-                    {drive.loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ChevronLeft className="w-3.5 h-3.5 rotate-[-90deg]" />}
+                    {drive.loadingMore ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ChevronLeft className="w-3.5 h-3.5 rotate-[-90deg]" />
+                    )}
                     Load more
                   </Button>
                 </div>
@@ -340,20 +454,20 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
 
               {drive.error && (
                 <div className="mt-4 text-center text-xs text-destructive">
-                  Could not load Google Drive files. Please try again.
+                  Could not load recent Drive files. Please try again.
                 </div>
               )}
             </div>
           </>
         )}
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <DialogFooter className="px-5 py-3 border-t shrink-0 gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={selecting || drive.uploadLoading}
+            disabled={selecting || pickerLoading || drive.uploadLoading}
           >
             Cancel
           </Button>

@@ -16,10 +16,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
   Tooltip,
@@ -143,6 +150,13 @@ export default function ProjectDetails() {
   const [taskEditDrawerId, setTaskEditDrawerId] = useState<string | null>(null);
   const [memberEmail, setMemberEmail] = useState("");
   const [inviting, setInviting] = useState(false);
+
+  // Direct member addition from workspace
+  const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [selectedWorkspaceMemberId, setSelectedWorkspaceMemberId] = useState("");
+  const [selectedMemberRole, setSelectedMemberRole] = useState<"admin" | "member" | "viewer">("member");
+  const [addingDirectMember, setAddingDirectMember] = useState(false);
 
   const [taskView, setTaskView] = useState<"table" | "kanban">("table");
   const [taskPage, setTaskPage] = useState(1);
@@ -404,6 +418,57 @@ export default function ProjectDetails() {
         description: err.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const loadWorkspaceMembers = async () => {
+    try {
+      const res = await api.getCompanyTeam();
+      const data = (res as any)?.data || {};
+      const list = Array.isArray(data.members) ? data.members : Array.isArray(data.team_members) ? data.team_members : [];
+      
+      // Filter out already-added members AND the project owner (cannot be re-added)
+      const existingMemberIds = new Set(members.map(m => m.userId));
+      const ownerIds = new Set(members.filter(m => m.role === "owner").map(m => m.userId));
+      const available = list.filter(
+        (m: any) => m.isVerified && !existingMemberIds.has(m.userId) && !ownerIds.has(m.userId)
+      );
+      
+      setWorkspaceMembers(available);
+    } catch (err: any) {
+      toast({ title: "Error", description: "Failed to load workspace members", variant: "destructive" });
+    }
+  };
+
+  const addDirectMember = async () => {
+    if (!id || !selectedWorkspaceMemberId) return;
+
+    try {
+      setAddingDirectMember(true);
+      await api.addProjectMemberDirect(id, selectedWorkspaceMemberId, selectedMemberRole as "admin" | "member" | "viewer");
+      
+      setShowAddMemberDialog(false);
+      setSelectedWorkspaceMemberId("");
+      setSelectedMemberRole("member");
+      
+      await loadMembers();
+      toast({ title: "Member added" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setAddingDirectMember(false);
+    }
+  };
+
+  const updateMemberRole = async (userId: string, newRole: "admin" | "member" | "viewer") => {
+    if (!id) return;
+
+    try {
+      await api.updateProjectMemberRole(id, userId, newRole);
+      await loadMembers();
+      toast({ title: "Role updated" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   };
 
@@ -937,7 +1002,24 @@ export default function ProjectDetails() {
                             </Button>
                           </TooltipTrigger>
 
-                          <TooltipContent>Invite</TooltipContent>
+                          <TooltipContent>Invite by email</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              className="h-7 w-7 shrink-0 bg-primary/10 hover:bg-primary/20"
+                              onClick={() => {
+                                loadWorkspaceMembers();
+                                setShowAddMemberDialog(true);
+                              }}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </TooltipTrigger>
+
+                          <TooltipContent>Add workspace member</TooltipContent>
                         </Tooltip>
                       </div>
 
@@ -958,26 +1040,49 @@ export default function ProjectDetails() {
                                   {m.firstName} {m.lastName}
                                 </p>
 
-                                <p className="text-[9px] text-muted-foreground truncate">
-                                  {m.role}
-                                </p>
+                                <div className="text-[9px] text-muted-foreground truncate">
+                                  {m.role === "owner" ? (
+                                    <span className="font-semibold text-primary">Owner</span>
+                                  ) : (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <button className="text-muted-foreground hover:text-foreground hover:underline cursor-pointer">
+                                          {m.role}
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="start" className="w-32">
+                                        <DropdownMenuItem onClick={() => updateMemberRole(m.userId || m.id, "admin")} className={m.role === "admin" ? "bg-muted" : ""}>
+                                          Admin
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => updateMemberRole(m.userId || m.id, "member")} className={m.role === "member" ? "bg-muted" : ""}>
+                                          Member
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => updateMemberRole(m.userId || m.id, "viewer")} className={m.role === "viewer" ? "bg-muted" : ""}>
+                                          Viewer
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
-                                  onClick={() => removeMember(m.userId || m.id)}
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </TooltipTrigger>
+                            {m.role !== "owner" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
+                                    onClick={() => removeMember(m.userId || m.id)}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
 
-                              <TooltipContent>Remove</TooltipContent>
-                            </Tooltip>
+                                <TooltipContent>Remove</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                         ))}
 
@@ -1728,12 +1833,18 @@ export default function ProjectDetails() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-medium truncate">{m.firstName} {m.lastName}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{m.role}</p>
+                            {m.role === "owner" ? (
+                              <p className="text-[10px] font-semibold text-primary truncate">Owner</p>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground truncate capitalize">{m.role}</p>
+                            )}
                           </div>
                         </div>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeMember(m.userId || m.id)}>
-                          <X className="w-3.5 h-3.5" />
-                        </Button>
+                        {m.role !== "owner" && (
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeMember(m.userId || m.id)}>
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                     {members.length === 0 && (
@@ -1744,6 +1855,60 @@ export default function ProjectDetails() {
               </CollapsiblePanel>
             </div>
             )}
+
+            {/* Add Workspace Member Dialog */}
+            <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Workspace Member</DialogTitle>
+                  <DialogDescription>
+                    Select an existing workspace member to add to this project.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Member</Label>
+                    <Select value={selectedWorkspaceMemberId} onValueChange={setSelectedWorkspaceMemberId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a team member" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workspaceMembers.map((m) => (
+                          <SelectItem key={m.userId} value={m.userId}>
+                            {m.user.firstName} {m.user.lastName} ({m.user.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Role</Label>
+                    <Select value={selectedMemberRole} onValueChange={(v: any) => setSelectedMemberRole(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowAddMemberDialog(false)} disabled={addingDirectMember}>
+                    Cancel
+                  </Button>
+                  <Button onClick={addDirectMember} disabled={addingDirectMember || !selectedWorkspaceMemberId}>
+                    {addingDirectMember && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Add Member
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
               <DialogContent className="sm:max-w-md">
@@ -1865,23 +2030,38 @@ function CollapsiblePanel({
 }) {
   return (
     <Collapsible open={open} onOpenChange={onToggle}>
-      <CollapsibleTrigger asChild>
-        <button className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors duration-150 border-b border-border group">
-          {open ? (
-            <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform" />
-          ) : (
-            <ChevronRight className="w-3 h-3 text-muted-foreground transition-transform" />
-          )}
+      {/* Use a div instead of a button so action-area buttons are never nested
+          inside another button element. The div gets role/keyboard handling for
+          equivalent accessibility. */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors duration-150 border-b border-border group cursor-pointer select-none"
+      >
+        {open ? (
+          <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform" />
+        ) : (
+          <ChevronRight className="w-3 h-3 text-muted-foreground transition-transform" />
+        )}
 
-          <span className="text-muted-foreground">{icon}</span>
+        <span className="text-muted-foreground">{icon}</span>
 
-          <span className="text-[11px] font-semibold flex-1 tracking-tight">
-            {title}
-          </span>
+        <span className="text-[11px] font-semibold flex-1 tracking-tight">
+          {title}
+        </span>
 
-          {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
-        </button>
-      </CollapsibleTrigger>
+        {action && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {action}
+          </div>
+        )}
+      </div>
 
       <CollapsibleContent className="animate-accordion-down">
         {children}

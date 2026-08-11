@@ -3,7 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { ImagePlus, Loader2, Trash2, Upload, Lock } from "lucide-react";
 
 interface ProjectLogoUploaderProps {
   projectId: string;
@@ -21,9 +23,19 @@ const ProjectLogoUploader = ({
   onClose,
 }: ProjectLogoUploaderProps) => {
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isManager =
+    workspaceRole === "owner" ||
+    workspaceRole === "admin" ||
+    workspaceRole === "manager";
+
+  const canUploadFiles = canPerformRoleOperation("upload_workspace_files");
+  const canEditLogo = isManager || canUploadFiles;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,8 +138,9 @@ const ProjectLogoUploader = ({
             <Button
               variant="default"
               className="w-full gap-2"
-              disabled={uploading || deleting}
+              disabled={uploading || deleting || !canEditLogo}
               onClick={() => fileInputRef.current?.click()}
+              title={!canEditLogo ? "You don't have permission to edit the project logo" : ""}
             >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {currentLogoUrl ? "Change Logo" : "Upload Logo"}
@@ -137,12 +150,20 @@ const ProjectLogoUploader = ({
               <Button
                 variant="outline"
                 className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                disabled={uploading || deleting}
+                disabled={uploading || deleting || !canEditLogo}
                 onClick={handleDelete}
+                title={!canEditLogo ? "You don't have permission to delete the project logo" : ""}
               >
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Remove Logo
               </Button>
+            )}
+
+            {!canEditLogo && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                <Lock className="w-3 h-3 shrink-0" />
+                <span>You don't have permission to edit the project logo</span>
+              </div>
             )}
           </div>
           

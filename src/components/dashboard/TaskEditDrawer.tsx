@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { api, Task, CompanyMember, TaskAttachment, UpdateTaskData } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import CompanyBadge from "@/components/CompanyBadge";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
@@ -72,7 +73,10 @@ export default function TaskEditDrawer({
 }: TaskEditDrawerProps) {
   const { user, workspaceRole } = useAuth();
   const { toast } = useToast();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const canAssignOthers = canPerformRoleOperation("assign_workspace_members");
 
   const isManager =
     user?.role === "admin" ||
@@ -120,7 +124,7 @@ export default function TaskEditDrawer({
   useEffect(() => {
     if ((inline || open) && taskId) {
       fetchTask();
-      if (isManager) fetchMembers();
+      if (isManager && canAssignOthers) fetchMembers();
       setActiveTab(initialTab);
     }
     if (!inline && !open) {
@@ -129,7 +133,7 @@ export default function TaskEditDrawer({
       setAddAssigneePick("select");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, taskId, inline]);
+  }, [open, taskId, inline, canAssignOthers]);
 
   const fetchTask = async () => {
     if (!taskId) return;
@@ -663,7 +667,7 @@ export default function TaskEditDrawer({
               </TabsContent>
 
               {/* Assignees */}
-              {isManager && (
+              {isManager && canAssignOthers && (
                 <TabsContent value="assignees" className="space-y-4">
                   <div className="space-y-2">
                     <Label>Assigned team members</Label>

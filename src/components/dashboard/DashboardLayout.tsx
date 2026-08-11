@@ -43,6 +43,7 @@ import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
 import { WebSocketStatus } from "@/components/WebSocketStatus";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 interface NavItem {
   label: string;
@@ -76,6 +77,7 @@ const DashboardLayout = ({
 }: DashboardLayoutProps) => {
   const { user, logout, workspaceRole } = useAuth();
   const location = useLocation();
+  const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -161,16 +163,18 @@ const DashboardLayout = ({
               href: "/assistance-requests",
               icon: <Users className="w-[18px] h-[18px]" />,
             },
-            {
-              label: "Team Directory",
-              href: "/team-directory",
-              icon: <Users className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Team Management",
-              href: "/team-management",
-              icon: <Crown className="w-[18px] h-[18px]" />,
-            },
+            ...(canPerformRoleOperation("view_workspace_members") ? [
+              {
+                label: "Team Directory",
+                href: "/team-directory",
+                icon: <Users className="w-[18px] h-[18px]" />,
+              },
+              {
+                label: "Team Management",
+                href: "/team-management",
+                icon: <Crown className="w-[18px] h-[18px]" />,
+              },
+            ] : []),
           ],
         },
         {
@@ -258,7 +262,7 @@ const DashboardLayout = ({
             },
           ],
         },
-        {
+        ...(canPerformRoleOperation("view_workspace_members") ? [{
           label: "Team",
           items: [
             {
@@ -267,7 +271,7 @@ const DashboardLayout = ({
               icon: <Users className="w-[18px] h-[18px]" />,
             },
           ],
-        },
+        }] : []),
         {
           label: "Harmony",
           href: "/harmony",
@@ -342,6 +346,16 @@ const DashboardLayout = ({
           },
         ],
       },
+      ...(canPerformRoleOperation("view_workspace_members") ? [{
+        label: "Team",
+        items: [
+          {
+            label: "Team Directory",
+            href: "/team-directory",
+            icon: <Users className="w-[18px] h-[18px]" />,
+          },
+        ],
+      }] : []),
       {
         label: "Harmony",
         href: "/harmony",

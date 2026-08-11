@@ -5,6 +5,7 @@ import { Users, Mail, Search, X, ArrowUpRight, Briefcase, CalendarDays, ShieldCh
 import { api, CompanyMember } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ const TeamDirectory = () => {
   const { activeWorkspace } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { canPerformRoleOperation, isLoading: settingsLoading } = useWorkspaceSettings();
 
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<CompanyMember[]>([]);
@@ -115,6 +117,33 @@ const TeamDirectory = () => {
     () => filteredTeam.find((m) => m.userId === selectedId) || null,
     [filteredTeam, selectedId]
   );
+
+  const canViewMembers = canPerformRoleOperation("view_workspace_members");
+
+  if (settingsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-20 text-muted-foreground animate-fade-in">
+          <div className="w-10 h-10 mx-auto mb-3 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          Loading workspace settings...
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!canViewMembers) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-24 animate-fade-in">
+          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive/60" />
+          <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            You don't have permission to view workspace members. Contact your workspace administrator if you need access.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
