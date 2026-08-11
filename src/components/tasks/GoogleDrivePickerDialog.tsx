@@ -49,7 +49,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
     enabled: open && isConnected,
   });
 
-  const { openGooglePicker } = useGooglePicker({
+  const { openGooglePicker, dispose } = useGooglePicker({
     onCancel: () => setPickerLoading(false),
     onError: (err) => {
       setPickerLoading(false);
@@ -155,9 +155,39 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => !o && !selecting && !pickerLoading && !drive.uploadLoading && onOpenChange(o)}
+      // When the Google Picker is open, switch to non-modal so Radix's
+      // focus-trap / scroll-lock doesn't freeze the Picker iframe.
+      modal={!pickerLoading}
+      onOpenChange={(o) => {
+        if (!o) {
+          // Picker still open → dispose it instead of closing the dialog.
+          if (pickerLoading) {
+            dispose();
+            return;
+          }
+          if (selecting || drive.uploadLoading) return;
+        }
+        onOpenChange(o);
+      }}
     >
-      <DialogContent className="sm:max-w-3xl md:max-w-4xl w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent
+        className="sm:max-w-3xl md:max-w-4xl w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
+        onEscapeKeyDown={(e) => {
+          if (pickerLoading) {
+            // Close the Google Picker, not the dialog.
+            e.preventDefault();
+            dispose();
+          } else if (selecting || drive.uploadLoading) {
+            e.preventDefault();
+          }
+        }}
+        onPointerDownOutside={(e) => {
+          // Never close via outside click during async work.
+          if (pickerLoading || selecting || drive.uploadLoading) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader className="px-5 pt-5 pb-3 border-b shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -466,8 +496,15 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={selecting || pickerLoading || drive.uploadLoading}
+            onClick={() => {
+              if (pickerLoading) {
+                // Close the Google Picker overlay, keep dialog open.
+                dispose();
+              } else {
+                onOpenChange(false);
+              }
+            }}
+            disabled={selecting || drive.uploadLoading}
           >
             Cancel
           </Button>

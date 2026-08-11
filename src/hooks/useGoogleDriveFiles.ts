@@ -47,8 +47,10 @@ export const useGoogleDriveFiles = (
         pageSize,
       });
     },
-    // Only auto-run the "first page" query. Next pages are triggered via setNextPageToken.
-    enabled: !nextPageToken ? enabled : false,
+    // Query runs for every page including subsequent pages triggered via
+    // setNextPageToken — the query key changes when pageToken changes so
+    // TanStack Query auto-fetches the next page.
+    enabled,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,

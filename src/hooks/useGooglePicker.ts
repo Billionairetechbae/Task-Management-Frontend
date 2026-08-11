@@ -22,7 +22,7 @@
  * session and is never written to localStorage / sessionStorage.
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { googleIntegrationService } from "@/services/googleIntegrationService";
 import type { GoogleDriveFile } from "@/types/googleDrive";
 
@@ -102,11 +102,56 @@ export interface UseGooglePickerOptions {
 
 export function useGooglePicker(options: UseGooglePickerOptions = {}) {
   const { onCancel, onError } = options;
-  // Keep a ref to the live picker instance so we can dispose on unmount.
+
+  // Live picker instance — kept in a ref so we can dispose it at any time.
   const pickerRef = useRef<google.picker.Picker | null>(null);
 
+  // The resolve function from the pending promise.  When we dispose the
+  // picker programmatically (Cancel button, Escape, unmount) we call this
+  // with `null` so the awaiting caller in the dialog can clean up.
+  const resolveRef = useRef<((value: GooglePickerResult | null) => void) | null>(null);
+
+  // Keep callbacks in refs so `openGooglePicker` never re-creates between
+  // renders.  Without this the inline closures in the dialog component would
+  // change on every render, invalidating memoised callers.
+  const onCancelRef = useRef(onCancel);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+    onErrorRef.current = onError;
+  });
+
+  // ─── Tear down the live picker + resolve the pending promise with null ──
+  const dispose = useCallback(() => {
+    if (pickerRef.current) {
+      try { pickerRef.current.dispose(); } catch { /* noop */ }
+      pickerRef.current = null;
+    }
+    if (resolveRef.current) {
+      const fn = resolveRef.current;
+      resolveRef.current = null;
+      fn(null);
+    }
+  }, []);
+
+  // Cleanup on unmount — never leave a dangling picker iframe.
+  useEffect(() => () => dispose(), [dispose]);
+
   const openGooglePicker = useCallback((): Promise<GooglePickerResult | null> => {
+    // If a previous picker is somehow still alive, tear it down first so we
+    // don't leak overlapping iframes or dangling promises.
+    if (pickerRef.current) {
+      try { pickerRef.current.dispose(); } catch { /* noop */ }
+      pickerRef.current = null;
+    }
+    if (resolveRef.current) {
+      const fn = resolveRef.current;
+      resolveRef.current = null;
+      fn(null);
+    }
+
     return new Promise(async (resolve, reject) => {
+      resolveRef.current = resolve;
       try {
         // 1. Get the browser-safe API key from Vite env
         const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY as string | undefined;
@@ -127,10 +172,10 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
         const { PickerBuilder, DocsView, Feature, Action, Response, Document } =
           google.picker;
 
-        // All-Drive view: allows browsing My Drive + Shared Drives
+        // All-Drive view: allows browsing My Drive + Shared Drives.
+        // Folders are browsable (double-click to enter) but NOT selectable.
         const allDriveView = new DocsView()
           .setIncludeFolders(true)
-          // Folders are browsable but NOT selectable (handled in callback)
           .setSelectFolderEnabled(false);
 
         // Shared-with-me view
@@ -153,7 +198,9 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
 
               if (!doc) {
                 // Defensive: no document in payload
-                onCancel?.();
+                onCancelRef.current?.();
+                pickerRef.current = null;
+                resolveRef.current = null;
                 resolve(null);
                 return;
               }
@@ -162,12 +209,16 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
 
               // Hard-block folder attachments
               if (mimeType === FOLDER_MIME) {
-                onError?.(new Error("Folders cannot be attached. Please select a file."));
+                onErrorRef.current?.(new Error("Folders cannot be attached. Please select a file."));
+                pickerRef.current = null;
+                resolveRef.current = null;
                 resolve(null);
                 return;
               }
 
               const normalized = normalizePickerDocument(doc);
+              pickerRef.current = null;
+              resolveRef.current = null;
               resolve({
                 fileId: normalized.fileId,
                 name: normalized.name,
@@ -177,10 +228,13 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
                 source: "google-drive",
               });
             } else if (action === Action.CANCEL) {
-              onCancel?.();
+              onCancelRef.current?.();
+              pickerRef.current = null;
+              resolveRef.current = null;
               resolve(null);
             }
-            // Any other action (e.g. navigation) does not resolve/reject
+            // Any other action (e.g. navigation) does not resolve/reject —
+            // the picker stays open and the user can continue browsing.
           })
           .build();
 
@@ -189,13 +243,15 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
       } catch (err: any) {
         const error =
           err instanceof Error ? err : new Error(String(err?.message ?? err));
-        onError?.(error);
+        onErrorRef.current?.(error);
+        pickerRef.current = null;
+        resolveRef.current = null;
         reject(error);
       }
     });
-  }, [onCancel, onError]);
+  }, []);  // stable — refs absorb callback changes
 
-  return { openGooglePicker };
+  return { openGooglePicker, dispose };
 }
 
 export default useGooglePicker;
