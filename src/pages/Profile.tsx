@@ -518,15 +518,17 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
     activeWorkspaceRole === "admin";
 
   return (
-    <div className="min-h-screen bg-muted/30 py-10 px-4 sm:px-6">
+    <div className={embedded ? "" : "min-h-screen bg-muted/30 py-10 px-4 sm:px-6"}>
       <div className="w-full space-y-8">
-        {/* Back */}
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
+        {!embedded && (
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+          </Link>
+        )}
+
 
         {/* SETTINGS HEADER (more “settings center” vibe, but keeps your profile image section) */}
         <Card className="rounded-2xl overflow-hidden border-none shadow-sm">
