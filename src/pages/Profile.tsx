@@ -303,7 +303,7 @@ const Field = ({
    MAIN PAGE
 ============================================================ */
 
-const Profile = () => {
+const Profile = ({ embedded = false }: { embedded?: boolean }) => {
   const { user, refreshUser, logout, setUser } = useAuth();
   const { toast } = useToast();
   const { confirm, node: confirmNode } = useConfirm();
