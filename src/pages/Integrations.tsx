@@ -167,8 +167,8 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-[1400px] mx-auto space-y-8 animate-fade-in">
+    <Shell>
+      <div className={embedded ? "space-y-8 animate-fade-in" : "max-w-[1400px] mx-auto space-y-8 animate-fade-in"}>
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
