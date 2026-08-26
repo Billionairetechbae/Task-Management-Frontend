@@ -27,7 +27,11 @@ import {
 } from "@/lib/integrations";
 import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
 
-const Integrations = () => {
+const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
+  const Shell = embedded
+    ? ({ children }: { children: React.ReactNode }) => <>{children}</>
+    : DashboardLayout;
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -163,8 +167,8 @@ const Integrations = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-[1400px] mx-auto space-y-8 animate-fade-in">
+    <Shell>
+      <div className={embedded ? "space-y-8 animate-fade-in" : "max-w-[1400px] mx-auto space-y-8 animate-fade-in"}>
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
@@ -443,7 +447,7 @@ const Integrations = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </Shell>
   );
 };
 
