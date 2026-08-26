@@ -27,7 +27,11 @@ import {
 } from "@/lib/integrations";
 import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
 
-const Integrations = () => {
+const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
+  const Shell = embedded
+    ? ({ children }: { children: React.ReactNode }) => <>{children}</>
+    : DashboardLayout;
+
   const navigate = useNavigate();
   const location = useLocation();
 
