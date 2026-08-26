@@ -447,7 +447,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </Shell>
   );
 };
 
