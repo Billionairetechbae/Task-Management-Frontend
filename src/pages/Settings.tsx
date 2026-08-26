@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   Copy,
+  FileArchive,
   Info,
   KeyRound,
   Laptop,
@@ -43,6 +44,7 @@ import useTheme, { ThemeMode } from "@/hooks/use-theme";
 import useLocalPreferences from "@/hooks/use-local-preferences";
 import Profile from "./Profile";
 import Integrations from "./Integrations";
+import AuditExport from "./AuditExport";
 
 type TabId =
   | "profile"
@@ -51,6 +53,7 @@ type TabId =
   | "notifications"
   | "preferences"
   | "integrations"
+  | "audit"
   | "about";
 
 const TABS: {
@@ -65,7 +68,8 @@ const TABS: {
   { id: "notifications", label: "Notifications", description: "Alerts on this device", icon: Bell },
   { id: "preferences", label: "Preferences", description: "Navigation & behaviour", icon: Sliders },
   { id: "integrations", label: "Integrations", description: "Connected apps & services", icon: Plug },
-  { id: "about", label: "About", description: "App info & support", icon: Info },
+  { id: "audit",        label: "Audit & Exports", description: "Workspace data exports",    icon: FileArchive },
+  { id: "about",        label: "About",        description: "App info & support",          icon: Info },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -198,6 +202,9 @@ const Settings = () => {
 
       case "integrations":
         return <Integrations embedded />;
+
+      case "audit":
+        return <AuditExport embedded />;
 
       case "account":
         return (

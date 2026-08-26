@@ -603,7 +603,7 @@ const DashboardLayout = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
-                to="/profile"
+                to="/settings"
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

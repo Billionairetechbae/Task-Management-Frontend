@@ -11,6 +11,7 @@ import SignupTeamMember from "./pages/SignupTeamMember";
 import SignupManager from "./pages/SignupManager";
 import SignupExecutiveJoin from "./pages/SignupExecutiveJoin";
 
+import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import DashboardExecutive from "./pages/DashboardExecutive";
 
@@ -123,6 +124,14 @@ const App = () => {
           }
         />
 
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/profile"
           element={
