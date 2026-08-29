@@ -62,7 +62,7 @@ const TABS: {
   description: string;
   icon: typeof UserIcon;
 }[] = [
-  { id: "profile", label: "Profile", description: "Your professional profile & CV", icon: UserIcon },
+  { id: "profile", label: "Profile", description: "Your profile", icon: UserIcon },
   { id: "account", label: "Account", description: "Identity, workspace & session", icon: ShieldCheck },
   { id: "appearance", label: "Appearance", description: "Theme, density & motion", icon: Palette },
   { id: "notifications", label: "Notifications", description: "Alerts on this device", icon: Bell },

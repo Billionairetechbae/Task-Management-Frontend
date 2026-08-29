@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Logo from "@/components/Logo";
@@ -44,6 +44,7 @@ import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
 import { WebSocketStatus } from "@/components/WebSocketStatus";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { readPreferences } from "@/hooks/use-local-preferences";
 
 interface NavItem {
   label: string;
@@ -79,8 +80,30 @@ const DashboardLayout = ({
   const location = useLocation();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isSettingsPage = location.pathname.startsWith("/settings");
+
+  // Read sidebar preference once at mount — no re-render storm on every keystroke.
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const { sidebarCollapsedByDefault } = readPreferences();
+    // Always start collapsed on the settings page to give it more room.
+    if (location.pathname.startsWith("/settings")) return false;
+    return !sidebarCollapsedByDefault;
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Collapse automatically when navigating into settings, restore when leaving.
+  const prevPathRef = useRef(location.pathname);
+  useEffect(() => {
+    const wasSettings = prevPathRef.current.startsWith("/settings");
+    const nowSettings = location.pathname.startsWith("/settings");
+    prevPathRef.current = location.pathname;
+    if (!wasSettings && nowSettings) {
+      setSidebarOpen(false);
+    } else if (wasSettings && !nowSettings) {
+      // Restore to the user's stored preference when leaving settings.
+      setSidebarOpen(!readPreferences().sidebarCollapsedByDefault);
+    }
+  }, [location.pathname]);
 
   const getNavItems = (): NavItemOrGroup[] => {
     if (workspaceRole === "owner" || workspaceRole === "admin") {

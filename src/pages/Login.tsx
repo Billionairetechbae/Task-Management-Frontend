@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Check, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { readPreferences } from "@/hooks/use-local-preferences";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
@@ -39,7 +40,9 @@ const Login = () => {
       }
     }
 
-    navigate("/dashboard");
+    // Respect user's saved default landing page preference when available.
+    const defaultLanding = readPreferences().defaultLandingPage || "/dashboard";
+    navigate(defaultLanding);
   }, [user, workspaces, activeCompanyId, setActiveCompanyId, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
