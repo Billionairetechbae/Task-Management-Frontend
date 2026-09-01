@@ -62,6 +62,18 @@ const Login = () => {
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Login failed. Try again.";
+      const statusCode = (err as any)?.statusCode ?? (err as any)?.status;
+
+      if (statusCode === 429) {
+        toast({
+          title: "Too many attempts",
+          description:
+            errorMessage || "Too many attempts. Please try again shortly.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
       if (errorMessage.toLowerCase().includes("verify")) {
         toast({
@@ -77,10 +89,16 @@ const Login = () => {
                       title: "Verification Sent!",
                       description: "A new verification email has been sent to your inbox.",
                     });
-                  } catch (err: any) {
+                  } catch (resendErr: any) {
+                    const resendStatus =
+                      resendErr?.statusCode ?? resendErr?.status;
+                    const resendMsg =
+                      resendStatus === 429
+                        ? "Too many attempts. Please try again shortly."
+                        : resendErr?.message || "Failed to resend email";
                     toast({
                       title: "Failed to resend email",
-                      description: err.message,
+                      description: resendMsg,
                       variant: "destructive",
                     });
                   }

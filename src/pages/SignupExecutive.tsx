@@ -45,9 +45,14 @@ const SignupExecutive = () => {
 
       setStep(2);
     } catch (error: any) {
+      const statusCode = error?.statusCode ?? error?.status;
+      const description =
+        statusCode === 429
+          ? "Too many attempts. Please try again shortly."
+          : error?.message || "Something went wrong";
       toast({
         title: "Signup failed",
-        description: error.message || "Something went wrong",
+        description,
         variant: "destructive",
       });
     } finally {

@@ -1537,6 +1537,15 @@ class ApiClient {
     if (!response.ok) {
       const message: string = result?.message || "Request failed";
 
+      // Rate-limit guard — surface a clean message for 429 responses.
+      if (response.status === 429) {
+        const rateLimitMessage =
+          typeof result?.message === "string" && result.message.trim()
+            ? result.message
+            : "Too many attempts. Please try again shortly.";
+        throw new ApiError(rateLimitMessage, 429);
+      }
+
       // Workspace missing guard
       if (
         response.status === 400 &&
@@ -3653,8 +3662,8 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
   async exportWorkspaceWorkbookXlsx(): Promise<void> {
     const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
     const companyId = localStorage.getItem("activeCompanyId");
-    if (!token) throw new Error("Not authenticated");
-    if (!companyId) throw new Error("No active workspace selected");
+    if (!token) throw new ApiError("Not authenticated", 401);
+    if (!companyId) throw new ApiError("No active workspace selected", 400);
 
     const res = await fetch(`${API_BASE_URL}/exports/workspace.xlsx`, {
       method: "POST",
@@ -3670,7 +3679,7 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
         const j = await res.json();
         msg = j?.message || msg;
       } catch {}
-      throw new Error(msg);
+      throw new ApiError(msg, res.status);
     }
 
     const blob = await res.blob();
@@ -3681,8 +3690,8 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
   async exportWorkspaceZip(): Promise<void> {
     const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
     const companyId = localStorage.getItem("activeCompanyId");
-    if (!token) throw new Error("Not authenticated");
-    if (!companyId) throw new Error("No active workspace selected");
+    if (!token) throw new ApiError("Not authenticated", 401);
+    if (!companyId) throw new ApiError("No active workspace selected", 400);
 
     const res = await fetch(`${API_BASE_URL}/exports/workspace`, {
       method: "POST",
@@ -3698,7 +3707,7 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
         const j = await res.json();
         msg = j?.message || msg;
       } catch {}
-      throw new Error(msg);
+      throw new ApiError(msg, res.status);
     }
 
     const blob = await res.blob();

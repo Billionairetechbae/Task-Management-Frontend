@@ -42,4 +42,10 @@ export default defineConfig(({ mode }) => ({
     port: 4173,
     host: true,
   },
-}));
+  // vitest config — not part of Vite's public types but safe to co-locate
+  test: {
+    environment: "happy-dom",
+    globals: true,
+    setupFiles: ["./src/test/setup.ts"],
+  },
+} as any));

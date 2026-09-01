@@ -41,9 +41,14 @@ const SignupTeamMember = () => {
       });
       setStep(2); // Show pending approval step
     } catch (error: any) {
+      const statusCode = error?.statusCode ?? error?.status;
+      const description =
+        statusCode === 429
+          ? "Too many attempts. Please try again shortly."
+          : error?.message || "Please check your company code and try again";
       toast({
         title: "Registration failed",
-        description: error.message || "Please check your company code and try again",
+        description,
         variant: "destructive",
       });
     } finally {

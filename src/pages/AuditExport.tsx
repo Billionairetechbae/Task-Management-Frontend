@@ -2,16 +2,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, FileArchive, FileSpreadsheet, Loader2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { canExportWorkspace } from "@/lib/permissions";
 
+/** Returns a user-facing message for API errors, with special handling for 429. */
+function exportErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    const anyErr = err as any;
+    if (anyErr.statusCode === 429 || anyErr.status === 429) {
+      return "Too many export attempts. Please try again shortly.";
+    }
+    return err.message || "Export failed. Please try again.";
+  }
+  return "Export failed. Please try again.";
+}
+
 const AuditExportContent = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const [loading, setLoading] = useState<"zip" | "xlsx" | null>(null);
 
@@ -19,9 +29,10 @@ const AuditExportContent = () => {
     localStorage.getItem("activeCompanyName") ||
     localStorage.getItem("activeWorkspaceName") ||
     "Active Workspace";
-  const workspaceRole = localStorage.getItem("workspaceRole") || undefined;
 
-  const canAccess = canExportWorkspace(workspaceRole as any, user?.role);
+  // Authorization: workspace role only — backend enforces this too.
+  const workspaceRole = localStorage.getItem("workspaceRole") || undefined;
+  const canAccess = canExportWorkspace(workspaceRole as any);
 
   if (!canAccess) {
     return (
@@ -29,31 +40,41 @@ const AuditExportContent = () => {
         <ShieldCheck className="h-10 w-10 text-muted-foreground/40" />
         <p className="font-semibold">Access restricted</p>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Audit exports are available to workspace Owner / Admin and global Executive / Admin only.
+          Workspace exports are available to workspace Owners and Admins only.
         </p>
       </div>
     );
   }
 
   const handleExportZip = async () => {
+    if (loading !== null) return;
     try {
       setLoading("zip");
       await api.exportWorkspaceZip();
       toast({ title: "ZIP export completed" });
-    } catch (err: any) {
-      toast({ title: "Export failed", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({
+        title: "Export failed",
+        description: exportErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setLoading(null);
     }
   };
 
   const handleExportXlsx = async () => {
+    if (loading !== null) return;
     try {
       setLoading("xlsx");
       await api.exportWorkspaceWorkbookXlsx();
       toast({ title: "Workbook export completed" });
-    } catch (err: any) {
-      toast({ title: "Export failed", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({
+        title: "Export failed",
+        description: exportErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setLoading(null);
     }
@@ -82,7 +103,11 @@ const AuditExportContent = () => {
               Structured audit export in spreadsheet format. Best for compliance
               reviews and reporting.
             </p>
-            <Button onClick={handleExportXlsx} disabled={loading !== null} className="w-full">
+            <Button
+              onClick={handleExportXlsx}
+              disabled={loading !== null}
+              className="w-full"
+            >
               {loading === "xlsx" ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating…</>
               ) : (

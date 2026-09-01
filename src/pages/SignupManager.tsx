@@ -73,9 +73,14 @@ const SignupManager = () => {
 
       setStep(2);
     } catch (error: any) {
+      const statusCode = error?.statusCode ?? error?.status;
+      const description =
+        statusCode === 429
+          ? "Too many attempts. Please try again shortly."
+          : error?.message || "Could not complete registration";
       toast({
         title: "Signup failed",
-        description: error.message || "Could not complete registration",
+        description,
         variant: "destructive",
       });
     } finally {

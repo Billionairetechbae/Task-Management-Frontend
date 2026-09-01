@@ -28,13 +28,13 @@ export const canAdminWorkspace = (
 };
 
 
+/**
+ * Workspace export is authorized by workspace role only.
+ * Backend Phase 1: owner and admin are allowed; manager/member/guest denied.
+ * Platform admin bypass is enforced server-side; we do NOT rely on globalRole here.
+ */
 export const canExportWorkspace = (
   workspaceRole: WorkspaceRole | null | undefined,
-  globalRole: UserRole | null | undefined
 ): boolean => {
-  if (globalRole === "admin") return true;
-  if (globalRole === "executive") return true;
-
-  const effective = inferWorkspaceRole(workspaceRole, globalRole);
-  return effective === "owner" || effective === "admin";
+  return workspaceRole === "owner" || workspaceRole === "admin";
 };

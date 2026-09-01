@@ -4,17 +4,20 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const ForgotPassword = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
 
+    setLoading(true);
     try {
       await api.request("/auth/forgot-password", {
         method: "POST",
@@ -28,20 +31,27 @@ const ForgotPassword = () => {
         title: "Reset Email Sent!",
         description: "Check your inbox for the password reset link.",
       });
-
     } catch (err: any) {
+      const statusCode = err?.statusCode ?? err?.status;
+      const description =
+        statusCode === 429
+          ? "Too many attempts. Please try again shortly."
+          : err?.message || "Unable to send reset email";
+
       toast({
         title: "Error",
-        description: err.message || "Unable to send reset email",
+        description,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8">
-        
+
         <Link to="/" className="flex items-center gap-2 text-primary mb-6">
           <ArrowLeft className="w-4 h-4" />
           Back to Login
@@ -66,8 +76,15 @@ const ForgotPassword = () => {
                 />
               </div>
 
-              <Button className="w-full h-12" type="submit">
-                Send Reset Email
+              <Button className="w-full h-12" type="submit" disabled={loading}>
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending…
+                  </span>
+                ) : (
+                  "Send Reset Email"
+                )}
               </Button>
             </form>
           </>

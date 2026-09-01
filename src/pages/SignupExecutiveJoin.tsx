@@ -42,9 +42,14 @@ const SignupExecutiveJoin = () => {
 
       setStep(2);
     } catch (error: any) {
+      const statusCode = error?.statusCode ?? error?.status;
+      const description =
+        statusCode === 429
+          ? "Too many attempts. Please try again shortly."
+          : error?.message || "Invalid company code or email already exists.";
       toast({
         title: "Signup failed",
-        description: error.message || "Invalid company code or email already exists.",
+        description,
         variant: "destructive",
       });
     } finally {

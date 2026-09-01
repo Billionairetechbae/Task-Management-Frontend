@@ -29,7 +29,16 @@ const Signup = () => {
       await api.signupUser(form);
       setSubmitted(true);
     } catch (err: any) {
-      toast({ title: "Signup failed", description: err?.message || "Try again", variant: "destructive" as any });
+      const statusCode = err?.statusCode ?? err?.status;
+      const description =
+        statusCode === 429
+          ? "Too many attempts. Please try again shortly."
+          : err?.message || "Try again";
+      toast({
+        title: "Signup failed",
+        description,
+        variant: "destructive" as any,
+      });
     } finally {
       setLoading(false);
     }

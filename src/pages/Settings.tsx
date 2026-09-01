@@ -45,6 +45,7 @@ import useLocalPreferences from "@/hooks/use-local-preferences";
 import Profile from "./Profile";
 import Integrations from "./Integrations";
 import AuditExport from "./AuditExport";
+import { canExportWorkspace } from "@/lib/permissions";
 
 type TabId =
   | "profile"
@@ -194,6 +195,11 @@ const Settings = () => {
   };
 
   const activeTab = TABS.find((t) => t.id === active)!;
+
+  // Hide Audit & Exports tab for roles that cannot export (manager/member/guest).
+  // The backend enforces the same rule; this is a UX-only filter.
+  const canExport = canExportWorkspace(workspaceRole as any);
+  const visibleTabs = canExport ? TABS : TABS.filter((t) => t.id !== "audit");
 
   const renderContent = () => {
     switch (active) {
@@ -525,7 +531,7 @@ const Settings = () => {
             {/* mobile: horizontal scroller */}
             <div className="lg:hidden -mx-1 px-1 overflow-x-auto">
               <div className="flex gap-2 pb-1">
-                {TABS.map((t) => (
+                {visibleTabs.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => setActive(t.id)}
@@ -547,7 +553,7 @@ const Settings = () => {
             <Card className="hidden lg:block rounded-2xl border-border/70 shadow-sm overflow-hidden lg:sticky lg:top-20">
               <ScrollArea className="max-h-[70vh]">
                 <nav className="p-2 space-y-1">
-                  {TABS.map((t) => {
+                  {visibleTabs.map((t) => {
                     const selected = active === t.id;
                     return (
                       <button
