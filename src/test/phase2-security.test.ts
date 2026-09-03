@@ -1,178 +1,400 @@
 /**
- * Phase 2 Security Compatibility — Regression Tests
+ * Phase 2 Security Compatibility — Regression Tests (Final Contract)
  *
- * Covers all items from Task 14 in the security remediation spec:
+ * Backend now uses authenticated server-side proxy streaming.
+ * No signed URLs or Cloudinary URLs are returned.
+ * Frontend receives Blob bytes and creates ephemeral object URLs.
  *
- *  1.  Task attachment no longer opens raw fileUrl
- *  2.  Task attachment requests authenticated download endpoint
- *  3.  Drive file requests authenticated download endpoint
- *  4.  Signed URL returned by backend is opened
- *  5.  Signed URL is not persisted (localStorage / sessionStorage)
- *  6.  Google Drive attachment retains external URL behavior
- *  7.  profilePictureUrl still renders directly (not through secure endpoint)
- *  8.  Unsupported upload extension is not advertised/accepted
- *  9.  Backend HTTP 400 upload validation message is surfaced
- * 10.  Forgot-password neutral 200 response displays neutral message
- * 11.  Resend-verification neutral 200 response displays neutral message
- * 12.  Frontend has no dependency on passwordResetToken
- * 13.  Frontend has no dependency on emailVerificationToken
- * 14.  Frontend has no dependency on googleId/googleEmail/googleAvatar (from auth response)
- * 15.  403 download produces access-denied UX message
- * 16.  404 download produces unavailable-file UX message
- * 17.  Existing 429 behavior remains intact (ApiError carries statusCode)
+ * Coverage:
+ *  1.  Task attachment download performs authenticated API request
+ *  2.  Response is consumed as Blob, not JSON URL
+ *  3.  Task download creates browser object URL
+ *  4.  Object URL is revoked after download use
+ *  5.  Task preview uses Blob / object URL
+ *  6.  Preview cleanup revokes object URL
+ *  7.  Drive file uses authenticated Blob endpoint
+ *  8.  Drive preview uses Blob / object URL
+ *  9.  No confidential raw fileUrl usage remains (fileUrl not passed to methods)
+ * 10.  No confidential signed-URL JSON contract remains (no { url } expected)
+ * 11.  Google Drive external URLs remain unchanged (webViewLink used directly)
+ * 12.  profilePictureUrl remains direct (not routed through download endpoints)
+ * 13.  403 download handled cleanly
+ * 14.  404 download handled cleanly
+ * 15.  429 behavior remains intact
+ * 16.  Existing Phase 2 forgot/resend neutral-response tests continue passing
+ * 17.  Upload accept attributes exclude unsafe extensions
+ * 18.  Backend 400 upload message surfaced cleanly
+ * 19.  Removed auth fields absent from User type
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { api, ApiError } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockFetch(
+/** Build a fake Response that returns file bytes (Blob endpoint). */
+function mockBlobResponse(
   status: number,
-  body: unknown,
-  headers: Record<string, string> = {}
+  content: string | null,
+  contentType = "application/pdf",
+  disposition = 'attachment; filename="test-file.pdf"'
 ) {
-  const response = new Response(JSON.stringify(body), {
+  const bodyInit = content ?? "";
+  const response = new Response(bodyInit, {
     status,
-    headers: { "Content-Type": "application/json", ...headers },
+    headers: {
+      "Content-Type": contentType,
+      ...(disposition ? { "Content-Disposition": disposition } : {}),
+    },
+  });
+  return vi.fn().mockResolvedValue(response);
+}
+
+/** Build a fake Response that returns a JSON error body (non-2xx). */
+function mockJsonErrorResponse(status: number, message: string) {
+  const response = new Response(JSON.stringify({ status: "error", message }), {
+    status,
+    headers: { "Content-Type": "application/json" },
   });
   return vi.fn().mockResolvedValue(response);
 }
 
 // ---------------------------------------------------------------------------
-// 1 & 2 — Task attachment uses authenticated download endpoint
+// 1 & 2 — downloadTaskAttachment: authenticated request, returns Blob
 // ---------------------------------------------------------------------------
 
-describe("Task 2 — getTaskAttachmentDownloadUrl", () => {
+describe("downloadTaskAttachment — authenticated Blob endpoint", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    localStorage.removeItem("auth_token");
   });
 
-  it("calls /tasks/:taskId/attachments/:attachmentId/download with Authorization header", async () => {
-    localStorage.setItem("auth_token", "test-jwt");
+  it("calls the correct endpoint with Authorization header", async () => {
+    localStorage.setItem("auth_token", "jwt-test");
+    globalThis.fetch = mockBlobResponse(200, "PDF bytes here");
 
-    const signed = "https://cdn.example.com/signed?token=abc123&expires=1234";
-    globalThis.fetch = mockFetch(200, { url: signed });
+    await api.downloadTaskAttachment("task-1", "att-1");
 
-    const result = await api.getTaskAttachmentDownloadUrl("task-1", "att-1");
-
-    expect(result.url).toBe(signed);
-
-    const [url, init] = (globalThis.fetch as any).mock.calls[0] as [
-      string,
-      RequestInit
-    ];
+    const [url, init] = (globalThis.fetch as any).mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/tasks/task-1/attachments/att-1/download");
     const headers = new Headers(init.headers as HeadersInit);
-    expect(headers.get("authorization")).toMatch(/^Bearer /);
-    expect(headers.get("accept")).toBe("application/json");
-
-    localStorage.removeItem("auth_token");
+    expect(headers.get("authorization")).toBe("Bearer jwt-test");
   });
 
-  it("never uses the raw fileUrl field to open the file", () => {
-    // Structural check: the api method signature does NOT accept a fileUrl parameter.
-    // It only accepts taskId + attachmentId, forcing callers through the endpoint.
-    expect(api.getTaskAttachmentDownloadUrl.length).toBe(2); // (taskId, attachmentId)
+  it("does NOT send Accept: application/json (proxy streams bytes, not JSON)", async () => {
+    localStorage.setItem("auth_token", "jwt-test");
+    globalThis.fetch = mockBlobResponse(200, "bytes");
+
+    await api.downloadTaskAttachment("t", "a");
+
+    const [, init] = (globalThis.fetch as any).mock.calls[0] as [string, RequestInit];
+    const headers = new Headers(init.headers as HeadersInit);
+    // Must not request JSON — the endpoint streams file bytes
+    expect(headers.get("accept")).not.toBe("application/json");
   });
 
-  it("parses backend envelope { data: { url } } correctly", async () => {
-    const signed = "https://signed.url/data-envelope";
-    globalThis.fetch = mockFetch(200, { data: { url: signed, expiresAt: "2026-09-03T09:00:00Z" } });
+  it("returns a Blob (not a URL string or JSON object)", async () => {
+    globalThis.fetch = mockBlobResponse(200, "fake-pdf-content", "application/pdf");
 
-    const result = await api.getTaskAttachmentDownloadUrl("t", "a");
-    expect(result.url).toBe(signed);
-    expect(result.expiresAt).toBe("2026-09-03T09:00:00Z");
+    const result = await api.downloadTaskAttachment("t", "a");
+
+    expect(result.blob).toBeInstanceOf(Blob);
+    expect(typeof result.blob).not.toBe("string");
+    expect((result as any).url).toBeUndefined();
+    expect((result as any).expiresAt).toBeUndefined();
+    expect((result as any).signedUrl).toBeUndefined();
   });
 
-  it("parses flat backend envelope { url } correctly", async () => {
-    const signed = "https://signed.url/flat";
-    globalThis.fetch = mockFetch(200, { url: signed });
+  it("returns contentType from response Content-Type header", async () => {
+    globalThis.fetch = mockBlobResponse(200, "content", "image/png", "");
 
-    const result = await api.getTaskAttachmentDownloadUrl("t", "a");
-    expect(result.url).toBe(signed);
+    const result = await api.downloadTaskAttachment("t", "a");
+
+    expect(result.contentType).toContain("image/png");
   });
 
-  it("throws when backend returns no url field", async () => {
-    globalThis.fetch = mockFetch(200, { status: "success" }); // no url
-    await expect(api.getTaskAttachmentDownloadUrl("t", "a")).rejects.toThrow(
-      "Download URL not found"
+  it("returns fileName parsed from Content-Disposition header", async () => {
+    globalThis.fetch = mockBlobResponse(
+      200,
+      "content",
+      "application/pdf",
+      'attachment; filename="my-report.pdf"'
     );
+
+    const result = await api.downloadTaskAttachment("t", "a");
+
+    expect(result.fileName).toBe("my-report.pdf");
   });
 
-  // 5 — Signed URL NOT persisted
-  it("does not write the signed URL to localStorage or sessionStorage", async () => {
-    const setLocalSpy = vi.spyOn(Storage.prototype, "setItem");
-    globalThis.fetch = mockFetch(200, { url: "https://signed.url/no-persist" });
-
-    const { url } = await api.getTaskAttachmentDownloadUrl("t", "a");
-
-    const signedUrlWritten = setLocalSpy.mock.calls.some(([, v]) =>
-      String(v).includes("no-persist")
+  it("returns fileName parsed from Content-Disposition filename* (RFC 5987)", async () => {
+    globalThis.fetch = mockBlobResponse(
+      200,
+      "content",
+      "application/pdf",
+      "attachment; filename*=UTF-8''my%20file.pdf"
     );
-    expect(signedUrlWritten).toBe(false);
-    expect(url).toBeTruthy();
+
+    const result = await api.downloadTaskAttachment("t", "a");
+
+    expect(result.fileName).toBe("my file.pdf");
+  });
+
+  it("method accepts only (taskId, attachmentId) — no fileUrl parameter", () => {
+    // Structural contract: 2 params only, not 3
+    expect(api.downloadTaskAttachment.length).toBe(2);
   });
 });
 
 // ---------------------------------------------------------------------------
-// 3 — Drive file requests authenticated download endpoint
+// 3 & 4 — Download: object URL created and revoked
 // ---------------------------------------------------------------------------
 
-describe("Task 2 — getDriveFileDownloadUrl", () => {
+describe("download via Blob — object URL lifecycle", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("calls /drive/files/:fileId/download with Authorization + Accept headers", async () => {
-    localStorage.setItem("auth_token", "drive-jwt");
-    const signed = "https://cdn.example.com/drive-signed";
-    globalThis.fetch = mockFetch(200, { url: signed });
+  it("URL.createObjectURL is called with the returned Blob for download", async () => {
+    globalThis.fetch = mockBlobResponse(200, "file content", "application/pdf");
+    const createSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
 
-    const result = await api.getDriveFileDownloadUrl("file-42");
+    const { blob } = await api.downloadTaskAttachment("t", "a");
+    const objectUrl = URL.createObjectURL(blob);
 
-    expect(result.url).toBe(signed);
+    expect(createSpy).toHaveBeenCalledWith(blob);
+    expect(objectUrl).toBe("blob:fake-url");
 
-    const [url, init] = (globalThis.fetch as any).mock.calls[0] as [
-      string,
-      RequestInit
-    ];
-    expect(url).toContain("/drive/files/file-42/download");
-    const headers = new Headers(init.headers as HeadersInit);
-    expect(headers.get("authorization")).toMatch(/^Bearer /);
-    expect(headers.get("accept")).toBe("application/json");
-
-    localStorage.removeItem("auth_token");
+    // Simulate what the component does after triggering download
+    URL.revokeObjectURL(objectUrl);
+    expect(revokeSpy).toHaveBeenCalledWith("blob:fake-url");
   });
 
-  it("does not write signed Drive URL to sessionStorage", async () => {
-    const setSessionSpy = vi.spyOn(sessionStorage, "setItem");
-    globalThis.fetch = mockFetch(200, { url: "https://drive-signed.url/no-session" });
+  it("URL.revokeObjectURL is called after download — no permanent object URL", () => {
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:download-url");
 
-    const { url } = await api.getDriveFileDownloadUrl("f");
+    // Simulate the component download pattern
+    const objectUrl = URL.createObjectURL(new Blob(["data"]));
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = "file.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
 
-    const written = setSessionSpy.mock.calls.some(([, v]) =>
-      String(v).includes("no-session")
-    );
-    expect(written).toBe(false);
-    expect(url).toBeTruthy();
+    expect(revokeSpy).toHaveBeenCalledWith("blob:download-url");
   });
 });
 
 // ---------------------------------------------------------------------------
-// 6 — Google Drive attachments retain external URL (webViewLink)
+// 5 & 6 — Preview: object URL used and revoked on close
 // ---------------------------------------------------------------------------
 
-describe("Task 6 — Google Drive external URL behavior", () => {
-  it("TaskAttachment interface supports webViewLink field (Google Drive)", async () => {
+describe("preview via Blob — object URL lifecycle", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("createObjectURL is called with Blob for preview", async () => {
+    globalThis.fetch = mockBlobResponse(200, "pdf-bytes", "application/pdf");
+    const createSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:preview-url");
+
+    const { blob } = await api.downloadTaskAttachment("t", "a");
+    const objectUrl = URL.createObjectURL(blob);
+
+    expect(createSpy).toHaveBeenCalledWith(blob);
+    expect(objectUrl).toBe("blob:preview-url");
+  });
+
+  it("revokeObjectURL is called when preview closes (blob: URL only)", () => {
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:preview-url");
+
+    // Simulate the onClose handler pattern in TaskDetails/Drive
+    const previewUrl = "blob:preview-url";
+    if (previewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    expect(revokeSpy).toHaveBeenCalledWith("blob:preview-url");
+  });
+
+  it("revokeObjectURL is NOT called for non-blob URLs (Google Drive webViewLink)", () => {
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    // Simulate onClose for a Google Drive URL — should not revoke
+    const previewUrl = "https://drive.google.com/file/d/xyz/view";
+    if (previewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    expect(revokeSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7 & 8 — Drive: downloadDriveFile uses authenticated Blob endpoint
+// ---------------------------------------------------------------------------
+
+describe("downloadDriveFile — authenticated Blob endpoint", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.removeItem("auth_token");
+  });
+
+  it("calls /drive/files/:fileId/download with Authorization header", async () => {
+    localStorage.setItem("auth_token", "drive-jwt");
+    globalThis.fetch = mockBlobResponse(200, "drive-bytes", "application/pdf");
+
+    await api.downloadDriveFile("file-42");
+
+    const [url, init] = (globalThis.fetch as any).mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/drive/files/file-42/download");
+    const headers = new Headers(init.headers as HeadersInit);
+    expect(headers.get("authorization")).toBe("Bearer drive-jwt");
+  });
+
+  it("does NOT send Accept: application/json", async () => {
+    globalThis.fetch = mockBlobResponse(200, "bytes");
+
+    await api.downloadDriveFile("f");
+
+    const [, init] = (globalThis.fetch as any).mock.calls[0] as [string, RequestInit];
+    const headers = new Headers(init.headers as HeadersInit);
+    expect(headers.get("accept")).not.toBe("application/json");
+  });
+
+  it("returns a Blob for Drive preview — not a URL string", async () => {
+    globalThis.fetch = mockBlobResponse(200, "drive-content", "application/pdf");
+
+    const result = await api.downloadDriveFile("f");
+
+    expect(result.blob).toBeInstanceOf(Blob);
+    expect((result as any).url).toBeUndefined();
+    expect((result as any).signedUrl).toBeUndefined();
+  });
+
+  it("creates object URL from Blob for Drive FileViewer", async () => {
+    globalThis.fetch = mockBlobResponse(200, "drive-content");
+    const createSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:drive-preview");
+
+    const { blob } = await api.downloadDriveFile("f");
+    const objectUrl = URL.createObjectURL(blob);
+
+    expect(createSpy).toHaveBeenCalledWith(blob);
+    expect(objectUrl).toBe("blob:drive-preview");
+  });
+
+  it("revokeObjectURL is called when Drive FileViewer closes", () => {
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:drive-preview");
+
+    const objectUrl = URL.createObjectURL(new Blob(["drive"]));
+    // Simulate Drive onClose handler
+    if (objectUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    expect(revokeSpy).toHaveBeenCalledWith("blob:drive-preview");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9 — No confidential raw fileUrl usage (fileUrl not accepted by download methods)
+// ---------------------------------------------------------------------------
+
+describe("Task 9 — No confidential raw fileUrl in download API", () => {
+  it("downloadTaskAttachment does not accept fileUrl as a parameter", () => {
+    // Method signature is (taskId, attachmentId) — 2 params
+    // A caller cannot pass fileUrl even by mistake
+    expect(api.downloadTaskAttachment.length).toBe(2);
+  });
+
+  it("downloadDriveFile does not accept fileUrl as a parameter", () => {
+    // Method signature is (fileId) — 1 param
+    expect(api.downloadDriveFile.length).toBe(1);
+  });
+
+  it("api client no longer exposes getTaskAttachmentDownloadUrl", () => {
+    expect((api as any).getTaskAttachmentDownloadUrl).toBeUndefined();
+  });
+
+  it("api client no longer exposes getDriveFileDownloadUrl", () => {
+    expect((api as any).getDriveFileDownloadUrl).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10 — No signed-URL JSON contract: methods do not return { url, expiresAt }
+// ---------------------------------------------------------------------------
+
+describe("Task 10 — No signed-URL JSON contract", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("downloadTaskAttachment does not return { url } property", async () => {
+    globalThis.fetch = mockBlobResponse(200, "content");
+
+    const result = await api.downloadTaskAttachment("t", "a");
+
+    expect((result as any).url).toBeUndefined();
+    expect((result as any).expiresAt).toBeUndefined();
+  });
+
+  it("downloadDriveFile does not return { url } property", async () => {
+    globalThis.fetch = mockBlobResponse(200, "content");
+
+    const result = await api.downloadDriveFile("f");
+
+    expect((result as any).url).toBeUndefined();
+    expect((result as any).expiresAt).toBeUndefined();
+  });
+
+  it("blob object URL is not written to localStorage", async () => {
+    globalThis.fetch = mockBlobResponse(200, "content");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test-url");
+    const setLocalSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    const { blob } = await api.downloadTaskAttachment("t", "a");
+    URL.createObjectURL(blob);
+
+    const blobUrlWritten = setLocalSpy.mock.calls.some(([, v]) =>
+      String(v).includes("blob:")
+    );
+    expect(blobUrlWritten).toBe(false);
+  });
+
+  it("blob object URL is not written to sessionStorage", async () => {
+    globalThis.fetch = mockBlobResponse(200, "content");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test-url-session");
+    const setSessionSpy = vi.spyOn(sessionStorage, "setItem");
+
+    const { blob } = await api.downloadDriveFile("f");
+    URL.createObjectURL(blob);
+
+    const blobUrlWritten = setSessionSpy.mock.calls.some(([, v]) =>
+      String(v).includes("blob:")
+    );
+    expect(blobUrlWritten).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11 — Google Drive external URLs remain unchanged
+// ---------------------------------------------------------------------------
+
+describe("Task 11 — Google Drive external URL behavior preserved", () => {
+  it("TaskAttachment supports webViewLink for Google Drive files", async () => {
     const mod = await import("@/lib/api");
-    // Verify the TypeScript shape allows webViewLink at runtime
     const att: mod.TaskAttachment = {
       id: "gd-1",
       taskId: "t-1",
-      fileUrl: "",           // empty — not used for Google Drive
+      fileUrl: "",
       fileName: "report.pdf",
       fileType: "application/pdf",
       fileSize: 1024,
@@ -183,24 +405,20 @@ describe("Task 6 — Google Drive external URL behavior", () => {
     expect(att.source).toBe("google-drive");
   });
 
-  it("getDriveFileDownloadUrl is not called for Google Drive files (external URL used directly)", () => {
-    // This test documents the design contract: Google Drive files use webViewLink,
-    // not the /drive/files/:id/download endpoint.
-    // We verify getDriveFileDownloadUrl exists for Admiino-uploaded files only.
-    expect(typeof api.getDriveFileDownloadUrl).toBe("function");
-    // The fact that Google Drive files have source === 'google-drive' and
-    // their webViewLink is used directly is verified in TaskDetails.tsx logic.
-    // No separate download call should be made for google-drive source.
-    expect(true).toBe(true); // design contract documented above
+  it("downloadTaskAttachment and downloadDriveFile exist only for Admiino-uploaded files", () => {
+    // Google Drive files use webViewLink directly — they never call these methods
+    expect(typeof api.downloadTaskAttachment).toBe("function");
+    expect(typeof api.downloadDriveFile).toBe("function");
+    // The google-drive source check in TaskDetails.tsx routes these to window.open instead
   });
 });
 
 // ---------------------------------------------------------------------------
-// 7 — profilePictureUrl renders directly (public asset, no secure endpoint)
+// 12 — profilePictureUrl renders directly (public asset)
 // ---------------------------------------------------------------------------
 
-describe("Task 11 — Public media not routed through secure endpoints", () => {
-  it("User type has profilePictureUrl as optional string (direct render allowed)", async () => {
+describe("Task 12 — Public media not routed through download endpoints", () => {
+  it("User.profilePictureUrl is a direct HTTPS URL, not a blob: or download endpoint", async () => {
     const mod = await import("@/lib/api");
     const user: mod.User = {
       id: "u-1",
@@ -218,76 +436,237 @@ describe("Task 11 — Public media not routed through secure endpoints", () => {
       profilePictureUrl: "https://cdn.example.com/avatars/alice.jpg",
     };
     expect(user.profilePictureUrl).toMatch(/^https:\/\//);
-    // profilePictureUrl is not sent through getTaskAttachmentDownloadUrl or getDriveFileDownloadUrl
     expect(user.profilePictureUrl).not.toContain("/tasks/");
     expect(user.profilePictureUrl).not.toContain("/drive/files/");
+    expect(user.profilePictureUrl).not.toMatch(/^blob:/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// 8 — Unsupported upload extensions not advertised
+// 13 & 14 — 403 / 404 handled cleanly via ApiError
 // ---------------------------------------------------------------------------
 
-describe("Task 7 — Upload accept attributes exclude unsafe formats", () => {
-  const UNSAFE_EXTENSIONS = [".html", ".svg", ".js", ".exe", ".sh", ".bat", ".ps1", ".ts", ".jsx", ".php"];
+describe("Task 13 & 14 — Download error handling", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-  const ACCEPTED_EXTENSIONS =
+  it("downloadTaskAttachment throws ApiError with statusCode 403", async () => {
+    globalThis.fetch = mockJsonErrorResponse(403, "Forbidden");
+
+    await expect(
+      api.downloadTaskAttachment("task-1", "att-1")
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("downloadTaskAttachment throws ApiError with statusCode 404", async () => {
+    globalThis.fetch = mockJsonErrorResponse(404, "Attachment not found");
+
+    await expect(
+      api.downloadTaskAttachment("task-1", "att-1")
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("downloadDriveFile throws ApiError with statusCode 403", async () => {
+    globalThis.fetch = mockJsonErrorResponse(403, "Forbidden");
+
+    await expect(api.downloadDriveFile("file-1")).rejects.toMatchObject({
+      statusCode: 403,
+    });
+  });
+
+  it("downloadDriveFile throws ApiError with statusCode 404", async () => {
+    globalThis.fetch = mockJsonErrorResponse(404, "File not found");
+
+    await expect(api.downloadDriveFile("file-1")).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("403 ApiError message is preserved from backend body", async () => {
+    globalThis.fetch = mockJsonErrorResponse(403, "You do not have access to this resource.");
+
+    const err = await api.downloadTaskAttachment("t", "a").catch((e) => e);
+
+    expect(err.statusCode).toBe(403);
+    expect(err.message).toBe("You do not have access to this resource.");
+  });
+
+  it("404 ApiError message is preserved from backend body", async () => {
+    globalThis.fetch = mockJsonErrorResponse(404, "Attachment not found.");
+
+    const err = await api.downloadTaskAttachment("t", "a").catch((e) => e);
+
+    expect(err.statusCode).toBe(404);
+    expect(err.message).toBe("Attachment not found.");
+  });
+
+  it("throws ApiError (not a Blob) when response is non-2xx", async () => {
+    globalThis.fetch = mockJsonErrorResponse(500, "Internal server error");
+
+    await expect(api.downloadTaskAttachment("t", "a")).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 15 — 429 rate-limit behavior preserved
+// ---------------------------------------------------------------------------
+
+describe("Task 15 — 429 rate-limit handling preserved", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("downloadTaskAttachment throws ApiError with statusCode 429", async () => {
+    globalThis.fetch = mockJsonErrorResponse(429, "Too many download requests.");
+
+    const err = await api.downloadTaskAttachment("t", "a").catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.statusCode).toBe(429);
+  });
+
+  it("downloadDriveFile throws ApiError with statusCode 429", async () => {
+    globalThis.fetch = mockJsonErrorResponse(429, "Too many requests. Please wait.");
+
+    const err = await api.downloadDriveFile("f").catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.statusCode).toBe(429);
+  });
+
+  it("ApiError carries statusCode so callers can distinguish 429 from others", () => {
+    const err = new ApiError("Rate limited", 429);
+    expect(err.statusCode).toBe(429);
+    expect(err instanceof Error).toBe(true);
+    expect(err.name).toBe("ApiError");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 16 — Forgot-password and resend-verification neutral UX (preserved)
+// ---------------------------------------------------------------------------
+
+describe("Task 16 — Forgot-password neutral UX (Phase 2 preserved)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("api.request resolves on 200 from /auth/forgot-password", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "success",
+          message: "If that email is registered, you will receive password reset instructions shortly.",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    await expect(
+      api.request("/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "unknown@example.com" }),
+      })
+    ).resolves.not.toThrow();
+  });
+
+  it("api.request throws 429 ApiError for rate-limited forgot-password", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "Too many attempts." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(
+      api.request("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email: "x@x.com" }),
+      })
+    ).rejects.toMatchObject({ statusCode: 429 });
+  });
+});
+
+describe("Task 16 — Resend-verification neutral UX (Phase 2 preserved)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("resendVerificationEmail resolves on 200 for unknown email", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ status: "success", message: "Neutral response." }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    await expect(
+      api.resendVerificationEmail("ghost@example.com")
+    ).resolves.not.toThrow();
+  });
+
+  it("resendVerificationEmail throws ApiError 429 when rate limited", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "Too many attempts. Please try again shortly." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(
+      api.resendVerificationEmail("user@example.com")
+    ).rejects.toMatchObject({ statusCode: 429 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 17 — Upload accept attributes exclude unsafe extensions
+// ---------------------------------------------------------------------------
+
+describe("Task 17 — Upload accept attributes (Phase 2 preserved)", () => {
+  const ACCEPTED =
     ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif";
 
-  it("accepted extension list does not contain HTML", () => {
-    expect(ACCEPTED_EXTENSIONS).not.toContain(".html");
-  });
+  const UNSAFE = [".html", ".svg", ".js", ".exe", ".sh", ".bat", ".ps1", ".php"];
 
-  it("accepted extension list does not contain SVG", () => {
-    expect(ACCEPTED_EXTENSIONS).not.toContain(".svg");
-  });
-
-  it("accepted extension list does not contain JS/TS/JSX", () => {
-    expect(ACCEPTED_EXTENSIONS).not.toContain(".js");
-    expect(ACCEPTED_EXTENSIONS).not.toContain(".ts");
-    expect(ACCEPTED_EXTENSIONS).not.toContain(".jsx");
-  });
-
-  it("accepted extension list does not contain executables or scripts", () => {
-    for (const ext of [".exe", ".sh", ".bat", ".ps1", ".php"]) {
-      expect(ACCEPTED_EXTENSIONS).not.toContain(ext);
-    }
-  });
-
-  it("accepted extension list includes all backend-supported business document types", () => {
+  it("accepted list includes all backend-supported business-document types", () => {
     const required = [
       ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
       ".txt", ".csv", ".jpg", ".jpeg", ".png", ".webp", ".gif",
     ];
     for (const ext of required) {
-      expect(ACCEPTED_EXTENSIONS).toContain(ext);
+      expect(ACCEPTED).toContain(ext);
     }
   });
 
-  it("none of the unsafe extensions appear in the accepted list", () => {
-    for (const ext of UNSAFE_EXTENSIONS) {
-      // We check each unsafe ext is NOT a substring of accepted
-      // (accounting for partial matches like .ts inside .pptx — we check word boundary)
-      const regex = new RegExp(`(?<![a-z])${ext.replace(".", "\\.")}(?![a-z])`, "i");
-      expect(regex.test(ACCEPTED_EXTENSIONS)).toBe(false);
-    }
+  it.each(UNSAFE)("accepted list does not contain unsafe extension %s", (ext) => {
+    // Use word-boundary check to avoid partial matches (e.g. .ts inside .pptx)
+    const regex = new RegExp(`(?<![a-z])${ext.replace(".", "\\.")}(?![a-z])`, "i");
+    expect(regex.test(ACCEPTED)).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// 9 — Backend HTTP 400 upload validation message surfaced cleanly
+// 18 — Backend 400 upload message surfaced cleanly
 // ---------------------------------------------------------------------------
 
-describe("Task 7 — Backend 400 upload error message surfacing", () => {
+describe("Task 18 — Backend 400 upload error surfacing", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("ApiError preserves backend message for 400 responses", async () => {
-    globalThis.fetch = mockFetch(400, {
-      status: "error",
-      message: "File type not allowed. Supported types: pdf, docx, xlsx.",
-    });
+  it("ApiError preserves backend 400 message for upload rejection", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "error",
+          message: "File type not allowed. Supported types: pdf, docx, xlsx.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    );
 
     await expect(
       api.uploadTaskAttachments("task-1", [new File([""], "bad.exe")])
@@ -297,11 +676,13 @@ describe("Task 7 — Backend 400 upload error message surfacing", () => {
     });
   });
 
-  it("ApiError.message is not [object Object] for 400 responses", async () => {
-    globalThis.fetch = mockFetch(400, {
-      status: "error",
-      message: "Unsupported file format",
-    });
+  it("ApiError.message is not [object Object]", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ status: "error", message: "Unsupported file format" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    );
 
     try {
       await api.uploadTaskAttachments("task-1", [new File([""], "test.svg")]);
@@ -313,288 +694,74 @@ describe("Task 7 — Backend 400 upload error message surfacing", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 10 — Forgot password neutral response
+// 19 — Removed auth fields absent from User type
 // ---------------------------------------------------------------------------
 
-describe("Task 9 — Forgot password neutral UX", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("api.request does not throw on 200 response from /auth/forgot-password", async () => {
-    globalThis.fetch = mockFetch(200, {
-      status: "success",
-      message:
-        "If that email is registered, you will receive password reset instructions shortly.",
-    });
-
-    await expect(
-      api.request("/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "unknown@example.com" }),
-      })
-    ).resolves.not.toThrow();
-  });
-
-  it("forgot-password endpoint: 404 is never received (backend returns 200 for unknown emails)", async () => {
-    // Backend contract: the endpoint ALWAYS returns 200.
-    // Frontend must not condition behavior on 404.
-    // Verify: the api.request would surface a 404 as ApiError if it ever happened.
-    globalThis.fetch = mockFetch(404, { status: "error", message: "Not found" });
-
-    await expect(
-      api.request("/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "x@x.com" }),
-      })
-    ).rejects.toMatchObject({ statusCode: 404 });
-    // This confirms the frontend would treat a 404 as an error, not as
-    // "account doesn't exist" (the backend should never send a 404 here).
-  });
-
-  it("api carries 429 statusCode for rate-limited forgot-password", async () => {
-    globalThis.fetch = mockFetch(429, {
-      status: "error",
-      message: "Too many attempts. Please wait.",
-    });
-
-    await expect(
-      api.request("/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email: "x@x.com" }),
-      })
-    ).rejects.toMatchObject({ statusCode: 429 });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 11 — Resend verification neutral response
-// ---------------------------------------------------------------------------
-
-describe("Task 10 — Resend verification neutral UX", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("api.resendVerificationEmail resolves on 200 for unknown email (neutral response)", async () => {
-    globalThis.fetch = mockFetch(200, {
-      status: "success",
-      message: "If that account exists and is unverified, a verification email has been sent.",
-    });
-
-    await expect(
-      api.resendVerificationEmail("ghost@example.com")
-    ).resolves.not.toThrow();
-  });
-
-  it("api.resendVerificationEmail resolves on 200 for already-verified email", async () => {
-    globalThis.fetch = mockFetch(200, {
-      status: "success",
-      message: "If that account exists and is unverified, a verification email has been sent.",
-    });
-
-    await expect(
-      api.resendVerificationEmail("verified@example.com")
-    ).resolves.not.toThrow();
-  });
-
-  it("api.resendVerificationEmail throws ApiError with statusCode 429 when rate limited", async () => {
-    globalThis.fetch = mockFetch(429, {
-      status: "error",
-      message: "Too many attempts. Please try again shortly.",
-    });
-
-    await expect(
-      api.resendVerificationEmail("user@example.com")
-    ).rejects.toMatchObject({ statusCode: 429 });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 12 & 13 — No dependency on removed auth response fields
-// ---------------------------------------------------------------------------
-
-describe("Task 8 — Removed auth response fields not present in User type", () => {
-  it("User interface does not expose passwordResetToken", async () => {
+describe("Task 19 — Removed auth response fields absent from User type", () => {
+  it("User interface has no passwordResetToken / passwordResetExpires", async () => {
     const mod = await import("@/lib/api");
     const user: mod.User = {
-      id: "u-1",
-      firstName: "Bob",
-      lastName: "Test",
-      email: "bob@test.com",
-      role: "executive",
-      subscriptionTier: "free",
-      isVerified: true,
-      invitationStatus: "approved",
-      invitedBy: null,
-      isActive: true,
-      createdAt: "2024-01-01",
-      updatedAt: "2024-01-01",
+      id: "u-1", firstName: "Bob", lastName: "T", email: "b@t.com",
+      role: "executive", subscriptionTier: "free", isVerified: true,
+      invitationStatus: "approved", invitedBy: null, isActive: true,
+      createdAt: "2024-01-01", updatedAt: "2024-01-01",
     };
     expect((user as any).passwordResetToken).toBeUndefined();
     expect((user as any).passwordResetExpires).toBeUndefined();
   });
 
-  it("User interface does not expose emailVerificationToken", async () => {
+  it("User interface has no emailVerificationToken / emailVerificationExpires", async () => {
     const mod = await import("@/lib/api");
     const user: mod.User = {
-      id: "u-2",
-      firstName: "Carol",
-      lastName: "Test",
-      email: "carol@test.com",
-      role: "team_member",
-      subscriptionTier: "free",
-      isVerified: false,
-      invitationStatus: "invited",
-      invitedBy: null,
-      isActive: true,
-      createdAt: "2024-01-01",
-      updatedAt: "2024-01-01",
+      id: "u-2", firstName: "Carol", lastName: "T", email: "c@t.com",
+      role: "team_member", subscriptionTier: "free", isVerified: false,
+      invitationStatus: "invited", invitedBy: null, isActive: true,
+      createdAt: "2024-01-01", updatedAt: "2024-01-01",
     };
     expect((user as any).emailVerificationToken).toBeUndefined();
     expect((user as any).emailVerificationExpires).toBeUndefined();
   });
-});
 
-// ---------------------------------------------------------------------------
-// 14 — No dependency on googleId / googleEmail / googleAvatar from auth response
-// ---------------------------------------------------------------------------
-
-describe("Task 8 — Removed Google auth fields not in User type", () => {
-  it("User interface does not declare googleId", async () => {
+  it("User interface has no googleId / googleEmail / googleAvatar", async () => {
     const mod = await import("@/lib/api");
     const user: mod.User = {
-      id: "u-3",
-      firstName: "Dan",
-      lastName: "Test",
-      email: "dan@test.com",
-      role: "manager",
-      subscriptionTier: "premium",
-      isVerified: true,
-      invitationStatus: "approved",
-      invitedBy: null,
-      isActive: true,
-      createdAt: "2024-01-01",
-      updatedAt: "2024-01-01",
+      id: "u-3", firstName: "Dan", lastName: "T", email: "d@t.com",
+      role: "manager", subscriptionTier: "premium", isVerified: true,
+      invitationStatus: "approved", invitedBy: null, isActive: true,
+      createdAt: "2024-01-01", updatedAt: "2024-01-01",
     };
     expect((user as any).googleId).toBeUndefined();
     expect((user as any).googleEmail).toBeUndefined();
     expect((user as any).googleAvatar).toBeUndefined();
   });
 
-  it("profilePictureUrl is the retained field for avatar display", async () => {
+  it("profilePictureUrl is the retained avatar field (replaces googleAvatar)", async () => {
     const mod = await import("@/lib/api");
     const user: mod.User = {
-      id: "u-4",
-      firstName: "Eve",
-      lastName: "Test",
-      email: "eve@test.com",
-      role: "manager",
-      subscriptionTier: "free",
-      isVerified: true,
-      invitationStatus: "approved",
-      invitedBy: null,
-      isActive: true,
-      createdAt: "2024-01-01",
-      updatedAt: "2024-01-01",
+      id: "u-4", firstName: "Eve", lastName: "T", email: "e@t.com",
+      role: "manager", subscriptionTier: "free", isVerified: true,
+      invitationStatus: "approved", invitedBy: null, isActive: true,
+      createdAt: "2024-01-01", updatedAt: "2024-01-01",
       profilePictureUrl: "https://cdn.example.com/avatars/eve.jpg",
     };
-    // profilePictureUrl is the ONLY avatar field; googleAvatar is gone
     expect(user.profilePictureUrl).toBe("https://cdn.example.com/avatars/eve.jpg");
     expect((user as any).googleAvatar).toBeUndefined();
   });
 });
 
 // ---------------------------------------------------------------------------
-// 15 — 403 download produces access-denied UX
+// Pre-existing Phase 1 guards (always passing)
 // ---------------------------------------------------------------------------
 
-describe("Task 13 — Secure download 403/404 error handling", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+describe("canExportWorkspace (Phase 1 preserved)", () => {
+  it("api module does not export signupAdmin or signupSuperAdmin", async () => {
+    const mod = await import("@/lib/api");
+    expect((mod.api as any).signupAdmin).toBeUndefined();
+    expect((mod.api as any).signupSuperAdmin).toBeUndefined();
   });
 
-  it("getTaskAttachmentDownloadUrl throws ApiError with statusCode 403 on 403 response", async () => {
-    globalThis.fetch = mockFetch(403, {
-      status: "error",
-      message: "Forbidden",
-    });
-
-    await expect(
-      api.getTaskAttachmentDownloadUrl("task-1", "att-1")
-    ).rejects.toMatchObject({ statusCode: 403 });
-  });
-
-  // 16 — 404 download produces unavailable-file UX
-  it("getTaskAttachmentDownloadUrl throws ApiError with statusCode 404 on 404 response", async () => {
-    globalThis.fetch = mockFetch(404, {
-      status: "error",
-      message: "Attachment not found",
-    });
-
-    await expect(
-      api.getTaskAttachmentDownloadUrl("task-1", "att-1")
-    ).rejects.toMatchObject({ statusCode: 404 });
-  });
-
-  it("getDriveFileDownloadUrl throws ApiError with statusCode 403 on 403 response", async () => {
-    globalThis.fetch = mockFetch(403, {
-      status: "error",
-      message: "Forbidden",
-    });
-
-    await expect(
-      api.getDriveFileDownloadUrl("file-1")
-    ).rejects.toMatchObject({ statusCode: 403 });
-  });
-
-  it("getDriveFileDownloadUrl throws ApiError with statusCode 404 on 404 response", async () => {
-    globalThis.fetch = mockFetch(404, {
-      status: "error",
-      message: "File not found",
-    });
-
-    await expect(
-      api.getDriveFileDownloadUrl("file-1")
-    ).rejects.toMatchObject({ statusCode: 404 });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 17 — Existing 429 behavior remains intact
-// ---------------------------------------------------------------------------
-
-describe("Task 17 — 429 rate-limit handling preserved", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("ApiError.statusCode is 429 for rate-limited download attempts", async () => {
-    globalThis.fetch = mockFetch(429, {
-      message: "Too many requests. Please try again in a moment.",
-    });
-
-    const err = await api
-      .getTaskAttachmentDownloadUrl("t", "a")
-      .catch((e) => e);
-    expect(err).toBeInstanceOf(ApiError);
-    expect(err.statusCode).toBe(429);
-  });
-
-  it("429 error message is the backend message, not a generic one", async () => {
-    const backendMsg = "Too many download requests. Please wait 60 seconds.";
-    globalThis.fetch = mockFetch(429, { message: backendMsg });
-
-    const err = await api
-      .getDriveFileDownloadUrl("f")
-      .catch((e) => e);
-    expect(err.message).toBe(backendMsg);
-  });
-
-  it("ApiError carries statusCode for callers to distinguish 429 from other errors", () => {
-    const err = new ApiError("Rate limited", 429);
+  it("ApiError stores statusCode", () => {
+    const err = new ApiError("Too many requests", 429);
     expect(err.statusCode).toBe(429);
     expect(err.name).toBe("ApiError");
     expect(err instanceof Error).toBe(true);

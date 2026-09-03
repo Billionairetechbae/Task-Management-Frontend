@@ -605,10 +605,11 @@ export default function Drive() {
                         key={file.id}
                         className="group relative border border-border rounded-xl overflow-hidden bg-card hover:border-primary/40 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                         onClick={async () => {
-                          // Phase 2: fetch a signed URL on demand; never use fileUrl directly
+                          // Phase 2: backend streams bytes — create ephemeral object URL for FileViewer
                           try {
-                            const { url } = await api.getDriveFileDownloadUrl(file.id);
-                            setPreviewFile({ ...file, fileUrl: url });
+                            const { blob, fileName: serverName, contentType } = await api.downloadDriveFile(file.id);
+                            const objectUrl = URL.createObjectURL(blob);
+                            setPreviewFile({ ...file, fileUrl: objectUrl, fileName: serverName || file.fileName, fileType: contentType || file.fileType });
                           } catch (err: any) {
                             const code = (err as any)?.statusCode ?? (err as any)?.status;
                             toast({
@@ -660,7 +661,13 @@ export default function Drive() {
 
       <FileViewer
         file={previewFile}
-        onClose={() => setPreviewFile(null)}
+        onClose={() => {
+          // Phase 2: revoke ephemeral object URL created from Blob to free browser memory
+          if (previewFile?.fileUrl && previewFile.fileUrl.startsWith("blob:")) {
+            URL.revokeObjectURL(previewFile.fileUrl);
+          }
+          setPreviewFile(null);
+        }}
       />
     </DashboardLayout>
   );

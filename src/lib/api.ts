@@ -1981,62 +1981,108 @@ class ApiClient {
   }
 
   /**
-   * Phase 2 — Secure file downloads.
+   * Phase 2 — Authenticated server-side proxy download for task attachments.
    *
-   * Returns a short-lived signed URL (~15 min) for a confidential task
-   * attachment.  Always call this on demand (click/preview); never cache the
-   * returned URL beyond the immediate interaction.
+   * The backend streams file bytes directly (no Cloudinary URL / signed URL
+   * is returned).  The frontend receives a Blob and must create a short-lived
+   * object URL for preview or download, then revoke it immediately after use.
    *
    * Endpoint: GET /api/v1/tasks/:taskId/attachments/:attachmentId/download
-   * Header:   Accept: application/json  → returns { url, expiresAt? }
    */
-  async getTaskAttachmentDownloadUrl(
+  async downloadTaskAttachment(
     taskId: string,
     attachmentId: string
-  ): Promise<{ url: string; expiresAt?: string }> {
-    const result = await this.request<any>(
+  ): Promise<{ blob: Blob; fileName: string; contentType: string }> {
+    return this._fetchBlob(
       `/tasks/${taskId}/attachments/${attachmentId}/download`,
-      {
-        method: "GET",
-        headers: {
-          ...this.getAuthHeaders(),
-          Accept: "application/json",
-        },
-      }
+      this.getAuthHeaders()
     );
-    // Backend envelope may be { data: { url } } or { url } directly
-    const url: string =
-      result?.data?.url ?? result?.url ?? result?.signedUrl ?? result?.downloadUrl;
-    if (!url) throw new Error("Download URL not found in response");
-    return { url, expiresAt: result?.data?.expiresAt ?? result?.expiresAt };
   }
 
   /**
-   * Phase 2 — Secure Drive file downloads.
+   * Phase 2 — Authenticated server-side proxy download for workspace Drive files.
    *
-   * Returns a short-lived signed URL for a confidential workspace Drive file.
-   * Always call this on demand; never persist the URL.
+   * The backend streams file bytes directly.  Create a short-lived object URL
+   * for preview/download, then revoke it immediately after use.
    *
    * Endpoint: GET /api/v1/drive/files/:fileId/download
-   * Header:   Accept: application/json  → returns { url, expiresAt? }
    */
-  async getDriveFileDownloadUrl(
+  async downloadDriveFile(
     fileId: string
-  ): Promise<{ url: string; expiresAt?: string }> {
-    const result = await this.request<any>(
+  ): Promise<{ blob: Blob; fileName: string; contentType: string }> {
+    return this._fetchBlob(
       `/drive/files/${fileId}/download`,
-      {
-        method: "GET",
-        headers: {
-          ...this.getAuthHeaders(),
-          Accept: "application/json",
-        },
-      }
+      this.getAuthHeaders()
     );
-    const url: string =
-      result?.data?.url ?? result?.url ?? result?.signedUrl ?? result?.downloadUrl;
-    if (!url) throw new Error("Download URL not found in response");
-    return { url, expiresAt: result?.data?.expiresAt ?? result?.expiresAt };
+  }
+
+  /**
+   * Internal helper: authenticated fetch that always returns a Blob.
+   *
+   * - For non-2xx responses: attempts to parse the body as JSON to extract
+   *   the backend error message, then throws an ApiError with the correct
+   *   statusCode (so 401/403/404/429/5xx all surface cleanly).
+   * - Content-Disposition is inspected to suggest a filename when available.
+   * - Does NOT set Accept: application/json — the proxy responds with file
+   *   bytes, not a JSON envelope.
+   */
+  private async _fetchBlob(
+    path: string,
+    headers: HeadersInit
+  ): Promise<{ blob: Blob; fileName: string; contentType: string }> {
+    const url = `${API_BASE_URL}${path}`;
+
+    let response: Response;
+    try {
+      response = await fetch(url, { method: "GET", headers });
+    } catch (err) {
+      throw new NetworkError(
+        err instanceof Error ? err.message : "Network error"
+      );
+    }
+
+    if (!response.ok) {
+      // Try to parse JSON error body for a clean message
+      let message = `Request failed (${response.status})`;
+      try {
+        const errJson = await response.json();
+        if (typeof errJson?.message === "string" && errJson.message.trim()) {
+          message = errJson.message;
+        }
+      } catch {
+        // body wasn't JSON — keep generic message
+      }
+
+      // Preserve Phase 1 rate-limit guard
+      if (response.status === 429) {
+        message = message !== `Request failed (429)`
+          ? message
+          : "Too many attempts. Please try again shortly.";
+      }
+
+      throw new ApiError(message, response.status);
+    }
+
+    const blob = await response.blob();
+    const contentType = blob.type || response.headers.get("content-type") || "application/octet-stream";
+
+    // Extract filename from Content-Disposition if present
+    const disposition = response.headers.get("content-disposition") || "";
+    let fileName = "";
+    const filenameStarMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (filenameStarMatch) {
+      try { fileName = decodeURIComponent(filenameStarMatch[1]); } catch { /* ignore */ }
+    }
+    if (!fileName) {
+      const filenameMatch = disposition.match(/filename="?([^";\r\n]+)"?/i);
+      if (filenameMatch) fileName = filenameMatch[1].trim();
+    }
+    if (!fileName) {
+      // Derive from path as last resort
+      fileName = path.split("/").pop() || "download";
+    }
+
+    return { blob, fileName, contentType };
   }
 
   async deleteTaskAttachment(

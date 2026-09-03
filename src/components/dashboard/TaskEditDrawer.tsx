@@ -822,15 +822,16 @@ export default function TaskEditDrawer({
                                 onClick={async () => {
                                   if (!taskId || !att.id) return;
                                   try {
-                                    const { url } = await api.getTaskAttachmentDownloadUrl(taskId, att.id);
+                                    // Phase 2: backend streams bytes — create ephemeral object URL
+                                    const { blob, fileName: serverName } = await api.downloadTaskAttachment(taskId, att.id);
+                                    const objectUrl = URL.createObjectURL(blob);
                                     const a = document.createElement("a");
-                                    a.href = url;
-                                    a.target = "_blank";
-                                    a.rel = "noopener noreferrer";
-                                    a.download = att.fileName || "download";
+                                    a.href = objectUrl;
+                                    a.download = serverName || att.fileName || "download";
                                     document.body.appendChild(a);
                                     a.click();
                                     a.remove();
+                                    URL.revokeObjectURL(objectUrl);
                                   } catch (err: any) {
                                     const code = err?.statusCode ?? err?.status;
                                     toast({

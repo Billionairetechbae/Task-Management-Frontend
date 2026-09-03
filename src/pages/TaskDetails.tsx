@@ -652,20 +652,12 @@ const TaskDetails = () => {
     if (!attachment.id || !attachment.fileName || !id) return;
     setSavingToDrive(attachment.id);
     try {
-      // Phase 2: fetch a short-lived signed URL through the authenticated endpoint
-      const { url: signedUrl } = await api.getTaskAttachmentDownloadUrl(id, attachment.id);
-
-      const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
-      const headers: Record<string, string> = {};
-      if (authToken) headers.Authorization = `Bearer ${authToken}`;
-      const resp = await fetch(signedUrl, { headers });
-      if (!resp.ok) throw new Error("Could not fetch file for upload");
-      const blob = await resp.blob();
-      const file = new File([blob], attachment.fileName, {
-        type: attachment.fileType || blob.type || "application/octet-stream",
-      });
-
-      uploadToGoogleDrive({ file, fileName: attachment.fileName });
+      // Phase 2: backend streams file bytes — receive as Blob directly
+      const { blob, fileName: serverFileName, contentType } = await api.downloadTaskAttachment(id, attachment.id);
+      const resolvedName = serverFileName || attachment.fileName;
+      const resolvedType = contentType || attachment.fileType || blob.type || "application/octet-stream";
+      const file = new File([blob], resolvedName, { type: resolvedType });
+      uploadToGoogleDrive({ file, fileName: resolvedName });
     } catch (err: any) {
       const code = err?.statusCode ?? err?.status;
       toast({
@@ -1761,9 +1753,12 @@ const TaskDetails = () => {
                                   if (isDrive && displayUrl) {
                                     window.open(displayUrl, "_blank", "noopener,noreferrer");
                                   } else if (f.id && id) {
-                                    // Phase 2: fetch signed URL on demand for confidential Admiino files
-                                    api.getTaskAttachmentDownloadUrl(id, f.id)
-                                      .then(({ url }) => setPreview({ url, type: displayType, name: displayName, attachmentId: f.id, alreadyInDocs: true }))
+                                    // Phase 2: backend streams bytes — create ephemeral object URL for preview
+                                    api.downloadTaskAttachment(id, f.id)
+                                      .then(({ blob, fileName: serverName }) => {
+                                        const objectUrl = URL.createObjectURL(blob);
+                                        setPreview({ url: objectUrl, type: blob.type || displayType, name: serverName || displayName, attachmentId: f.id, alreadyInDocs: true });
+                                      })
                                       .catch((err: any) => {
                                         const code = err?.statusCode ?? err?.status;
                                         toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
@@ -1904,9 +1899,12 @@ const TaskDetails = () => {
                       if (isGoogleDrive && attachmentUrl) {
                         window.open(attachmentUrl, "_blank", "noopener,noreferrer");
                       } else if (file?.id && id) {
-                        // Phase 2: request short-lived signed URL on demand
-                        api.getTaskAttachmentDownloadUrl(id, file.id)
-                          .then(({ url }) => setPreview({ url, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true }))
+                        // Phase 2: backend streams bytes — create ephemeral object URL for preview
+                        api.downloadTaskAttachment(id, file.id)
+                          .then(({ blob, fileName: serverName }) => {
+                            const objectUrl = URL.createObjectURL(blob);
+                            setPreview({ url: objectUrl, type: blob.type || mimeType, name: serverName || fileName, attachmentId: file?.id, alreadyInDocs: true });
+                          })
                           .catch((err: any) => {
                             const code = err?.statusCode ?? err?.status;
                             toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
@@ -1927,15 +1925,16 @@ const TaskDetails = () => {
                               e.stopPropagation();
                               if (!file?.id || !id) return;
                               try {
-                                const { url } = await api.getTaskAttachmentDownloadUrl(id, file.id);
+                                // Phase 2: receive Blob from proxy, create ephemeral object URL
+                                const { blob, fileName: serverName } = await api.downloadTaskAttachment(id, file.id);
+                                const objectUrl = URL.createObjectURL(blob);
                                 const a = document.createElement("a");
-                                a.href = url;
-                                a.download = fileName;
-                                a.target = "_blank";
-                                a.rel = "noopener noreferrer";
+                                a.href = objectUrl;
+                                a.download = serverName || fileName;
                                 document.body.appendChild(a);
                                 a.click();
                                 a.remove();
+                                URL.revokeObjectURL(objectUrl);
                               } catch (err: any) {
                                 const code = err?.statusCode ?? err?.status;
                                 toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Download failed", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
@@ -2005,8 +2004,11 @@ const TaskDetails = () => {
                           className="h-7 text-[11px] flex-1 gap-1 justify-center"
                           onClick={() => {
                             if (!file?.id || !id) return;
-                            api.getTaskAttachmentDownloadUrl(id, file.id)
-                              .then(({ url }) => setPreview({ url, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true }))
+                            api.downloadTaskAttachment(id, file.id)
+                              .then(({ blob, fileName: serverName }) => {
+                                const objectUrl = URL.createObjectURL(blob);
+                                setPreview({ url: objectUrl, type: blob.type || mimeType, name: serverName || fileName, attachmentId: file?.id, alreadyInDocs: true });
+                              })
                               .catch((err: any) => {
                                 const code = err?.statusCode ?? err?.status;
                                 toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
@@ -2172,7 +2174,13 @@ const TaskDetails = () => {
           url={preview.url}
           type={preview.type}
           name={preview.name}
-          onClose={() => setPreview(null)}
+          onClose={() => {
+            // Phase 2: revoke ephemeral object URL created from Blob to free browser memory
+            if (preview.url && preview.url.startsWith("blob:")) {
+              URL.revokeObjectURL(preview.url);
+            }
+            setPreview(null);
+          }}
           alreadyInTaskDocs={preview.alreadyInDocs}
           addingToTaskDocs={addingToDocs}
           onAddToTaskDocs={
