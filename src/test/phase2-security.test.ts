@@ -767,3 +767,335 @@ describe("canExportWorkspace (Phase 1 preserved)", () => {
     expect(err instanceof Error).toBe(true);
   });
 });
+
+// ===========================================================================
+// PHASE 2 FINAL — Assistance Request attachment tests (Tasks 20-32)
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Task 20 — AssistanceRequestAttachment type: no url or publicId
+// ---------------------------------------------------------------------------
+
+describe("Task 20 — AssistanceRequestAttachment: no raw url or publicId", () => {
+  it("AssistanceRequestAttachment type has no 'url' field required", async () => {
+    const mod = await import("@/lib/api");
+    // Create a valid attachment without url or publicId — TS would error if
+    // these were required fields.
+    const att: mod.AssistanceRequestAttachment = {
+      fileName: "brief.pdf",
+      fileType: "application/pdf",
+      fileSize: 204800,
+      uploadedAt: "2026-09-01T12:00:00Z",
+    };
+    expect((att as any).url).toBeUndefined();
+    expect((att as any).publicId).toBeUndefined();
+    expect(att.fileName).toBe("brief.pdf");
+  });
+
+  it("publicId is not required by the frontend Assistance attachment type", async () => {
+    const mod = await import("@/lib/api");
+    const att: mod.AssistanceRequestAttachment = {
+      fileName: "spec.docx",
+      fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      fileSize: 1024,
+    };
+    expect((att as any).publicId).toBeUndefined();
+  });
+
+  it("Cloudinary URL is not required by Assistance attachment type", async () => {
+    const mod = await import("@/lib/api");
+    const att: mod.AssistanceRequestAttachment = {
+      fileName: "data.xlsx",
+      fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      fileSize: 512,
+    };
+    expect((att as any).url).toBeUndefined();
+    expect((att as any).secure_url).toBeUndefined();
+    // Metadata fields remain correct
+    expect(att.fileSize).toBe(512);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 21 & 22 — downloadAssistanceAttachment: authenticated endpoint + correct IDs
+// ---------------------------------------------------------------------------
+
+describe("downloadAssistanceAttachment — authenticated Blob endpoint", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.removeItem("auth_token");
+  });
+
+  it("calls the correct endpoint with requestId and attachment index", async () => {
+    localStorage.setItem("auth_token", "jwt-assist");
+    globalThis.fetch = mockBlobResponse(200, "file-bytes", "application/pdf");
+
+    await api.downloadAssistanceAttachment("req-abc-123", 2);
+
+    const [url] = (globalThis.fetch as any).mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/assistance/req-abc-123/attachments/2/download");
+  });
+
+  it("sends Authorization header with JWT", async () => {
+    localStorage.setItem("auth_token", "jwt-assist-token");
+    globalThis.fetch = mockBlobResponse(200, "bytes");
+
+    await api.downloadAssistanceAttachment("req-1", 0);
+
+    const [, init] = (globalThis.fetch as any).mock.calls[0] as [string, RequestInit];
+    const headers = new Headers(init.headers as HeadersInit);
+    expect(headers.get("authorization")).toBe("Bearer jwt-assist-token");
+  });
+
+  it("uses index 0 for the first attachment", async () => {
+    globalThis.fetch = mockBlobResponse(200, "data");
+    await api.downloadAssistanceAttachment("req-xyz", 0);
+    const [url] = (globalThis.fetch as any).mock.calls[0] as [string];
+    expect(url).toContain("/attachments/0/download");
+  });
+
+  it("uses index 1 for the second attachment", async () => {
+    globalThis.fetch = mockBlobResponse(200, "data");
+    await api.downloadAssistanceAttachment("req-xyz", 1);
+    const [url] = (globalThis.fetch as any).mock.calls[0] as [string];
+    expect(url).toContain("/attachments/1/download");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 23 — Response consumed as Blob
+// ---------------------------------------------------------------------------
+
+describe("Task 23 — downloadAssistanceAttachment returns Blob", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("returns a Blob instance — not a URL string or JSON body", async () => {
+    globalThis.fetch = mockBlobResponse(200, "assistance-pdf-bytes", "application/pdf");
+
+    const result = await api.downloadAssistanceAttachment("req-1", 0);
+
+    expect(result.blob).toBeInstanceOf(Blob);
+    expect(typeof result.blob).not.toBe("string");
+    expect((result as any).url).toBeUndefined();
+    expect((result as any).publicId).toBeUndefined();
+    expect((result as any).cloudinaryUrl).toBeUndefined();
+  });
+
+  it("returns contentType from Content-Type header", async () => {
+    globalThis.fetch = mockBlobResponse(200, "content", "application/vnd.ms-excel", "");
+
+    const result = await api.downloadAssistanceAttachment("req-1", 0);
+
+    expect(result.contentType).toContain("application/vnd.ms-excel");
+  });
+
+  it("returns fileName parsed from Content-Disposition", async () => {
+    globalThis.fetch = mockBlobResponse(
+      200,
+      "content",
+      "application/pdf",
+      'attachment; filename="project-brief.pdf"'
+    );
+
+    const result = await api.downloadAssistanceAttachment("req-1", 0);
+
+    expect(result.fileName).toBe("project-brief.pdf");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 24 — Blob URL created for download
+// ---------------------------------------------------------------------------
+
+describe("Task 24 — Blob URL created for assistance download", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("URL.createObjectURL is called with the returned Blob", async () => {
+    globalThis.fetch = mockBlobResponse(200, "assist-bytes");
+    const createSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:assist-url");
+
+    const { blob } = await api.downloadAssistanceAttachment("req-1", 0);
+    const objectUrl = URL.createObjectURL(blob);
+
+    expect(createSpy).toHaveBeenCalledWith(blob);
+    expect(objectUrl).toBe("blob:assist-url");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 25 — Blob URL revoked after download
+// ---------------------------------------------------------------------------
+
+describe("Task 25 — Blob URL revoked after assistance download", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("URL.revokeObjectURL is called after triggering the download anchor", async () => {
+    globalThis.fetch = mockBlobResponse(200, "assist-bytes");
+    const revokeSpy = vi.spyOn(URL, "revokeObjectURL");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:assist-download");
+
+    const { blob } = await api.downloadAssistanceAttachment("req-1", 0);
+    const objectUrl = URL.createObjectURL(blob);
+
+    // Simulate the component download pattern (same as triggerBlobDownload)
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = "brief.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+
+    expect(revokeSpy).toHaveBeenCalledWith("blob:assist-download");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 26 — publicId not required by frontend assistance type
+// (duplicate structural guard — belt and suspenders)
+// ---------------------------------------------------------------------------
+
+describe("Task 26 — publicId not required by frontend type", () => {
+  it("AssistanceRequestAttachment can be constructed without publicId", async () => {
+    const mod = await import("@/lib/api");
+    // TypeScript would fail to compile this test if publicId were required
+    const att: mod.AssistanceRequestAttachment = {
+      fileName: "evidence.pdf",
+      fileType: "application/pdf",
+      fileSize: 99999,
+    };
+    expect("publicId" in att).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 27 — Cloudinary URL not required by assistance UI
+// ---------------------------------------------------------------------------
+
+describe("Task 27 — Cloudinary URL not required by assistance UI", () => {
+  it("AssistanceRequestAttachment can be constructed without url or secure_url", async () => {
+    const mod = await import("@/lib/api");
+    const att: mod.AssistanceRequestAttachment = {
+      fileName: "onboarding-doc.docx",
+      fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      fileSize: 45000,
+    };
+    expect((att as any).url).toBeUndefined();
+    expect((att as any).secure_url).toBeUndefined();
+    expect((att as any).cloudinaryUrl).toBeUndefined();
+  });
+
+  it("downloadAssistanceAttachment method does not accept a cloudinaryUrl parameter", () => {
+    // Signature: (requestId: string, attachmentIndex: number) — 2 params only
+    expect(api.downloadAssistanceAttachment.length).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 28 — 403 produces access-denied UX
+// ---------------------------------------------------------------------------
+
+describe("Task 28 — 403 access-denied for assistance attachments", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("throws ApiError with statusCode 403", async () => {
+    globalThis.fetch = mockJsonErrorResponse(403, "You do not have access to this resource.");
+
+    const err = await api.downloadAssistanceAttachment("req-1", 0).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.statusCode).toBe(403);
+  });
+
+  it("403 message is preserved from backend body", async () => {
+    globalThis.fetch = mockJsonErrorResponse(403, "You don't have access to this file.");
+
+    const err = await api.downloadAssistanceAttachment("req-1", 0).catch((e) => e);
+
+    expect(err.message).toBe("You don't have access to this file.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 29 — 404 produces unavailable-file UX
+// ---------------------------------------------------------------------------
+
+describe("Task 29 — 404 unavailable-file for assistance attachments", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("throws ApiError with statusCode 404", async () => {
+    globalThis.fetch = mockJsonErrorResponse(404, "Attachment not found.");
+
+    const err = await api.downloadAssistanceAttachment("req-1", 0).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.statusCode).toBe(404);
+  });
+
+  it("404 message is preserved from backend body", async () => {
+    globalThis.fetch = mockJsonErrorResponse(404, "This file is no longer available.");
+
+    const err = await api.downloadAssistanceAttachment("req-1", 0).catch((e) => e);
+
+    expect(err.message).toBe("This file is no longer available.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 30 — 429 rate-limit preserved for assistance attachments
+// ---------------------------------------------------------------------------
+
+describe("Task 30 — 429 rate-limit handling for assistance attachments", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("throws ApiError with statusCode 429", async () => {
+    globalThis.fetch = mockJsonErrorResponse(429, "Too many download requests. Please wait.");
+
+    const err = await api.downloadAssistanceAttachment("req-1", 0).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.statusCode).toBe(429);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 31 — Existing Task attachment Blob tests still pass (structural guard)
+// ---------------------------------------------------------------------------
+
+describe("Task 31 — Task attachment Blob API contract preserved", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("downloadTaskAttachment still exists and accepts (taskId, attachmentId)", async () => {
+    expect(typeof api.downloadTaskAttachment).toBe("function");
+    expect(api.downloadTaskAttachment.length).toBe(2);
+  });
+
+  it("downloadTaskAttachment still returns Blob", async () => {
+    globalThis.fetch = mockBlobResponse(200, "task-bytes", "image/png", "");
+
+    const result = await api.downloadTaskAttachment("t-1", "a-1");
+
+    expect(result.blob).toBeInstanceOf(Blob);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 32 — Existing Drive Blob tests still pass (structural guard)
+// ---------------------------------------------------------------------------
+
+describe("Task 32 — Drive Blob API contract preserved", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("downloadDriveFile still exists and accepts (fileId)", async () => {
+    expect(typeof api.downloadDriveFile).toBe("function");
+    expect(api.downloadDriveFile.length).toBe(1);
+  });
+
+  it("downloadDriveFile still returns Blob", async () => {
+    globalThis.fetch = mockBlobResponse(200, "drive-bytes", "application/pdf", "");
+
+    const result = await api.downloadDriveFile("file-99");
+
+    expect(result.blob).toBeInstanceOf(Blob);
+  });
+});

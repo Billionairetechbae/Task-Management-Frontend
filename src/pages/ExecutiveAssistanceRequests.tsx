@@ -50,6 +50,55 @@ const ExecutiveAssistanceRequests = () => {
     search: string;
   }>({ search: "" });
 
+  // Tracks which attachment index is being downloaded (prevents double-click).
+  const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
+
+  /**
+   * Authenticated attachment download — Phase 2.
+   *
+   * Calls the backend proxy endpoint, receives file bytes as a Blob,
+   * creates a short-lived object URL for the download anchor, then
+   * immediately revokes it.  No raw Cloudinary URL or publicId is used.
+   *
+   * Error UX:
+   *   403 → "You don't have access to this file."
+   *   404 → "This file is no longer available."
+   *   429 → existing Phase 1 rate-limit copy
+   *   5xx → generic safe message
+   */
+  const handleDownloadAttachment = async (requestId: string, index: number, fallbackName: string) => {
+    if (downloadingIndex !== null) return;
+    setDownloadingIndex(index);
+    try {
+      const { blob, fileName, contentType } = await api.downloadAssistanceAttachment(requestId, index);
+      const resolvedName = fileName || fallbackName || `attachment-${index + 1}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = resolvedName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+      void contentType; // consumed for future preview use; not needed here
+    } catch (err: any) {
+      const status = err?.statusCode ?? err?.status;
+      let description: string;
+      if (status === 403) {
+        description = "You don't have access to this file.";
+      } else if (status === 404) {
+        description = "This file is no longer available.";
+      } else if (status === 429) {
+        description = err?.message || "Too many attempts. Please try again shortly.";
+      } else {
+        description = err?.message || "Could not download the file. Please try again.";
+      }
+      toast({ title: "Download failed", description, variant: "destructive" });
+    } finally {
+      setDownloadingIndex(null);
+    }
+  };
+
   const canCreateRequest = useMemo(() => {
     if (user?.role === "admin") return true;
     if (assistancePermissionMode === "free") return !!workspaceRole;
@@ -642,11 +691,27 @@ const ExecutiveAssistanceRequests = () => {
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => window.open(attachment.url, "_blank")}
+                              onClick={() =>
+                                handleDownloadAttachment(
+                                  selectedRequest.id,
+                                  index,
+                                  attachment.fileName
+                                )
+                              }
+                              disabled={downloadingIndex !== null}
                               className="gap-2 w-full sm:w-auto"
                             >
-                              <Download className="w-4 h-4" />
-                              Download
+                              {downloadingIndex === index ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                  Downloading…
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  Download
+                                </>
+                              )}
                             </Button>
                           </div>
                         ))}

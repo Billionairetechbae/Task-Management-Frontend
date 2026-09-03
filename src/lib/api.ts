@@ -719,13 +719,22 @@ export interface ProjectInvite {
    ASSISTANCE REQUEST TYPES
 ============================ */
 
+/**
+ * AssistanceRequestAttachment — Phase 2 contract.
+ *
+ * The backend no longer exposes Cloudinary `url` or `publicId` in assistance
+ * attachment responses.  Files are downloaded via the authenticated endpoint:
+ *   GET /api/v1/assistance/:requestId/attachments/:index/download
+ *
+ * `url` and `publicId` are intentionally absent from this interface.
+ * Do NOT add them back; the backend sanitizes them server-side.
+ */
 export interface AssistanceRequestAttachment {
-  url: string;
   fileName: string;
   fileType: string;
   fileSize: number;
-  publicId: string;
-  uploadedAt: string;
+  /** ISO timestamp of upload — metadata only, not a download URL. */
+  uploadedAt?: string;
 }
 
 export type AssistanceRequestPriority = "low" | "medium" | "high" | "urgent";
@@ -2012,6 +2021,29 @@ class ApiClient {
   ): Promise<{ blob: Blob; fileName: string; contentType: string }> {
     return this._fetchBlob(
       `/drive/files/${fileId}/download`,
+      this.getAuthHeaders()
+    );
+  }
+
+  /**
+   * Phase 2 — Authenticated server-side proxy download for Assistance Request
+   * attachments.
+   *
+   * The backend authenticates the user, verifies visibility permissions,
+   * fetches the file from storage server-side, and streams bytes.
+   * No Cloudinary URL or publicId is ever exposed to the frontend.
+   *
+   * Endpoint: GET /api/v1/assistance/:requestId/attachments/:index/download
+   *
+   * @param requestId   - The assistance request UUID
+   * @param attachmentIndex - 0-based index of the attachment in the array
+   */
+  async downloadAssistanceAttachment(
+    requestId: string,
+    attachmentIndex: number
+  ): Promise<{ blob: Blob; fileName: string; contentType: string }> {
+    return this._fetchBlob(
+      `/assistance/${requestId}/attachments/${attachmentIndex}/download`,
       this.getAuthHeaders()
     );
   }
