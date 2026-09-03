@@ -1980,6 +1980,65 @@ class ApiClient {
     });
   }
 
+  /**
+   * Phase 2 — Secure file downloads.
+   *
+   * Returns a short-lived signed URL (~15 min) for a confidential task
+   * attachment.  Always call this on demand (click/preview); never cache the
+   * returned URL beyond the immediate interaction.
+   *
+   * Endpoint: GET /api/v1/tasks/:taskId/attachments/:attachmentId/download
+   * Header:   Accept: application/json  → returns { url, expiresAt? }
+   */
+  async getTaskAttachmentDownloadUrl(
+    taskId: string,
+    attachmentId: string
+  ): Promise<{ url: string; expiresAt?: string }> {
+    const result = await this.request<any>(
+      `/tasks/${taskId}/attachments/${attachmentId}/download`,
+      {
+        method: "GET",
+        headers: {
+          ...this.getAuthHeaders(),
+          Accept: "application/json",
+        },
+      }
+    );
+    // Backend envelope may be { data: { url } } or { url } directly
+    const url: string =
+      result?.data?.url ?? result?.url ?? result?.signedUrl ?? result?.downloadUrl;
+    if (!url) throw new Error("Download URL not found in response");
+    return { url, expiresAt: result?.data?.expiresAt ?? result?.expiresAt };
+  }
+
+  /**
+   * Phase 2 — Secure Drive file downloads.
+   *
+   * Returns a short-lived signed URL for a confidential workspace Drive file.
+   * Always call this on demand; never persist the URL.
+   *
+   * Endpoint: GET /api/v1/drive/files/:fileId/download
+   * Header:   Accept: application/json  → returns { url, expiresAt? }
+   */
+  async getDriveFileDownloadUrl(
+    fileId: string
+  ): Promise<{ url: string; expiresAt?: string }> {
+    const result = await this.request<any>(
+      `/drive/files/${fileId}/download`,
+      {
+        method: "GET",
+        headers: {
+          ...this.getAuthHeaders(),
+          Accept: "application/json",
+        },
+      }
+    );
+    const url: string =
+      result?.data?.url ?? result?.url ?? result?.signedUrl ?? result?.downloadUrl;
+    if (!url) throw new Error("Download URL not found in response");
+    return { url, expiresAt: result?.data?.expiresAt ?? result?.expiresAt };
+  }
+
   async deleteTaskAttachment(
     attachmentId: string
   ): Promise<{ status: string; message: string }> {

@@ -86,21 +86,26 @@ const Login = () => {
                   try {
                     await api.resendVerificationEmail(formData.email);
                     toast({
-                      title: "Verification Sent!",
-                      description: "A new verification email has been sent to your inbox.",
+                      title: "Verification Email Sent",
+                      description: "If that address is registered and unverified, a new verification email has been sent.",
                     });
                   } catch (resendErr: any) {
                     const resendStatus =
                       resendErr?.statusCode ?? resendErr?.status;
-                    const resendMsg =
-                      resendStatus === 429
-                        ? "Too many attempts. Please try again shortly."
-                        : resendErr?.message || "Failed to resend email";
-                    toast({
-                      title: "Failed to resend email",
-                      description: resendMsg,
-                      variant: "destructive",
-                    });
+                    if (resendStatus === 429) {
+                      toast({
+                        title: "Too many attempts",
+                        description: "Too many attempts. Please try again shortly.",
+                        variant: "destructive",
+                      });
+                    } else {
+                      // All other errors: show neutral acknowledgement
+                      // (backend returns 200 for unknown/verified/rate-limited)
+                      toast({
+                        title: "Verification Email Sent",
+                        description: "If that address is registered and unverified, a new verification email has been sent.",
+                      });
+                    }
                   }
                 }}
                 className="underline text-primary font-semibold mt-2"

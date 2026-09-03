@@ -649,17 +649,16 @@ const TaskDetails = () => {
   };
 
   const handleSaveToGoogleDrive = async (attachment: { id: string; fileName: string; fileUrl: string; fileType?: string }) => {
-    if (!attachment.fileUrl || !attachment.fileName) return;
+    if (!attachment.id || !attachment.fileName || !id) return;
     setSavingToDrive(attachment.id);
     try {
-      const resolvedUrl = attachment.fileUrl.startsWith("http")
-        ? attachment.fileUrl
-        : `${API_BASE_URL}${attachment.fileUrl}`;
+      // Phase 2: fetch a short-lived signed URL through the authenticated endpoint
+      const { url: signedUrl } = await api.getTaskAttachmentDownloadUrl(id, attachment.id);
 
       const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
       const headers: Record<string, string> = {};
       if (authToken) headers.Authorization = `Bearer ${authToken}`;
-      const resp = await fetch(resolvedUrl, { headers });
+      const resp = await fetch(signedUrl, { headers });
       if (!resp.ok) throw new Error("Could not fetch file for upload");
       const blob = await resp.blob();
       const file = new File([blob], attachment.fileName, {
@@ -668,9 +667,15 @@ const TaskDetails = () => {
 
       uploadToGoogleDrive({ file, fileName: attachment.fileName });
     } catch (err: any) {
+      const code = err?.statusCode ?? err?.status;
       toast({
         title: "Failed to save to Google Drive",
-        description: err?.message || "Please try again",
+        description:
+          code === 403
+            ? "You don't have access to this file."
+            : code === 404
+            ? "This file is no longer available."
+            : err?.message || "Please try again",
         variant: "destructive",
       });
       setSavingToDrive(null);
@@ -1358,7 +1363,7 @@ const TaskDetails = () => {
                 )}
               </div>
 
-              <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+              <input type="file" multiple ref={fileInputRef} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif" onChange={handleFileUpload} />
 
               {/* Desktop / tablet toolbar */}
               <div className="hidden md:flex items-center gap-2 shrink-0">
@@ -1755,8 +1760,14 @@ const TaskDetails = () => {
                                 onClick={() => {
                                   if (isDrive && displayUrl) {
                                     window.open(displayUrl, "_blank", "noopener,noreferrer");
-                                  } else if (f.fileUrl) {
-                                    setPreview({ url: f.fileUrl, type: displayType, name: displayName, attachmentId: f.id, alreadyInDocs: true });
+                                  } else if (f.id && id) {
+                                    // Phase 2: fetch signed URL on demand for confidential Admiino files
+                                    api.getTaskAttachmentDownloadUrl(id, f.id)
+                                      .then(({ url }) => setPreview({ url, type: displayType, name: displayName, attachmentId: f.id, alreadyInDocs: true }))
+                                      .catch((err: any) => {
+                                        const code = err?.statusCode ?? err?.status;
+                                        toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
+                                      });
                                   } else if (displayUrl) {
                                     window.open(displayUrl, "_blank", "noopener,noreferrer");
                                   }
@@ -1799,7 +1810,7 @@ const TaskDetails = () => {
             disabled={sendingComment || isReadOnly}
           />
           <div className="flex flex-col gap-1.5">
-            <input type="file" multiple ref={chatFileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, true)} />
+            <input type="file" multiple ref={chatFileInputRef} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif" onChange={(e) => handleFileUpload(e, true)} />
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={uploadingFiles || isReadOnly}>
               <Paperclip className="w-3.5 h-3.5" />
             </Button>
@@ -1892,8 +1903,14 @@ const TaskDetails = () => {
                     onClick={() => {
                       if (isGoogleDrive && attachmentUrl) {
                         window.open(attachmentUrl, "_blank", "noopener,noreferrer");
-                      } else if (attachmentFile.fileUrl) {
-                        setPreview({ url: attachmentFile.fileUrl, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true });
+                      } else if (file?.id && id) {
+                        // Phase 2: request short-lived signed URL on demand
+                        api.getTaskAttachmentDownloadUrl(id, file.id)
+                          .then(({ url }) => setPreview({ url, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true }))
+                          .catch((err: any) => {
+                            const code = err?.statusCode ?? err?.status;
+                            toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
+                          });
                       } else if (attachmentUrl) {
                         window.open(attachmentUrl, "_blank", "noopener,noreferrer");
                       }
@@ -1905,10 +1922,27 @@ const TaskDetails = () => {
                             variant="secondary"
                             size="icon"
                             className="h-6 w-6"
-                            asChild
-                            title="Open"
+                            title="Download"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!file?.id || !id) return;
+                              try {
+                                const { url } = await api.getTaskAttachmentDownloadUrl(id, file.id);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = fileName;
+                                a.target = "_blank";
+                                a.rel = "noopener noreferrer";
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                              } catch (err: any) {
+                                const code = err?.statusCode ?? err?.status;
+                                toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Download failed", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
+                              }
+                            }}
                           >
-                            <a href={attachmentFile.fileUrl} download={fileName}><Download className="w-3 h-3" /></a>
+                            <Download className="w-3 h-3" />
                           </Button>
                         )}
                         {isGoogleDrive && attachmentUrl && (
@@ -1969,8 +2003,16 @@ const TaskDetails = () => {
                           size="sm"
                           variant="outline"
                           className="h-7 text-[11px] flex-1 gap-1 justify-center"
-                          onClick={() => attachmentFile.fileUrl && setPreview({ url: attachmentFile.fileUrl, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true })}
-                          disabled={!attachmentFile.fileUrl}
+                          onClick={() => {
+                            if (!file?.id || !id) return;
+                            api.getTaskAttachmentDownloadUrl(id, file.id)
+                              .then(({ url }) => setPreview({ url, type: mimeType, name: fileName, attachmentId: file?.id, alreadyInDocs: true }))
+                              .catch((err: any) => {
+                                const code = err?.statusCode ?? err?.status;
+                                toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
+                              });
+                          }}
+                          disabled={!file?.id}
                         >
                           <Eye className="w-3 h-3" /> Open
                         </Button>
@@ -1984,7 +2026,7 @@ const TaskDetails = () => {
                             fileUrl: attachmentFile.fileUrl || "",
                             fileType: mimeType,
                           })}
-                          disabled={currentlySaving || uploadLoading || !attachmentFile.fileUrl}
+                          disabled={currentlySaving || uploadLoading || !file?.id}
                         >
                           {currentlySaving || (uploadLoading && savingToDrive === file?.id) ? (
                             <Loader2 className="w-3 h-3 animate-spin" />

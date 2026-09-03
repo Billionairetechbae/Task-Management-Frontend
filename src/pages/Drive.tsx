@@ -482,6 +482,7 @@ export default function Drive() {
                       multiple
                       onChange={(e) => setPendingFiles(e.target.files)}
                       disabled={tabDisabled}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif"
                       className="flex-1 sm:max-w-[220px]"
                     />
                     <Button
@@ -603,16 +604,24 @@ export default function Drive() {
                       <div
                         key={file.id}
                         className="group relative border border-border rounded-xl overflow-hidden bg-card hover:border-primary/40 hover:shadow-md transition-all cursor-pointer animate-fade-in"
-                        onClick={() => setPreviewFile(file)}
+                        onClick={async () => {
+                          // Phase 2: fetch a signed URL on demand; never use fileUrl directly
+                          try {
+                            const { url } = await api.getDriveFileDownloadUrl(file.id);
+                            setPreviewFile({ ...file, fileUrl: url });
+                          } catch (err: any) {
+                            const code = (err as any)?.statusCode ?? (err as any)?.status;
+                            toast({
+                              title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error",
+                              description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : (err as any)?.message || "Failed to open file",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
                       >
                         <div className="aspect-square bg-muted/40 flex items-center justify-center relative overflow-hidden">
                           {isImage ? (
-                            <img
-                              src={file.fileUrl}
-                              alt={file.fileName}
-                              loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
+                            <Icon className="h-12 w-12 text-primary/70 group-hover:scale-110 transition-transform" />
                           ) : (
                             <Icon className="h-12 w-12 text-primary/70 group-hover:scale-110 transition-transform" />
                           )}

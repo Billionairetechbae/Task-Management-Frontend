@@ -33,6 +33,7 @@ import {
   UserMinus,
   AlertTriangle,
   Lock,
+  ExternalLink,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -806,11 +807,43 @@ export default function TaskEditDrawer({
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                              <a href={att.fileUrl} target="_blank" rel="noopener noreferrer">
+                            {att.source === "google-drive" && att.webViewLink ? (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                                <a href={att.webViewLink} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                title="Download"
+                                onClick={async () => {
+                                  if (!taskId || !att.id) return;
+                                  try {
+                                    const { url } = await api.getTaskAttachmentDownloadUrl(taskId, att.id);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.target = "_blank";
+                                    a.rel = "noopener noreferrer";
+                                    a.download = att.fileName || "download";
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                  } catch (err: any) {
+                                    const code = err?.statusCode ?? err?.status;
+                                    toast({
+                                      title: code === 403 ? "Access denied" : code === 404 ? "File not found" : "Download failed",
+                                      description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message || "Please try again",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
                                 <Download className="h-3.5 w-3.5" />
-                              </a>
-                            </Button>
+                              </Button>
+                            )}
                             {canModify && (
                               <Button
                                 variant="ghost"
@@ -836,6 +869,7 @@ export default function TaskEditDrawer({
                       type="file"
                       multiple
                       className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif"
                       onChange={handleFileSelect}
                     />
                     <Button

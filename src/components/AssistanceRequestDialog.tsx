@@ -304,7 +304,7 @@ const AssistanceRequestDialog = ({
                 onChange={handleFileChange}
                 className="hidden"
                 id="file-upload"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif"
               />
               <Label
                 htmlFor="file-upload"
@@ -314,7 +314,7 @@ const AssistanceRequestDialog = ({
                 <div>
                   <p className="font-medium">Click to upload or drag and drop</p>
                   <p className="text-sm text-muted-foreground">
-                    PDF, DOC, XLS, JPG, PNG, etc.
+                    PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, CSV, TXT, JPG, PNG, WEBP, GIF
                   </p>
                 </div>
               </Label>

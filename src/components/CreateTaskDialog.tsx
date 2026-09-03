@@ -241,7 +241,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
                 )}
               </div>
 
-              <Input id="file-input" key={fileInputKey} type="file" multiple onChange={handleFileChange} className="hidden" />
+              <Input id="file-input" key={fileInputKey} type="file" multiple onChange={handleFileChange} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif" />
 
               <div className="mb-3">
                 <Button

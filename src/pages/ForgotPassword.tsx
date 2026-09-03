@@ -28,8 +28,8 @@ const ForgotPassword = () => {
       setSent(true);
 
       toast({
-        title: "Reset Email Sent!",
-        description: "Check your inbox for the password reset link.",
+        title: "Request Received",
+        description: "If that email is registered, you will receive password reset instructions shortly.",
       });
     } catch (err: any) {
       const statusCode = err?.statusCode ?? err?.status;
@@ -92,7 +92,7 @@ const ForgotPassword = () => {
           <>
             <h2 className="text-2xl font-bold mb-4">Check Your Email</h2>
             <p className="text-muted-foreground mb-6">
-              We sent a reset link to <strong>{email}</strong>.
+              If <strong>{email}</strong> is registered, you will receive password reset instructions shortly.
             </p>
 
             <Link to="/" className="text-primary underline block text-center">
