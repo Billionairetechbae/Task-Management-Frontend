@@ -8,6 +8,8 @@ import Logo from "@/components/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { GoogleAuthButton } from "@/components/GoogleAuthButton";
+import { Checkbox } from "@/components/ui/checkbox";
+import LegalLinks, { TERMS_URL, PRIVACY_URL } from "@/components/LegalLinks";
 
 const Signup = () => {
   const { toast } = useToast();
@@ -15,6 +17,7 @@ const Signup = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -24,6 +27,14 @@ const Signup = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!consent) {
+      toast({
+        title: "Please accept the Terms",
+        description: "You must agree to the Terms and Privacy Policy to create an account.",
+        variant: "destructive" as any,
+      });
+      return;
+    }
     setLoading(true);
     try {
       await api.signupUser(form);
@@ -200,7 +211,27 @@ const Signup = () => {
                 </div>
               </div>
 
-              <Button className="w-full h-10 gap-2 group" type="submit" disabled={loading}>
+              <div className="flex items-start gap-2.5 rounded-lg border border-border/70 bg-muted/30 p-3">
+                <Checkbox
+                  id="consent"
+                  checked={consent}
+                  onCheckedChange={(v) => setConsent(v === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="consent" className="text-xs leading-relaxed font-normal text-muted-foreground cursor-pointer">
+                  I agree to Admiino&apos;s{" "}
+                  <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="text-foreground underline">
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="text-foreground underline">
+                    Privacy Policy
+                  </a>
+                  .
+                </Label>
+              </div>
+
+              <Button className="w-full h-10 gap-2 group" type="submit" disabled={loading || !consent}>
                 {loading ? "Creating..." : "Create account"}
                 {!loading && <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />}
               </Button>
@@ -214,7 +245,7 @@ const Signup = () => {
                 </div>
               </div>
 
-              <GoogleAuthButton />
+              <GoogleAuthButton disabled={!consent} />
             </form>
 
             <div className="mt-10 space-y-6">
@@ -228,6 +259,7 @@ const Signup = () => {
                   Legacy signup options
                 </Link>
               </div>
+              <LegalLinks className="pt-2" />
             </div>
           </div>
         </div>
