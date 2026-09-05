@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { SUPPORT_EMAIL, TERMS_URL, PRIVACY_URL } from "@/components/LegalLinks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

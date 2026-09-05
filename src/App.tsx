@@ -55,6 +55,7 @@ import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import Integrations from "./pages/Integrations";
 
 import Calendar from "./pages/Calendar";
+import Help from "./pages/Help";
 
 const App = () => {
   const { user, loading } = useAuth();
@@ -113,6 +114,7 @@ const App = () => {
         <Route path="/project-invite/:token" element={<ProjectInvite />} />
         <Route path="/client-view/:token" element={<ClientView />} />
         <Route path="/calendar" element={<Calendar />} />
+        <Route path="/help" element={<Help />} />
 
         {/* TeamMembers Page */}
         <Route

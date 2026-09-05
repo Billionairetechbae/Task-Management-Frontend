@@ -8,6 +8,7 @@ import { readPreferences } from "@/hooks/use-local-preferences";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
+import LegalLinks from "@/components/LegalLinks";
 import { api } from "@/lib/api";
 import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 
@@ -303,6 +304,7 @@ const Login = () => {
                   Legacy signup options
                 </Link>
               </div>
+              <LegalLinks className="pt-2" />
             </div>
           </div>
         </div>
