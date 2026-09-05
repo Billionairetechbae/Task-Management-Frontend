@@ -4,10 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 
 export const GoogleAuthButton = ({ 
   variant = "outline", 
-  className = "" 
+  className = "",
+  disabled = false
 }: { 
   variant?: "outline" | "default", 
-  className?: string 
+  className?: string,
+  disabled?: boolean
 }) => {
   const { toast } = useToast();
 
@@ -28,10 +30,13 @@ export const GoogleAuthButton = ({
 
   return (
     <Button 
+      type="button"
       variant={variant} 
+      disabled={disabled}
       className={`w-full flex items-center justify-center gap-2 ${className}`}
       onClick={handleGoogleAuth}
     >
+
       {/* Google's "G" logo (SVG) */}
       <svg 
         width="18" 
