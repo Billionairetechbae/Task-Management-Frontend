@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { SUPPORT_EMAIL, TERMS_URL, PRIVACY_URL } from "@/components/LegalLinks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -503,6 +504,23 @@ const Settings = () => {
                   <span className="text-sm text-muted-foreground">{v}</span>
                 </div>
               ))}
+            </SectionCard>
+
+            <SectionCard title="Help & legal" description="Support, terms and privacy.">
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button variant="outline" size="sm" onClick={() => navigate("/help")}>
+                  Help &amp; Support
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+                </Button>
+              </div>
             </SectionCard>
           </div>
         );
