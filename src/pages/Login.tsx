@@ -299,11 +299,6 @@ const Login = () => {
               <Button variant="outline" className="w-full h-10" asChild>
                 <Link to="/signup">Create your account</Link>
               </Button>
-              <div className="text-xs text-center">
-                <Link to="/signup-executive" className="text-muted-foreground hover:text-foreground underline transition-colors duration-150">
-                  Legacy signup options
-                </Link>
-              </div>
               <LegalLinks className="pt-2" />
             </div>
           </div>
