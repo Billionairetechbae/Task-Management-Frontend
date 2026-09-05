@@ -504,6 +504,23 @@ const Settings = () => {
                 </div>
               ))}
             </SectionCard>
+
+            <SectionCard title="Help & legal" description="Support, terms and privacy.">
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button variant="outline" size="sm" onClick={() => navigate("/help")}>
+                  Help &amp; Support
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+                </Button>
+              </div>
+            </SectionCard>
           </div>
         );
     }
