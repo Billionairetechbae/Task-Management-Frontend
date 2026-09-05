@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Check, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Check, ArrowRight, MailCheck, RefreshCw, AlertCircle } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
@@ -191,6 +191,16 @@ const Signup = () => {
             <p className="text-muted-foreground text-sm mb-8">
               Enter your details to create your account
             </p>
+
+            {error && (
+              <div
+                role="alert"
+                className="mb-5 flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive animate-fade-in"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="leading-relaxed">{error}</span>
+              </div>
+            )}
 
             <form className="space-y-5" onSubmit={onSubmit}>
               <div className="grid grid-cols-2 gap-3">
