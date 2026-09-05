@@ -25,14 +25,19 @@ const Signup = () => {
     password: "",
   });
 
+  const [error, setError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     if (!consent) {
-      toast({
-        title: "Please accept the Terms",
-        description: "You must agree to the Terms and Privacy Policy to create an account.",
-        variant: "destructive" as any,
-      });
+      setError("You must agree to the Terms and Privacy Policy to create an account.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Your password must be at least 8 characters long.");
       return;
     }
     setLoading(true);
@@ -41,13 +46,16 @@ const Signup = () => {
       setSubmitted(true);
     } catch (err: any) {
       const statusCode = err?.statusCode ?? err?.status;
-      const description =
+      const message =
         statusCode === 429
-          ? "Too many attempts. Please try again shortly."
-          : err?.message || "Try again";
+          ? "Too many attempts. Please wait a moment and try again."
+          : statusCode === 409
+          ? "An account with this email already exists. Try signing in instead."
+          : err?.message || "We couldn't create your account. Please try again.";
+      setError(message);
       toast({
         title: "Signup failed",
-        description,
+        description: message,
         variant: "destructive" as any,
       });
     } finally {
@@ -55,46 +63,78 @@ const Signup = () => {
     }
   };
 
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      await api.resendVerificationEmail(form.email);
+      setResent(true);
+      toast({ title: "Verification email sent", description: `We sent a new link to ${form.email}.` });
+    } catch (err: any) {
+      toast({
+        title: "Couldn't resend",
+        description: err?.message || "Please try again in a moment.",
+        variant: "destructive" as any,
+      });
+    } finally {
+      setResending(false);
+    }
+  };
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <div className="mb-6">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-10 h-10 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                ></path>
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold mb-4">Verify your email</h1>
-            <p className="text-muted-foreground text-lg mb-8">
-              We sent a verification link to your email. Please verify to continue.
-            </p>
+        <div className="w-full max-w-md text-center animate-fade-in">
+          <div className="mb-8 flex justify-center">
+            <Logo className="h-8" />
           </div>
 
-          <div className="space-y-3">
-            <Button
-              className="w-full h-10"
-              onClick={() => navigate("/")}
-            >
-              Go to Login
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full h-10"
-              onClick={() => navigate("/")}
-            >
-              Back to Login
-            </Button>
+          <div className="rounded-2xl border border-border/70 bg-card p-8 shadow-soft">
+            <div className="relative mx-auto mb-6 h-20 w-20">
+              <span className="absolute inset-0 rounded-full bg-primary/10 animate-ping" />
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 animate-scale-in">
+                <MailCheck className="h-9 w-9 text-primary" />
+              </div>
+            </div>
+
+            <h1 className="text-2xl font-bold tracking-tight mb-2">Account created</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              We sent a verification link to{" "}
+              <span className="font-medium text-foreground break-all">{form.email}</span>. Open it to
+              activate your account, then sign in.
+            </p>
+
+            <div className="mt-6 rounded-lg border border-border/60 bg-muted/30 p-3 text-left text-xs text-muted-foreground leading-relaxed">
+              Didn&apos;t get it? Check your spam folder, or resend the link below. Links expire after
+              a short while.
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <Button className="w-full h-10 gap-2 group" onClick={() => navigate("/")}>
+                Go to Login
+                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-10 gap-2"
+                onClick={handleResend}
+                disabled={resending || resent}
+              >
+                {resent ? (
+                  <>
+                    <Check className="w-4 h-4" /> Verification email sent
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className={`w-4 h-4 ${resending ? "animate-spin" : ""}`} />
+                    {resending ? "Sending..." : "Resend verification email"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <LegalLinks />
           </div>
         </div>
       </div>
