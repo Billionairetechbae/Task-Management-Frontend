@@ -1,3 +1,4 @@
+import { triggerBlobDownload } from "@/lib/api";
 // src/components/dashboard/TaskEditDrawer.tsx
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -824,14 +825,7 @@ export default function TaskEditDrawer({
                                   try {
                                     // Phase 2: backend streams bytes — create ephemeral object URL
                                     const { blob, fileName: serverName } = await api.downloadTaskAttachment(taskId, att.id);
-                                    const objectUrl = URL.createObjectURL(blob);
-                                    const a = document.createElement("a");
-                                    a.href = objectUrl;
-                                    a.download = serverName || att.fileName || "download";
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    a.remove();
-                                    URL.revokeObjectURL(objectUrl);
+                                    triggerBlobDownload(blob, serverName || att.fileName || "download");
                                   } catch (err: any) {
                                     const code = err?.statusCode ?? err?.status;
                                     toast({

@@ -1,9 +1,12 @@
+import OfficeDocumentPreview from "@/components/OfficeDocumentPreview";
+import { getOfficePreviewKind } from "@/lib/officePreview";
 import { X, Download, ExternalLink, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getFileIcon } from "@/utils/fileIcons";
 
 interface AttachmentPreviewProps {
   url: string;
+  blob?: Blob;
   type: string;
   name: string;
   onClose: () => void;
@@ -29,6 +32,7 @@ const isOffice = (type: string, name: string) => {
 
 const AttachmentPreview = ({
   url,
+  blob,
   type,
   name,
   onClose,
@@ -44,6 +48,9 @@ const AttachmentPreview = ({
   const isText = t.startsWith("text") || /\.(txt|md|csv|log|json)$/i.test(name);
   const isOfficeFile = isOffice(type, name);
 
+  const unsupported = !isImage && !isPDF && !isVideo && !isAudio && !isText;
+  const officeKind = getOfficePreviewKind(name, type);
+  const canPreviewOffice = !!blob && !!officeKind;
   const Icon = getFileIcon(type, name);
 
   return (
@@ -85,7 +92,7 @@ const AttachmentPreview = ({
               </Button>
             )}
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
-              <a href={url} target="_blank" rel="noreferrer">
+              <a href={url} download={url.startsWith("blob:") && (unsupported || isOfficeFile) ? name : undefined} target="_blank" rel="noreferrer">
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Open</span>
               </a>
@@ -96,7 +103,7 @@ const AttachmentPreview = ({
                 <span className="hidden sm:inline">Download</span>
               </a>
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Close preview" onClick={onClose}>
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -145,17 +152,11 @@ const AttachmentPreview = ({
               <audio src={url} controls className="w-full" />
             </div>
           )}
-          {isOfficeFile && !isPDF && (
-            <iframe
-              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`}
-              title={name}
-              className="w-full h-full min-h-[70vh] border-0 bg-white"
-            />
-          )}
+          {canPreviewOffice && <OfficeDocumentPreview blob={blob} kind={officeKind} />}
           {isText && !isPDF && !isOfficeFile && (
             <iframe src={url} title={name} className="w-full h-full min-h-[60vh] border-0 bg-white" />
           )}
-          {!isImage && !isPDF && !isVideo && !isAudio && !isOfficeFile && !isText && (
+          {(!canPreviewOffice && (isOfficeFile || unsupported)) && (
             <div className="p-8 text-center text-muted-foreground">
               <Icon className="w-12 h-12 mx-auto mb-3 opacity-40" />
               <p className="text-sm">Preview not available for this file type.</p>

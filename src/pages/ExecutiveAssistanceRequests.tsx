@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import AttachmentPreview from "@/components/AttachmentPreview";
+import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
+import { triggerBlobDownload } from "@/lib/api";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api, AssistanceRequest, AssistanceRequestStatus } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -42,6 +45,10 @@ const ExecutiveAssistanceRequests = () => {
   const [assistancePermissionMode, setAssistancePermissionMode] = useState<"restricted" | "free">("restricted");
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<AssistanceRequest | null>(null);
+  const previewBlob = usePreviewBlobUrl();
+  const previewScope = useRef(0);
+  const [attachmentPreview, setAttachmentPreview] = useState<{ blob: Blob; url: string; name: string; type: string } | null>(null);
+  const [attachmentAction, setAttachmentAction] = useState<"download" | "preview">("download");
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -58,7 +65,7 @@ const ExecutiveAssistanceRequests = () => {
    *
    * Calls the backend proxy endpoint, receives file bytes as a Blob,
    * creates a short-lived object URL for the download anchor, then
-   * immediately revokes it.  No raw Cloudinary URL or publicId is used.
+   * revokes it after the browser starts the download.  No raw Cloudinary URL or publicId is used.
    *
    * Error UX:
    *   403 → "You don't have access to this file."
@@ -66,21 +73,20 @@ const ExecutiveAssistanceRequests = () => {
    *   429 → existing Phase 1 rate-limit copy
    *   5xx → generic safe message
    */
-  const handleDownloadAttachment = async (requestId: string, index: number, fallbackName: string) => {
+  const handleDownloadAttachment = async (requestId: string, index: number, fallbackName: string, action: "download" | "preview" = "download") => {
     if (downloadingIndex !== null) return;
     setDownloadingIndex(index);
+    setAttachmentAction(action);
+    const scope = previewScope.current;
     try {
       const { blob, fileName, contentType } = await api.downloadAssistanceAttachment(requestId, index);
       const resolvedName = fileName || fallbackName || `attachment-${index + 1}`;
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = resolvedName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(objectUrl);
-      void contentType; // consumed for future preview use; not needed here
+      if (action === "preview") {
+        if (scope !== previewScope.current) return;
+        setAttachmentPreview({ blob, url: previewBlob.create(blob), name: resolvedName, type: contentType });
+      } else {
+        triggerBlobDownload(blob, resolvedName);
+      }
     } catch (err: any) {
       const status = err?.statusCode ?? err?.status;
       let description: string;
@@ -93,11 +99,18 @@ const ExecutiveAssistanceRequests = () => {
       } else {
         description = err?.message || "Could not download the file. Please try again.";
       }
-      toast({ title: "Download failed", description, variant: "destructive" });
+      toast({ title: action === "preview" ? "Preview failed" : "Download failed", description, variant: "destructive" });
     } finally {
       setDownloadingIndex(null);
     }
   };
+
+  useEffect(() => {
+    previewScope.current += 1;
+    previewBlob.clear();
+    setAttachmentPreview(null);
+    return () => { previewScope.current += 1; };
+  }, [isDetailsOpen, selectedRequest?.id, previewBlob.clear]);
 
   const canCreateRequest = useMemo(() => {
     if (user?.role === "admin") return true;
@@ -576,7 +589,7 @@ const ExecutiveAssistanceRequests = () => {
         </Tabs>
 
         {/* Request Details Dialog */}
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <Dialog open={isDetailsOpen && !attachmentPreview} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             {selectedRequest && (
               <>
@@ -688,6 +701,12 @@ const ExecutiveAssistanceRequests = () => {
                                 </p>
                               </div>
                             </div>
+                            <Button variant="outline" size="sm" disabled={downloadingIndex !== null}
+                              onClick={() => handleDownloadAttachment(selectedRequest.id, index, attachment.fileName, "preview")}
+                              className="gap-2 w-full sm:w-auto">
+                              <Eye className="w-4 h-4" />
+                              {downloadingIndex === index && attachmentAction === "preview" ? "Loading preview..." : "Preview"}
+                            </Button>
                             <Button
                               variant="secondary"
                               size="sm"
@@ -701,7 +720,7 @@ const ExecutiveAssistanceRequests = () => {
                               disabled={downloadingIndex !== null}
                               className="gap-2 w-full sm:w-auto"
                             >
-                              {downloadingIndex === index ? (
+                              {downloadingIndex === index && attachmentAction === "download" ? (
                                 <>
                                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                   Downloading…
@@ -750,6 +769,10 @@ const ExecutiveAssistanceRequests = () => {
             )}
           </DialogContent>
         </Dialog>
+        {attachmentPreview && <AttachmentPreview {...attachmentPreview} onClose={() => {
+          previewBlob.clear();
+          setAttachmentPreview(null);
+        }} />}
       </div>
     </DashboardLayout>
   );

@@ -1,3 +1,4 @@
+import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { api, Folder, FolderFile } from "@/lib/api";
@@ -110,7 +111,8 @@ export default function Drive() {
   const [uploading, setUploading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<FileList | null>(null);
   const [search, setSearch] = useState("");
-  const [previewFile, setPreviewFile] = useState<FolderFile | null>(null);
+  const previewBlob = usePreviewBlobUrl();
+  const [previewFile, setPreviewFile] = useState<(FolderFile & { fileUrl: string; blob: Blob }) | null>(null);
   const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(true);
   const [typeFilter, setTypeFilter] = useState<FileTypeFilter>("all");
   const [isDragging, setIsDragging] = useState(false);
@@ -608,8 +610,8 @@ export default function Drive() {
                           // Phase 2: backend streams bytes — create ephemeral object URL for FileViewer
                           try {
                             const { blob, fileName: serverName, contentType } = await api.downloadDriveFile(file.id);
-                            const objectUrl = URL.createObjectURL(blob);
-                            setPreviewFile({ ...file, fileUrl: objectUrl, fileName: serverName || file.fileName, fileType: contentType || file.fileType });
+                            const objectUrl = previewBlob.create(blob);
+                            setPreviewFile({ ...file, blob, fileUrl: objectUrl, fileName: serverName || file.fileName || "download", fileType: contentType || file.fileType });
                           } catch (err: any) {
                             const code = (err as any)?.statusCode ?? (err as any)?.status;
                             toast({
@@ -663,9 +665,7 @@ export default function Drive() {
         file={previewFile}
         onClose={() => {
           // Phase 2: revoke ephemeral object URL created from Blob to free browser memory
-          if (previewFile?.fileUrl && previewFile.fileUrl.startsWith("blob:")) {
-            URL.revokeObjectURL(previewFile.fileUrl);
-          }
+          previewBlob.clear();
           setPreviewFile(null);
         }}
       />

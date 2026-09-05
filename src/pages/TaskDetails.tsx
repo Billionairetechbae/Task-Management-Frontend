@@ -1,3 +1,5 @@
+import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
+import { triggerBlobDownload } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import ClientViewShareButton from "@/components/ClientViewShareButton";
 import { Badge } from "@/components/ui/badge";
@@ -161,8 +163,10 @@ const TaskDetails = () => {
   const [sendingComment, setSendingComment] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const previewBlob = usePreviewBlobUrl();
   const [preview, setPreview] = useState<{
     url: string;
+    blob: Blob;
     type: string;
     name: string;
     attachmentId?: string;
@@ -648,7 +652,7 @@ const TaskDetails = () => {
     }
   };
 
-  const handleSaveToGoogleDrive = async (attachment: { id: string; fileName: string; fileUrl: string; fileType?: string }) => {
+  const handleSaveToGoogleDrive = async (attachment: { id: string; fileName: string; fileType?: string }) => {
     if (!attachment.id || !attachment.fileName || !id) return;
     setSavingToDrive(attachment.id);
     try {
@@ -1725,11 +1729,10 @@ const TaskDetails = () => {
                             const fAny = f as any;
                             const displayName =
                               f.fileName || fAny.name || "";
-                            const displayUrl =
+                            const displayUrl = fAny.source === "google-drive" ? (
                               fAny.webViewLink ||
                               fAny.externalUrl ||
-                              f.fileUrl ||
-                              "";
+                              "") : "";
                             const displayType =
                               fAny.mimeType ||
                               f.fileType ||
@@ -1756,8 +1759,8 @@ const TaskDetails = () => {
                                     // Phase 2: backend streams bytes — create ephemeral object URL for preview
                                     api.downloadTaskAttachment(id, f.id)
                                       .then(({ blob, fileName: serverName }) => {
-                                        const objectUrl = URL.createObjectURL(blob);
-                                        setPreview({ url: objectUrl, type: blob.type || displayType, name: serverName || displayName, attachmentId: f.id, alreadyInDocs: true });
+                                        const objectUrl = previewBlob.create(blob);
+                                        setPreview({ blob, url: objectUrl, type: blob.type || displayType, name: serverName || displayName || "download", attachmentId: f.id, alreadyInDocs: true });
                                       })
                                       .catch((err: any) => {
                                         const code = err?.statusCode ?? err?.status;
@@ -1865,11 +1868,10 @@ const TaskDetails = () => {
               const attachmentFile = file as any;
               const isGoogleDrive =
                 attachmentFile.source === "google-drive";
-              const attachmentUrl =
+              const attachmentUrl = isGoogleDrive ? (
                 attachmentFile.webViewLink ||
                 attachmentFile.externalUrl ||
-                attachmentFile.fileUrl ||
-                "";
+                "") : "";
               const thumbnail =
                 attachmentFile.thumbnailLink ||
                 attachmentFile.thumbnailUrl;
@@ -1902,8 +1904,8 @@ const TaskDetails = () => {
                         // Phase 2: backend streams bytes — create ephemeral object URL for preview
                         api.downloadTaskAttachment(id, file.id)
                           .then(({ blob, fileName: serverName }) => {
-                            const objectUrl = URL.createObjectURL(blob);
-                            setPreview({ url: objectUrl, type: blob.type || mimeType, name: serverName || fileName, attachmentId: file?.id, alreadyInDocs: true });
+                            const objectUrl = previewBlob.create(blob);
+                            setPreview({ blob, url: objectUrl, type: blob.type || mimeType, name: serverName || fileName || "download", attachmentId: file?.id, alreadyInDocs: true });
                           })
                           .catch((err: any) => {
                             const code = err?.statusCode ?? err?.status;
@@ -1927,14 +1929,7 @@ const TaskDetails = () => {
                               try {
                                 // Phase 2: receive Blob from proxy, create ephemeral object URL
                                 const { blob, fileName: serverName } = await api.downloadTaskAttachment(id, file.id);
-                                const objectUrl = URL.createObjectURL(blob);
-                                const a = document.createElement("a");
-                                a.href = objectUrl;
-                                a.download = serverName || fileName;
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
-                                URL.revokeObjectURL(objectUrl);
+                                triggerBlobDownload(blob, serverName || fileName || "download");
                               } catch (err: any) {
                                 const code = err?.statusCode ?? err?.status;
                                 toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Download failed", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
@@ -2006,8 +2001,8 @@ const TaskDetails = () => {
                             if (!file?.id || !id) return;
                             api.downloadTaskAttachment(id, file.id)
                               .then(({ blob, fileName: serverName }) => {
-                                const objectUrl = URL.createObjectURL(blob);
-                                setPreview({ url: objectUrl, type: blob.type || mimeType, name: serverName || fileName, attachmentId: file?.id, alreadyInDocs: true });
+                                const objectUrl = previewBlob.create(blob);
+                                setPreview({ blob, url: objectUrl, type: blob.type || mimeType, name: serverName || fileName || "download", attachmentId: file?.id, alreadyInDocs: true });
                               })
                               .catch((err: any) => {
                                 const code = err?.statusCode ?? err?.status;
@@ -2025,7 +2020,6 @@ const TaskDetails = () => {
                           onClick={() => handleSaveToGoogleDrive({
                             id: file?.id || "",
                             fileName: fileName || "",
-                            fileUrl: attachmentFile.fileUrl || "",
                             fileType: mimeType,
                           })}
                           disabled={currentlySaving || uploadLoading || !file?.id}
@@ -2172,13 +2166,12 @@ const TaskDetails = () => {
       {preview && (
         <AttachmentPreview
           url={preview.url}
+          blob={preview.blob}
           type={preview.type}
           name={preview.name}
           onClose={() => {
             // Phase 2: revoke ephemeral object URL created from Blob to free browser memory
-            if (preview.url && preview.url.startsWith("blob:")) {
-              URL.revokeObjectURL(preview.url);
-            }
+            previewBlob.clear();
             setPreview(null);
           }}
           alreadyInTaskDocs={preview.alreadyInDocs}

@@ -285,12 +285,12 @@ export interface LoginData {
 export interface TaskAttachment {
   id: string;
   taskId: string;
-  fileUrl: string;
   fileName: string;
   fileType: string;
   fileSize: number;
   fileId?: string;
   mimeType?: string;
+  externalUrl?: string;
   webViewLink?: string;
   thumbnailLink?: string;
   source?: "device" | "google-drive" | string;
@@ -696,8 +696,6 @@ export interface Folder {
 export interface FolderFile {
   id: string;
   folderId: string;
-  fileUrl: string;
-  publicId: string;
   fileName: string;
   fileType: string;
   fileSize: number;
@@ -2100,19 +2098,7 @@ class ApiClient {
 
     // Extract filename from Content-Disposition if present
     const disposition = response.headers.get("content-disposition") || "";
-    let fileName = "";
-    const filenameStarMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-    if (filenameStarMatch) {
-      try { fileName = decodeURIComponent(filenameStarMatch[1]); } catch { /* ignore */ }
-    }
-    if (!fileName) {
-      const filenameMatch = disposition.match(/filename="?([^";\r\n]+)"?/i);
-      if (filenameMatch) fileName = filenameMatch[1].trim();
-    }
-    if (!fileName) {
-      // Derive from path as last resort
-      fileName = path.split("/").pop() || "download";
-    }
+    const fileName = resolveDownloadFileName(disposition, "", "");
 
     return { blob, fileName, contentType };
   }
@@ -3854,15 +3840,32 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
   
 }
 
-function triggerBlobDownload(blob: Blob, filename: string) {
+/** Parse the response header before considering metadata; never use the endpoint name. */
+export function resolveDownloadFileName(disposition: string, metadataName = "", fallback = "download"): string {
+  let fileName = "";
+  const encoded = disposition.match(/(?:^|;)\s*filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (encoded) {
+    try { fileName = decodeURIComponent(encoded[1].trim()); } catch { /* use plain filename or metadata */ }
+  }
+  if (!fileName) {
+    const plain = disposition.match(/(?:^|;)\s*filename\s*=\s*(?:"([^"\r\n]+)"|([^;\r\n]+))/i);
+    if (plain) fileName = plain[1] || plain[2].trim();
+  }
+  return fileName || metadataName || fallback;
+}
+
+export function triggerBlobDownload(blob: Blob, filename: string) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
+  try {
+    a.click();
+  } finally {
+    a.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+  }
 }
 
 export const api = new ApiClient();

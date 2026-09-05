@@ -315,3 +315,30 @@
 .calendar-scroll::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
 }
+/* Google mounts Picker directly under body, outside the Radix portal.
+   Its absolute positioning can move off-screen when modal scroll-lock changes. */
+body > .picker-dialog {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(1051px, calc(100vw - 2rem)) !important;
+  height: min(650px, calc(100dvh - 2rem)) !important;
+  z-index: 1001 !important;
+  pointer-events: auto !important;
+}
+
+body > .picker-dialog-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  z-index: 1000 !important;
+}
+
+body > .picker-dialog .picker-dialog-content,
+body > .picker-dialog .picker-frame,
+body > .picker-dialog .picker-dialog-frame {
+  width: 100% !important;
+  height: 100% !important;
+}

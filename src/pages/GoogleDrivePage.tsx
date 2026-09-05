@@ -1,3 +1,4 @@
+import { triggerBlobDownload } from "@/lib/api";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -120,12 +121,7 @@ export default function GoogleDrivePage() {
   const handleDownloadFile = async (file: any) => {
     try {
       const blob = await downloadFile(file.id);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = file.name;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      triggerBlobDownload(blob, file.name);
     } catch (error: any) {
       toast({ title: "Download failed", description: error?.message || "Unable to download file", variant: "destructive" });
     }

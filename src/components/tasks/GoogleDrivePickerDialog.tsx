@@ -64,8 +64,10 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
       setSelectedFile(null);
       setAttachPending(false);
       setPickerError(null);
+    } else {
+      dispose();
     }
-  }, [open]);
+  }, [open, dispose]);
 
   const files = drive.files;
   const folders = useMemo(() => files.filter(isFolder), [files]);
@@ -180,6 +182,10 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
           } else if (selecting || drive.uploadLoading) {
             e.preventDefault();
           }
+        }}
+        onFocusOutside={(e) => {
+          // Google's body-mounted iframe is intentionally outside this dialog.
+          if (pickerLoading) e.preventDefault();
         }}
         onPointerDownOutside={(e) => {
           // Never close via outside click during async work.

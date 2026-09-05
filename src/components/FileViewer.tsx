@@ -1,10 +1,14 @@
+import OfficeDocumentPreview from "@/components/OfficeDocumentPreview";
+import { getOfficePreviewKind } from "@/lib/officePreview";
 import { useEffect, useState } from "react";
 import { X, Download, ExternalLink, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getFileIcon } from "@/utils/fileIcons";
 
 export interface FileViewerFile {
+  /** Local preview URL, or an external Google Drive link; never storage metadata. */
   fileUrl: string;
+  blob?: Blob;
   fileName: string;
   fileType: string;
   fileSize?: number;
@@ -87,7 +91,9 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
   const kind = detectKind(file.fileType, file.fileName);
   const Icon = getFileIcon(file.fileType, file.fileName);
 
-  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.fileUrl)}`;
+  const unsupportedBlob = file.fileUrl.startsWith("blob:") && (kind === "office" || kind === "unknown");
+  const officeKind = getOfficePreviewKind(file.fileName, file.fileType);
+  const canPreviewOffice = !!file.blob && !!officeKind;
 
   return (
     <div
@@ -111,7 +117,7 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
             </p>
           </div>
           <Button asChild variant="ghost" size="icon" title="Open in new tab">
-            <a href={file.fileUrl} target="_blank" rel="noreferrer">
+            <a href={file.fileUrl} download={unsupportedBlob ? file.fileName : undefined} target="_blank" rel="noreferrer">
               <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
@@ -155,13 +161,7 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
             </div>
           )}
 
-          {kind === "office" && (
-            <iframe
-              src={officeUrl}
-              title={file.fileName}
-              className="w-full h-full border-0 bg-white"
-            />
-          )}
+          {canPreviewOffice && <OfficeDocumentPreview blob={file.blob} kind={officeKind} />}
 
           {kind === "text" && (
             <div className="w-full h-full p-3 sm:p-4 overflow-auto">
@@ -181,12 +181,12 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
             </div>
           )}
 
-          {kind === "unknown" && (
+          {(!canPreviewOffice && (kind === "unknown" || kind === "office")) && (
             <div className="text-center p-8 max-w-md">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              <p className="font-semibold mb-1">Preview not available</p>
+              <p className="font-semibold mb-1">Preview not available for this file type.</p>
               <p className="text-sm text-muted-foreground mb-4">
-                This file type can't be previewed in the browser.
+                Use Open or Download to view the file.
               </p>
               <div className="flex gap-2 justify-center">
                 <Button asChild>
@@ -195,7 +195,7 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
                   </a>
                 </Button>
                 <Button asChild variant="outline">
-                  <a href={file.fileUrl} target="_blank" rel="noreferrer">
+                  <a href={file.fileUrl} download={unsupportedBlob ? file.fileName : undefined} target="_blank" rel="noreferrer">
                     <ExternalLink className="h-4 w-4 mr-2" /> Open
                   </a>
                 </Button>

@@ -123,32 +123,19 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
 
   // ─── Tear down the live picker + resolve the pending promise with null ──
   const dispose = useCallback(() => {
-    if (pickerRef.current) {
-      try { pickerRef.current.dispose(); } catch { /* noop */ }
-      pickerRef.current = null;
-    }
-    if (resolveRef.current) {
-      const fn = resolveRef.current;
-      resolveRef.current = null;
-      fn(null);
-    }
+    const picker = pickerRef.current;
+    const resolve = resolveRef.current;
+    pickerRef.current = null;
+    resolveRef.current = null;
+    try { picker?.dispose(); } catch { /* Already removed by Google. */ }
+    resolve?.(null);
   }, []);
 
   // Cleanup on unmount — never leave a dangling picker iframe.
   useEffect(() => () => dispose(), [dispose]);
 
   const openGooglePicker = useCallback((): Promise<GooglePickerResult | null> => {
-    // If a previous picker is somehow still alive, tear it down first so we
-    // don't leak overlapping iframes or dangling promises.
-    if (pickerRef.current) {
-      try { pickerRef.current.dispose(); } catch { /* noop */ }
-      pickerRef.current = null;
-    }
-    if (resolveRef.current) {
-      const fn = resolveRef.current;
-      resolveRef.current = null;
-      fn(null);
-    }
+    dispose();
 
     return new Promise(async (resolve, reject) => {
       resolveRef.current = resolve;
@@ -163,10 +150,13 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
 
         // 2. Lazy-load gapi script + picker module
         await injectGapiScript();
+        if (resolveRef.current !== resolve) return;
         await loadPickerModule();
+        if (resolveRef.current !== resolve) return;
 
         // 3. Request a short-lived access token from backend (never refresh token)
         const { accessToken } = await googleIntegrationService.getPickerToken();
+        if (resolveRef.current !== resolve) return;
 
         // 4. Build the Picker
         const { PickerBuilder, DocsView, Feature, Action, Response, Document } =
@@ -189,7 +179,16 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
           .setDeveloperKey(apiKey)
           .setTitle("Select a file from Google Drive")
           .setCallback((data: google.picker.PickerResponse) => {
+            if (resolveRef.current !== resolve) return;
             const action = data[Response.ACTION];
+            // A terminal callback may hide the iframe without removing its backdrop.
+            // Dispose the owned instance before releasing the reference.
+            if (action === Action.PICKED || action === Action.CANCEL) {
+              const activePicker = pickerRef.current;
+              pickerRef.current = null;
+              resolveRef.current = null;
+              try { activePicker?.dispose(); } catch { /* Already removed by Google. */ }
+            }
 
             if (action === Action.PICKED) {
               const docs: google.picker.PickerDocument[] =
@@ -241,15 +240,17 @@ export function useGooglePicker(options: UseGooglePickerOptions = {}) {
         pickerRef.current = picker;
         picker.setVisible(true);
       } catch (err: any) {
+        if (resolveRef.current !== resolve) return;
         const error =
           err instanceof Error ? err : new Error(String(err?.message ?? err));
+        try { pickerRef.current?.dispose(); } catch { /* Already removed by Google. */ }
         onErrorRef.current?.(error);
         pickerRef.current = null;
         resolveRef.current = null;
         reject(error);
       }
     });
-  }, []);  // stable — refs absorb callback changes
+  }, [dispose]);  // stable — refs absorb callback changes
 
   return { openGooglePicker, dispose };
 }

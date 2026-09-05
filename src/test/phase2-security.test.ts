@@ -1,3 +1,4 @@
+import type * as ApiTypes from "@/lib/api";
 /**
  * Phase 2 Security Compatibility — Regression Tests (Final Contract)
  *
@@ -28,7 +29,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, resolveDownloadFileName } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -64,6 +65,28 @@ function mockJsonErrorResponse(status: number, message: string) {
 // ---------------------------------------------------------------------------
 // 1 & 2 — downloadTaskAttachment: authenticated request, returns Blob
 // ---------------------------------------------------------------------------
+
+describe("download filename resolution contract", () => {
+  it("prefers Content-Disposition filename* for UTF-8 filenames", () => {
+    expect(
+      resolveDownloadFileName('attachment; filename*=UTF-8\'\'Budget%20Model.xlsx', "")
+    ).toBe("Budget Model.xlsx");
+  });
+
+  it("falls back to attachment metadata when no Content-Disposition exists", () => {
+    expect(resolveDownloadFileName("", "Budget Model.xlsx")).toBe("Budget Model.xlsx");
+  });
+
+  it("never resolves to download when metadata fileName exists", () => {
+    expect(resolveDownloadFileName("download", "Budget Model.xlsx")).toBe("Budget Model.xlsx");
+  });
+
+  it("does not derive a path-based filename fallback from the endpoint", async () => {
+    globalThis.fetch = mockBlobResponse(200, "bytes", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    const result = await api.downloadTaskAttachment("t", "a");
+    expect(result.fileName).not.toBe("download");
+  });
+});
 
 describe("downloadTaskAttachment — authenticated Blob endpoint", () => {
   afterEach(() => {
@@ -391,10 +414,9 @@ describe("Task 10 — No signed-URL JSON contract", () => {
 describe("Task 11 — Google Drive external URL behavior preserved", () => {
   it("TaskAttachment supports webViewLink for Google Drive files", async () => {
     const mod = await import("@/lib/api");
-    const att: mod.TaskAttachment = {
+    const att: ApiTypes.TaskAttachment = {
       id: "gd-1",
       taskId: "t-1",
-      fileUrl: "",
       fileName: "report.pdf",
       fileType: "application/pdf",
       fileSize: 1024,
@@ -420,7 +442,8 @@ describe("Task 11 — Google Drive external URL behavior preserved", () => {
 describe("Task 12 — Public media not routed through download endpoints", () => {
   it("User.profilePictureUrl is a direct HTTPS URL, not a blob: or download endpoint", async () => {
     const mod = await import("@/lib/api");
-    const user: mod.User = {
+    const user: ApiTypes.User = {
+      companyId: null,
       id: "u-1",
       firstName: "Alice",
       lastName: "Smith",
@@ -700,7 +723,8 @@ describe("Task 18 — Backend 400 upload error surfacing", () => {
 describe("Task 19 — Removed auth response fields absent from User type", () => {
   it("User interface has no passwordResetToken / passwordResetExpires", async () => {
     const mod = await import("@/lib/api");
-    const user: mod.User = {
+    const user: ApiTypes.User = {
+      companyId: null,
       id: "u-1", firstName: "Bob", lastName: "T", email: "b@t.com",
       role: "executive", subscriptionTier: "free", isVerified: true,
       invitationStatus: "approved", invitedBy: null, isActive: true,
@@ -712,7 +736,8 @@ describe("Task 19 — Removed auth response fields absent from User type", () =>
 
   it("User interface has no emailVerificationToken / emailVerificationExpires", async () => {
     const mod = await import("@/lib/api");
-    const user: mod.User = {
+    const user: ApiTypes.User = {
+      companyId: null,
       id: "u-2", firstName: "Carol", lastName: "T", email: "c@t.com",
       role: "team_member", subscriptionTier: "free", isVerified: false,
       invitationStatus: "invited", invitedBy: null, isActive: true,
@@ -724,7 +749,8 @@ describe("Task 19 — Removed auth response fields absent from User type", () =>
 
   it("User interface has no googleId / googleEmail / googleAvatar", async () => {
     const mod = await import("@/lib/api");
-    const user: mod.User = {
+    const user: ApiTypes.User = {
+      companyId: null,
       id: "u-3", firstName: "Dan", lastName: "T", email: "d@t.com",
       role: "manager", subscriptionTier: "premium", isVerified: true,
       invitationStatus: "approved", invitedBy: null, isActive: true,
@@ -737,7 +763,8 @@ describe("Task 19 — Removed auth response fields absent from User type", () =>
 
   it("profilePictureUrl is the retained avatar field (replaces googleAvatar)", async () => {
     const mod = await import("@/lib/api");
-    const user: mod.User = {
+    const user: ApiTypes.User = {
+      companyId: null,
       id: "u-4", firstName: "Eve", lastName: "T", email: "e@t.com",
       role: "manager", subscriptionTier: "free", isVerified: true,
       invitationStatus: "approved", invitedBy: null, isActive: true,
@@ -781,7 +808,7 @@ describe("Task 20 — AssistanceRequestAttachment: no raw url or publicId", () =
     const mod = await import("@/lib/api");
     // Create a valid attachment without url or publicId — TS would error if
     // these were required fields.
-    const att: mod.AssistanceRequestAttachment = {
+    const att: ApiTypes.AssistanceRequestAttachment = {
       fileName: "brief.pdf",
       fileType: "application/pdf",
       fileSize: 204800,
@@ -794,7 +821,7 @@ describe("Task 20 — AssistanceRequestAttachment: no raw url or publicId", () =
 
   it("publicId is not required by the frontend Assistance attachment type", async () => {
     const mod = await import("@/lib/api");
-    const att: mod.AssistanceRequestAttachment = {
+    const att: ApiTypes.AssistanceRequestAttachment = {
       fileName: "spec.docx",
       fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       fileSize: 1024,
@@ -804,7 +831,7 @@ describe("Task 20 — AssistanceRequestAttachment: no raw url or publicId", () =
 
   it("Cloudinary URL is not required by Assistance attachment type", async () => {
     const mod = await import("@/lib/api");
-    const att: mod.AssistanceRequestAttachment = {
+    const att: ApiTypes.AssistanceRequestAttachment = {
       fileName: "data.xlsx",
       fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       fileSize: 512,
@@ -959,7 +986,7 @@ describe("Task 26 — publicId not required by frontend type", () => {
   it("AssistanceRequestAttachment can be constructed without publicId", async () => {
     const mod = await import("@/lib/api");
     // TypeScript would fail to compile this test if publicId were required
-    const att: mod.AssistanceRequestAttachment = {
+    const att: ApiTypes.AssistanceRequestAttachment = {
       fileName: "evidence.pdf",
       fileType: "application/pdf",
       fileSize: 99999,
@@ -975,7 +1002,7 @@ describe("Task 26 — publicId not required by frontend type", () => {
 describe("Task 27 — Cloudinary URL not required by assistance UI", () => {
   it("AssistanceRequestAttachment can be constructed without url or secure_url", async () => {
     const mod = await import("@/lib/api");
-    const att: mod.AssistanceRequestAttachment = {
+    const att: ApiTypes.AssistanceRequestAttachment = {
       fileName: "onboarding-doc.docx",
       fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       fileSize: 45000,
