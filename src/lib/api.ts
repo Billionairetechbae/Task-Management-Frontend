@@ -1533,19 +1533,6 @@ class ApiClient {
       headers.set("Content-Type", "application/json");
     }
 
-    try {
-      if (
-        typeof path === "string" &&
-        path.startsWith("/tasks") &&
-        (options.method || "GET") === "GET"
-      ) {
-        const hdrObj: Record<string, string> = {};
-        headers.forEach((v, k) => (hdrObj[k] = v));
-        // TEMP DEBUG: verify x-company-id header is present on GET /tasks
-        console.log("API DEBUG /tasks headers:", hdrObj);
-      }
-    } catch {}
-
     let response: Response;
     try {
       response = await fetch(url, { ...options, headers });
@@ -1858,13 +1845,6 @@ class ApiClient {
       method: "POST",
       headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({}),
-    });
-  }
-
-  async getIntegrationActivity(): Promise<any> {
-    return this.request(`/integrations/activity`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
     });
   }
 

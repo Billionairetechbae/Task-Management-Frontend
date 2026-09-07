@@ -23,7 +23,7 @@ import {
 import { api } from "@/lib/api";
 import {
   Integration, IntegrationActivityEvent, STATUS_STYLES,
-  extractActivity, extractIntegrations,
+  extractIntegrations, normalizeIntegration,
 } from "@/lib/integrations";
 import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
 
@@ -56,8 +56,18 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
       const items = extractIntegrations(res);
       const waConnected = Boolean((whatsApp as any)?.data?.connected);
       const waIndex = items.findIndex((item) => item.id === "whatsapp");
-      if (waIndex >= 0) items[waIndex] = { ...items[waIndex], connected: waConnected };
-      else items.push({ id: "whatsapp", name: "WhatsApp", description: "Securely link your WhatsApp identity", available: true, connected: waConnected, capabilities: [] } as Integration);
+      if (waIndex >= 0) items[waIndex] = normalizeIntegration({
+        ...items[waIndex],
+        connected: waConnected,
+        status: waConnected ? "CONNECTED" : "DISCONNECTED",
+      });
+      else items.push(normalizeIntegration({
+        id: "whatsapp",
+        name: "WhatsApp",
+        description: "Securely link your WhatsApp identity",
+        available: true,
+        connected: waConnected,
+      }));
       setIntegrations(items);
     } catch (err: any) {
       toast.error("Couldn't load integrations", { description: err?.message });
@@ -68,15 +78,10 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
   }, []);
 
   const loadActivity = useCallback(async () => {
-    setActivityLoading(true);
-    try {
-      const res = await api.getIntegrationActivity();
-      setActivity(extractActivity(res));
-    } catch {
-      setActivity([]); // activity endpoint is optional
-    } finally {
-      setActivityLoading(false);
-    }
+    // The production backend does not expose /integrations/activity.
+    // Keep the optional section empty without issuing a guaranteed 404.
+    setActivity([]);
+    setActivityLoading(false);
   }, []);
 
   useEffect(() => { load(); loadActivity(); }, [load, loadActivity]);
@@ -344,8 +349,8 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
                         : selected.accountEmail || selected.description}
                     </SheetDescription>
                   </div>
-                  <Badge variant="outline" className={STATUS_STYLES[selected.status].className}>
-                    {STATUS_STYLES[selected.status].label}
+                  <Badge variant="outline" className={(STATUS_STYLES[selected.status] ?? STATUS_STYLES.DISCONNECTED).className}>
+                    {(STATUS_STYLES[selected.status] ?? STATUS_STYLES.DISCONNECTED).label}
                   </Badge>
                 </div>
               </SheetHeader>
@@ -499,7 +504,7 @@ const IntegrationCard = ({
     disconnectLoading: boolean;
   };
 }) => {
-  const style = STATUS_STYLES[integration.status];
+  const style = STATUS_STYLES[integration.status] ?? STATUS_STYLES.DISCONNECTED;
   const googleConnected = integration.connected || googleState.isConnected;
   const googleEmail = googleState.status?.email;
   return (

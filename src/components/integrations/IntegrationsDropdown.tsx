@@ -69,7 +69,7 @@ export default function IntegrationsDropdown() {
             </p>
           ) : (
             preview.map((i) => {
-              const style = STATUS_STYLES[i.status];
+              const style = STATUS_STYLES[i.status] ?? STATUS_STYLES.DISCONNECTED;
               return (
                 <Link
                   key={i.id}
