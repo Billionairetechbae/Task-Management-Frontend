@@ -114,7 +114,7 @@ const App = () => {
         <Route path="/reset-password/:token" element={<Login />} />
         <Route path="/project-invite/:token" element={<ProjectInvite />} />
         <Route path="/client-view/:token" element={<ClientView />} />
-        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
         <Route path="/help" element={<Help />} />
 
         {/* TeamMembers Page */}

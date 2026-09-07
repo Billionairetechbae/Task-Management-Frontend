@@ -26,6 +26,7 @@ import CreateTaskDialog from "../components/CreateTaskDialog";
 
 import calendarService from "../services/calendarService";
 import type { CalendarFilters as SharedCalendarFilters } from "../types/calendar";
+import DashboardLayout from "../components/dashboard/DashboardLayout";
 
 export type CalendarView = "month" | "week" | "day";
 
@@ -137,7 +138,8 @@ export default function CalendarPage() {
     };
 
     return (
-        <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100/50">
+      <DashboardLayout hidePadding fullWidth>
+        <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 bg-gradient-to-br from-gray-50 to-gray-100/50">
             {/* Sidebar */}
             <CalendarSidebar
                 view={view}
@@ -222,5 +224,6 @@ export default function CalendarPage() {
                 onSuccess={handleTaskCreated}
             />
         </div>
+      </DashboardLayout>
     );
 }
