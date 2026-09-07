@@ -1,0 +1,10 @@
+import {describe,it,expect} from "vitest";import fs from "node:fs";import path from "node:path";
+const root=path.resolve(__dirname,"..");const read=(f:string)=>fs.readFileSync(path.join(root,f),"utf8");
+describe("WhatsApp Phase 3A",()=>{const page=read("pages/WhatsAppConnect.tsx"),api=read("lib/api.ts"),app=read("App.tsx"),integrations=read("pages/Integrations.tsx");
+it("registers the opaque-token connect route",()=>{expect(app).toContain('/whatsapp/connect');expect(page).toContain('q.get("t")');expect(page).not.toContain('waId');expect(page).not.toContain('userId')});
+it("validates challenges and handles expiry",()=>{expect(page).toContain("validateWhatsAppChallenge");expect(page).toContain("invalid, expired, or already used")});
+it("reuses login and signup",()=>{expect(page).toContain("api.login");expect(page).toContain("api.signupUser")});
+it("requires explicit confirmation and supports cancellation",()=>{expect(page).toContain("Connect WhatsApp to Admiino?");expect(page).toContain("completeWhatsAppConnection(token,true)");expect(page).toContain("cancelWhatsAppConnection")});
+it("shows safe masked account details",()=>{expect(page).toContain("WhatsApp: ••••");expect(page).toContain('replace(/^(.{2}).*(@.*)$/')});
+it("supports disconnect in integrations",()=>{expect(integrations).toContain("disconnectWhatsApp");expect(api).toContain("/integrations/whatsapp/account")});
+it("uses a mobile-safe narrow layout",()=>{expect(page).toContain("max-w-md");expect(page).toContain("min-h-screen")});});

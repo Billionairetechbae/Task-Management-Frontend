@@ -52,8 +52,13 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const res = await api.listIntegrations();
-      setIntegrations(extractIntegrations(res));
+      const [res, whatsApp] = await Promise.all([api.listIntegrations(), api.getWhatsAppAccount().catch(() => null)]);
+      const items = extractIntegrations(res);
+      const waConnected = Boolean((whatsApp as any)?.data?.connected);
+      const waIndex = items.findIndex((item) => item.id === "whatsapp");
+      if (waIndex >= 0) items[waIndex] = { ...items[waIndex], connected: waConnected };
+      else items.push({ id: "whatsapp", name: "WhatsApp", description: "Securely link your WhatsApp identity", available: true, connected: waConnected, capabilities: [] } as Integration);
+      setIntegrations(items);
     } catch (err: any) {
       toast.error("Couldn't load integrations", { description: err?.message });
     } finally {
@@ -152,6 +157,8 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
         google.disconnect();
         // wait briefly for the mutation to start since we can't directly await useMutation callbacks
         await new Promise((resolve) => setTimeout(resolve, 150));
+      } else if (provider === "whatsapp") {
+        await api.disconnectWhatsApp();
       } else {
         await api.disconnectIntegration(provider);
       }

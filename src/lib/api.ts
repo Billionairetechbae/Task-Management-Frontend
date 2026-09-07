@@ -1608,6 +1608,11 @@ class ApiClient {
   /* ============================
      AUTH
   ============================ */
+  async validateWhatsAppChallenge(token:string){return this.get("/integrations/whatsapp/connect/validate",{params:{t:token},includeWorkspace:false});}
+  async completeWhatsAppConnection(token:string,confirm:boolean){return this.request("/integrations/whatsapp/connect/complete",{method:"POST",headers:this.getAuthHeaders(false),body:JSON.stringify({token,confirm})});}
+  async cancelWhatsAppConnection(token:string){return this.request("/integrations/whatsapp/connect/cancel",{method:"POST",body:JSON.stringify({token})});}
+  async getWhatsAppAccount(){return this.get("/integrations/whatsapp/account",{includeWorkspace:false});}
+  async disconnectWhatsApp(){return this.request("/integrations/whatsapp/account",{method:"DELETE",headers:this.getAuthHeaders(false)});}
 
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive", {

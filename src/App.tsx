@@ -6,6 +6,7 @@ import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 
 
 import Login from "./pages/Login";
+import WhatsAppConnect from "./pages/WhatsAppConnect";
 import SignupExecutive from "./pages/SignupExecutive";
 import SignupTeamMember from "./pages/SignupTeamMember";
 import SignupManager from "./pages/SignupManager";
@@ -100,6 +101,7 @@ const App = () => {
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Login />} />
+        <Route path="/whatsapp/connect" element={<WhatsAppConnect />} />
         <Route path="/auth/google/callback" element={<AuthGoogleCallback />} />
         <Route path="/integrations/google/callback" element={<AuthGoogleCallback />} />
         <Route path="/signup-executive" element={<SignupExecutive />} />
