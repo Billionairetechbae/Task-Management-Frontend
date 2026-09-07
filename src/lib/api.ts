@@ -80,7 +80,26 @@ export interface WorkspaceItem {
     name: string;
     companyCode: string;
     industry?: string | null;
+    logoUrl?: string | null;
   };
+}
+
+export type TrashItemType = "workspace" | "project" | "task" | "folder" | "file";
+
+export interface TrashItem {
+  id: string;
+  type: TrashItemType;
+  name: string;
+  workspaceId?: string | null;
+  workspaceName?: string | null;
+  parentType?: string | null;
+  parentId?: string | null;
+  parentName?: string | null;
+  deletedAt: string;
+  expiresAt: string;
+  deletedBy?: { id?: string; firstName?: string; lastName?: string } | string | null;
+  canRestore?: boolean;
+  canPermanentlyDelete?: boolean;
 }
 
 export type PermissionMode = "restricted" | "free";
@@ -1745,6 +1764,58 @@ class ApiClient {
     });
   }
 
+  async leaveWorkspace(workspaceId: string, data?: { newOwnerUserId?: string; confirmHandover?: boolean }): Promise<{ status: string; message?: string }> {
+    return this.request(`/workspaces/${workspaceId}/leave`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data || {}),
+    });
+  }
+
+  async deleteWorkspace(workspaceId: string, confirmation: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/workspaces/${workspaceId}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ confirmation }),
+    });
+  }
+
+  async uploadWorkspaceLogo(workspaceId: string, file: File): Promise<{ status: string; message?: string; data?: { logoUrl?: string | null } }> {
+    const form = new FormData();
+    form.append("logo", file);
+    return this.request(`/workspaces/${workspaceId}/logo`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: form,
+    });
+  }
+
+  async removeWorkspaceLogo(workspaceId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/workspaces/${workspaceId}/logo`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getTrash(): Promise<{ status: string; data: { items: TrashItem[] } }> {
+    return this.request("/trash", { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async restoreTrashItem(type: TrashItemType, id: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/trash/${type}/${id}/restore`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async permanentlyDeleteTrashItem(type: TrashItemType, id: string, confirmation?: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/trash/${type}/${id}/permanent`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(confirmation ? { confirmation } : {}),
+    });
+  }
+
   async getGoogleAuthUrl(): Promise<{ status: string; data: { authUrl: string } }> {
     return this.request("/auth/google", {
       method: "GET",
@@ -3254,6 +3325,13 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       method: "PATCH",
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
       body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProject(id: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${id}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
     });
   }
 

@@ -7,6 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface ProjectSettingsTabProps {
   project: Project;
@@ -17,6 +22,11 @@ interface ProjectSettingsTabProps {
 const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSettingsTabProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { workspaceRole, activeCompanyId } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const canDelete = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
   const [formData, setFormData] = useState({
     name: project.name,
     description: project.description || "",
@@ -49,6 +59,19 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.deleteProject(project.id);
+      await queryClient.invalidateQueries({ queryKey: ["projects", activeCompanyId] });
+      await queryClient.invalidateQueries({ queryKey: ["trash", activeCompanyId] });
+      toast({ title: "Project moved to Trash." });
+      navigate("/projects", { replace: true });
+    } catch (err: any) {
+      toast({ title: "Unable to delete project", description: err?.statusCode === 403 ? "You don't have permission to perform this action." : "We couldn't complete this action. Please try again.", variant: "destructive" });
+    } finally { setDeleting(false); }
   };
 
   if (isCompact) {
@@ -198,6 +221,7 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
           </form>
         </CardContent>
       </Card>
+      {canDelete && <Card className="mt-6 border-destructive/40"><CardHeader><CardTitle className="text-destructive">Danger Zone</CardTitle></CardHeader><CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-muted-foreground">Move this project and its active tasks/files to Trash for 30 days.</p><AlertDialog><AlertDialogTrigger asChild><Button variant="destructive"><Trash2 className="mr-2 h-4 w-4" />Delete project</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Move project to Trash?</AlertDialogTitle><AlertDialogDescription>This project and its active tasks/files will be removed from the workspace and kept in Trash for 30 days.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Move to Trash</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></CardContent></Card>}
     </div>
   );
 };

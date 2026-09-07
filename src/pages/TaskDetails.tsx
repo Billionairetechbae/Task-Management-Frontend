@@ -571,9 +571,9 @@ const TaskDetails = () => {
         ...prev,
         attachments: prev.attachments?.filter(a => a.id !== attachmentId)
       } : null);
+      await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trash" });
       toast({
-        title: "Success",
-        description: "Attachment deleted",
+        title: "File moved to Trash.",
       });
     } catch (error: any) {
       toast({
@@ -2191,11 +2191,12 @@ const TaskDetails = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this attachment?</AlertDialogTitle>
+            <AlertDialogTitle>Move this file to Trash?</AlertDialogTitle>
             <AlertDialogDescription>
               {attachmentToDelete?.name
-                ? `"${attachmentToDelete.name}" will be permanently removed from this task.`
-                : "This attachment will be permanently removed from this task."}
+                ? `"${attachmentToDelete.name}" can be restored for 30 days.`
+                : "The file can be restored for 30 days."}
+              {(attachmentToDelete as any)?.source === "google-drive" && " This removes the file from Admiino. The original Google Drive file will not be deleted."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2204,7 +2205,7 @@ const TaskDetails = () => {
               onClick={confirmDeleteAttachment}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

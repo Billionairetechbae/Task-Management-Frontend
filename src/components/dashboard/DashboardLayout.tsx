@@ -23,6 +23,7 @@ import {
   Building2,
   CalendarDays,
   Settings,
+  Trash2,
   User,
   LogOut,
   Menu,
@@ -153,6 +154,7 @@ const DashboardLayout = ({
           href: "/drive",
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
+        { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
         {
           label: "Calendar",
           href: "/calendar",
@@ -260,6 +262,7 @@ const DashboardLayout = ({
           href: "/drive",
           icon: <Folder className="w-[18px] h-[18px]" />,
         },
+        { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
         {
           label: "Calendar",
           href: "/calendar",
@@ -300,6 +303,7 @@ const DashboardLayout = ({
           href: "/harmony",
           icon: <Users className="w-[18px] h-[18px]" />,
         },
+        { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
       ];
     }
 
@@ -344,6 +348,7 @@ const DashboardLayout = ({
         href: "/drive",
         icon: <Folder className="w-[18px] h-[18px]" />,
       },
+      { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
       {
         label: "Calendar",
         href: "/calendar",
@@ -384,6 +389,7 @@ const DashboardLayout = ({
         href: "/harmony",
         icon: <Users className="w-[18px] h-[18px]" />,
       },
+      { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
     ];
   };
 

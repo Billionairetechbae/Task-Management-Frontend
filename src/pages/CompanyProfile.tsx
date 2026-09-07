@@ -45,6 +45,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { api } from "@/lib/api";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import type { RoleOperationPermissions } from "@/lib/api";
+import WorkspaceLifecycleSettings from "@/components/workspaces/WorkspaceLifecycleSettings";
 
 const CompanyProfile = () => {
   const { user, refreshUser, activeCompanyId, activeWorkspace, workspaceRole } = useAuth();
@@ -73,7 +74,6 @@ const CompanyProfile = () => {
     refetch: refetchWorkspaceSettings,
   } = useWorkspaceSettings();
 
-  const isExecutive = user?.role === "executive";
   // Only the actual workspace owner (or platform admin) can edit workspace settings/permissions per backend `requireWorkspaceOwner`.
   const isWorkspaceOwner = workspaceRole === "owner" || user?.role === "admin";
   // Backend `updateActiveCompany` allows membership role of "owner" or "admin".
@@ -236,27 +236,6 @@ const CompanyProfile = () => {
         <div className="flex items-center justify-center p-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!isExecutive) {
-    return (
-      <DashboardLayout>
-        <Card>
-          <CardContent className="p-8">
-            <div className="max-w-md mx-auto text-center">
-              <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Company Profile</h3>
-              <p className="text-muted-foreground mb-6">
-                Company profile management is only available for executives.
-              </p>
-              <Button asChild>
-                <Link to="/dashboard-team_member">Back to Dashboard</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </DashboardLayout>
     );
   }
@@ -721,6 +700,7 @@ const CompanyProfile = () => {
             </Card>
           </div>
         </div>
+        <div className="mt-6"><WorkspaceLifecycleSettings /></div>
       </TooltipProvider>
     </DashboardLayout>
   );

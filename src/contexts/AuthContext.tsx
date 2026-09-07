@@ -26,11 +26,13 @@ interface Workspace {
   role: WorkspaceRole;
   status: string;
   isVerified?: boolean;
+  logoUrl?: string | null;
   company?: {
     id: string;
     name: string;
     companyCode?: string;
     industry?: string | null;
+    logoUrl?: string | null;
   } | null;
 }
 interface AuthContextType {
@@ -40,6 +42,7 @@ interface AuthContextType {
   loginWithGoogleToken: (token: string) => Promise<{ isAdmin: boolean }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  refreshWorkspaces: () => Promise<Workspace[]>;
   setUser: (user: User | null) => void;
   activeCompanyId: string | null;
   activeWorkspace: Workspace | null;
@@ -59,6 +62,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>(loadCachedWorkspaces);
+
+  const mapWorkspaces = (items: any[]): Workspace[] => (Array.isArray(items) ? items : [])
+    .map((w: any) => ({
+      id: w.companyId || w.company?.id || w.id,
+      name: w.company?.name ?? w.name ?? "Workspace",
+      role: (w.role || "member") as WorkspaceRole,
+      status: w.status || "active",
+      isVerified: !!w.isVerified,
+      logoUrl: w.company?.logoUrl ?? w.logoUrl ?? null,
+      company: w.company ? {
+        id: w.company.id,
+        name: w.company.name,
+        companyCode: w.company.companyCode,
+        industry: w.company.industry ?? null,
+        logoUrl: w.company.logoUrl ?? null,
+      } : w.id ? { id: w.id, name: w.name, logoUrl: w.logoUrl ?? null } : null,
+    }))
+    .filter((w: Workspace) => !!w.id && w.status !== "removed");
 
   const activeWorkspace = useMemo(() => {
     if (!activeCompanyId) return workspaces[0] || null;
@@ -86,10 +107,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const stored = localStorage.getItem("activeCompanyId");
     const validIds = nextWorkspaces.map((w) => w.id);
-    const resolved =
-      stored && (validIds.length === 0 || validIds.includes(stored))
+    const resolved = nextWorkspaces.length === 0
+      ? null
+      : stored && validIds.includes(stored)
         ? stored
-        : (nextWorkspaces[0]?.id || nextUser.companyId || null);
+        : nextWorkspaces[0]?.id || null;
 
     if (resolved) localStorage.setItem("activeCompanyId", resolved);
     else localStorage.removeItem("activeCompanyId");
@@ -171,6 +193,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const refreshWorkspaces = async (): Promise<Workspace[]> => {
+    const response = await api.getMyWorkspaces();
+    const payload = (response as any)?.data ?? {};
+    const next = mapWorkspaces(payload.workspaces ?? (response as any)?.workspaces ?? []);
+    saveCachedWorkspaces(next);
+    initializeWorkspaceState(user, next);
+    return next;
   };
 
   useEffect(() => {
@@ -352,6 +383,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loginWithGoogleToken,
         logout,
         refreshUser,
+        refreshWorkspaces,
         setUser,
         activeCompanyId,
         activeWorkspace,

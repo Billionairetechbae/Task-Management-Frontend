@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { useQueryClient } from "@tanstack/react-query";
 import FileViewer from "@/components/FileViewer";
 import { getFileIcon } from "@/utils/fileIcons";
 import {
@@ -98,6 +99,7 @@ const formatBytes = (b: number) => {
 
 export default function Drive() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const [tab, setTab] = useState<Tab>("workspace");
@@ -173,23 +175,25 @@ export default function Drive() {
 
   const handleDeleteFile = async (file: FolderFile) => {
     if (!selectedFolder) return;
-    if (!window.confirm(`Delete "${file.fileName}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Move "${file.fileName}" to Trash? The file can be restored for 30 days.`)) return;
     try {
       await api.deleteFile(file.id);
       setFiles((prev) => prev.filter((f) => f.id !== file.id));
-      toast({ title: "File deleted" });
+      await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trash" });
+      toast({ title: "File moved to Trash." });
     } catch (err: any) {
       toast({ title: "Delete failed", description: err.message, variant: "destructive" });
     }
   };
 
   const handleDeleteFolder = async (folder: Folder) => {
-    if (!window.confirm(`Delete "${folder.name}"? This removes all files inside.`)) return;
+    if (!window.confirm(`Move "${folder.name}" to Trash? Its contents can be restored for 30 days.`)) return;
     try {
       setLoading(true);
       await api.deleteFolder(folder.id);
       await loadFolders();
-      toast({ title: "Folder deleted" });
+      await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trash" });
+      toast({ title: "Folder moved to Trash." });
     } catch (err: any) {
       if (err.status === 403) {
         toast({ title: "Delete failed", description: "Only the folder owner can delete.", variant: "destructive" });

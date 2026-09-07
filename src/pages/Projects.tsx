@@ -6,7 +6,7 @@ import { api, Project } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, FolderKanban, Calendar, ChevronRight } from "lucide-react";
+import { Plus, FolderKanban, Calendar, ChevronRight, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ import { useProjectsQuery } from "@/hooks/useCoreQueries";
 import { queryKeys } from "@/lib/queryKeys";
 import { SkeletonProjectGrid, RefreshingIndicator } from "@/components/skeletons/AppSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -29,6 +30,9 @@ export default function Projects() {
     (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
     !canPerformRoleOperation("view_all_projects", workspaceRole);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const canDeleteProjects = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
 
   const { data, isPending, isFetching, isError, error } = useProjectsQuery();
   const projects: Project[] = data ?? [];
@@ -52,6 +56,20 @@ export default function Projects() {
 
   const handleProjectCreated = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeCompanyId) });
+  };
+
+  const deleteProject = async () => {
+    if (!projectToDelete) return;
+    setDeleting(true);
+    try {
+      await api.deleteProject(projectToDelete.id);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeCompanyId) });
+      await queryClient.invalidateQueries({ queryKey: ["trash", activeCompanyId] });
+      toast({ title: "Project moved to Trash." });
+      setProjectToDelete(null);
+    } catch (error: any) {
+      toast({ title: "Unable to delete project", description: error?.statusCode === 403 ? "You don't have permission to perform this action." : "We couldn't complete this action. Please try again.", variant: "destructive" });
+    } finally { setDeleting(false); }
   };
 
   return (
@@ -135,7 +153,7 @@ export default function Projects() {
                         {p.status}
                       </span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {canDeleteProjects ? <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`Delete ${p.name}`} onClick={(event) => { event.stopPropagation(); setProjectToDelete(p); }}><Trash2 className="h-4 w-4" /></Button> : <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
                     {p.description || "No description"}
@@ -177,6 +195,7 @@ export default function Projects() {
         onSuccess={handleProjectCreated}
         mode="create"
       />
+      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Move project to Trash?</AlertDialogTitle><AlertDialogDescription>This project and its active tasks/files will be removed from the workspace and kept in Trash for 30 days.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={deleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Move to Trash</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </DashboardLayout>
   );
 }

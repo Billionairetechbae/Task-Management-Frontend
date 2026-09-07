@@ -56,6 +56,7 @@ import Integrations from "./pages/Integrations";
 
 import Calendar from "./pages/Calendar";
 import Help from "./pages/Help";
+import Trash from "./pages/Trash";
 
 const App = () => {
   const { user, loading } = useAuth();
@@ -277,7 +278,7 @@ const App = () => {
         <Route
           path="/company-profile"
           element={
-            <ProtectedRoute allowedRoles={["executive"]}>
+            <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
               <CompanyProfile />
             </ProtectedRoute>
           }
@@ -325,6 +326,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="/trash" element={<ProtectedRoute><Trash /></ProtectedRoute>} />
 
         <Route
           path="/assistance-requests"

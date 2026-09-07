@@ -47,6 +47,7 @@ import CompanyBadge from "@/components/CompanyBadge";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TaskEditDrawerProps {
   open?: boolean;
@@ -76,6 +77,7 @@ export default function TaskEditDrawer({
 }: TaskEditDrawerProps) {
   const { user, workspaceRole } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -407,7 +409,8 @@ export default function TaskEditDrawer({
       setTask((prev) =>
         prev ? { ...prev, attachments: prev.attachments?.filter((a) => a.id !== att.id) } : prev
       );
-      toast({ title: "Attachment removed" });
+      await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trash" });
+      toast({ title: "File moved to Trash." });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
@@ -418,7 +421,8 @@ export default function TaskEditDrawer({
     try {
       setDeleting(true);
       await api.deleteTask(task.id);
-      toast({ title: "Task deleted" });
+      await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trash" });
+      toast({ title: "Task moved to Trash." });
       onTaskDeleted(task.id);
       onOpenChange(false);
     } catch (err: any) {
@@ -918,7 +922,7 @@ export default function TaskEditDrawer({
                       <h3 className="font-semibold">Danger Zone</h3>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Permanently delete this task and all its attachments. This action cannot be undone.
+                      Move this task and its related content to Trash for 30 days.
                     </p>
                     <Button
                       variant="destructive"
@@ -941,9 +945,9 @@ export default function TaskEditDrawer({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+            <AlertDialogTitle>Move task to Trash?</AlertDialogTitle>
             <AlertDialogDescription>
-              Type <strong>DELETE</strong> to confirm. This will permanently remove the task and all data.
+              This task, its subtasks, comments and attachments will be removed from active views and kept in Trash for 30 days. Type <strong>DELETE</strong> to confirm.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -961,7 +965,7 @@ export default function TaskEditDrawer({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1005,11 +1009,12 @@ export default function TaskEditDrawer({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this file?</AlertDialogTitle>
+            <AlertDialogTitle>Move this file to Trash?</AlertDialogTitle>
             <AlertDialogDescription>
               {attachmentToRemove
-                ? `"${attachmentToRemove.fileName}" will be permanently removed from this task.`
+                ? `"${attachmentToRemove.fileName}" will be moved to Trash for 30 days.`
                 : ""}
+              {(attachmentToRemove as any)?.source === "google-drive" && " The original Google Drive file will not be deleted."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1051,6 +1056,3 @@ export default function TaskEditDrawer({
     </>
   );
 }
-
-
-
