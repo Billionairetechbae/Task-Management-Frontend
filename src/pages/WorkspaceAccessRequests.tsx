@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { api, WorkspaceAccessRequest, WorkspaceRolePermissionKey } from "@/lib/api";
+import { api, WorkspaceAccessRequest, WorkspaceJoinRequest, WorkspaceRolePermissionKey } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { useToast } from "@/hooks/use-toast";
@@ -93,6 +93,7 @@ export default function WorkspaceAccessRequests() {
 
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<WorkspaceAccessRequest[]>([]);
+  const [joinRequests, setJoinRequests] = useState<WorkspaceJoinRequest[]>([]);
   const [submittingKey, setSubmittingKey] = useState<WorkspaceRolePermissionKey | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [reasonByPermission, setReasonByPermission] = useState<Record<string, string>>({});
@@ -104,6 +105,7 @@ export default function WorkspaceAccessRequests() {
     user?.role === "admin";
 
   const isTeamMember = workspaceRole === "member";
+  const isJoinApprover = workspaceRole === "owner" || workspaceRole === "admin" || user?.role === "admin";
 
   const pendingRequests = useMemo(
     () => requests.filter((request) => request.status === "pending"),
@@ -129,6 +131,10 @@ export default function WorkspaceAccessRequests() {
       const response = await api.listAccessRequests();
       const list = response?.data?.requests || [];
       setRequests(Array.isArray(list) ? list : []);
+      if (isJoinApprover) {
+        const joinResponse = await api.listWorkspaceJoinRequests();
+        setJoinRequests(Array.isArray(joinResponse?.data?.requests) ? joinResponse.data.requests : []);
+      }
     } catch (error: any) {
       toast({
         title: "Failed to load access requests",
@@ -137,6 +143,19 @@ export default function WorkspaceAccessRequests() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleJoinDecision = async (requestId: string, action: "approve" | "reject") => {
+    try {
+      setDecidingId(requestId);
+      await api.decideWorkspaceJoinRequest(requestId, action);
+      toast({ title: action === "approve" ? "Member approved" : "Request rejected" });
+      await loadRequests();
+    } catch (error: any) {
+      toast({ title: "Decision failed", description: error?.message || "Could not update the join request.", variant: "destructive" });
+    } finally {
+      setDecidingId(null);
     }
   };
 
@@ -464,6 +483,20 @@ export default function WorkspaceAccessRequests() {
 
             <CardContent className="space-y-3">
               {pendingRequests.map((request) => renderRequestCard(request, true))}
+            </CardContent>
+          </Card>
+        )}
+
+        {isJoinApprover && joinRequests.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><UserCheck className="h-4 w-4 text-primary" />Workspace join requests</CardTitle><CardDescription>Approve or reject registered users who entered this workspace's company code.</CardDescription></CardHeader>
+            <CardContent className="space-y-3">
+              {joinRequests.map((request) => (
+                <div key={request.id} className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div><p className="font-semibold text-sm">{getRequesterName(request as WorkspaceAccessRequest)}</p><p className="text-xs text-muted-foreground">{request.requester?.email}</p><p className="text-[11px] text-muted-foreground">{new Date(request.createdAt).toLocaleString()}</p></div>
+                  <div className="flex gap-2"><Button size="sm" disabled={decidingId === request.id} onClick={() => handleJoinDecision(request.id, "approve")}>Approve</Button><Button size="sm" variant="outline" disabled={decidingId === request.id} onClick={() => handleJoinDecision(request.id, "reject")}>Reject</Button></div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}

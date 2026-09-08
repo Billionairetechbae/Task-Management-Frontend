@@ -1215,6 +1215,13 @@ export interface WorkspaceAccessRequest {
   };
 }
 
+export interface WorkspaceJoinRequest {
+  id: string;
+  status: "pending" | "approved" | "denied" | string;
+  createdAt: string;
+  requester?: { id: string; email: string; firstName: string; lastName: string };
+}
+
 
 /* ============================
    PROFESSIONAL PROFILE TYPES
@@ -1548,7 +1555,14 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      const message: string = result?.message || "Request failed";
+      let message: string = result?.message || "Request failed";
+
+      if (response.status === 401 && /user belonging to this token|session is no longer valid/i.test(message)) {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("token");
+        localStorage.removeItem("activeCompanyId");
+        message = "Your session has expired. Please sign in again.";
+      }
 
       // Rate-limit guard — surface a clean message for 429 responses.
       if (response.status === 429) {
@@ -1835,9 +1849,23 @@ class ApiClient {
 
   buildIntegrationConnectUrl(provider: string): string {
     const base = API_BASE_URL || "";
-    const token = localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
-    const q = token ? `?token=${encodeURIComponent(token)}` : "";
-    return `${base}/integrations/${provider}/connect${q}`;
+    return `${base}/integrations/${encodeURIComponent(provider)}/connect`;
+  }
+
+  buildWhatsAppClickToChatUrl(): string {
+    return `https://wa.me/6589932607?text=${encodeURIComponent("Hello")}`;
+  }
+
+  async inspectWorkspaceInvite(token: string): Promise<any> {
+    return this.get(`/invites/${encodeURIComponent(token)}`, { includeWorkspace: false });
+  }
+
+  async resolveWorkspaceCode(companyCode: string): Promise<any> {
+    return this.request("/company/join/resolve", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify({ companyCode }) });
+  }
+
+  async requestWorkspaceJoin(companyCode: string): Promise<any> {
+    return this.request("/company/join/requests", { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify({ companyCode }) });
   }
 
   async disconnectIntegration(provider: string): Promise<any> {
@@ -3635,6 +3663,18 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       method: "PATCH",
       headers: this.getAuthHeaders(true),
       body: JSON.stringify(data),
+    });
+  }
+
+  async listWorkspaceJoinRequests(): Promise<{ status: string; data: { requests: WorkspaceJoinRequest[] } }> {
+    return this.request("/companies/join/requests", { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async decideWorkspaceJoinRequest(id: string, action: "approve" | "reject"): Promise<{ status: string; message?: string }> {
+    return this.request(`/companies/join/requests/${id}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify({ action }),
     });
   }
 

@@ -25,6 +25,13 @@ const Login = () => {
   useEffect(() => {
     if (!user) return;
 
+    const pendingInvite = sessionStorage.getItem("pending_workspace_invite");
+    if (pendingInvite) {
+      sessionStorage.removeItem("pending_workspace_invite");
+      navigate(`/signup-with-invite?token=${encodeURIComponent(pendingInvite)}`);
+      return;
+    }
+
     const ws = Array.isArray(workspaces) ? workspaces : [];
     if (ws.length === 0) {
       navigate("/onboarding/workspace");

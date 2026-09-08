@@ -8,31 +8,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
-const tryDecodeEmailFromToken = (token: string): string => {
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return "";
-    const payload = parts[1];
-    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-    const json =
-      typeof window !== "undefined" && typeof window.atob === "function"
-        ? window.atob(padded)
-        : "";
-    if (!json) return "";
-    const parsed = JSON.parse(json);
-    const maybeEmail =
-      parsed?.email ||
-      parsed?.inviteEmail ||
-      parsed?.invitedEmail ||
-      parsed?.userEmail ||
-      "";
-    return String(maybeEmail).toLowerCase().trim();
-  } catch {
-    return "";
-  }
-};
-
 const Invite = () => {
   const { user, refreshUser, setActiveCompanyId, workspaces } = useAuth();
   const { toast } = useToast();
@@ -43,18 +18,14 @@ const Invite = () => {
   const [formLoading, setFormLoading] = useState(false);
   const token = useMemo(() => params.token || search.get("token") || "", [params.token, search]);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [inviteInfo, setInviteInfo] = useState<{ existingAccount: boolean; maskedEmail: string; workspaceName: string } | null>(null);
+  const [inspectFailed, setInspectFailed] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
   const hasAutoAcceptedRef = useRef(false);
-  const inviteEmail = useMemo(() => {
-    const fromQuery = (search.get("email") || search.get("inviteEmail") || "").toLowerCase().trim();
-    if (fromQuery) return fromQuery;
-    return tryDecodeEmailFromToken(token);
-  }, [search, token]);
-  const lockedInviteEmail = inviteEmail.length > 0;
-
   useEffect(() => {
-    if (!lockedInviteEmail) return;
-    setForm((prev) => ({ ...prev, email: inviteEmail }));
-  }, [inviteEmail, lockedInviteEmail]);
+    if (!token) return;
+    api.inspectWorkspaceInvite(token).then((res: any) => setInviteInfo(res?.data?.invite || null)).catch(() => setInspectFailed(true));
+  }, [token]);
 
   const resolveDashboardRoute = () => {
     if (!user) return "/dashboard";
@@ -95,9 +66,8 @@ const Invite = () => {
     e.preventDefault();
     setFormLoading(true);
     try {
-      const res: any = await api.signupWithInvite({ token: token as string, ...form });
-      const cid = res?.data?.company?.id || res?.data?.companyId || res?.companyId;
-      await completeWorkspaceJoin(cid);
+      await api.signupWithInvite({ token: token as string, ...form });
+      setSignupComplete(true);
     } catch (err: any) {
       toast({ title: "Signup failed", description: err?.message || "Try again", variant: "destructive" as any });
     } finally {
@@ -109,17 +79,16 @@ const Invite = () => {
     const shouldAutoAccept =
       !!user &&
       !!token &&
-      !!inviteEmail &&
-      inviteEmail === (user.email || "").toLowerCase().trim() &&
+      !!inviteInfo &&
       !hasAutoAcceptedRef.current;
 
     if (!shouldAutoAccept) return;
     hasAutoAcceptedRef.current = true;
     onAccept();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, token, inviteEmail]);
+  }, [user, token, inviteInfo]);
 
-  if (!token) {
+  if (!token || inspectFailed) {
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
         <Card className="max-w-md w-full">
@@ -134,6 +103,8 @@ const Invite = () => {
       </div>
     );
   }
+
+  if (!inviteInfo) return <div className="min-h-screen flex items-center justify-center">Checking invitation…</div>;
 
   if (user) {
     return (
@@ -150,6 +121,14 @@ const Invite = () => {
         </Card>
       </div>
     );
+  }
+
+  if (inviteInfo.existingAccount) {
+    return <div className="min-h-screen flex items-center justify-center px-6"><Card className="max-w-md w-full"><CardHeader><CardTitle>Sign in to accept</CardTitle><CardDescription>This invitation for {inviteInfo.maskedEmail} joins {inviteInfo.workspaceName}.</CardDescription></CardHeader><CardContent><Button onClick={() => { sessionStorage.setItem("pending_workspace_invite", token); navigate("/"); }}>Sign in securely</Button></CardContent></Card></div>;
+  }
+
+  if (signupComplete) {
+    return <div className="min-h-screen flex items-center justify-center px-6"><Card className="max-w-md w-full"><CardHeader><CardTitle>Verify your email</CardTitle><CardDescription>We created your account and preserved this workspace invitation. Verify your email, then sign in to finish joining {inviteInfo.workspaceName}.</CardDescription></CardHeader><CardContent><Button onClick={() => { sessionStorage.setItem("pending_workspace_invite", token); navigate("/"); }}>Continue to sign in</Button></CardContent></Card></div>;
   }
 
   return (
@@ -178,14 +157,7 @@ const Invite = () => {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 required
-                readOnly={lockedInviteEmail}
-                disabled={lockedInviteEmail}
               />
-              {lockedInviteEmail && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Email is pre-filled from your invite link.
-                </p>
-              )}
             </div>
             <div>
               <Label>Password</Label>

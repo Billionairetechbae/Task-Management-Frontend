@@ -40,6 +40,8 @@ export interface IntegrationActivityEvent {
   type?: string;
 }
 
+const SUPPORTED_INTEGRATION_IDS = new Set(["google", "whatsapp"]);
+
 // Fallback metadata for well-known providers so the UI is beautiful
 // even before the backend enriches its response. NEVER used to hide
 // or change providers the backend actually returned.
@@ -167,7 +169,9 @@ export function extractIntegrations(payload: any): Integration[] {
     payload ??
     [];
   if (!Array.isArray(list)) return [];
-  return list.map(normalizeIntegration);
+  return list
+    .map(normalizeIntegration)
+    .filter((integration) => SUPPORTED_INTEGRATION_IDS.has(integration.id));
 }
 
 export function extractActivity(payload: any): IntegrationActivityEvent[] {

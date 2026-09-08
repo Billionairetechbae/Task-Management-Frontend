@@ -19,7 +19,8 @@ const WorkspaceOnboarding = () => {
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState<string>("");
   const [size, setSize] = useState<string>("");
-  const [token, setToken] = useState("");
+  const [companyCode, setCompanyCode] = useState("");
+  const [resolvedWorkspace, setResolvedWorkspace] = useState<string | null>(null);
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,18 +53,15 @@ const WorkspaceOnboarding = () => {
     e.preventDefault();
     setJoining(true);
     try {
-      const res: any = await api.acceptWorkspaceInvite(token);
-      const companyId = res?.data?.company?.id || res?.data?.companyId || res?.companyId;
-      const wsRes: any = await api.getWorkspaces();
-      localStorage.setItem("workspaces_cache", JSON.stringify(wsRes?.data?.workspaces || []));
-      if (companyId) {
-        localStorage.setItem("activeCompanyId", companyId);
-        window.location.reload();
+      if (!resolvedWorkspace) {
+        const res: any = await api.resolveWorkspaceCode(companyCode.trim());
+        setResolvedWorkspace(res?.data?.workspace?.name || "Workspace");
         return;
       }
-      window.location.reload();
+      const res: any = await api.requestWorkspaceJoin(companyCode.trim());
+      toast({ title: "Request sent", description: res?.message || `Your request to join ${resolvedWorkspace} has been sent for approval.` });
     } catch (err: any) {
-      toast({ title: "Accept invite failed", description: err?.message || "Try again", variant: "destructive" as any });
+      toast({ title: "Join request failed", description: err?.message || "Check the company code and try again", variant: "destructive" as any });
     } finally {
       setJoining(false);
     }
@@ -74,13 +72,13 @@ const WorkspaceOnboarding = () => {
       <div className="w-full">
         <div className="mb-6">
           <h2 className="text-3xl font-bold">Set up your workspace</h2>
-          <p className="text-muted-foreground">Create a new workspace or join with an invite.</p>
+          <p className="text-muted-foreground">Create a new workspace or request to join using its company code.</p>
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="create">Create workspace</TabsTrigger>
-            <TabsTrigger value="join">Join with invite</TabsTrigger>
+            <TabsTrigger value="join">Join a Workspace</TabsTrigger>
           </TabsList>
 
           <TabsContent value="create">
@@ -139,16 +137,18 @@ const WorkspaceOnboarding = () => {
           <TabsContent value="join">
             <Card>
               <CardHeader>
-                <CardTitle>Join with invite</CardTitle>
-                <CardDescription>Paste your invite token or link to join.</CardDescription>
+                <CardTitle>Join a Workspace</CardTitle>
+                <CardDescription>Enter the company code shared by the workspace owner.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form className="space-y-3" onSubmit={onJoin}>
                   <div>
-                    <Label>Token or Link</Label>
-                    <Input value={token} onChange={(e) => setToken(e.target.value)} required />
+                    <Label>Company Code</Label>
+                    <Input value={companyCode} onChange={(e) => { setCompanyCode(e.target.value.toUpperCase()); setResolvedWorkspace(null); }} placeholder="RICHIE-5WMZ" required />
+                    <p className="text-xs text-muted-foreground mt-1">Example: RICHIE-5WMZ</p>
                   </div>
-                  <Button type="submit" disabled={joining}>{joining ? "Joining..." : "Accept invite"}</Button>
+                  {resolvedWorkspace && <p className="rounded-md border p-3 font-medium">{resolvedWorkspace}</p>}
+                  <Button type="submit" disabled={joining}>{joining ? "Please wait..." : resolvedWorkspace ? "Request to Join" : "Find Workspace"}</Button>
                 </form>
               </CardContent>
             </Card>

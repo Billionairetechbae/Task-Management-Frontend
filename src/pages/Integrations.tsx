@@ -140,6 +140,11 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
       return;
     }
 
+    if (integration.id === "whatsapp") {
+      window.open(api.buildWhatsAppClickToChatUrl(), "_blank", "noopener,noreferrer");
+      return;
+    }
+
     // Prefer backend-provided authUrl when available; fall back to a direct redirect.
     setBusyProvider(integration.id);
     api
