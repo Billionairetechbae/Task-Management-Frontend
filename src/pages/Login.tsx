@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Check, ArrowRight } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { readPreferences } from "@/hooks/use-local-preferences";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,9 +11,11 @@ import Logo from "@/components/Logo";
 import LegalLinks from "@/components/LegalLinks";
 import { api } from "@/lib/api";
 import { GoogleAuthButton } from "@/components/GoogleAuthButton";
+import { consumeWhatsAppConnectReturn } from "@/lib/whatsappConnectJourney";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, user, activeCompanyId, setActiveCompanyId, workspaces } = useAuth();
   const { toast } = useToast();
 
@@ -24,6 +26,14 @@ const Login = () => {
 
   useEffect(() => {
     if (!user) return;
+
+    if (searchParams.get("continue") === "whatsapp-connect") {
+      const returnPath = consumeWhatsAppConnectReturn();
+      if (returnPath) {
+        navigate(returnPath, { replace: true });
+        return;
+      }
+    }
 
     const pendingInvite = sessionStorage.getItem("pending_workspace_invite");
     if (pendingInvite) {
@@ -51,7 +61,7 @@ const Login = () => {
     // Respect user's saved default landing page preference when available.
     const defaultLanding = readPreferences().defaultLandingPage || "/dashboard";
     navigate(defaultLanding);
-  }, [user, workspaces, activeCompanyId, setActiveCompanyId, navigate]);
+  }, [user, workspaces, activeCompanyId, setActiveCompanyId, navigate, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
