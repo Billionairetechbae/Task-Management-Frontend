@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { consumeAuthReturnPath, safeInternalReturnPath } from "@/lib/authReturnPath";
 
 const AuthGoogleCallback = () => {
   const [searchParams] = useSearchParams();
@@ -44,7 +45,7 @@ const AuthGoogleCallback = () => {
         }
 
         const token = searchParams.get("token");
-        const redirect = searchParams.get("redirect");
+        const redirect = safeInternalReturnPath(searchParams.get("redirect"));
 
         // If no token but integration_return, treat as integration success and go back
         if (!token && integrationReturn) {
@@ -70,10 +71,8 @@ const AuthGoogleCallback = () => {
           if (integrationReturn) {
             sessionStorage.removeItem("integration_return");
             navigate(`${integrationReturn}?connected=google`);
-          } else if (redirect) {
-            navigate(redirect);
           } else {
-            navigate("/dashboard");
+            navigate(consumeAuthReturnPath() || redirect || "/dashboard");
           }
           return;
         }
@@ -91,10 +90,8 @@ const AuthGoogleCallback = () => {
         if (integrationReturn) {
           sessionStorage.removeItem("integration_return");
           navigate(`${integrationReturn}?connected=google`);
-        } else if (redirect) {
-          navigate(redirect);
         } else {
-          navigate("/dashboard");
+          navigate(consumeAuthReturnPath() || redirect || "/dashboard");
         }
       } catch (err: any) {
         console.error("Google callback error:", err);

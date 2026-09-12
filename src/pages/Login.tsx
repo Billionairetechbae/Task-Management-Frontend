@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Check, ArrowRight } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { readPreferences } from "@/hooks/use-local-preferences";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,9 +12,11 @@ import LegalLinks from "@/components/LegalLinks";
 import { api } from "@/lib/api";
 import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 import { consumeWhatsAppConnectReturn } from "@/lib/whatsappConnectJourney";
+import { consumeAuthReturnPath, preserveAuthReturnPath } from "@/lib/authReturnPath";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { login, user, activeCompanyId, setActiveCompanyId, workspaces } = useAuth();
   const { toast } = useToast();
@@ -23,6 +25,10 @@ const Login = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    preserveAuthReturnPath((location.state as { returnTo?: unknown } | null)?.returnTo);
+  }, [location.state]);
 
   useEffect(() => {
     if (!user) return;
@@ -56,6 +62,12 @@ const Login = () => {
         window.location.reload();
         return;
       }
+    }
+
+    const returnPath = consumeAuthReturnPath();
+    if (returnPath) {
+      navigate(returnPath, { replace: true });
+      return;
     }
 
     // Respect user's saved default landing page preference when available.
