@@ -1,3 +1,4 @@
+import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -81,6 +82,7 @@ export default function WhatsAppConnect() {
   const maskedEmail = user?.email?.replace(/^(.{2}).*(@.*)$/, "$1***$2");
 
   return <main className="min-h-screen bg-background flex items-center justify-center p-4"><section className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-lg"><Logo className="h-8 mb-6" />
+    <IntegrationLogo integration={{ id: "whatsapp", name: "WhatsApp" }} size={36} decorative={false} className="mb-4" />
     {state === "loading" && <p>Checking secure connection…</p>}
     {state === "invalid" && <><h1 className="text-xl font-bold">Link unavailable</h1><p className="text-muted-foreground mt-2">This WhatsApp connection link has expired or is no longer available. Return to WhatsApp and request a new connection link.</p></>}
     {state === "auth-required" && <div className="space-y-4"><h1 className="text-2xl font-bold">Sign in to connect WhatsApp</h1><p className="text-muted-foreground">You need to sign in to your Admiino account before connecting WhatsApp.</p>{error && <p className="text-sm text-destructive">{error}</p>}<Button className="w-full" onClick={signIn}>Sign in</Button><Button variant="ghost" className="w-full" onClick={cancel}>Cancel</Button></div>}

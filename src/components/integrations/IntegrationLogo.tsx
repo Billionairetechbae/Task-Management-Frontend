@@ -1,24 +1,35 @@
 import { Integration, PROVIDER_META } from "@/lib/integrations";
 import { cn } from "@/lib/utils";
 
-/**
- * Provider-agnostic logo tile. Uses colored initials so any provider the
- * backend returns renders without extra work. If we later ship SVG logos,
- * this is the only component to update.
- */
+/** Local provider artwork, with initials only for providers without an asset. */
 export const IntegrationLogo = ({
   integration,
-  size = 40,
+  size = 36,
   className,
+  decorative = true,
 }: {
   integration: Pick<Integration, "id" | "name">;
   size?: number;
   className?: string;
+  decorative?: boolean;
 }) => {
   const meta = PROVIDER_META[integration.id];
   const brand = meta?.brand ?? "hsl(var(--primary))";
   const letter = (integration.name?.[0] ?? "?").toUpperCase();
   const px = `${size}px`;
+
+  if (meta?.icon) {
+    return (
+      <img
+        src={meta.icon}
+        alt={decorative ? "" : meta.name}
+        width={size}
+        height={size}
+        className={cn("object-contain shrink-0", className)}
+        style={{ width: px, height: px }}
+      />
+    );
+  }
 
   return (
     <div

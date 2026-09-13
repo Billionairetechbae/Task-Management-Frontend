@@ -1,3 +1,6 @@
+import googleLogo from "@/assets/Google__G__logo.svg.webp";
+import whatsappLogo from "@/assets/whatsapp-logo-icon-isolated-on-transparent-background-free-png.webp";
+
 // Shared helpers/types for the Integration Hub.
 // The backend is the source of truth — we only normalize its response
 // and map provider IDs to a local logo/description fallback so we can
@@ -47,13 +50,20 @@ const SUPPORTED_INTEGRATION_IDS = new Set(["google", "whatsapp"]);
 // or change providers the backend actually returned.
 export const PROVIDER_META: Record<
   string,
-  { name: string; description: string; brand: string; capabilities?: string[] }
+  { name: string; description: string; brand: string; icon?: string; capabilities?: string[] }
 > = {
   google: {
     name: "Google",
+    icon: googleLogo,
     description: "Calendar, Drive, Meet, Docs and Sheets in one place.",
     brand: "#4285F4",
     capabilities: ["Calendar", "Drive", "Meet", "Docs", "Sheets"],
+  },
+  whatsapp: {
+    name: "WhatsApp",
+    description: "Securely link your WhatsApp identity",
+    brand: "#25D366",
+    icon: whatsappLogo,
   },
   microsoft: {
     name: "Microsoft 365",
