@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ClipboardList, FolderKanban, Users } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, ClipboardList, FolderKanban, Users } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ContentCard, EmptyState, LoadingState, PageHeader, StatsCard } from "@/components/dashboard/DashboardComponents";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api, Project, Team, WorkspaceInsights as WorkspaceInsightsData, WorkspaceInsightsHistory } from "@/lib/api";
+import { api, Project, Team, WorkspaceDeliveryInsights, WorkspaceInsights as WorkspaceInsightsData, WorkspaceInsightsHistory } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +75,11 @@ export default function WorkspaceInsights() {
     queryFn: () => api.getWorkspaceInsightsHistory(historyFilters),
     enabled: Boolean(activeCompanyId),
   });
+  const deliveryQuery = useQuery({
+    queryKey: ["workspace-insight-delivery", activeCompanyId, historyFilters],
+    queryFn: () => api.getWorkspaceDeliveryInsights(historyFilters),
+    enabled: Boolean(activeCompanyId),
+  });
 
   useEffect(() => {
     if (insightsQuery.isError) toast({ title: "Unable to load workspace insights", description: (insightsQuery.error as Error).message, variant: "destructive" });
@@ -82,6 +87,7 @@ export default function WorkspaceInsights() {
 
   const data = insightsQuery.data?.data as WorkspaceInsightsData | undefined;
   const history = historyQuery.data?.data as WorkspaceInsightsHistory | undefined;
+  const delivery = deliveryQuery.data?.data as WorkspaceDeliveryInsights | undefined;
   const teams = (teamsQuery.data?.data?.teams || []) as Team[];
   const projectPayload = projectsQuery.data?.data as { projects?: Project[] } | undefined;
   const projects = projectPayload?.projects || [];
@@ -128,6 +134,11 @@ export default function WorkspaceInsights() {
             {data.projects.length === 0 ? <EmptyState icon={FolderKanban} title="No Projects in this view" description="Try clearing a filter or create a project in this workspace." /> : <div className="divide-y divide-border">{data.projects.map((project) => <div key={project.id} className="p-4"><div className="flex items-center justify-between gap-3"><p className="font-medium">{project.name}</p><span className="text-xs text-muted-foreground">{project.completionRate}% complete</span></div><p className="mt-1 text-xs text-muted-foreground">{project.team?.name || "No Team"} · {project.taskCount} tasks · {project.overdueTasks} overdue</p>{project.riskIndicators.length > 0 && <p className="mt-2 text-xs text-destructive">{project.riskIndicators.join(" · ")}</p>}</div>)}</div>}
           </ContentCard>
         </div>
+
+        <ContentCard>
+          <div className="border-b border-border pb-4"><h2 className="flex items-center gap-2 font-semibold"><Activity className="h-4 w-4" />Delivery analytics</h2><p className="text-xs text-muted-foreground">Lifecycle-derived delivery metrics in UTC. These are separate from activity history.</p></div>
+          {deliveryQuery.isLoading ? <LoadingState message="Loading delivery analytics..." /> : deliveryQuery.isError ? <p className="py-6 text-sm text-destructive">Unable to load delivery analytics.</p> : delivery ? <div className="space-y-5 pt-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><div><p className="text-xs text-muted-foreground">Completed tasks</p><p className="text-xl font-semibold">{delivery.summary.completedTasks}</p></div><div><p className="text-xs text-muted-foreground">Throughput</p><p className="text-xl font-semibold">{delivery.summary.throughputCount}</p></div><div><p className="text-xs text-muted-foreground">Reopened</p><p className="text-xl font-semibold">{delivery.summary.reopenedTasks}</p></div><div><p className="text-xs text-muted-foreground">Average cycle</p><p className="text-xl font-semibold">{delivery.summary.averageCycleTimeDays === null ? "-" : `${delivery.summary.averageCycleTimeDays}d`}</p></div><div><p className="text-xs text-muted-foreground">Overdue completed</p><p className="text-xl font-semibold">{delivery.summary.overdueCompletedCount}</p></div></div><div className="space-y-2">{delivery.trends.slice(-14).map((day) => { const max = Math.max(...delivery.trends.map((item) => item.throughput), 1); return <div key={day.date} className="flex items-center gap-3 text-xs"><span className="w-24 shrink-0 text-muted-foreground">{day.date}</span><div className="h-3 flex-1 rounded bg-muted"><div className="h-3 rounded bg-primary" style={{ width: `${Math.round((day.throughput / max) * 100)}%` }} /></div><span className="w-8 text-right font-medium">{day.throughput}</span></div>; })}</div><div className="grid gap-4 md:grid-cols-3"><div><h3 className="mb-2 text-sm font-semibold">By Team</h3>{delivery.byTeam.length ? delivery.byTeam.slice(0, 5).map((item) => <p key={item.id || "none"} className="flex justify-between text-xs text-muted-foreground"><span>{item.name}</span><span>{item.throughputCount}</span></p>) : <p className="text-xs text-muted-foreground">No lifecycle data.</p>}</div><div><h3 className="mb-2 text-sm font-semibold">By Project</h3>{delivery.byProject.length ? delivery.byProject.slice(0, 5).map((item) => <p key={item.id || "none"} className="flex justify-between text-xs text-muted-foreground"><span>{item.name}</span><span>{item.throughputCount}</span></p>) : <p className="text-xs text-muted-foreground">No lifecycle data.</p>}</div><div><h3 className="mb-2 text-sm font-semibold">By Member</h3>{delivery.byMember.length ? delivery.byMember.slice(0, 5).map((item) => <p key={item.id || "none"} className="flex justify-between text-xs text-muted-foreground"><span>{item.name}</span><span>{item.throughputCount}</span></p>) : <p className="text-xs text-muted-foreground">No lifecycle data.</p>}</div></div></div> : <p className="pt-4 text-sm text-muted-foreground">No lifecycle data in this period.</p>}
+        </ContentCard>
 
         <ContentCard>
           <div className="flex flex-col gap-4 border-b border-border pb-4 md:flex-row md:items-end md:justify-between">

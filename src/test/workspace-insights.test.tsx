@@ -8,6 +8,7 @@ const apiMock = vi.hoisted(() => ({
   getProjects: vi.fn(),
   getWorkspaceInsights: vi.fn(),
   getWorkspaceInsightsHistory: vi.fn(),
+  getWorkspaceDeliveryInsights: vi.fn(),
 }));
 const authMock = vi.hoisted(() => ({ activeCompanyId: "workspace-a" }));
 
@@ -44,6 +45,7 @@ beforeEach(() => {
   apiMock.getProjects.mockResolvedValue({ data: { projects: [{ id: "project-a", name: "Launch" }] } });
   apiMock.getWorkspaceInsights.mockResolvedValue({ data: insights });
   apiMock.getWorkspaceInsightsHistory.mockResolvedValue({ data: { period: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-19T00:00:00.000Z", timezone: "UTC", activityDerived: true }, summary: { totalActivity: 2, taskCreated: 1, statusChanges: 1, completedStatusChanges: 1, assignmentActivity: 0, projectActivity: 2 }, trends: [{ date: "2026-09-19", taskCreated: 1, statusChanges: 1, completedStatusChanges: 1, assignmentActivity: 0, projectActivity: 2, totalActivity: 2 }], byTeam: [], byProject: [], noTeamActivity: 0 } });
+  apiMock.getWorkspaceDeliveryInsights.mockResolvedValue({ data: { source: "lifecycle", period: { from: "2026-09-01T00:00:00.000Z", to: "2026-09-19T00:00:00.000Z", timezone: "UTC", lifecycleDerived: true }, summary: { totalTasksInScope: 4, completedTasks: 2, reopenedTasks: 0, completionRate: 50, throughputCount: 2, averageCycleTimeDays: 2, medianCycleTimeDays: 2, overdueCompletedCount: 0, reopenedAfterCompletionCount: 0 }, trends: [], byTeam: [], byProject: [], byMember: [] } });
 });
 
 describe("Workspace Insights", () => {

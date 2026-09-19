@@ -990,6 +990,26 @@ export interface WorkspaceInsightsHistory {
   noTeamActivity: number;
 }
 
+export interface WorkspaceDeliveryInsights {
+  source: "lifecycle";
+  period: { from: string; to: string; timezone: string; lifecycleDerived: boolean };
+  summary: {
+    totalTasksInScope: number;
+    completedTasks: number;
+    reopenedTasks: number;
+    completionRate: number;
+    throughputCount: number;
+    averageCycleTimeDays: number | null;
+    medianCycleTimeDays: number | null;
+    overdueCompletedCount: number;
+    reopenedAfterCompletionCount: number;
+  };
+  trends: Array<{ date: string; completed: number; reopened: number; throughput: number }>;
+  byTeam: Array<{ id: string | null; name: string; completedTasks: number; reopenedTasks: number; throughputCount: number }>;
+  byProject: Array<{ id: string | null; name: string; completedTasks: number; reopenedTasks: number; throughputCount: number }>;
+  byMember: Array<{ id: string | null; name: string; completedTasks: number; reopenedTasks: number; throughputCount: number }>;
+}
+
 export interface CreateProjectData {
   name: string;
   description?: string;
@@ -2381,6 +2401,22 @@ class ApiClient {
     const query = new URLSearchParams();
     Object.entries(filters || {}).forEach(([key, value]) => { if (value) query.set(key, value); });
     return this.request(`/dashboard/insights/history${query.toString() ? `?${query}` : ""}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getWorkspaceDeliveryInsights(filters?: {
+    teamId?: string;
+    projectId?: string;
+    status?: string;
+    priority?: string;
+    from?: string;
+    to?: string;
+  }): Promise<{ status: string; data: WorkspaceDeliveryInsights }> {
+    const query = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([key, value]) => { if (value) query.set(key, value); });
+    return this.request(`/dashboard/insights/delivery${query.toString() ? `?${query}` : ""}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
