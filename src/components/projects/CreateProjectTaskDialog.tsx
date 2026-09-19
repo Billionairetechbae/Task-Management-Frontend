@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import TeamSelector from "@/components/TeamSelector";
 
 interface CreateProjectTaskDialogProps {
   projectId: string;
@@ -31,13 +32,14 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
     deadline: "",
     assigneeId: "",
     category: "",
+    teamId: null as string | null,
   });
   const canCreateProjectTask = canPerformRoleOperation("create_project_tasks", workspaceRole);
   const canAssignOthers = canPerformRoleOperation("assign_workspace_members");
 
   useEffect(() => {
     if (open) {
-      setForm({ title: "", description: "", priority: "medium", deadline: "", assigneeId: "", category: "" });
+      setForm({ title: "", description: "", priority: "medium", deadline: "", assigneeId: "", category: "", teamId: null });
       if (canAssignOthers) {
         api.getCompanyTeam().then(r => setMembers(r.data.members || [])).catch(() => {});
       } else {
@@ -61,6 +63,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
       if (form.deadline) payload.deadline = form.deadline;
       if (form.assigneeId) payload.assigneeId = form.assigneeId;
       if (form.category) payload.category = form.category;
+      payload.teamId = form.teamId;
 
       await api.createProjectTask(projectId, payload);
       toast({ title: "Task created" });
@@ -109,6 +112,8 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
               <Input type="date" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} />
             </div>
           </div>
+
+          <TeamSelector value={form.teamId} onChange={(teamId) => setForm(p => ({ ...p, teamId }))} />
 
           {canAssignOthers ? (
             members.length > 0 && (

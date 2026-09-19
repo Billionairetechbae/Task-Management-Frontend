@@ -16,6 +16,7 @@ import { User, Clock, X, Plus, Paperclip } from "lucide-react";
 import { getFileIcon } from "@/utils/fileIcons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import TeamSelector from "@/components/TeamSelector";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -46,6 +47,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
     deadline: "",
     category: "",
     assigneeId: "", // USER ID
+    teamId: null as string | null,
   });
   const canCreateTaskByPolicy = projectId
     ? canPerformRoleOperation("create_project_tasks", workspaceRole)
@@ -148,6 +150,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
           deadline: new Date(formData.deadline).toISOString(),
           category: formData.category,
           assigneeId: formData.assigneeId || undefined,
+          teamId: formData.teamId,
         };
         await api.createProjectTask(projectId, payload);
       } else {
@@ -160,6 +163,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
         form.append("category", formData.category);
 
         if (formData.assigneeId) form.append("assigneeId", formData.assigneeId);
+        if (formData.teamId) form.append("teamId", formData.teamId);
         files.forEach((file) => form.append("files", file));
 
         await api.createTask(form);
@@ -174,6 +178,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
         deadline: "",
         category: "",
         assigneeId: "",
+        teamId: null,
       });
 
       setFiles([]);
@@ -212,6 +217,8 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
               required
             />
           </div>
+
+          <TeamSelector value={formData.teamId} onChange={(teamId) => setFormData({ ...formData, teamId })} />
 
           <div>
             <Label>Description *</Label>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, AllTasksFilters, Task } from "@/lib/api";
+import { api, AllTasksFilters, Task, Team } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -76,6 +76,8 @@ const AllTasks = () => {
   const [limit, setLimit] = useState(20);
   const [watchedOnly, setWatchedOnly] = useState(false);
   const [hasSubtasksOnly, setHasSubtasksOnly] = useState(false);
+  const [teamId, setTeamId] = useState("all");
+  const [teams, setTeams] = useState<Team[]>([]);
 
   // My Tasks | All Tasks segmented control. Defaults to the route intent,
   // then remembers the user's pick for the rest of the session.
@@ -110,6 +112,19 @@ const AllTasks = () => {
   }, [activeCompanyId, isMyTasksRoute]);
 
   useEffect(() => {
+    let cancelled = false;
+    setTeamId("all");
+    if (companyId === "all") {
+      setTeams([]);
+      return;
+    }
+    api.listTeams()
+      .then((response) => { if (!cancelled) setTeams(response.data.teams || []); })
+      .catch(() => { if (!cancelled) setTeams([]); });
+    return () => { cancelled = true; };
+  }, [companyId]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
@@ -125,6 +140,7 @@ const AllTasks = () => {
     status: status === "all" ? undefined : status,
     priority: priority === "all" ? undefined : priority,
     companyId: companyId === "all" ? undefined : companyId,
+    teamId: teamId === "all" || companyId === "all" ? undefined : teamId,
     scope:
       taskScope === "my"
         ? companyId === "all"
@@ -158,6 +174,7 @@ const AllTasks = () => {
     setCompanyId("all");
     setWatchedOnly(false);
     setHasSubtasksOnly(false);
+    setTeamId("all");
     setPage(1);
   };
 
@@ -186,7 +203,8 @@ const AllTasks = () => {
     priority !== "all" ||
     companyId !== "all" ||
     watchedOnly ||
-    hasSubtasksOnly;
+    hasSubtasksOnly ||
+    teamId !== "all";
 
   return (
     <DashboardLayout>
@@ -356,6 +374,19 @@ const AllTasks = () => {
                   <GitBranch className="h-4 w-4" />
                   Has Subtasks
                 </Button>
+
+                {companyId !== "all" && (
+                  <Select value={teamId} onValueChange={(value) => { setTeamId(value); setPage(1); }}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="All Teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Teams</SelectItem>
+                      <SelectItem value="none">No Team</SelectItem>
+                      {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
 
                 {hasActiveFilters && (
                   <Button

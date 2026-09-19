@@ -1540,6 +1540,10 @@ const TaskDetails = () => {
                 {task.category && <p className="text-[11px] text-muted-foreground truncate">{task.category}</p>}
               </div>
               <div className="rounded-lg border bg-card p-3">
+                <div className="text-xs text-muted-foreground">Team</div>
+                <p className="font-semibold text-sm mt-1 truncate">{task.team?.name || "No team"}</p>
+              </div>
+              <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" /> Created
                 </div>

@@ -115,6 +115,11 @@ const DashboardLayout = ({
           icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Workspace Insights",
+          href: "/workspace-insights",
+          icon: <Activity className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Projects",
           items: [
             {
@@ -190,6 +195,11 @@ const DashboardLayout = ({
             },
             ...(canPerformRoleOperation("view_workspace_members") ? [
               {
+                label: "Teams",
+                href: "/teams",
+                icon: <Crown className="w-[18px] h-[18px]" />,
+              },
+              {
                 label: "Team Directory",
                 href: "/team-directory",
                 icon: <Users className="w-[18px] h-[18px]" />,
@@ -226,6 +236,11 @@ const DashboardLayout = ({
           label: "Dashboard",
           href: "/dashboard",
           icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
+        },
+        {
+          label: "Workspace Insights",
+          href: "/workspace-insights",
+          icon: <Activity className="w-[18px] h-[18px]" />,
         },
         {
           label: "Projects",
@@ -292,6 +307,11 @@ const DashboardLayout = ({
           label: "Team",
           items: [
             {
+              label: "Teams",
+              href: "/teams",
+              icon: <Crown className="w-[18px] h-[18px]" />,
+            },
+            {
               label: "Team Directory",
               href: "/team-directory",
               icon: <Users className="w-[18px] h-[18px]" />,
@@ -312,6 +332,11 @@ const DashboardLayout = ({
         label: "Dashboard",
         href: "/dashboard",
         icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
+      },
+      {
+        label: "Workspace Insights",
+        href: "/workspace-insights",
+        icon: <Activity className="w-[18px] h-[18px]" />,
       },
       {
         label: "Projects",
@@ -377,6 +402,11 @@ const DashboardLayout = ({
       ...(canPerformRoleOperation("view_workspace_members") ? [{
         label: "Team",
         items: [
+          {
+            label: "Teams",
+            href: "/teams",
+            icon: <Crown className="w-[18px] h-[18px]" />,
+          },
           {
             label: "Team Directory",
             href: "/team-directory",

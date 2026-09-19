@@ -9,6 +9,10 @@ export type WorkspaceScope = string | null | undefined;
 export const queryKeys = {
   dashboard: (companyId: WorkspaceScope, role?: string | null) =>
     ["dashboard", companyId ?? "none", role ?? "none"] as const,
+  workspaceInsights: (companyId: WorkspaceScope, filters?: unknown) =>
+    ["workspace-insights", companyId ?? "none", filters ?? null] as const,
+  workspaceInsightsHistory: (companyId: WorkspaceScope, filters?: unknown) =>
+    ["workspace-insights-history", companyId ?? "none", filters ?? null] as const,
   tasks: (companyId: WorkspaceScope) => ["tasks", companyId ?? "none"] as const,
   taskList: (companyId: WorkspaceScope, filters?: unknown) =>
     ["tasks", companyId ?? "none", "list", filters ?? null] as const,

@@ -158,6 +158,7 @@ export default function Projects() {
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
                     {p.description || "No description"}
                   </p>
+                  {p.team && <p className="mb-3 text-xs font-medium text-primary">Team: {p.team.name}</p>}
                   <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                     {p.startDate && (
                       <span className="flex items-center gap-1">

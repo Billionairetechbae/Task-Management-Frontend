@@ -35,6 +35,8 @@ const WorkspaceLifecycleSettings = () => {
   const [memberSearch, setMemberSearch] = useState("");
   const [newOwnerId, setNewOwnerId] = useState("");
   const [handoverConfirmed, setHandoverConfirmed] = useState(false);
+  const [leadTeams, setLeadTeams] = useState<Array<{ id: string; name: string; currentLeadMemberId: string }>>([]);
+  const [leadReplacements, setLeadReplacements] = useState<Record<string, string>>({});
   const [deleteName, setDeleteName] = useState("");
   const [busy, setBusy] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -46,11 +48,14 @@ const WorkspaceLifecycleSettings = () => {
 
   useEffect(() => {
     if (!leaveOpen || !isOwner) return;
-    api.getCompanyTeam().then((response) => {
-      const list = response.data?.members || response.data?.team_members || [];
+    Promise.all([api.getCompanyTeam(), activeCompanyId ? api.getLeaveRequirements(activeCompanyId) : Promise.resolve({ data: { teams: [] } })]).then(([response, requirements]) => {
+      const workspaceData = response.data as typeof response.data & { team_members?: CompanyMember[] };
+      const list = workspaceData.members || workspaceData.team_members || [];
       setMembers(list.filter((member: CompanyMember) => member.status === "active" && member.userId !== user?.id));
-    }).catch(() => setMembers([]));
-  }, [leaveOpen, isOwner, user?.id]);
+      setLeadTeams(requirements.data?.teams || []);
+      setLeadReplacements({});
+    }).catch(() => { setMembers([]); setLeadTeams([]); });
+  }, [leaveOpen, isOwner, user?.id, activeCompanyId]);
 
   const eligibleMembers = useMemo(() => {
     const query = memberSearch.trim().toLocaleLowerCase();
@@ -67,11 +72,17 @@ const WorkspaceLifecycleSettings = () => {
     if (!activeCompanyId) return;
     setBusy(true);
     try {
-      await api.leaveWorkspace(activeCompanyId, isOwner ? { newOwnerUserId: newOwnerId, confirmHandover: true } : undefined);
+      const teamLeadHandovers = leadTeams.map((team) => ({ teamId: team.id, replacementCompanyMemberId: leadReplacements[team.id] })).filter((handover): handover is { teamId: string; replacementCompanyMemberId: string } => Boolean(handover.replacementCompanyMemberId));
+      await api.leaveWorkspace(activeCompanyId, { ...(isOwner ? { newOwnerUserId: newOwnerId, confirmHandover: true } : {}), ...(leadTeams.length ? { teamLeadHandovers } : {}) });
       await finishWorkspaceRemoval();
       setLeaveOpen(false);
       toast({ title: isOwner ? "Ownership transferred and workspace left." : "You left the workspace." });
-    } catch (error) { toast({ title: "Unable to leave workspace", description: friendlyError(error), variant: "destructive" }); }
+    } catch (error: any) {
+      if (error instanceof ApiError && error.statusCode === 409 && error.message.toLowerCase().includes("leadership")) {
+        try { const requirements = await api.getLeaveRequirements(activeCompanyId); setLeadTeams(requirements.data?.teams || []); } catch (_) {}
+      }
+      toast({ title: "Unable to leave workspace", description: friendlyError(error), variant: "destructive" });
+    }
     finally { setBusy(false); }
   };
 
@@ -143,8 +154,9 @@ const WorkspaceLifecycleSettings = () => {
     </Card>
 
     <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>{isOwner ? "Transfer ownership before leaving" : "Leave workspace?"}</DialogTitle><DialogDescription>{isOwner ? "You are the owner of this workspace. Choose another active member to become the new owner before you leave." : "Are you sure you want to leave this workspace? You will lose access to its projects, tasks and files."}</DialogDescription></DialogHeader>
+      {leadTeams.length > 0 && <div className="space-y-3 rounded-md border border-warning/40 bg-warning/5 p-3"><p className="text-sm font-medium">You currently lead these teams. Transfer leadership before leaving this workspace.</p>{leadTeams.map((team) => <div key={team.id} className="space-y-2"><Label>{team.name}</Label><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={leadReplacements[team.id] || ""} onChange={(event) => setLeadReplacements((current) => ({ ...current, [team.id]: event.target.value }))}><option value="">Select a replacement</option>{members.filter((member) => member.status === "active").map((member) => <option key={member.id} value={member.id}>{member.user.firstName} {member.user.lastName}</option>)}</select></div>)}</div>}
       {isOwner && (members.length ? <div className="space-y-3"><Input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Search members..." aria-label="Search members" /><div className="max-h-52 space-y-1 overflow-y-auto">{eligibleMembers.map((member) => <button type="button" key={member.userId} onClick={() => setNewOwnerId(member.userId)} className={`w-full rounded-md border p-3 text-left text-sm ${newOwnerId === member.userId ? "border-primary bg-primary/5" : ""}`}><span className="block font-medium">{member.user.firstName} {member.user.lastName}</span><span className="text-muted-foreground">{member.user.email}</span></button>)}</div><label className="flex items-start gap-2 text-sm"><Checkbox checked={handoverConfirmed} onCheckedChange={(checked) => setHandoverConfirmed(checked === true)} />I understand that the selected member will become the new workspace owner.</label></div> : <p className="rounded-md bg-muted p-3 text-sm">You must add another member before you can transfer ownership and leave.</p>)}
-      <DialogFooter><Button variant="outline" onClick={() => setLeaveOpen(false)}>Cancel</Button><Button variant="destructive" disabled={busy || (isOwner && (!newOwnerId || !handoverConfirmed))} onClick={submitLeave}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{isOwner ? "Transfer ownership and leave" : "Leave workspace"}</Button></DialogFooter></DialogContent></Dialog>
+      <DialogFooter><Button variant="outline" onClick={() => setLeaveOpen(false)}>Cancel</Button><Button variant="destructive" disabled={busy || (isOwner && (!newOwnerId || !handoverConfirmed)) || leadTeams.some((team) => !leadReplacements[team.id])} onClick={submitLeave}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{isOwner ? "Transfer ownership and leave" : "Leave workspace"}</Button></DialogFooter></DialogContent></Dialog>
 
     <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}><DialogContent><DialogHeader><DialogTitle>Delete workspace?</DialogTitle><DialogDescription>Deleting this workspace will remove it for every member and move its projects, tasks, comments, files and other workspace content to Trash. The workspace can be restored for 30 days. After 30 days, it will be permanently deleted. All workspace members will lose access immediately.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="delete-workspace-name">Type {activeWorkspace?.name} to confirm</Label><Input id="delete-workspace-name" value={deleteName} onChange={(e) => setDeleteName(e.target.value)} /></div><DialogFooter><Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button><Button variant="destructive" disabled={busy || deleteName !== activeWorkspace?.name} onClick={submitDelete}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Move workspace to Trash</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={removeLogoOpen} onOpenChange={setRemoveLogoOpen}><DialogContent><DialogHeader><DialogTitle>Remove workspace logo?</DialogTitle><DialogDescription>The workspace will use its initials instead.</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setRemoveLogoOpen(false)}>Cancel</Button><Button variant="destructive" onClick={removeLogo} disabled={busy}>Remove logo</Button></DialogFooter></DialogContent></Dialog>

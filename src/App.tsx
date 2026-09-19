@@ -15,6 +15,8 @@ import SignupExecutiveJoin from "./pages/SignupExecutiveJoin";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import DashboardExecutive from "./pages/DashboardExecutive";
+import DashboardManager from "./pages/DashboardManager";
+import DashboardRoleRouter from "./pages/DashboardRoleRouter";
 
 import AIHub from "./pages/AIHub";
 import AllTasks from "./pages/AllTasks";
@@ -24,6 +26,7 @@ import TeamManagement from "./pages/TeamManagement";
 import CompanyProfile from "./pages/CompanyProfile";
 import TeamDirectory from "./pages/TeamDirectory";
 import TeamMemberProfile from "./pages/TeamMemberProfile";
+import Teams from "./pages/Teams";
 
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
@@ -48,6 +51,7 @@ import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
 import ProjectHealth from "@/pages/ProjectHealth";
 import ClientView from "@/pages/ClientView";
 import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
+import WorkspaceInsights from "@/pages/WorkspaceInsights";
 
 import AuditExport from "@/pages/AuditExport";
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
@@ -159,7 +163,7 @@ const App = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardExecutive />
+              <DashboardRoleRouter />
             </ProtectedRoute>
           }
         />
@@ -175,7 +179,7 @@ const App = () => {
           path="/dashboard-manager"
           element={
             <ProtectedRoute>
-              <DashboardExecutive />
+              <DashboardManager />
             </ProtectedRoute>
           }
         />
@@ -187,6 +191,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="/workspace-insights" element={<ProtectedRoute><WorkspaceInsights /></ProtectedRoute>} />
 
         <Route
           path="/onboarding/workspace"
@@ -275,6 +280,11 @@ const App = () => {
               <TeamManagement />
             </ProtectedRoute>
           }
+        />
+
+        <Route
+          path="/teams"
+          element={<ProtectedRoute><Teams /></ProtectedRoute>}
         />
 
         <Route

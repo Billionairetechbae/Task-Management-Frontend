@@ -317,6 +317,12 @@ export const TaskTable = ({
                       </p>
                     )}
 
+                    {task.team && (
+                      <p className="mt-1 truncate text-[10px] font-medium text-primary">
+                        Team: {task.team.name}
+                      </p>
+                    )}
+
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <ListTodo className="h-3 w-3" />
@@ -464,6 +470,12 @@ export const TaskTable = ({
                 {task.description && (
                   <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">
                     {task.description}
+                  </p>
+                )}
+
+                {task.team && (
+                  <p className="mt-1 truncate text-[10px] font-medium text-primary">
+                    Team: {task.team.name}
                   </p>
                 )}
 

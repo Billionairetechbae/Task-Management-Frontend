@@ -46,6 +46,36 @@ describe("workspace lifecycle and trash API contract", () => {
     expect(JSON.parse(options.body)).toEqual({ newOwnerUserId: "user-2", confirmHandover: true });
   });
 
+  it("sends explicit team lead handovers with workspace leave", async () => {
+    localStorage.setItem("auth_token", "token");
+    localStorage.setItem("activeCompanyId", "workspace-1");
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "success" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    globalThis.fetch = fetchMock;
+    await api.leaveWorkspace("workspace-1", {
+      teamLeadHandovers: [
+        { teamId: "team-1", replacementCompanyMemberId: "member-2" },
+        { teamId: "team-2", replacementCompanyMemberId: "member-3" },
+      ],
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      teamLeadHandovers: [
+        { teamId: "team-1", replacementCompanyMemberId: "member-2" },
+        { teamId: "team-2", replacementCompanyMemberId: "member-3" },
+      ],
+    });
+  });
+
+  it("sends an explicit current-lead guard and confirmation for lead transfer", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "success" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    globalThis.fetch = fetchMock;
+    await api.assignTeamLead("team-1", "member-2", { expectedCurrentLeadMemberId: "member-1", confirmTransfer: true });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      companyMemberId: "member-2",
+      expectedCurrentLeadMemberId: "member-1",
+      confirmTransfer: true,
+    });
+  });
+
   it("uses soft-delete and unified Trash endpoints", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "success", data: { items: [] } }), { status: 200, headers: { "Content-Type": "application/json" } }));
     globalThis.fetch = fetchMock;

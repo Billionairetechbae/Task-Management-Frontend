@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
+import TeamSelector from "@/components/TeamSelector";
 
 interface EditProjectDrawerProps {
   project: Project | null;
@@ -28,6 +29,7 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
     status: "planning" as ProjectStatus,
     startDate: "",
     endDate: "",
+    teamId: null as string | null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -39,9 +41,10 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
         status: project.status || "planning",
         startDate: project.startDate ? project.startDate.slice(0, 10) : "",
         endDate: project.endDate ? project.endDate.slice(0, 10) : "",
+        teamId: project.teamId || null,
       });
     } else if (mode === "create") {
-      setForm({ name: "", description: "", status: "planning", startDate: "", endDate: "" });
+      setForm({ name: "", description: "", status: "planning", startDate: "", endDate: "", teamId: null });
     }
     setErrors({});
   }, [project, mode, open]);
@@ -67,6 +70,7 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
       };
       if (form.startDate) payload.startDate = form.startDate;
       if (form.endDate) payload.endDate = form.endDate;
+      payload.teamId = form.teamId;
 
       if (mode === "create") {
         await api.createProject(payload);
@@ -105,6 +109,8 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </div>
+
+          <TeamSelector value={form.teamId} onChange={(teamId) => setForm(p => ({ ...p, teamId }))} />
 
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Description</Label>

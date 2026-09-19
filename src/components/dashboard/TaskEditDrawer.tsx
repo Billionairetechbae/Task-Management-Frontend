@@ -47,6 +47,7 @@ import CompanyBadge from "@/components/CompanyBadge";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
+import TeamSelector from "@/components/TeamSelector";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface TaskEditDrawerProps {
@@ -117,6 +118,7 @@ export default function TaskEditDrawer({
   const [status, setStatus] = useState("pending");
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [category, setCategory] = useState("");
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [estimatedHours, setEstimatedHours] = useState<number>(0);
   const [actualHours, setActualHours] = useState<number>(0);
 
@@ -172,6 +174,7 @@ export default function TaskEditDrawer({
       setStatus(t.status);
       setDeadline(t.deadline ? new Date(t.deadline) : undefined);
       setCategory(t.category || "");
+      setTeamId(t.teamId || null);
       setEstimatedHours(t.estimatedHours || 0);
       setActualHours(t.actualHours || 0);
 
@@ -244,6 +247,7 @@ export default function TaskEditDrawer({
         fd.append("status", status);
         if (deadline) fd.append("deadline", deadline.toISOString());
         fd.append("category", category);
+        fd.append("teamId", teamId || "");
 
         pendingFiles.forEach((f) => fd.append("files", f));
 
@@ -262,6 +266,7 @@ export default function TaskEditDrawer({
           status: status as any,
           deadline: deadline?.toISOString(),
           category,
+          teamId,
         };
 
         const res = await api.updateTask(task.id, data);
@@ -622,6 +627,7 @@ export default function TaskEditDrawer({
                     <div className="space-y-2">
                       <Label>Category</Label>
                       <Input value={category} onChange={(e) => setCategory(e.target.value)} />
+                      <TeamSelector value={teamId} onChange={setTeamId} disabled={saving} />
                     </div>
                   </>
                 ) : (

@@ -70,6 +70,28 @@ export interface CompanyMember {
   company?: Company;
 }
 
+export interface TeamMemberLink {
+  id: string;
+  teamId: string;
+  companyMemberId: string;
+  companyMember: CompanyMember;
+}
+
+export interface Team {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  leadMemberId: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  memberLinks?: TeamMemberLink[];
+  leadMember?: CompanyMember | null;
+  projects?: Project[];
+  tasks?: Task[];
+}
+
 export interface WorkspaceItem {
   companyId: string;
   role: WorkspaceRole;
@@ -387,6 +409,8 @@ export interface Task {
   assignedAssistantId?: string | null;
   executiveId?: string | null;
   assigneeId?: string | null;
+  teamId?: string | null;
+  team?: Pick<Team, "id" | "name" | "leadMemberId"> | null;
   parentTaskId?: string | null;
 
   createdAt?: string | null;
@@ -446,6 +470,7 @@ export interface CreateTaskData {
   category: string;
   estimatedHours?: number;
   assigneeId?: string;
+  teamId?: string | null;
 }
 
 export interface UpdateTaskData {
@@ -458,6 +483,7 @@ export interface UpdateTaskData {
   estimatedHours?: number;
   actualHours?: number;
   assigneeId?: string | null;
+  teamId?: string | null;
   googleDriveAttachments?: Array<{
     fileId: string;
     name: string;
@@ -491,6 +517,7 @@ export interface AllTasksFilters {
   status?: string;
   priority?: string;
   companyId?: string;
+  teamId?: string;
   scope?: "workspace" | "all_workspaces" | "assigned_all" | "assigned_workspace";
 }
 
@@ -893,12 +920,74 @@ export interface Project {
   endDate?: string | null;
   settings?: Record<string, any> | null;
   companyId: string;
+  teamId?: string | null;
+  team?: Pick<Team, "id" | "name" | "leadMemberId"> | null;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
   tasks?: Task[];
   checklists?: ProjectChecklist[];
   _count?: { tasks?: number; checklists?: number };
+}
+
+export interface WorkspaceInsights {
+  summary: {
+    totalProjects: number;
+    projectsByStatus: Record<string, number>;
+    totalTasks: number;
+    tasksByStatus: Record<string, number>;
+    completedTasks: number;
+    openTasks: number;
+    overdueTasks: number;
+    unassignedTasks: number;
+    projectsWithTeam: number;
+    projectsWithoutTeam: number;
+    tasksWithTeam: number;
+    tasksWithoutTeam: number;
+  };
+  teams: Array<{
+    id: string;
+    name: string;
+    memberCount: number;
+    projectCount: number;
+    taskCount: number;
+    openTasks: number;
+    overdueTasks: number;
+    tasksByStatus: Record<string, number>;
+  }>;
+  projects: Array<{
+    id: string;
+    name: string;
+    status: string;
+    team: { id: string; name: string } | null;
+    taskCount: number;
+    completedTasks: number;
+    openTasks: number;
+    overdueTasks: number;
+    completionRate: number;
+    riskIndicators: string[];
+  }>;
+  workload: {
+    unassignedTasks: number;
+    members: Array<{
+      userId: string;
+      name: string;
+      assignedTasks: number;
+      openTasks: number;
+      completedTasks: number;
+    }>;
+  };
+  filters: { teamId: string | null; projectId: string | null; status: string | null; priority: string | null };
+  generatedAt: string;
+}
+
+export interface WorkspaceInsightsHistory {
+  period: { from: string; to: string; timezone: string; activityDerived: boolean };
+  summary: { totalActivity: number; taskCreated: number; statusChanges: number; completedStatusChanges: number; assignmentActivity: number; projectActivity: number };
+  trends: Array<{ date: string; taskCreated: number; statusChanges: number; completedStatusChanges: number; assignmentActivity: number; projectActivity: number; totalActivity: number }>;
+  byTeam: Array<{ id: string | null; name: string; totalActivity: number; taskCreated: number; statusChanges: number; completedStatusChanges: number; assignmentActivity: number }>;
+  byProject: Array<{ id: string | null; name: string; totalActivity: number; taskCreated: number; statusChanges: number; completedStatusChanges: number; assignmentActivity: number }>;
+  noTeamActivity: number;
 }
 
 export interface CreateProjectData {
@@ -908,6 +997,7 @@ export interface CreateProjectData {
   startDate?: string;
   endDate?: string;
   settings?: Record<string, any>;
+  teamId?: string | null;
 }
 
 /* ============================
@@ -1770,7 +1860,14 @@ class ApiClient {
     });
   }
 
-  async leaveWorkspace(workspaceId: string, data?: { newOwnerUserId?: string; confirmHandover?: boolean }): Promise<{ status: string; message?: string }> {
+  async getLeaveRequirements(workspaceId: string): Promise<{ status: string; data: { teams: Array<{ id: string; name: string; currentLeadMemberId: string }> } }> {
+    return this.request(`/workspaces/${workspaceId}/leave-requirements`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async leaveWorkspace(workspaceId: string, data?: { newOwnerUserId?: string; confirmHandover?: boolean; teamLeadHandovers?: Array<{ teamId: string; replacementCompanyMemberId: string }> }): Promise<{ status: string; message?: string }> {
     return this.request(`/workspaces/${workspaceId}/leave`, {
       method: "POST",
       headers: this.getAuthHeaders(),
@@ -1904,12 +2001,13 @@ class ApiClient {
   }
 
   async getTasks(
-    filters?: TaskFilters
+    filters?: TaskFilters & { teamId?: string }
   ): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
     const queryParams = new URLSearchParams();
     if (filters?.status) queryParams.append("status", filters.status);
     if (filters?.priority) queryParams.append("priority", filters.priority);
     if (filters?.category) queryParams.append("category", filters.category);
+    if (filters?.teamId) queryParams.append("teamId", filters.teamId);
 
     return this.request(`/tasks?${queryParams.toString()}`, {
       method: "GET",
@@ -1929,6 +2027,7 @@ class ApiClient {
     if (filters?.status) queryParams.append("status", filters.status);
     if (filters?.priority) queryParams.append("priority", filters.priority);
     if (filters?.companyId) queryParams.append("companyId", filters.companyId);
+    if (filters?.teamId) queryParams.append("teamId", filters.teamId);
 
     // For workspace scopes, we need to send x-company-id header
     const useCompanyHeader = scope === "workspace" || scope === "assigned_workspace";
@@ -2255,6 +2354,38 @@ class ApiClient {
     });
   }
 
+  async getWorkspaceInsights(filters?: {
+    teamId?: string;
+    projectId?: string;
+    status?: string;
+    priority?: string;
+  }): Promise<{ status: string; data: WorkspaceInsights }> {
+    const query = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([key, value]) => {
+      if (value) query.set(key, value);
+    });
+    return this.request(`/dashboard/insights${query.toString() ? `?${query}` : ""}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async getWorkspaceInsightsHistory(filters?: {
+    teamId?: string;
+    projectId?: string;
+    status?: string;
+    priority?: string;
+    from?: string;
+    to?: string;
+  }): Promise<{ status: string; data: WorkspaceInsightsHistory }> {
+    const query = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([key, value]) => { if (value) query.set(key, value); });
+    return this.request(`/dashboard/insights/history${query.toString() ? `?${query}` : ""}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
   async getTeamMemberDashboard(): Promise<{
     status: string;
     data: AssistantDashboard;
@@ -2283,6 +2414,38 @@ class ApiClient {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
+  }
+
+  async listTeams(): Promise<{ status: string; results: number; data: { teams: Team[] } }> {
+    return this.request("/team/teams", { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async getTeam(teamId: string): Promise<{ status: string; data: { team: Team } }> {
+    return this.request(`/team/teams/${teamId}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async createTeam(data: { name: string; description?: string }): Promise<{ status: string; data: { team: Team } }> {
+    return this.request("/team/teams", { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify(data) });
+  }
+
+  async updateTeam(teamId: string, data: { name?: string; description?: string | null }): Promise<{ status: string; data: { team: Team } }> {
+    return this.request(`/team/teams/${teamId}`, { method: "PATCH", headers: this.getAuthHeaders(), body: JSON.stringify(data) });
+  }
+
+  async deleteTeam(teamId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/team/teams/${teamId}`, { method: "DELETE", headers: this.getAuthHeaders() });
+  }
+
+  async addTeamMember(teamId: string, companyMemberId: string) {
+    return this.request(`/team/teams/${teamId}/members`, { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify({ companyMemberId }) });
+  }
+
+  async removeTeamMemberFromTeam(teamId: string, companyMemberId: string, data?: { replacementCompanyMemberId?: string; expectedCurrentLeadMemberId?: string; confirmTransfer?: boolean }) {
+    return this.request(`/team/teams/${teamId}/members/${companyMemberId}`, { method: "DELETE", headers: this.getAuthHeaders(), body: JSON.stringify(data || {}) });
+  }
+
+  async assignTeamLead(teamId: string, companyMemberId: string, data?: { expectedCurrentLeadMemberId?: string; confirmTransfer?: boolean }): Promise<{ status: string; data: { teamId: string; previousLeadMemberId: string | null; leadMemberId: string } }> {
+    return this.request(`/team/teams/${teamId}/lead`, { method: "PUT", headers: this.getAuthHeaders(), body: JSON.stringify({ companyMemberId, ...data }) });
   }
 
   // GET /team/members
@@ -3293,6 +3456,7 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     color?: string;
     dueDate?: string;
     memberIds?: string[];
+    teamId?: string | null;
   }): Promise<{ status: string; message?: string; data: { project: Project } }> {
     return this.request(`/projects`, {
       method: "POST",
@@ -3301,12 +3465,13 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async getProjects(): Promise<{
+  async getProjects(filters?: { teamId?: string }): Promise<{
     status: string;
     results?: number;
     data: { projects: Project[] } | { items?: Project[] } | any;
   }> {
-    return this.request(`/projects`, {
+    const query = filters?.teamId ? `?teamId=${encodeURIComponent(filters.teamId)}` : "";
+    return this.request(`/projects${query}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
@@ -3333,6 +3498,7 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     startDate?: string | null;
     endDate?: string | null;
     settings?: Record<string, any> | null;
+    teamId?: string | null;
   }>): Promise<{ status: string; message?: string; data: { project: Project } | any }> {
     return this.request(`/projects/${id}`, {
       method: "PATCH",
