@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import TeamSelector from "@/components/TeamSelector";
 
 type Props = {
   taskId: string;
@@ -41,6 +42,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     setSubtasks(initialSubtasks);
@@ -88,7 +90,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
 
     try {
       setSaving(true);
-      const res = await api.createTaskSubtask(taskId, { title: optimistic.title });
+      const res = await api.createTaskSubtask(taskId, { title: optimistic.title, teamId });
       const created = extractSubtask(res) || optimistic;
       sync([created, ...previous]);
     } catch (error: any) {
@@ -176,7 +178,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
 
       {/* Create input */}
       {canEdit && (
-        <div className="flex gap-2">
+        <div className="space-y-2">
           <Input
             placeholder="Create a subtask..."
             value={title}
@@ -184,9 +186,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
             onKeyDown={(e) => e.key === "Enter" && createSubtask()}
             className="flex-1"
           />
-          <Button size="sm" onClick={createSubtask} disabled={!title.trim() || saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-          </Button>
+          <div className="flex items-end gap-2"><div className="min-w-0 flex-1"><TeamSelector value={teamId} onChange={setTeamId} label="Team (optional)" /></div><Button size="sm" onClick={createSubtask} disabled={!title.trim() || saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}</Button></div>
         </div>
       )}
 

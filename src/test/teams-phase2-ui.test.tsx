@@ -9,6 +9,8 @@ const apiMock = vi.hoisted(() => ({
   listTeams: vi.fn(),
   getCompanyTeam: vi.fn(),
   assignTeamLead: vi.fn(),
+  addTeamMembers: vi.fn(),
+  removeTeamMembers: vi.fn(),
   removeTeamMemberFromTeam: vi.fn(),
   getLeaveRequirements: vi.fn(),
   leaveWorkspace: vi.fn(),
@@ -55,6 +57,8 @@ beforeEach(() => {
   apiMock.listTeams.mockResolvedValue({ data: { teams: [team()] } });
   apiMock.getCompanyTeam.mockResolvedValue({ data: { members: [] } });
   apiMock.assignTeamLead.mockResolvedValue({ status: "success" });
+  apiMock.addTeamMembers.mockResolvedValue({ status: "success" });
+  apiMock.removeTeamMembers.mockResolvedValue({ status: "success" });
   apiMock.removeTeamMemberFromTeam.mockResolvedValue({ status: "success" });
   apiMock.getLeaveRequirements.mockResolvedValue({ data: { teams: [] } });
   apiMock.leaveWorkspace.mockResolvedValue({ status: "success" });
@@ -75,20 +79,18 @@ describe("Teams leadership handover UI", () => {
     await user.click(screen.getByRole("button", { name: /change lead/i }));
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByRole("option", { name: "Richard User" }));
-    await user.click(screen.getByRole("button", { name: /confirm lead change/i }));
+    await user.click(screen.getByRole("button", { name: /save lead/i }));
     await waitFor(() => expect(apiMock.assignTeamLead).toHaveBeenCalledWith("team-1", "replacement-member", expect.objectContaining({ confirmTransfer: true, expectedCurrentLeadMemberId: "lead-member" })));
   });
 
-  it("opens replacement selection for current-lead removal and atomically submits handover", async () => {
+  it("does not allow the current lead to be removed by bulk action", async () => {
     const user = userEvent.setup();
     render(<Teams />);
     await screen.findByRole("heading", { name: "Marketing" });
-    await user.click(screen.getAllByRole("button", { name: /remove/i })[0]);
-    expect(screen.getByRole("heading", { name: /handover before removing lead/i })).toBeInTheDocument();
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByRole("option", { name: "Richard User" }));
-    await user.click(screen.getByRole("button", { name: /confirm handover and remove/i }));
-    await waitFor(() => expect(apiMock.removeTeamMemberFromTeam).toHaveBeenCalledWith("team-1", "lead-member", expect.objectContaining({ replacementCompanyMemberId: "replacement-member", confirmTransfer: true, expectedCurrentLeadMemberId: "lead-member" })));
+    await user.click(screen.getAllByRole("checkbox")[0]);
+    await user.click(screen.getByRole("button", { name: /remove selected/i }));
+    expect(apiMock.removeTeamMembers).not.toHaveBeenCalled();
+    expect(apiMock.removeTeamMemberFromTeam).not.toHaveBeenCalled();
   });
 });
 

@@ -2078,7 +2078,7 @@ class ApiClient {
 
   async createTaskSubtask(
     taskId: string,
-    data: { title: string; status?: TaskSubtask["status"]; sortOrder?: number }
+    data: { title: string; status?: TaskSubtask["status"]; sortOrder?: number; teamId?: string | null }
   ): Promise<{ status: string; message?: string; data: { subtask: TaskSubtask } | TaskSubtask }> {
     return this.request(`/tasks/${taskId}/subtasks`, {
       method: "POST",
@@ -2474,6 +2474,12 @@ class ApiClient {
 
   async addTeamMember(teamId: string, companyMemberId: string) {
     return this.request(`/team/teams/${teamId}/members`, { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify({ companyMemberId }) });
+  }
+  async addTeamMembers(teamId: string, companyMemberIds: string[]) {
+    return this.request(`/team/teams/${teamId}/members/bulk`, { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify({ companyMemberIds }) });
+  }
+  async removeTeamMembers(teamId: string, companyMemberIds: string[]) {
+    return this.request(`/team/teams/${teamId}/members/bulk`, { method: "DELETE", headers: this.getAuthHeaders(), body: JSON.stringify({ companyMemberIds }) });
   }
 
   async removeTeamMemberFromTeam(teamId: string, companyMemberId: string, data?: { replacementCompanyMemberId?: string; expectedCurrentLeadMemberId?: string; confirmTransfer?: boolean }) {

@@ -7,6 +7,7 @@ import { ArrowLeft, FileArchive, FileSpreadsheet, Loader2, ShieldCheck } from "l
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { canExportWorkspace } from "@/lib/permissions";
+import { useAuth } from "@/contexts/AuthContext";
 
 /** Returns a user-facing message for API errors, with special handling for 429. */
 function exportErrorMessage(err: unknown): string {
@@ -22,6 +23,7 @@ function exportErrorMessage(err: unknown): string {
 
 const AuditExportContent = () => {
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
 
   const [loading, setLoading] = useState<"zip" | "xlsx" | null>(null);
 
@@ -30,9 +32,8 @@ const AuditExportContent = () => {
     localStorage.getItem("activeWorkspaceName") ||
     "Active Workspace";
 
-  // Authorization: workspace role only — backend enforces this too.
-  const workspaceRole = localStorage.getItem("workspaceRole") || undefined;
-  const canAccess = canExportWorkspace(workspaceRole as any);
+  // Authorization: active workspace role only — backend enforces this too.
+  const canAccess = canExportWorkspace(workspaceRole);
 
   if (!canAccess) {
     return (
