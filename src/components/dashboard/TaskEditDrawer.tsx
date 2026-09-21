@@ -627,7 +627,11 @@ export default function TaskEditDrawer({
                     <div className="space-y-2">
                       <Label>Category</Label>
                       <Input value={category} onChange={(e) => setCategory(e.target.value)} />
-                      <TeamSelector value={teamId} onChange={setTeamId} disabled={saving} />
+                      <TeamSelector
+                        value={teamId}
+                        onChange={setTeamId}
+                        disabled={saving || !canAssignOthers}
+                      />
                     </div>
                   </>
                 ) : (
