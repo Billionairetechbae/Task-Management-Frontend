@@ -113,7 +113,11 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
             </div>
           </div>
 
-          <TeamSelector value={form.teamId} onChange={(teamId) => setForm(p => ({ ...p, teamId }))} />
+          <TeamSelector
+            value={form.teamId}
+            onChange={(teamId) => setForm(p => ({ ...p, teamId }))}
+            disabled={!canAssignOthers}
+          />
 
           {canAssignOthers ? (
             members.length > 0 && (

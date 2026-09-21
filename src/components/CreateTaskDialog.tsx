@@ -218,7 +218,11 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
             />
           </div>
 
-          <TeamSelector value={formData.teamId} onChange={(teamId) => setFormData({ ...formData, teamId })} />
+          <TeamSelector
+            value={formData.teamId}
+            onChange={(teamId) => setFormData({ ...formData, teamId })}
+            disabled={!canAssignOthers}
+          />
 
           <div>
             <Label>Description *</Label>
