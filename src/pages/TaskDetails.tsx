@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/sheet";
 
 import { 
-  X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, 
+  X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, Reply,
   MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, 
   Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, 
   Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, 
@@ -98,6 +98,8 @@ const TaskDetails = () => {
   const [taskAccess, setTaskAccess] = useState<TaskAccess | null>(null);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
+  const [replyToComment, setReplyToComment] = useState<CorrectedTaskComment | null>(null);
+  const [pendingCommentFiles, setPendingCommentFiles] = useState<File[]>([]);
   
   // NEW: State for description expansion
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -153,6 +155,7 @@ const TaskDetails = () => {
   const isReadOnly = taskAccess
     ? taskAccess.readOnly === true || taskAccess.canEdit === false
     : false;
+  const canCollaborate = taskAccess?.canCollaborate === true || !isReadOnly;
 
   useEffect(() => {
     if (commentsQuery.data) {
@@ -562,6 +565,13 @@ const TaskDetails = () => {
     }
   };
 
+  const handleCommentFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setPendingCommentFiles((current) => [...current, ...files].slice(0, 10));
+    e.target.value = "";
+  };
+
   const confirmDeleteAttachment = async () => {
     const attachmentId = attachmentToDelete?.id;
     if (!attachmentId || isReadOnly) return;
@@ -680,7 +690,7 @@ const TaskDetails = () => {
 
   const handleSendComment = async (overrideContent?: string) => {
     const content = (overrideContent || newComment).trim();
-    if (!id || !content || sendingComment || isReadOnly) return;
+    if (!id || !content || sendingComment || !canCollaborate) return;
     
     // messageId will be determined by WebSocket send (preferred) or local fallback
     let messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -689,6 +699,17 @@ const TaskDetails = () => {
       setSendingComment(true);
       
       // Create optimistic comment with correct profile picture field
+      const mentionParticipants = [
+        task?.creator,
+        task?.assignee,
+        ...(task?.assignees || []),
+        ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user),
+        task?.team?.leadMember?.user,
+      ].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
+      const mentionedUserIds = mentionParticipants
+        .filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim()))
+        .map((participant) => participant.id)
+        .filter(Boolean) as string[];
       const optimisticComment: CorrectedTaskComment = {
         id: `optimistic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         taskId: id,
@@ -700,6 +721,7 @@ const TaskDetails = () => {
           isOptimistic: true,
           sending: true
         },
+        parentCommentId: replyToComment?.id || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         user: {
@@ -726,7 +748,7 @@ const TaskDetails = () => {
       optimisticCommentRef.current.set(messageId, optimisticComment);
       
       // Try WebSocket first if connected
-      if (isConnected) {
+      if (isConnected && !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0) {
         try {
           // Ensure we are in the room; backend also auto-joins, but this keeps UX consistent
           joinTaskRoom(id);
@@ -766,6 +788,8 @@ const TaskDetails = () => {
       }
       
       setNewComment("");
+      setReplyToComment(null);
+      setPendingCommentFiles([]);
       
       // Clear typing indicator
       if (typingTimeoutRef.current) {
@@ -793,7 +817,9 @@ const TaskDetails = () => {
   // Helper function to send comment via HTTP API
   const sendCommentViaHttp = async (content: string, messageId: string) => {
     try {
-      const response = await api.addTaskComment(id!, content);
+      const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
+      const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
+      const response = await api.addTaskComment(id!, content, { parentCommentId: replyToComment?.id || null, mentionedUserIds, files: pendingCommentFiles });
       
       // Fix the profile picture in the response
       const fixedComment = fixCommentProfilePicture(response.comment);
@@ -852,6 +878,7 @@ const TaskDetails = () => {
   const STATUS_LABEL = {
     pending: "Pending",
     in_progress: "In Progress",
+    in_review: "Ready for Executive Review",
     completed: "Completed",
     cancelled: "Cancelled",
   };
@@ -859,6 +886,7 @@ const TaskDetails = () => {
   const STATUS_COLORS = {
     pending: "bg-yellow-100 text-yellow-700",
     in_progress: "bg-blue-100 text-blue-700",
+    in_review: "bg-violet-100 text-violet-700",
     completed: "bg-green-100 text-green-700",
     cancelled: "bg-red-100 text-red-700",
   };
@@ -1303,8 +1331,10 @@ const TaskDetails = () => {
       const subtaskCount = getTaskSubtaskCount(task);
       const completedSub = (task.subtasks || []).filter(Boolean).filter((s: any) => s.status === "completed" || s.completed).length;
       const progressPct = subtaskCount > 0 ? Math.round((completedSub / subtaskCount) * 100) : 0;
+      const isTeamLead = task.team?.leadMember?.userId === user?.id;
       const canEditSubtasks =
         user?.role === "admin" ||
+        isTeamLead ||
         user?.id === task.assigneeId ||
         user?.id === task.creator?.id ||
         user?.role === "executive" ||
@@ -1373,6 +1403,7 @@ const TaskDetails = () => {
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="in_review">Ready for Executive Review</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="delayed">Delayed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -1463,6 +1494,7 @@ const TaskDetails = () => {
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="in_review">Ready for Executive Review</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="delayed">Delayed</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -1542,6 +1574,11 @@ const TaskDetails = () => {
               <div className="rounded-lg border bg-card p-3">
                 <div className="text-xs text-muted-foreground">Team</div>
                 <p className="font-semibold text-sm mt-1 truncate">{task.team?.name || "No team"}</p>
+                {task.team?.leadMember?.user && (
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Lead: {task.team.leadMember.user.firstName} {task.team.leadMember.user.lastName}
+                  </p>
+                )}
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1617,6 +1654,40 @@ const TaskDetails = () => {
               </div>
             </section>
 
+            {task.teamId && task.execution && (
+              <section className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">Team Execution</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {task.execution.total === 0
+                        ? "No subtasks yet. The Team Lead can break this outcome into work items."
+                        : `${task.execution.completed} completed · ${task.execution.inProgress} in progress · ${task.execution.pending} pending`}
+                    </p>
+                  </div>
+                  {task.execution.progressPercent !== null && (
+                    <span className="text-lg font-bold">{task.execution.progressPercent}%</span>
+                  )}
+                </div>
+                {task.execution.progressPercent !== null && (
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full bg-primary transition-all" style={{ width: `${task.execution.progressPercent}%` }} />
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {(task.team?.leadMember?.userId === user?.id || user?.id === task.creator?.id || ["admin", "manager"].includes(user?.role || "")) && task.status !== "in_review" && task.status !== "completed" && (
+                    <Button size="sm" onClick={() => handleStatusChange("in_review")} disabled={updating}>Submit for Executive Review</Button>
+                  )}
+                  {(user?.id === task.creator?.id || ["admin", "manager", "executive"].includes(user?.role || "")) && task.status === "in_review" && (
+                    <Button size="sm" onClick={() => handleStatusChange("completed")} disabled={updating}>Approve and Complete</Button>
+                  )}
+                  {(user?.id === task.creator?.id || ["admin", "manager", "executive"].includes(user?.role || "")) && task.status === "completed" && (
+                    <Button size="sm" variant="outline" onClick={() => handleStatusChange("in_progress")} disabled={updating}>Reopen Task</Button>
+                  )}
+                </div>
+              </section>
+            )}
+
             {/* Subtasks - ENHANCED with scrollable list */}
             <section className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between mb-2">
@@ -1634,7 +1705,10 @@ const TaskDetails = () => {
               <SubtaskList
                 taskId={task.id}
                 initialSubtasks={(task.subtasks || []).filter(Boolean)}
+                parentTeamId={task.teamId}
                 canEdit={canEditSubtasks && canCreateSubtasksByPolicy && !isReadOnly}
+                canCreate={canEditSubtasks && canCreateSubtasksByPolicy && !isReadOnly}
+                canUpdate={(subtask) => taskAccess?.canCollaborate === true && subtask.assigneeId === user?.id}
                 onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
               />
             </section>
@@ -1677,6 +1751,14 @@ const TaskDetails = () => {
       );
     })() : DetailsPanelSkeleton;
 
+  const mentionableParticipants = Array.from(new Map([
+    task?.creator,
+    task?.assignee,
+    ...(task?.assignees || []),
+    ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user),
+    task?.team?.leadMember?.user,
+  ].filter((participant): participant is { id: string; firstName?: string | null; lastName?: string | null } => Boolean(participant?.id)).map((participant) => [participant.id, participant])).values());
+
   const ChatContent = (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto p-4">
@@ -1698,7 +1780,7 @@ const TaskDetails = () => {
         ) : (
           <div className="space-y-4">
             {comments.map((comment) => (
-              <div key={comment.id} className={cn("flex gap-3", comment.userId === user?.id && "flex-row-reverse")}>
+              <div key={comment.id} className={cn("flex gap-3", comment.parentCommentId && "ml-6", comment.userId === user?.id && "flex-row-reverse")}>
                 <Avatar className="w-8 h-8 shrink-0">
                   <AvatarImage src={comment.user?.profilePictureUrl} />
                   <AvatarFallback className="text-xs">{getInitials(comment.user?.firstName || '', comment.user?.lastName || '')}</AvatarFallback>
@@ -1793,6 +1875,27 @@ const TaskDetails = () => {
                     })()}
                     {renderDeliveryMark(comment)}
                   </div>
+                  {comment.attachments && comment.attachments.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {comment.attachments.map((attachment) => (
+                        <Button key={attachment.id} variant="outline" size="sm" className="h-7 max-w-full text-xs" onClick={async () => {
+                          try {
+                            const file = await api.downloadTaskAttachment(comment.taskId, attachment.id);
+                            triggerBlobDownload(file.blob, file.fileName || attachment.fileName);
+                          } catch (error: any) {
+                            toast({ title: "Download failed", description: error.message, variant: "destructive" });
+                          }
+                        }}>
+                          {attachment.fileName}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  {canCollaborate && !comment.isSystemMessage && (
+                    <Button variant="ghost" size="sm" className="h-7 px-1 text-xs text-muted-foreground" onClick={() => setReplyToComment(comment)}>
+                      <Reply className="mr-1 h-3 w-3" /> Reply
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -1801,30 +1904,61 @@ const TaskDetails = () => {
         )}
       </div>
       <div className="p-3 border-t bg-background">
+        {replyToComment && (
+          <div className="mb-2 flex items-center justify-between rounded-md bg-muted px-2 py-1.5 text-xs">
+            <span>Replying to {replyToComment.user?.firstName} {replyToComment.user?.lastName}</span>
+            <Button variant="ghost" size="sm" className="h-6 px-1" onClick={() => setReplyToComment(null)}>Cancel</Button>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <Textarea
-            placeholder={isReadOnly ? "You can't comment on read-only tasks" : "Type a message..."}
+            placeholder={!canCollaborate ? "You can't comment on this task" : "Type a message..."}
             rows={2}
             value={newComment}
             onChange={(e) => { setNewComment(e.target.value); handleTyping(); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
             className="flex-1 resize-none text-sm"
-            disabled={sendingComment || isReadOnly}
+            disabled={sendingComment || !canCollaborate}
           />
           <div className="flex flex-col gap-1.5">
-            <input type="file" multiple ref={chatFileInputRef} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif" onChange={(e) => handleFileUpload(e, true)} />
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={uploadingFiles || isReadOnly}>
+            <input type="file" multiple ref={chatFileInputRef} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif" onChange={handleCommentFileSelect} />
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={sendingComment || !canCollaborate}>
               <Paperclip className="w-3.5 h-3.5" />
             </Button>
-            <Button size="icon" className="h-8 w-8" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || isReadOnly}>
+            <Button size="icon" className="h-8 w-8" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || !canCollaborate}>
               {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
           </div>
         </div>
+        {pendingCommentFiles.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {pendingCommentFiles.map((file, index) => (
+              <button key={`${file.name}-${index}`} type="button" className="rounded border px-2 py-1 text-[11px]" onClick={() => setPendingCommentFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}>
+                {file.name} ×
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mt-1.5 text-[11px] text-muted-foreground flex justify-between">
           <span>Enter to send · Shift+Enter for new line</span>
           {!isConnected && <span className="text-yellow-600">Offline · HTTP fallback</span>}
         </div>
+        {canCollaborate && mentionableParticipants.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {mentionableParticipants.map((participant) => (
+              <Button
+                key={participant.id}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setNewComment((current) => `${current}${current ? " " : ""}@${participant.firstName || ""} ${participant.lastName || ""}`)}
+              >
+                @{participant.firstName}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -92,6 +92,26 @@ export interface Team {
   tasks?: Task[];
 }
 
+export interface TeamMessage {
+  id: string;
+  teamId: string;
+  userId: string;
+  parentMessageId?: string | null;
+  content: string;
+  mentionedUserIds?: string[];
+  createdAt: string;
+  updatedAt: string;
+  user?: Pick<User, "id" | "firstName" | "lastName" | "email" | "profilePictureUrl">;
+}
+
+export interface TeamWorkspaceResponse {
+  team: Team;
+  messages: TeamMessage[];
+  activeAssignments: Task[];
+  workload: Array<{ user: User | null; activeSubtasks: number; overdue: number; nearestDueDate: string | null }>;
+  activity: TaskActivity[];
+}
+
 export interface WorkspaceItem {
   companyId: string;
   role: WorkspaceRole;
@@ -346,6 +366,23 @@ export interface TaskSubtask {
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
+  description?: string | null;
+  priority?: TaskPriority | null;
+  deadline?: string | null;
+  assigneeId?: string | null;
+  assignee?: User | null;
+  assignees?: User[] | null;
+  teamId?: string | null;
+  parentTaskId?: string | null;
+}
+
+export interface TaskExecutionSummary {
+  hasExecution: boolean;
+  total: number;
+  completed: number;
+  inProgress: number;
+  pending: number;
+  progressPercent: number | null;
 }
 
 export interface TaskActivity {
@@ -381,7 +418,7 @@ export interface TaskWatcher {
 }
 
 export type TaskPriority = "low" | "medium" | "high";
-export type TaskStatus = "pending" | "in_progress" | "completed" | "delayed" | "cancelled";
+export type TaskStatus = "pending" | "in_progress" | "in_review" | "completed" | "delayed" | "cancelled";
 
 /**
  * Per-user access info for a task, returned by GET /tasks/:id (and optionally
@@ -392,6 +429,7 @@ export interface TaskAccess {
   canView: boolean;
   canEdit: boolean;
   readOnly: boolean;
+  canCollaborate?: boolean;
 }
 
 export interface Task {
@@ -410,7 +448,7 @@ export interface Task {
   executiveId?: string | null;
   assigneeId?: string | null;
   teamId?: string | null;
-  team?: Pick<Team, "id" | "name" | "leadMemberId"> | null;
+  team?: (Pick<Team, "id" | "name" | "leadMemberId"> & { leadMember?: CompanyMember | null; memberLinks?: TeamMemberLink[] }) | null;
   parentTaskId?: string | null;
 
   createdAt?: string | null;
@@ -460,6 +498,7 @@ export interface Task {
 
   /** Optional per-user access hint (list items). GET /tasks/:id is authoritative. */
   access?: TaskAccess | null;
+  execution?: TaskExecutionSummary | null;
 }
 
 export interface CreateTaskData {
@@ -692,6 +731,8 @@ export interface TaskComment {
   metadata: Record<string, any>;
   createdAt: string;
   updatedAt: string;
+  parentCommentId?: string | null;
+  attachments?: TaskAttachment[];
   user?: {
     id: string;
     firstName: string;
@@ -2078,7 +2119,7 @@ class ApiClient {
 
   async createTaskSubtask(
     taskId: string,
-    data: { title: string; status?: TaskSubtask["status"]; sortOrder?: number; teamId?: string | null }
+    data: { title: string; description?: string; priority?: TaskPriority; deadline?: string; status?: TaskSubtask["status"]; assigneeId?: string | null; sortOrder?: number; teamId?: string | null }
   ): Promise<{ status: string; message?: string; data: { subtask: TaskSubtask } | TaskSubtask }> {
     return this.request(`/tasks/${taskId}/subtasks`, {
       method: "POST",
@@ -2090,7 +2131,7 @@ class ApiClient {
   async updateTaskSubtask(
     taskId: string,
     subtaskId: string,
-    data: Partial<{ title: string; status: TaskSubtask["status"]; sortOrder: number }>
+    data: Partial<{ title: string; description: string; priority: TaskPriority; deadline: string | null; status: TaskSubtask["status"]; assigneeId: string | null; sortOrder: number }>
   ): Promise<{ status: string; message?: string; data: { subtask: TaskSubtask } | TaskSubtask }> {
     return this.request(`/tasks/${taskId}/subtasks/${subtaskId}`, {
       method: "PATCH",
@@ -2458,6 +2499,14 @@ class ApiClient {
 
   async getTeam(teamId: string): Promise<{ status: string; data: { team: Team } }> {
     return this.request(`/team/teams/${teamId}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async getTeamWorkspace(teamId: string): Promise<{ status: string; data: TeamWorkspaceResponse }> {
+    return this.request(`/team/teams/${teamId}/workspace`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async postTeamMessage(teamId: string, data: { content: string; parentMessageId?: string | null; mentionedUserIds?: string[] }): Promise<{ status: string; data: { message: TeamMessage } }> {
+    return this.request(`/team/teams/${teamId}/messages`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
   }
 
   async createTeam(data: { name: string; description?: string }): Promise<{ status: string; data: { team: Team } }> {
@@ -2991,16 +3040,23 @@ class ApiClient {
 
   async addTaskComment(
     taskId: string,
-    content: string
+    content: string,
+    options?: { parentCommentId?: string | null; mentionedUserIds?: string[]; files?: File[] }
   ): Promise<{
     success: boolean;
     comment: TaskComment;
     involvedUsers: string[];
   }> {
+    const files = options?.files || [];
+    const body = new FormData();
+    body.append("content", content);
+    if (options?.parentCommentId) body.append("parentCommentId", options.parentCommentId);
+    if (options?.mentionedUserIds?.length) body.append("mentionedUserIds", JSON.stringify(options.mentionedUserIds));
+    files.forEach((file) => body.append("files", file));
     return this.request(`/task-comments/task/${taskId}/comments`, {
       method: "POST",
-      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      headers: this.getAuthHeaders(true),
+      body,
     });
   }
 

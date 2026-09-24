@@ -2,18 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { api, TaskSubtask } from "@/lib/api";
+import { api, CompanyMember, TaskSubtask } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import TeamSelector from "@/components/TeamSelector";
+import { Link } from "react-router-dom";
 
 type Props = {
   taskId: string;
   initialSubtasks?: TaskSubtask[];
   canEdit?: boolean;
+  canCreate?: boolean;
+  canUpdate?: (subtask: TaskSubtask) => boolean;
+  parentTeamId?: string | null;
   onChanged?: (subtasks: TaskSubtask[]) => void;
 };
 
@@ -34,7 +39,7 @@ const extractSubtask = (payload: any): TaskSubtask | null => {
   return null;
 };
 
-const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }: Props) => {
+const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate = canEdit, canUpdate, parentTeamId = null, onChanged }: Props) => {
   const { toast } = useToast();
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>(initialSubtasks);
   const [title, setTitle] = useState("");
@@ -43,10 +48,26 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
   const [editingTitle, setEditingTitle] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<CompanyMember[]>([]);
+  const [assigneeId, setAssigneeId] = useState("none");
 
   useEffect(() => {
     setSubtasks(initialSubtasks);
   }, [initialSubtasks]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!parentTeamId) {
+      setTeamMembers([]);
+      return undefined;
+    }
+    api.getTeam(parentTeamId).then((response) => {
+      if (!cancelled) setTeamMembers((response.data.team.memberLinks || []).map((link) => link.companyMember).filter(Boolean));
+    }).catch(() => {
+      if (!cancelled) setTeamMembers([]);
+    });
+    return () => { cancelled = true; };
+  }, [parentTeamId]);
 
   const { total, completed, incomplete } = useMemo(() => {
     const total = subtasks.length;
@@ -90,7 +111,11 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
 
     try {
       setSaving(true);
-      const res = await api.createTaskSubtask(taskId, { title: optimistic.title, teamId });
+      const res = await api.createTaskSubtask(taskId, {
+        title: optimistic.title,
+        teamId: parentTeamId || teamId,
+        assigneeId: parentTeamId && assigneeId !== "none" ? assigneeId : undefined,
+      });
       const created = extractSubtask(res) || optimistic;
       sync([created, ...previous]);
     } catch (error: any) {
@@ -177,7 +202,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
       </div>
 
       {/* Create input */}
-      {canEdit && (
+      {canCreate && (
         <div className="space-y-2">
           <Input
             placeholder="Create a subtask..."
@@ -186,7 +211,30 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
             onKeyDown={(e) => e.key === "Enter" && createSubtask()}
             className="flex-1"
           />
-          <div className="flex items-end gap-2"><div className="min-w-0 flex-1"><TeamSelector value={teamId} onChange={setTeamId} label="Team (optional)" /></div><Button size="sm" onClick={createSubtask} disabled={!title.trim() || saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}</Button></div>
+          <div className="flex items-end gap-2">
+            <div className="min-w-0 flex-1">
+              {parentTeamId ? (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">Assign to Team member</p>
+                  <Select value={assigneeId} onValueChange={setAssigneeId}>
+                    <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {teamMembers.map((member) => (
+                        <SelectItem key={member.userId} value={member.userId}>
+                          {member.user?.firstName} {member.user?.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {teamMembers.length === 0 && <p className="text-xs text-muted-foreground">No active members are available in this Team.</p>}
+                </div>
+              ) : (
+                <TeamSelector value={teamId} onChange={setTeamId} label="Team (optional)" />
+              )}
+            </div>
+            <Button size="sm" onClick={createSubtask} disabled={!title.trim() || saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}</Button>
+          </div>
         </div>
       )}
 
@@ -205,10 +253,14 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
                 subtask.status === "completed" && "bg-muted/30 opacity-70"
               )}
             >
+              {(() => {
+                const canUpdateSubtask = canEdit || canUpdate?.(subtask) === true;
+                return (
+                  <>
               <Checkbox
                 checked={subtask.status === "completed"}
                 onCheckedChange={(checked) => toggleStatus(subtask, !!checked)}
-                disabled={!canEdit}
+                disabled={!canUpdateSubtask}
                 className="shrink-0"
               />
               {editingId === subtask.id ? (
@@ -238,7 +290,18 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
                   {subtask.title}
                 </button>
               )}
-              <div className="flex items-center gap-0.5 shrink-0">
+              <Link to={`/tasks/${subtask.id}`} className="text-xs text-primary hover:underline">Open</Link>
+              <div className="flex items-center gap-2 shrink-0">
+                <Select value={subtask.status} onValueChange={(status) => api.updateTaskSubtask(taskId, subtask.id, { status }).then(() => loadSubtasks()).catch((error: any) => toast({ title: "Could not update subtask", description: error.message, variant: "destructive" }))} disabled={!canUpdateSubtask}>
+                  <SelectTrigger className="h-7 w-[112px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="delayed">Delayed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
                 {editingId === subtask.id && (
                   <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => saveInlineTitle(subtask)}>
                     <Check className="w-3.5 h-3.5" />
@@ -255,6 +318,9 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, onChanged }
                   </Button>
                 )}
               </div>
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>
