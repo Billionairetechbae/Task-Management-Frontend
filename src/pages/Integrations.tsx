@@ -26,6 +26,7 @@ import {
   extractIntegrations, normalizeIntegration,
 } from "@/lib/integrations";
 import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
+import { WhatsAppSettings } from "@/components/integrations/WhatsAppSettings";
 
 const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
   const Shell = embedded
@@ -377,6 +378,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
                   label="Last sync"
                   value={selected.lastSyncAt ? formatDistanceToNow(new Date(selected.lastSyncAt), { addSuffix: true }) : "—"}
                 />
+                {selected.id === "whatsapp" && <WhatsAppSettings />}
 
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">

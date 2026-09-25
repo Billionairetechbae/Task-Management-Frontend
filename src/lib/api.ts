@@ -1765,6 +1765,10 @@ class ApiClient {
   async cancelWhatsAppConnection(token:string){return this.request("/integrations/whatsapp/connect/cancel",{method:"POST",body:JSON.stringify({token})});}
   async getWhatsAppAccount(){return this.get("/integrations/whatsapp/account",{includeWorkspace:false});}
   async disconnectWhatsApp(){return this.request("/integrations/whatsapp/account",{method:"DELETE",headers:this.getAuthHeaders(false)});}
+  async getWhatsAppPreferences(){return this.get("/integrations/whatsapp/preferences",{includeWorkspace:false});}
+  async updateWhatsAppPreferences(data:Record<string, boolean>){return this.request("/integrations/whatsapp/preferences",{method:"PUT",headers:this.getAuthHeaders(false),body:JSON.stringify(data)});}
+  async getWhatsAppQuietHours(){return this.get("/integrations/whatsapp/quiet-hours",{includeWorkspace:false});}
+  async updateWhatsAppQuietHours(data:{enabled:boolean;startTime:string|null;endTime:string|null;timeZone:string|null}){return this.request("/integrations/whatsapp/quiet-hours",{method:"PUT",headers:this.getAuthHeaders(false),body:JSON.stringify(data)});}
 
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive", {
