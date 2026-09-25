@@ -203,7 +203,7 @@ export default function TeamWorkspacePanel({ team }: Props) {
                 {workspace.activeAssignments.length === 0 ? (
                   <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">This Team has no active assignments.</p>
                 ) : workspace.activeAssignments.map((task) => (
-                  <Link key={task.id} to={`/tasks/${task.id}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                  <Link key={task.id} to={`/task-details/${task.id}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">{task.title}</span>
                       <span className="text-xs text-muted-foreground">{task.status} · {task.deadline ? new Date(task.deadline).toLocaleDateString() : "No deadline"}</span>

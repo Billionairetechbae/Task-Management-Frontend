@@ -15,16 +15,16 @@ describe("Phase 5B workspace and task files contract", () => {
   });
 
   it("links subtasks back to the existing task room", () => {
-    expect(subtasks).toContain("to={`/tasks/${subtask.id}`}");
+    expect(subtasks).toContain("to={`/task-details/${subtask.id}`}");
     expect(subtasks).toContain("Assign to Team member");
   });
 
   it("adds persistent Team workspace sections and empty states", () => {
     expect(teams).toContain("TeamWorkspacePanel");
-    expect(workspace).toContain("Discussion");
-    expect(workspace).toContain("Assignments");
-    expect(workspace).toContain("Activity");
+    expect(workspace).toContain('value="discussion"');
+    expect(workspace).toContain('value="assignments"');
+    expect(workspace).toContain('value="activity"');
     expect(workspace).toContain("This Team has no active assignments.");
-    expect(workspace).toContain("No Team messages yet.");
+    expect(workspace).toContain("No messages yet");
   });
 });

@@ -290,7 +290,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate =
                   {subtask.title}
                 </button>
               )}
-              <Link to={`/tasks/${subtask.id}`} className="text-xs text-primary hover:underline">Open</Link>
+              <Link to={`/task-details/${subtask.id}`} className="text-xs text-primary hover:underline">Open</Link>
               <div className="flex items-center gap-2 shrink-0">
                 <Select value={subtask.status} onValueChange={(status) => api.updateTaskSubtask(taskId, subtask.id, { status }).then(() => loadSubtasks()).catch((error: any) => toast({ title: "Could not update subtask", description: error.message, variant: "destructive" }))} disabled={!canUpdateSubtask}>
                   <SelectTrigger className="h-7 w-[112px] text-xs"><SelectValue /></SelectTrigger>
