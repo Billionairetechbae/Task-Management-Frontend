@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TeamWorkspacePanel from "@/components/teams/TeamWorkspacePanel";
+import TaskDetailsRedirect from "@/components/TaskDetailsRedirect";
 
 /**
  * Regression coverage for the production bug where opening a Task from the
@@ -100,6 +101,23 @@ describe("Team -> Task navigation route contract", () => {
     await user.click(link);
 
     expect(await screen.findByText(`TaskDetails route:${TASK_ID}`)).toBeInTheDocument();
+    expect(screen.queryByText("NotFound route")).not.toBeInTheDocument();
+  });
+});
+
+describe("Legacy /tasks/:id backward-compatible redirect", () => {
+  it("redirects a direct/pasted/refreshed /tasks/:id URL to the canonical task-details route", () => {
+    render(
+      <MemoryRouter initialEntries={[`/tasks/${TASK_ID}`]}>
+        <Routes>
+          <Route path="/tasks/:id" element={<TaskDetailsRedirect />} />
+          <Route path="/task-details/:id" element={<TaskDetailsStub />} />
+          <Route path="*" element={<NotFoundStub />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(`TaskDetails route:${TASK_ID}`)).toBeInTheDocument();
     expect(screen.queryByText("NotFound route")).not.toBeInTheDocument();
   });
 });

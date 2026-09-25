@@ -33,6 +33,7 @@ import NotFound from "./pages/NotFound";
 import TeamMembers from "./pages/TeamMembers";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import TaskDetailsRedirect from "./components/TaskDetailsRedirect";
 import OnboardingProfileModal from "./components/OnboardingProfileModal";
 import { api } from "./lib/api";
 import { useAuth } from "./contexts/AuthContext";
@@ -272,6 +273,9 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* Backward-compatible redirect: legacy /tasks/:id -> canonical /task-details/:id */}
+        <Route path="/tasks/:id" element={<TaskDetailsRedirect />} />
 
         <Route
           path="/team-management"
