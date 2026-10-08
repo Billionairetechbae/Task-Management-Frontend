@@ -17,33 +17,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import {
+  HarmonyAiSummary,
+  isUsableTeamReport,
+  normalizePersonalReport,
+  parseCachedPersonalSummary,
+} from "@/lib/harmonyAiReport";
 import { ContentCard, SectionHeader } from "@/components/dashboard/DashboardComponents";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Mode = "intro" | "assessment" | "generating" | "report";
-
-type HarmonyAiSummary = {
-  executiveSummary?: string;
-  strengths?: string[];
-  watchOuts?: string[];
-  collaborationTips?: string[];
-  suggestedRoles?: string[];
-  nextActions?: string[];
-};
-
-const safeJsonParse = (raw: any): HarmonyAiSummary => {
-  if (!raw) return {};
-  if (typeof raw === "object") return raw as HarmonyAiSummary;
-
-  const text = String(raw);
-  try {
-    const parsed = JSON.parse(text);
-    if (parsed && typeof parsed === "object") return parsed as HarmonyAiSummary;
-  } catch {
-    // ignore
-  }
-  return { executiveSummary: text };
-};
 
 const Harmony = () => {
   const { toast } = useToast();
@@ -63,6 +46,7 @@ const Harmony = () => {
   // --- AI summary state
   const [aiSummary, setAiSummary] = useState<HarmonyAiSummary | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // --- Team AI summary state
   const [teamAiReport, setTeamAiReport] = useState<HarmonyAiReport | null>(null);
@@ -82,7 +66,7 @@ const Harmony = () => {
       profile?.completedAt ||
       profile?.archetype ||
       "v1";
-    return uid ? `harmony_ai_summary_${uid}_${version}` : "harmony_ai_summary_fallback";
+    return uid ? `harmony_ai_summary_v2_${uid}_${version}` : "harmony_ai_summary_v2_fallback";
   }, [user?.id, (profile as any)?.latestSubmissionId, profile?.completedAt, profile?.archetype]);
 
   const loadMyProfile = async () => {
@@ -130,16 +114,15 @@ const Harmony = () => {
       setAiSummary(null);
       return;
     }
-    const cached = localStorage.getItem(aiCacheKey);
-    if (cached) {
-      try {
-        setAiSummary(JSON.parse(cached));
-      } catch {
-        setAiSummary(null);
-      }
-    } else {
-      setAiSummary(null);
+    // Ignore cache entries that lack the minimum personal-report content (e.g. older blank ones).
+    let cached: HarmonyAiSummary | null = null;
+    try {
+      cached = parseCachedPersonalSummary(localStorage.getItem(aiCacheKey));
+      if (!cached) localStorage.removeItem(aiCacheKey);
+    } catch {
+      cached = null;
     }
+    setAiSummary(cached);
   }, [aiCacheKey, profile, user?.id]);
 
   useEffect(() => {
@@ -255,7 +238,11 @@ const Harmony = () => {
       setTeamAiLoading(true);
       setTeamAiError(null);
       const res = await api.getHarmonyAiSummaryTeam(force);
-      setTeamAiReport(res?.data?.report || null);
+      const report = res?.data?.report;
+      if (!isUsableTeamReport(report)) {
+        throw new Error("The team AI summary came back empty. Please try again.");
+      }
+      setTeamAiReport(report);
     } catch (err: any) {
       const msg = err?.message || "Failed to load team AI summary";
       setTeamAiError(msg);
@@ -272,7 +259,11 @@ const Harmony = () => {
   const canManageTeamAi = ["owner", "admin", "manager"].includes(workspaceRole || "");
 
   const clearAiSummary = () => {
-    localStorage.removeItem(aiCacheKey);
+    try {
+      localStorage.removeItem(aiCacheKey);
+    } catch {
+      // storage unavailable
+    }
     setAiSummary(null);
     toast({
       title: "Harmony",
@@ -283,46 +274,48 @@ const Harmony = () => {
   const generateAiSummary = async (force = false) => {
     try {
       if (!profile || !user?.id) return;
+      setAiError(null);
 
       if (!force) {
-        const cached = localStorage.getItem(aiCacheKey);
+        let cached: HarmonyAiSummary | null = null;
+        try {
+          cached = parseCachedPersonalSummary(localStorage.getItem(aiCacheKey));
+        } catch {
+          cached = null;
+        }
         if (cached) {
-          try {
-            setAiSummary(JSON.parse(cached));
-            return;
-          } catch {
-            // ignore and regenerate
-          }
+          setAiSummary(cached);
+          return;
         }
       }
 
       setAiLoading(true);
 
       const res = await api.getHarmonyAiSummaryMe(force);
-      const raw = res?.data?.report;
-
-      // For backward compatibility, map the new report shape to old summary shape
-      const parsed: HarmonyAiSummary = raw
-        ? {
-            executiveSummary: raw.teamSnapshot,
-            strengths: raw.strengths,
-            watchOuts: raw.risks,
-            collaborationTips: raw.operatingNorms,
-            nextActions: raw.actionsNext30Days,
-          }
-        : {};
+      // Personal reports have their own contract; do not map them through the team schema.
+      const parsed = normalizePersonalReport(res?.data?.report);
+      if (!parsed) {
+        throw new Error("The AI summary came back in an unexpected format. Please try again.");
+      }
 
       setAiSummary(parsed);
-      localStorage.setItem(aiCacheKey, JSON.stringify(parsed));
+      try {
+        localStorage.setItem(aiCacheKey, JSON.stringify(parsed));
+      } catch {
+        // storage unavailable; the summary still renders
+      }
 
       toast({
         title: "Harmony",
         description: "AI summary generated.",
       });
     } catch (err: any) {
+      // Failures are never cached and never replace the summary with a blank one.
+      const message = err?.message || "Failed to generate AI summary.";
+      setAiError(message);
       toast({
         title: "Harmony",
-        description: err?.message || "Failed to generate AI summary.",
+        description: message,
         variant: "destructive" as any,
       });
     } finally {
@@ -425,6 +418,8 @@ const Harmony = () => {
               <>
                 <HarmonyReport profile={profile} onRetake={startAssessment} />
 
+                {aiError && <p className="text-sm text-destructive">{aiError}</p>}
+
                 {/* AI summary render */}
                 {aiSummary?.executiveSummary && (
                   <div className="rounded-2xl border bg-card p-6 shadow-sm space-y-4">
@@ -480,6 +475,17 @@ const Harmony = () => {
                         <ul className="mt-2 list-disc pl-5 text-sm">
                           {aiSummary.collaborationTips.map((x, i) => (
                             <li key={`tip-${i}`}>{x}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {!!aiSummary.bestWorkConditions?.length && (
+                      <div>
+                        <p className="text-sm font-medium">Best work conditions</p>
+                        <ul className="mt-2 list-disc pl-5 text-sm">
+                          {aiSummary.bestWorkConditions.map((x, i) => (
+                            <li key={`condition-${i}`}>{x}</li>
                           ))}
                         </ul>
                       </div>
