@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Crown, Plus, Search, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { EmptyState, LoadingState, PageHeader } from "@/components/dashboard/DashboardComponents";
@@ -27,6 +28,7 @@ const memberInitials = (member?: CompanyMember | null) => {
 const teamInitials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word.charAt(0)).join("").toUpperCase() || "T";
 
 export default function Teams() {
+  const [searchParams] = useSearchParams();
   const { activeCompanyId, user, workspaceRole } = useAuth();
   const { toast } = useToast();
   const canManage = canManageWorkspace(workspaceRole, user?.role);
@@ -68,13 +70,14 @@ export default function Teams() {
       const nextTeams = teamResponse.data.teams || [];
       setTeams(nextTeams);
       setWorkspaceMembers(memberResponse.data.members || []);
-      setSelectedId((current) => nextTeams.some((team) => team.id === current) ? current : nextTeams[0]?.id || null);
+      const requested = searchParams.get("team");
+      setSelectedId((current) => nextTeams.some((team) => team.id === requested) ? requested : nextTeams.some((team) => team.id === current) ? current : nextTeams[0]?.id || null);
     } catch (error: any) {
       toast({ title: "Could not load teams", description: error.message, variant: "destructive" });
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { void load(); }, [activeCompanyId, canManage]);
+  useEffect(() => { void load(); }, [activeCompanyId, canManage, searchParams]);
   useEffect(() => { setSelectedMemberIds([]); setMemberSearch(""); }, [selectedId]);
 
   const closeDialog = () => {
