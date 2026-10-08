@@ -293,7 +293,7 @@ const App = () => {
           element={<ProtectedRoute><Teams /></ProtectedRoute>}
         />
         <Route path="/teams/:teamId/tasks/:taskId" element={<ProtectedRoute><TeamTaskView /></ProtectedRoute>} />
-        <Route path="/teams/:teamId/tasks/:taskId/subtasks/:subtaskId" element={<ProtectedRoute><TeamSubtaskView /></ProtectedRoute>} />
+        <Route path="/teams/:teamId/tasks/:taskId/subtasks/:subtaskId" element={<ProtectedRoute><TeamTaskView /></ProtectedRoute>} />
 
         <Route
           path="/company-profile"
