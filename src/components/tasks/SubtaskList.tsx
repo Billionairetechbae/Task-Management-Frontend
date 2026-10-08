@@ -20,6 +20,7 @@ type Props = {
   canUpdate?: (subtask: TaskSubtask) => boolean;
   parentTeamId?: string | null;
   subtaskLinkBuilder?: (subtask: TaskSubtask) => string;
+  selectedSubtaskId?: string | null;
   onChanged?: (subtasks: TaskSubtask[]) => void;
 };
 
@@ -40,7 +41,7 @@ const extractSubtask = (payload: any): TaskSubtask | null => {
   return null;
 };
 
-const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate = canEdit, canUpdate, parentTeamId = null, subtaskLinkBuilder, onChanged }: Props) => {
+const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate = canEdit, canUpdate, parentTeamId = null, subtaskLinkBuilder, selectedSubtaskId, onChanged }: Props) => {
   const { toast } = useToast();
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>(initialSubtasks);
   const [title, setTitle] = useState("");
@@ -251,6 +252,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate =
               key={subtask.id} 
               className={cn(
                 "flex items-center gap-2 rounded-md border p-2 transition-all",
+                selectedSubtaskId === subtask.id && "border-primary bg-primary/5 ring-1 ring-primary/20",
                 subtask.status === "completed" && "bg-muted/30 opacity-70"
               )}
             >

@@ -28,7 +28,6 @@ import TeamDirectory from "./pages/TeamDirectory";
 import TeamMemberProfile from "./pages/TeamMemberProfile";
 import Teams from "./pages/Teams";
 import TeamTaskView from "./pages/TeamTaskView";
-import TeamSubtaskView from "./pages/TeamSubtaskView";
 
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
@@ -292,8 +291,7 @@ const App = () => {
           path="/teams"
           element={<ProtectedRoute><Teams /></ProtectedRoute>}
         />
-        <Route path="/teams/:teamId/tasks/:taskId" element={<ProtectedRoute><TeamTaskView /></ProtectedRoute>} />
-        <Route path="/teams/:teamId/tasks/:taskId/subtasks/:subtaskId" element={<ProtectedRoute><TeamTaskView /></ProtectedRoute>} />
+        <Route path="/teams/:teamId/tasks/:taskId/*" element={<ProtectedRoute><TeamTaskView /></ProtectedRoute>} />
 
         <Route
           path="/company-profile"
