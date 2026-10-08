@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TeamWorkspacePanel from "@/components/teams/TeamWorkspacePanel";
 import TaskDetailsRedirect from "@/components/TaskDetailsRedirect";
+import { teamTaskPath } from "@/lib/taskExecutionRoutes";
 
 /**
  * Regression coverage for the production bug where opening a Task from the
@@ -53,6 +54,7 @@ const renderRouter = (initialPath: string) =>
       <Routes>
         <Route path="/teams" element={<TeamWorkspacePanel team={team} />} />
         <Route path="/task-details/:id" element={<TaskDetailsStub />} />
+        <Route path="/teams/:teamId/tasks/:taskId" element={<div>TeamTask route</div>} />
         <Route path="*" element={<NotFoundStub />} />
       </Routes>
     </MemoryRouter>,
@@ -81,7 +83,7 @@ describe("Team -> Task navigation route contract", () => {
     expect(screen.queryByText(/TaskDetails route:/)).not.toBeInTheDocument();
   });
 
-  it("links an Active Assignment to the canonical /task-details/:id route", async () => {
+  it("links an Active Assignment to the dedicated Team Task route", async () => {
     const user = userEvent.setup();
     renderRouter("/teams");
 
@@ -89,10 +91,10 @@ describe("Team -> Task navigation route contract", () => {
     await user.click(await screen.findByRole("tab", { name: /Tasks/i }));
 
     const link = await screen.findByRole("link", { name: /Ship the campaign/i });
-    expect(link).toHaveAttribute("href", `/task-details/${TASK_ID}`);
+    expect(link).toHaveAttribute("href", teamTaskPath(team.id, TASK_ID));
   });
 
-  it("navigating from the Team workspace opens TaskDetails, not the 404 page", async () => {
+  it("navigating from the Team workspace opens Team Task View, not the generic workbench", async () => {
     const user = userEvent.setup();
     renderRouter("/teams");
 
@@ -100,7 +102,7 @@ describe("Team -> Task navigation route contract", () => {
     const link = await screen.findByRole("link", { name: /Ship the campaign/i });
     await user.click(link);
 
-    expect(await screen.findByText(`TaskDetails route:${TASK_ID}`)).toBeInTheDocument();
+    expect(await screen.findByText("TeamTask route")).toBeInTheDocument();
     expect(screen.queryByText("NotFound route")).not.toBeInTheDocument();
   });
 });

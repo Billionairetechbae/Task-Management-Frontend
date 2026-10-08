@@ -19,6 +19,7 @@ type Props = {
   canCreate?: boolean;
   canUpdate?: (subtask: TaskSubtask) => boolean;
   parentTeamId?: string | null;
+  subtaskLinkBuilder?: (subtask: TaskSubtask) => string;
   onChanged?: (subtasks: TaskSubtask[]) => void;
 };
 
@@ -39,7 +40,7 @@ const extractSubtask = (payload: any): TaskSubtask | null => {
   return null;
 };
 
-const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate = canEdit, canUpdate, parentTeamId = null, onChanged }: Props) => {
+const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate = canEdit, canUpdate, parentTeamId = null, subtaskLinkBuilder, onChanged }: Props) => {
   const { toast } = useToast();
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>(initialSubtasks);
   const [title, setTitle] = useState("");
@@ -290,7 +291,7 @@ const SubtaskList = ({ taskId, initialSubtasks = [], canEdit = true, canCreate =
                   {subtask.title}
                 </button>
               )}
-              <Link to={`/task-details/${subtask.id}`} className="text-xs text-primary hover:underline">Open</Link>
+              <Link to={subtaskLinkBuilder ? subtaskLinkBuilder(subtask) : parentTeamId ? `/teams/${parentTeamId}/tasks/${taskId}/subtasks/${subtask.id}` : `/task-details/${subtask.id}`} className="text-xs text-primary hover:underline">Open</Link>
               <div className="flex items-center gap-2 shrink-0">
                 <Select value={subtask.status} onValueChange={(status) => api.updateTaskSubtask(taskId, subtask.id, { status }).then(() => loadSubtasks()).catch((error: any) => toast({ title: "Could not update subtask", description: error.message, variant: "destructive" }))} disabled={!canUpdateSubtask}>
                   <SelectTrigger className="h-7 w-[112px] text-xs"><SelectValue /></SelectTrigger>

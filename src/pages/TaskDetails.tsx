@@ -70,6 +70,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { teamTaskPath } from "@/lib/taskExecutionRoutes";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -1369,6 +1370,9 @@ const TaskDetails = () => {
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                       <Badge className={cn("text-[10px] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
                       <Badge className={cn("text-[10px] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                      {task.teamId && !task.parentTaskId && (
+                        <Badge variant="outline" className="text-[10px] sm:text-xs">Assigned to Team{task.team?.name ? ` · ${task.team.name}` : ""}</Badge>
+                      )}
                       {isReadOnly && (
                         <Badge
                           variant="outline"
@@ -1393,6 +1397,9 @@ const TaskDetails = () => {
 
               {/* Desktop / tablet toolbar */}
               <div className="hidden md:flex items-center gap-2 shrink-0">
+                {task.teamId && !task.parentTaskId && (
+                  <Button size="sm" variant="secondary" onClick={() => navigate(teamTaskPath(task.teamId!, task.id!))}>Open in Team Workspace</Button>
+                )}
                 <TooltipProvider delayDuration={150}>
                   <div className="hidden lg:flex items-center gap-1.5 pr-1 border-r mr-1">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
