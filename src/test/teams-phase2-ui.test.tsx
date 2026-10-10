@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Teams from "@/pages/Teams";
 import WorkspaceLifecycleSettings from "@/components/workspaces/WorkspaceLifecycleSettings";
@@ -8,6 +9,7 @@ import WorkspaceLifecycleSettings from "@/components/workspaces/WorkspaceLifecyc
 const apiMock = vi.hoisted(() => ({
   listTeams: vi.fn(),
   getCompanyTeam: vi.fn(),
+  getTeamWorkspace: vi.fn(),
   assignTeamLead: vi.fn(),
   addTeamMembers: vi.fn(),
   removeTeamMembers: vi.fn(),
@@ -56,6 +58,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   apiMock.listTeams.mockResolvedValue({ data: { teams: [team()] } });
   apiMock.getCompanyTeam.mockResolvedValue({ data: { members: [] } });
+  apiMock.getTeamWorkspace.mockResolvedValue({ data: { activeAssignments: [], workload: [], activity: [], messages: [] } });
   apiMock.assignTeamLead.mockResolvedValue({ status: "success" });
   apiMock.addTeamMembers.mockResolvedValue({ status: "success" });
   apiMock.removeTeamMembers.mockResolvedValue({ status: "success" });
@@ -69,7 +72,7 @@ afterEach(() => { vi.restoreAllMocks(); });
 describe("Teams leadership handover UI", () => {
   it("renders Change Lead, supports cancellation, and confirms a lead transfer", async () => {
     const user = userEvent.setup();
-    render(<Teams />);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><Teams /></MemoryRouter></QueryClientProvider>);
     await screen.findByRole("heading", { name: "Marketing" });
     await user.click(screen.getByRole("button", { name: /change lead/i }));
     expect(screen.getByText(/Team Lead status does not grant Workspace Admin/i)).toBeInTheDocument();
@@ -85,8 +88,9 @@ describe("Teams leadership handover UI", () => {
 
   it("does not allow the current lead to be removed by bulk action", async () => {
     const user = userEvent.setup();
-    render(<Teams />);
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><Teams /></MemoryRouter></QueryClientProvider>);
     await screen.findByRole("heading", { name: "Marketing" });
+    await user.click(screen.getByRole("button", { name: /add members/i }));
     await user.click(screen.getAllByRole("checkbox")[0]);
     await user.click(screen.getByRole("button", { name: /remove selected/i }));
     expect(apiMock.removeTeamMembers).not.toHaveBeenCalled();
