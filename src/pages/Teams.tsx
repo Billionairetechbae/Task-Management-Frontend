@@ -1,373 +1,77 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Crown, Plus, Search, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, CheckSquare, Crown, ExternalLink, FileText, MoreHorizontal, Plus, X } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { EmptyState, LoadingState, PageHeader } from "@/components/dashboard/DashboardComponents";
+import TeamWorkspacePanel from "@/components/teams/TeamWorkspacePanel";
+import SubtaskList from "@/components/tasks/SubtaskList";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { api, CompanyMember, Team, TeamMemberLink } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { canAdminWorkspace, canManageWorkspace } from "@/lib/permissions";
+import { canManageWorkspace } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import TeamWorkspacePanel from "@/components/teams/TeamWorkspacePanel";
+import { taskWorkbenchPath, teamSubtaskPath, teamTaskPath } from "@/lib/taskExecutionRoutes";
 
-type DialogMode = "create" | "edit" | "lead" | "removeLead" | null;
-const memberName = (member?: CompanyMember | null) => member?.user ? `${member.user.firstName} ${member.user.lastName}` : "Unassigned";
-const memberInitials = (member?: CompanyMember | null) => {
-  if (!member?.user) return "?";
-  return `${member.user.firstName?.charAt(0) || ""}${member.user.lastName?.charAt(0) || ""}`.toUpperCase() || "?";
-};
-const teamInitials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word.charAt(0)).join("").toUpperCase() || "T";
+type DialogMode = "members" | "lead" | "edit" | "create" | null;
+const nameOf = (member?: CompanyMember | null) => member?.user ? `${member.user.firstName} ${member.user.lastName}` : "Unassigned";
+const initials = (value?: string | null) => (value || "Team").split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+const personInitials = (member?: CompanyMember | null) => initials(nameOf(member));
+const date = (value?: string | null) => value ? new Date(value).toLocaleDateString() : "No due date";
 
+/** Route-stable workspace: all /teams URLs intentionally use this one persistent shell. */
 export default function Teams() {
-  const [searchParams] = useSearchParams();
-  const { activeCompanyId, user, workspaceRole } = useAuth();
-  const { toast } = useToast();
+  const { teamId: routeTeamId, taskId, subtaskId } = useParams<{ teamId: string; taskId: string; subtaskId: string }>();
+  const [searchParams] = useSearchParams(); const navigate = useNavigate();
+  const { activeCompanyId, user, workspaceRole } = useAuth(); const { toast } = useToast();
   const canManage = canManageWorkspace(workspaceRole, user?.role);
-  const canDelete = canAdminWorkspace(workspaceRole, user?.role);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [workspaceMembers, setWorkspaceMembers] = useState<CompanyMember[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [dialog, setDialog] = useState<DialogMode>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [memberSearch, setMemberSearch] = useState("");
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [handoverTarget, setHandoverTarget] = useState<TeamMemberLink | null>(null);
-
-  const selectedTeam = teams.find((team) => team.id === selectedId) || null;
-  const teamMembers = selectedTeam?.memberLinks || [];
-  const existingIds = useMemo(() => new Set(teamMembers.map((link) => link.companyMemberId)), [teamMembers]);
-  const availableMembers = useMemo(() => workspaceMembers.filter((member) => member.status === "active" && !existingIds.has(member.id)), [workspaceMembers, existingIds]);
-  const filteredAvailable = useMemo(() => availableMembers.filter((member) => {
-    const query = memberSearch.toLowerCase();
-    return memberName(member).toLowerCase().includes(query) || member.user?.email?.toLowerCase().includes(query);
-  }), [availableMembers, memberSearch]);
-  const filteredTeamMembers = useMemo(() => teamMembers.filter((link) => {
-    const query = memberSearch.toLowerCase();
-    return memberName(link.companyMember).toLowerCase().includes(query) || link.companyMember?.user?.email?.toLowerCase().includes(query);
-  }), [teamMembers, memberSearch]);
-  const replacementMembers = useMemo(() => teamMembers.filter((link) => link.companyMemberId !== handoverTarget?.companyMemberId), [teamMembers, handoverTarget]);
+  const [teams, setTeams] = useState<Team[]>([]); const [members, setMembers] = useState<CompanyMember[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null); const [loading, setLoading] = useState(true);
+  const [dialog, setDialog] = useState<DialogMode>(null); const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [memberSearch, setMemberSearch] = useState(""); const [teamName, setTeamName] = useState(""); const [teamDescription, setTeamDescription] = useState(""); const [saving, setSaving] = useState(false);
+  const selectedTeam = teams.find((team) => team.id === (routeTeamId || selectedId)) || null;
+  const taskQuery = useQuery({ queryKey: ["teams", "task", routeTeamId, taskId], queryFn: () => api.getTaskById(taskId!), enabled: !!routeTeamId && !!taskId, retry: false, staleTime: 30_000 });
+  // The parent query deliberately excludes subtaskId: inspector navigation does not refetch it.
+  const subtaskQuery = useQuery({ queryKey: ["teams", "subtask", subtaskId], queryFn: () => api.getTaskById(subtaskId!), enabled: !!subtaskId, retry: false });
+  const task = taskQuery.data?.data?.task; const access = taskQuery.data?.data?.access; const subtask = subtaskQuery.data?.data?.task;
 
   const load = async () => {
-    if (!activeCompanyId) { setTeams([]); setSelectedId(null); setLoading(false); return; }
-    try {
-      setLoading(true);
-      const [teamResponse, memberResponse] = await Promise.all([
-        api.listTeams(),
-        canManage ? api.getCompanyTeam() : Promise.resolve({ data: { members: [] as CompanyMember[] } }),
-      ]);
-      const nextTeams = teamResponse.data.teams || [];
-      setTeams(nextTeams);
-      setWorkspaceMembers(memberResponse.data.members || []);
-      const requested = searchParams.get("team");
-      setSelectedId((current) => nextTeams.some((team) => team.id === requested) ? requested : nextTeams.some((team) => team.id === current) ? current : nextTeams[0]?.id || null);
-    } catch (error: any) {
-      toast({ title: "Could not load teams", description: error.message, variant: "destructive" });
-    } finally { setLoading(false); }
+    if (!activeCompanyId) { setTeams([]); setLoading(false); return; }
+    try { setLoading(true); const [teamResponse, memberResponse] = await Promise.all([api.listTeams(), canManage ? api.getCompanyTeam() : Promise.resolve({ data: { members: [] as CompanyMember[] } })]); const next = teamResponse.data.teams || []; setTeams(next); setMembers(memberResponse.data.members || []); setSelectedId((current) => routeTeamId || searchParams.get("team") || current || next[0]?.id || null); }
+    catch (error: any) { toast({ title: "Could not load teams", description: error.message, variant: "destructive" }); }
+    finally { setLoading(false); }
   };
-
-  useEffect(() => { void load(); }, [activeCompanyId, canManage, searchParams]);
-  useEffect(() => { setSelectedMemberIds([]); setMemberSearch(""); }, [selectedId]);
-
-  const closeDialog = () => {
-    if (!saving) { setDialog(null); setSelectedMemberIds([]); setHandoverTarget(null); }
-  };
-  const refreshAfter = async (action: () => Promise<unknown>, success: string) => {
-    try { setSaving(true); await action(); toast({ title: success }); closeDialog(); await load(); }
-    catch (error: any) { toast({ title: "Team update failed", description: error.message, variant: "destructive" }); }
-    finally { setSaving(false); }
-  };
-  const toggleSelected = (id: string) => setSelectedMemberIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
-  const addSelected = () => selectedTeam && selectedMemberIds.length ? void refreshAfter(() => api.addTeamMembers(selectedTeam.id, selectedMemberIds), `${selectedMemberIds.length} member${selectedMemberIds.length === 1 ? "" : "s"} added`) : undefined;
-  const removeSelected = () => {
-    if (!selectedTeam || !selectedMemberIds.length) return;
-    if (selectedTeam.leadMemberId && selectedMemberIds.includes(selectedTeam.leadMemberId)) {
-      toast({ title: "Transfer Team Lead first", description: "The current Team Lead cannot be removed in a bulk action.", variant: "destructive" });
-      return;
-    }
-    void refreshAfter(() => api.removeTeamMembers(selectedTeam.id, selectedMemberIds), `${selectedMemberIds.length} member${selectedMemberIds.length === 1 ? "" : "s"} removed`);
-  };
-  const selectAll = (ids: string[]) => setSelectedMemberIds(ids);
-  const saveTeam = () => {
-    if (!name.trim() || (dialog === "edit" && !selectedTeam)) return;
-    return refreshAfter(() => dialog === "create"
-      ? api.createTeam({ name: name.trim(), description: description.trim() || undefined })
-      : api.updateTeam(selectedTeam!.id, { name: name.trim(), description: description.trim() || null }), dialog === "create" ? "Team created" : "Team updated");
-  };
-  const transferLead = () => selectedTeam && selectedMemberIds[0] ? void refreshAfter(() => api.assignTeamLead(selectedTeam.id, selectedMemberIds[0], { expectedCurrentLeadMemberId: selectedTeam.leadMemberId || undefined, confirmTransfer: true }), "Team lead updated") : undefined;
-  const removeLeadWithHandover = () => selectedTeam && handoverTarget && selectedMemberIds[0] ? void refreshAfter(() => api.removeTeamMemberFromTeam(selectedTeam.id, handoverTarget.companyMemberId, { replacementCompanyMemberId: selectedMemberIds[0], expectedCurrentLeadMemberId: selectedTeam.leadMemberId || undefined, confirmTransfer: true }), "Leadership transferred and member removed") : undefined;
-
-  if (!activeCompanyId) return <DashboardLayout><EmptyState icon={Crown} title="Choose a workspace" description="Select a workspace to manage teams." /></DashboardLayout>;
-
-  const renderMemberRow = (
-    key: string,
-    member: CompanyMember | null | undefined,
-    checked: boolean,
-    onToggle: () => void,
-    opts?: { disabled?: boolean; isLead?: boolean },
-  ) => (
-    <label
-      key={key}
-      className={cn(
-        "group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
-        checked ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/60",
-        opts?.disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-      )}
-    >
-      <input type="checkbox" className="h-4 w-4 shrink-0 accent-primary" checked={checked} onChange={onToggle} disabled={opts?.disabled} />
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={member?.user?.profilePictureUrl || undefined} alt={memberName(member)} />
-        <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{memberInitials(member)}</AvatarFallback>
-      </Avatar>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium">{memberName(member)}</span>
-          {opts?.isLead && <Badge variant="secondary" className="shrink-0 gap-1 border-primary/20 bg-primary/10 px-1.5 py-0 text-[10px] text-primary"><Crown className="h-3 w-3" /> Lead</Badge>}
-        </span>
-        <span className="block truncate text-xs text-muted-foreground">{member?.user?.email}</span>
-      </span>
-    </label>
-  );
-
-  return (
-    <DashboardLayout>
-      <div className="w-full space-y-6">
-        <PageHeader
-          title="Teams"
-          description="Organize workspace members into focused teams."
-          actions={canManage ? <Button onClick={() => { setName(""); setDescription(""); setDialog("create"); }} className="gap-2"><Plus className="h-4 w-4" /> Create team</Button> : undefined}
-        />
-
-        {loading ? <LoadingState /> : teams.length === 0 ? (
-          <Card>
-            <CardContent className="py-16 text-center">
-              <Crown className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">No teams yet</h2>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Teams help you group members, share updates and track assignments together.</p>
-              {canManage && <Button onClick={() => setDialog("create")} className="mt-5">Create your first team</Button>}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid items-start gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-            {/* Column 1 — Teams list */}
-            <Card className="h-fit lg:sticky lg:top-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Workspace teams</CardTitle>
-                <CardDescription>{teams.length} team{teams.length === 1 ? "" : "s"}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-1.5">
-                {teams.map((team) => (
-                  <button
-                    key={team.id}
-                    onClick={() => setSelectedId(team.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-                      team.id === selectedId ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/60",
-                    )}
-                  >
-                    <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                      <AvatarFallback className="rounded-lg bg-muted text-xs font-semibold">{teamInitials(team.name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{team.name}</span>
-                      <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><Users className="h-3 w-3" />{team.memberLinks?.length || 0}</span>
-                    </span>
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {selectedTeam && (
-              <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-                {/* Column 2 — Team details + members */}
-                <div className="min-w-0 space-y-6">
-                  {/* Team header */}
-                  <Card>
-                    <CardHeader>
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <Avatar className="h-12 w-12 shrink-0 rounded-xl">
-                            <AvatarFallback className="rounded-xl bg-primary/10 text-base font-semibold text-primary">{teamInitials(selectedTeam.name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <CardTitle className="truncate">{selectedTeam.name}</CardTitle>
-                            <CardDescription className="mt-1 line-clamp-2">{selectedTeam.description || "No description provided."}</CardDescription>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{teamMembers.length} member{teamMembers.length === 1 ? "" : "s"}</span>
-                            </div>
-                          </div>
-                        </div>
-                        {canManage && (
-                          <div className="flex shrink-0 gap-2">
-                            <Button variant="outline" size="sm" onClick={() => { setName(selectedTeam.name); setDescription(selectedTeam.description || ""); setDialog("edit"); }}>Edit</Button>
-                            {canDelete && <Button variant="destructive" size="sm" onClick={() => void refreshAfter(() => api.deleteTeam(selectedTeam.id), "Team deleted")} aria-label="Delete team"><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>}
-                          </div>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <Avatar className="h-10 w-10 shrink-0">
-                            <AvatarImage src={selectedTeam.leadMember?.user?.profilePictureUrl || undefined} alt={memberName(selectedTeam.leadMember)} />
-                            <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">{memberInitials(selectedTeam.leadMember)}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Team Lead</p>
-                            <p className="truncate text-sm font-semibold">{memberName(selectedTeam.leadMember)}</p>
-                          </div>
-                        </div>
-                        {canManage && <Button variant="outline" size="sm" onClick={() => { setSelectedMemberIds([]); setDialog("lead"); }}><Crown className="mr-2 h-4 w-4" /> Change lead</Button>}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Members manager */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <CardTitle className="text-base">Members</CardTitle>
-                          <CardDescription>
-                            {teamMembers.length} in team · {availableMembers.length} available
-                            {selectedMemberIds.length > 0 && <span className="ml-1 font-medium text-primary">· {selectedMemberIds.length} selected</span>}
-                          </CardDescription>
-                        </div>
-                        {canManage && (
-                          <div className="flex flex-wrap gap-2">
-                            <Button variant="default" size="sm" onClick={addSelected} disabled={!selectedMemberIds.length}><UserPlus className="mr-2 h-4 w-4" /> Add selected</Button>
-                            <Button variant="outline" size="sm" onClick={removeSelected} disabled={!selectedMemberIds.length}><UserMinus className="mr-2 h-4 w-4" /> Remove selected</Button>
-                          </div>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="relative min-w-[200px] flex-1">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Search members by name or email" className="pl-8" />
-                        </div>
-                        {canManage && (
-                          <div className="flex flex-wrap gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => selectAll(filteredAvailable.map((member) => member.id))} disabled={!filteredAvailable.length}>Select available</Button>
-                            <Button variant="ghost" size="sm" onClick={() => selectAll(filteredTeamMembers.map((link) => link.companyMemberId))} disabled={!filteredTeamMembers.length}>Select team</Button>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedMemberIds([])} disabled={!selectedMemberIds.length}>Clear</Button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {/* Team members column */}
-                        <div className="rounded-xl border">
-                          <div className="flex items-center justify-between border-b bg-muted/40 px-3 py-2">
-                            <h3 className="text-sm font-semibold">In this team</h3>
-                            <span className="text-xs text-muted-foreground">{filteredTeamMembers.length}</span>
-                          </div>
-                          <div className="max-h-[420px] space-y-1 overflow-y-auto p-2">
-                            {teamMembers.length === 0 ? (
-                              <p className="p-6 text-center text-sm text-muted-foreground">No members yet. Use “Available to add” to invite workspace members.</p>
-                            ) : filteredTeamMembers.length === 0 ? (
-                              <p className="p-6 text-center text-sm text-muted-foreground">No team members match this search.</p>
-                            ) : (
-                              filteredTeamMembers.map((link) => renderMemberRow(
-                                link.id,
-                                link.companyMember,
-                                selectedMemberIds.includes(link.companyMemberId),
-                                () => canManage && toggleSelected(link.companyMemberId),
-                                { disabled: !canManage, isLead: link.companyMemberId === selectedTeam.leadMemberId },
-                              ))
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Available members column */}
-                        {canManage && (
-                          <div className="rounded-xl border border-dashed">
-                            <div className="flex items-center justify-between border-b bg-muted/20 px-3 py-2">
-                              <h3 className="text-sm font-semibold">Available to add</h3>
-                              <span className="text-xs text-muted-foreground">{filteredAvailable.length}</span>
-                            </div>
-                            <div className="max-h-[420px] space-y-1 overflow-y-auto p-2">
-                              {filteredAvailable.length === 0 ? (
-                                <p className="p-6 text-center text-sm text-muted-foreground">{availableMembers.length === 0 ? "Every active workspace member is already on this team." : "No available members match this search."}</p>
-                              ) : (
-                                filteredAvailable.map((member) => renderMemberRow(
-                                  member.id,
-                                  member,
-                                  selectedMemberIds.includes(member.id),
-                                  () => toggleSelected(member.id),
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Column 3 — Team workspace (chat room, overview, assignments, activity) */}
-                <div className="min-w-0 xl:sticky xl:top-6">
-                  <TeamWorkspacePanel team={selectedTeam} />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <Dialog open={dialog !== null} onOpenChange={(open) => !open && closeDialog()}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{dialog === "create" ? "Create team" : dialog === "edit" ? "Edit team" : dialog === "removeLead" ? "Handover before removing lead" : "Change team lead"}</DialogTitle>
-              <DialogDescription>{dialog === "removeLead" ? "The current Team Lead must be replaced before their team membership can be removed." : "Team Lead status does not grant Workspace Admin permissions."}</DialogDescription>
-            </DialogHeader>
-            {(dialog === "create" || dialog === "edit") && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="team-name">Team name</Label>
-                  <Input id="team-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={120} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="team-description">Description</Label>
-                  <Textarea id="team-description" value={description} onChange={(event) => setDescription(event.target.value)} />
-                </div>
-              </div>
-            )}
-            {(dialog === "lead" || dialog === "removeLead") && (
-              <div className="space-y-2">
-                <Label>Replacement Team Lead</Label>
-                <Select value={selectedMemberIds[0] || ""} onValueChange={(value) => setSelectedMemberIds([value])}>
-                  <SelectTrigger><SelectValue placeholder="Select a team member" /></SelectTrigger>
-                  <SelectContent>
-                    {(dialog === "lead" ? teamMembers : replacementMembers).map((link) => (
-                      <SelectItem key={link.companyMemberId} value={link.companyMemberId}>{memberName(link.companyMember)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-              {dialog === "create" || dialog === "edit"
-                ? <Button onClick={() => void saveTeam()} disabled={saving || !name.trim()}>Save</Button>
-                : dialog === "lead"
-                  ? <Button onClick={transferLead} disabled={saving || !selectedMemberIds[0]}>Save lead</Button>
-                  : <Button onClick={removeLeadWithHandover} disabled={saving || !selectedMemberIds[0]}>Transfer and remove</Button>}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </DashboardLayout>
-  );
+  useEffect(() => { void load(); }, [activeCompanyId, canManage]);
+  const chooseTeam = (team: Team) => { setSelectedId(team.id); navigate(`/teams?team=${team.id}`); };
+  const teamMembers = selectedTeam?.memberLinks || [];
+  const allMembers = [...teamMembers.map((link) => link.companyMember), ...members.filter((member) => member.status === "active" && !teamMembers.some((link) => link.companyMemberId === member.id))].filter((member) => nameOf(member).toLowerCase().includes(memberSearch.toLowerCase()));
+  const save = async (action: () => Promise<unknown>, message: string) => { try { setSaving(true); await action(); toast({ title: message }); setDialog(null); await load(); } catch (error: any) { toast({ title: "Update failed", description: error.message, variant: "destructive" }); } finally { setSaving(false); } };
+  const openTask = !!taskId && !!routeTeamId;
+  if (!activeCompanyId) return <DashboardLayout><div className="p-6 text-sm text-muted-foreground">Choose a workspace to view Teams.</div></DashboardLayout>;
+  return <DashboardLayout><main className="teams-workspace flex h-[calc(100vh-var(--header-height,0px))] min-h-[620px] w-full overflow-hidden bg-muted/30" data-testid="teams-workspace-shell">
+    <aside className="hidden w-[232px] shrink-0 flex-col border-r bg-background md:flex" aria-label="Teams navigator"><div className="flex items-center justify-between border-b px-4 py-4"><div><h1 className="text-sm font-semibold">Teams</h1><p className="text-xs text-muted-foreground">{teams.length} workspace teams</p></div>{canManage && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Create team" title="Create team" onClick={() => { setTeamName(""); setTeamDescription(""); setDialog("create"); }}><Plus className="h-4 w-4" /></Button>}</div><div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">{loading ? <p className="p-3 text-xs text-muted-foreground">Loading teams…</p> : teams.map((team) => <button key={team.id} onClick={() => chooseTeam(team)} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-200 motion-reduce:transition-none", selectedTeam?.id === team.id ? "bg-primary/10 text-primary ring-1 ring-primary/15" : "hover:bg-muted")}><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">{initials(team.name)}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{team.name}</span><span className="block text-xs text-muted-foreground">{team.memberLinks?.length || 0} members</span></span></button>)}</div></aside>
+    <section className="min-w-0 flex-1 overflow-y-auto">{!selectedTeam && !loading && <div className="p-8 text-sm text-muted-foreground">No teams are available in this workspace.</div>}{selectedTeam && !openTask && <TeamHome team={selectedTeam} canManage={canManage} onEdit={() => { setTeamName(selectedTeam.name); setTeamDescription(selectedTeam.description || ""); setDialog("edit"); }} onMembers={() => { setSelectedMemberIds([]); setDialog("members"); }} onLead={() => { setSelectedMemberIds([]); setDialog("lead"); }} />}{openTask && <TaskWorkspace team={selectedTeam} task={task} loading={taskQuery.isLoading} subtask={subtask} subtaskLoading={subtaskQuery.isLoading} subtaskId={subtaskId} canEdit={!!access?.canEdit && access?.readOnly !== true} onClose={() => navigate(teamTaskPath(routeTeamId!, taskId!))} onRefresh={() => void taskQuery.refetch()} />}</section>
+    <TeamDialogs {...{ dialog, setDialog, canManage, team: selectedTeam, teamMembers, allMembers, selectedMemberIds, setSelectedMemberIds, memberSearch, setMemberSearch, teamName, setTeamName, teamDescription, setTeamDescription, saving, save }} />
+  </main></DashboardLayout>;
 }
+
+function TeamHome({ team, canManage, onEdit, onMembers, onLead }: { team: Team; canManage: boolean; onEdit: () => void; onMembers: () => void; onLead: () => void }) { return <div className="p-4 sm:p-6 lg:p-7"><header className="border-b pb-5"><div className="flex flex-wrap items-start justify-between gap-4"><div className="flex min-w-0 gap-3"><Avatar className="h-12 w-12 rounded-xl"><AvatarFallback className="rounded-xl bg-primary/10 font-bold text-primary">{initials(team.name)}</AvatarFallback></Avatar><div className="min-w-0"><h2 className="truncate text-2xl font-bold tracking-tight">{team.name}</h2><p className="mt-1 text-sm text-muted-foreground">{team.description || "No description provided."}</p><div className="mt-3 flex items-center gap-2"><div className="flex -space-x-2">{team.memberLinks?.slice(0, 4).map((link) => <Avatar key={link.id} className="h-6 w-6 border-2 border-background"><AvatarImage src={link.companyMember?.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[9px]">{personInitials(link.companyMember)}</AvatarFallback></Avatar>)}</div><span className="text-xs text-muted-foreground">{team.memberLinks?.length || 0} members</span></div></div></div><div className="flex gap-2">{canManage && <><Button variant="outline" size="sm" onClick={onEdit}>Edit team</Button><Button size="sm" onClick={onMembers}><Plus className="mr-1.5 h-4 w-4" />Add members</Button></>}<Button variant="outline" size="icon" aria-label="More team actions" title="More team actions"><MoreHorizontal className="h-4 w-4" /></Button></div></div><button onClick={onLead} className="mt-5 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-left hover:bg-muted"><Crown className="h-4 w-4 text-primary" /><span><span className="block text-[11px] text-muted-foreground">Team Lead</span><span className="block text-sm font-medium">{nameOf(team.leadMember)}</span></span>{canManage && <span className="ml-2 text-xs text-primary">Change</span>}</button></header><div className="mt-5"><TeamWorkspacePanel team={team} /></div></div>; }
+
+function TaskWorkspace({ team, task, loading, subtask, subtaskLoading, subtaskId, canEdit, onClose, onRefresh }: any) {
+  const navigate = useNavigate(); const { toast } = useToast();
+  if (loading) return <div className="p-7"><div className="h-7 w-48 animate-pulse rounded bg-muted" /><div className="mt-5 h-64 animate-pulse rounded-xl bg-muted" /></div>;
+  if (!task || String(task.teamId || "") !== String(team.id) || task.parentTaskId) return <div className="p-7"><h2 className="font-semibold">Team task not available</h2><p className="mt-1 text-sm text-muted-foreground">This task is not available in the selected Team context.</p></div>;
+  const completed = (task.subtasks || []).filter((item: any) => item.status === "completed").length;
+  const updateStatus = async (status: string) => { try { await api.updateTaskSubtask(task.id, subtask.id, { status }); await onRefresh(); } catch (error: any) { toast({ title: "Could not update sub-task", description: error.message, variant: "destructive" }); } };
+  return <div className="flex min-h-full min-w-0 overflow-hidden"><section className={cn("min-w-0 flex-1 p-4 sm:p-6 lg:p-7", subtaskId && "lg:max-w-[calc(100%-400px)]")}><nav className="mb-5 flex items-center gap-2 text-sm text-muted-foreground"><button onClick={() => navigate(`/teams?team=${team.id}`)} className="inline-flex items-center gap-1 hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back to tasks</button><span>/</span><span>{team.name}</span></nav><div className="rounded-xl border bg-background shadow-sm"><div className="border-b p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Task</p><h2 className="break-words text-2xl font-bold tracking-tight">{task.title}</h2><p className="mt-1 text-sm text-muted-foreground">Assigned to {team.name}</p></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => navigate(taskWorkbenchPath(task.id))}><ExternalLink className="mr-1.5 h-4 w-4" />Open in Task Workbench</Button><Button variant="outline" size="icon" aria-label="More task actions" title="More task actions"><MoreHorizontal className="h-4 w-4" /></Button></div></div><div className="mt-4 flex flex-wrap gap-2"><Badge variant="outline">{task.status}</Badge><Badge variant="outline">{task.priority || "medium"}</Badge><Badge variant="outline">Due: {date(task.deadline)}</Badge><span className="ml-auto text-xs text-muted-foreground">{task.attachments?.length || 0} attachments · {task.activities?.length || 0} recent activity</span></div></div><div className="space-y-4 p-5"><section className="rounded-lg border bg-muted/20 p-4"><div className="flex items-center justify-between"><h3 className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4" />Execution brief</h3><Button variant="ghost" size="sm" className="h-7">Edit</Button></div><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{task.description || "No execution instructions provided."}</p></section><section className="overflow-hidden rounded-lg border"><div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h3 className="flex items-center gap-2 text-sm font-semibold"><CheckSquare className="h-4 w-4" />Sub-tasks <span className="font-normal text-muted-foreground">{completed}/{(task.subtasks || []).length} completed</span></h3><div className="mt-2 h-1.5 w-48 overflow-hidden rounded bg-muted"><div className="h-full bg-primary transition-all duration-300 motion-reduce:transition-none" style={{ width: `${(task.subtasks || []).length ? (completed / task.subtasks.length) * 100 : 0}%` }} /></div></div><Button size="sm"><Plus className="mr-1.5 h-4 w-4" />Add subtask</Button></div><div className="p-3"><SubtaskList taskId={task.id} initialSubtasks={(task.subtasks || []).filter(Boolean)} parentTeamId={task.teamId} canEdit={canEdit} canCreate={canEdit} selectedSubtaskId={subtaskId} subtaskLinkBuilder={(item) => teamSubtaskPath(team.id, task.id, item.id)} /></div></section></div></div></section>{subtaskId && <aside className="fixed inset-0 z-40 w-full overflow-y-auto border-l bg-background p-5 shadow-2xl transition-transform duration-250 ease-out motion-reduce:transition-none lg:static lg:z-auto lg:w-[400px] lg:shrink-0" aria-label="Sub-task inspector"><div className="flex items-start justify-between gap-3 border-b pb-4"><div><Badge className="text-[10px]">SUB-TASK</Badge><h2 className="mt-3 text-xl font-bold">{subtask?.title || "Loading sub-task…"}</h2><p className="mt-1 text-xs text-muted-foreground">Part of {task.title} · {team.name}</p></div><Button variant="ghost" size="icon" aria-label="Close sub-task" title="Close sub-task" onClick={onClose}><X className="h-4 w-4" /></Button></div>{subtaskLoading ? <div className="mt-5 h-48 animate-pulse rounded-lg bg-muted" /> : subtask && <div className="space-y-5 pt-5"><div className="grid gap-3 text-sm"><p><span className="block text-xs text-muted-foreground">Assignee</span>{subtask.assignee ? `${subtask.assignee.firstName} ${subtask.assignee.lastName}` : "Unassigned"}</p><p><span className="block text-xs text-muted-foreground">Due date</span>{date(subtask.deadline)}</p><p><span className="block text-xs text-muted-foreground">Priority</span>{subtask.priority || "Medium"}</p><div><span className="block text-xs text-muted-foreground">Status</span><Select value={subtask.status || "pending"} onValueChange={updateStatus}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent>{["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"].map((status) => <SelectItem key={status} value={status}>{status.replace(/_/g, " ")}</SelectItem>)}</SelectContent></Select></div></div><section className="rounded-lg border p-4"><h3 className="text-sm font-semibold">Instructions / Notes</h3><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{subtask.description || "No additional instructions provided."}</p></section><div className="grid grid-cols-2 gap-3"><Card><CardContent className="p-3 text-center text-xs"><strong className="block text-base">{subtask.attachments?.length || 0}</strong>Attachments</CardContent></Card><Card><CardContent className="p-3 text-center text-xs"><strong className="block text-base">{subtask.activities?.length || 0}</strong>Activity</CardContent></Card></div><div className="border-b"><div className="flex gap-5 text-sm font-medium"><button className="border-b-2 border-primary pb-2 text-primary">Notes</button><button className="pb-2 text-muted-foreground">Files</button><button className="pb-2 text-muted-foreground">Activity</button></div><Textarea className="my-4" placeholder="Add a note…" /></div></div>}</aside>}</div>;
+}
+
+function TeamDialogs(props: any) { const { dialog, setDialog, canManage, team, teamMembers, allMembers, selectedMemberIds, setSelectedMemberIds, memberSearch, setMemberSearch, teamName, setTeamName, teamDescription, setTeamDescription, saving, save } = props; if (!team && dialog !== "create") return null; const toggle = (id: string) => setSelectedMemberIds((current: string[]) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]); const isMember = (id: string) => teamMembers.some((link: TeamMemberLink) => link.companyMemberId === id); return <Dialog open={!!dialog} onOpenChange={(open) => !open && setDialog(null)}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>{dialog === "members" ? "Manage members" : dialog === "lead" ? "Change team lead" : dialog === "create" ? "Create team" : "Edit team"}</DialogTitle><DialogDescription>{dialog === "members" ? "Add or remove workspace members without leaving this Team workspace." : "Team Lead status does not grant Workspace Admin permissions."}</DialogDescription></DialogHeader>{(dialog === "create" || dialog === "edit") && <div className="space-y-4"><div><Label htmlFor="team-name">Team name</Label><Input id="team-name" className="mt-1" value={teamName} onChange={(e) => setTeamName(e.target.value)} /></div><div><Label htmlFor="team-description">Description</Label><Textarea id="team-description" className="mt-1" value={teamDescription} onChange={(e) => setTeamDescription(e.target.value)} /></div></div>}{dialog === "lead" && <Select value={selectedMemberIds[0] || ""} onValueChange={(value) => setSelectedMemberIds([value])}><SelectTrigger><SelectValue placeholder="Select a Team member" /></SelectTrigger><SelectContent>{teamMembers.map((link: TeamMemberLink) => <SelectItem key={link.companyMemberId} value={link.companyMemberId}>{nameOf(link.companyMember)}</SelectItem>)}</SelectContent></Select>}{dialog === "members" && <div className="space-y-3"><Input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Search members" /><div className="max-h-72 space-y-1 overflow-y-auto">{allMembers.map((member: CompanyMember) => <label key={member.id} className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-muted"><input type="checkbox" checked={selectedMemberIds.includes(member.id)} onChange={() => toggle(member.id)} /><Avatar className="h-8 w-8"><AvatarFallback>{personInitials(member)}</AvatarFallback></Avatar><span className="flex-1 text-sm">{nameOf(member)}</span><span className="text-xs text-muted-foreground">{isMember(member.id) ? "In team" : "Available"}</span></label>)}</div></div>}<DialogFooter><Button variant="outline" onClick={() => setDialog(null)}>Cancel</Button>{canManage && dialog === "lead" && <Button disabled={saving || !selectedMemberIds[0]} onClick={() => save(() => api.assignTeamLead(team.id, selectedMemberIds[0], { expectedCurrentLeadMemberId: team.leadMemberId || undefined, confirmTransfer: true }), "Team lead updated")}>Save lead</Button>}{canManage && dialog === "members" && <><Button variant="outline" disabled={saving || !selectedMemberIds.length} onClick={() => save(() => api.removeTeamMembers(team.id, selectedMemberIds.filter(isMember)), "Members removed")}>Remove selected</Button><Button disabled={saving || !selectedMemberIds.length} onClick={() => save(() => api.addTeamMembers(team.id, selectedMemberIds.filter((id: string) => !isMember(id))), "Members added")}>Add selected</Button></>}{canManage && (dialog === "create" || dialog === "edit") && <Button disabled={saving || !teamName.trim()} onClick={() => save(() => dialog === "create" ? api.createTeam({ name: teamName.trim(), description: teamDescription.trim() || undefined }) : api.updateTeam(team.id, { name: teamName.trim(), description: teamDescription.trim() || null }), dialog === "create" ? "Team created" : "Team updated")}>Save</Button>}</DialogFooter></DialogContent></Dialog>; }
