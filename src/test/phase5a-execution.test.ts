@@ -14,10 +14,11 @@ describe("Phase 5A execution room contract", () => {
     expect(taskDetails).toContain("progressPercent");
   });
 
-  it("keeps Team member execution separate from decomposition", () => {
-    expect(subtasks).toContain("Assign to Team member");
+  it("keeps Team member execution separate and exposes compact assignment controls", () => {
+    expect(subtasks).toContain('aria-label="Sub-task assignee"');
     expect(subtasks).toContain("canUpdate");
-    expect(subtasks).toContain("No active members are available in this Team.");
+    expect(subtasks).toContain("Add sub-task");
+    expect(subtasks).not.toContain("No active members are available in this Team.");
     expect(taskDetails).toContain("parentTeamId={task.teamId}");
   });
 

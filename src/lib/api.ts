@@ -417,7 +417,7 @@ export interface TaskWatcher {
   };
 }
 
-export type TaskPriority = "low" | "medium" | "high";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "pending" | "in_progress" | "in_review" | "completed" | "delayed" | "cancelled";
 
 /**
@@ -505,8 +505,8 @@ export interface CreateTaskData {
   title: string;
   description: string;
   priority: TaskPriority;
-  deadline: string;
-  category: string;
+  deadline?: string;
+  category?: string;
   estimatedHours?: number;
   assigneeId?: string;
   teamId?: string | null;
@@ -517,7 +517,7 @@ export interface UpdateTaskData {
   description?: string;
   priority?: TaskPriority;
   status?: TaskStatus;
-  deadline?: string;
+  deadline?: string | null;
   category?: string;
   estimatedHours?: number;
   actualHours?: number;
@@ -2124,7 +2124,7 @@ class ApiClient {
   async createTaskSubtask(
     taskId: string,
     data: { title: string; description?: string; priority?: TaskPriority; deadline?: string; status?: TaskSubtask["status"]; assigneeId?: string | null; sortOrder?: number; teamId?: string | null }
-  ): Promise<{ status: string; message?: string; data: { subtask: TaskSubtask } | TaskSubtask }> {
+  ): Promise<{ status: string; message?: string; data: { task?: TaskSubtask; subtask?: TaskSubtask } | TaskSubtask }> {
     return this.request(`/tasks/${taskId}/subtasks`, {
       method: "POST",
       headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },

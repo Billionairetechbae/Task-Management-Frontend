@@ -74,12 +74,12 @@ describe("Teams leadership handover UI", () => {
     const user = userEvent.setup();
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><Teams /></MemoryRouter></QueryClientProvider>);
     await screen.findByRole("heading", { name: "Marketing" });
-    await user.click(screen.getByRole("button", { name: /change lead/i }));
-    expect(screen.getByText(/Team Lead status does not grant Workspace Admin/i)).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: /change lead/i }));
+    expect(screen.getByText(/Only active Team members can become Team Lead/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByText("Confirm lead change")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /change lead/i }));
+    await user.click(await screen.findByRole("button", { name: /change lead/i }));
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByRole("option", { name: "Richard User" }));
     await user.click(screen.getByRole("button", { name: /save lead/i }));
