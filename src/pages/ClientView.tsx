@@ -64,6 +64,21 @@ const ClientView = () => {
     };
   }, [token]);
 
+  useEffect(() => {
+    if (!user || !data?.resourceId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.getSharedWithMe();
+        const granted = res.data.resources.find((resource) => resource.resourceType === data.resourceType && resource.resourceId === data.resourceId);
+        if (granted && !cancelled) navigate(`/shared-with-me/${granted.resourceType}/${granted.resourceId}`, { replace: true });
+      } catch {
+        // The public link remains available if the user has no approved grant.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, data, navigate]);
+
   const handleRequestAccess = async () => {
     if (!token) return;
     if (!user) {
@@ -123,7 +138,7 @@ const ClientView = () => {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Need to comment, edit, or collaborate? Send a request to the workspace owner.
+          Need authenticated access to this shared resource? Send a request to the workspace owner.
         </p>
         <Textarea
           value={reason}

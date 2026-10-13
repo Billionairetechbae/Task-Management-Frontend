@@ -52,6 +52,7 @@ import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
 import ProjectHealth from "@/pages/ProjectHealth";
 import ClientView from "@/pages/ClientView";
 import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
+import SharedWithMe from "@/pages/SharedWithMe";
 import WorkspaceInsights from "@/pages/WorkspaceInsights";
 
 import AuditExport from "@/pages/AuditExport";
@@ -211,6 +212,8 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="/shared-with-me" element={<ProtectedRoute><SharedWithMe /></ProtectedRoute>} />
+        <Route path="/shared-with-me/:resourceType/:resourceId" element={<ProtectedRoute><SharedWithMe /></ProtectedRoute>} />
 
         <Route
           path="/workspace-access"

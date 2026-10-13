@@ -232,6 +232,7 @@ export interface ClientViewShareLink {
 export interface ClientViewProjectPayload {
   resourceType: "project";
   token: string;
+  resourceId: string;
   visibilityLevel: "summary" | "detailed";
   canRequestAccess: boolean;
   project: {
@@ -263,6 +264,7 @@ export interface ClientViewProjectPayload {
 export interface ClientViewTaskPayload {
   resourceType: "task";
   token: string;
+  resourceId: string;
   visibilityLevel: "summary" | "detailed";
   canRequestAccess: boolean;
   task: {
@@ -293,8 +295,8 @@ export interface ResourceAccessRequest {
   resourceType: ClientViewResourceType;
   resourceId: string;
   requesterUserId: string;
-  accessLevel: "viewer";
-  status: "pending" | "approved" | "denied";
+  accessLevel: "viewer" | "commenter" | "collaborator";
+  status: "pending" | "approved" | "denied" | "revoked";
   reason?: string | null;
   requester?: {
     id: string;
@@ -4122,6 +4124,14 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       method: "GET",
       headers: this.getAuthHeaders(true),
     });
+  }
+
+  async getSharedWithMe(): Promise<{ status: string; data: { resources: Array<{ id: string; resourceType: ClientViewResourceType; resourceId: string; companyId: string; accessLevel: "viewer" | "commenter" | "collaborator"; grantedAt?: string | null; title: string }> } }> {
+    return this.request("/client-view/shared-with-me", { method: "GET", headers: this.getAuthHeaders(true) });
+  }
+
+  async getAuthenticatedSharedResource(resourceType: ClientViewResourceType, resourceId: string): Promise<{ status: string; data: ClientViewPayload & { accessLevel: "viewer" | "commenter" | "collaborator" } }> {
+    return this.request(`/client-view/shared/${resourceType}/${resourceId}`, { method: "GET", headers: this.getAuthHeaders(true) });
   }
 
   async decideResourceAccessRequest(
