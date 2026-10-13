@@ -1572,6 +1572,7 @@ export interface ProjectHealthSummary {
 ============================ */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { captureUnexpectedApiError } from "@/lib/sentry";
 
 /* ============================
    API CLIENT
@@ -1695,7 +1696,9 @@ class ApiClient {
     try {
       response = await fetch(url, { ...options, headers });
     } catch (err) {
-      throw new NetworkError(err instanceof Error ? err.message : "Network error");
+      const error = new NetworkError(err instanceof Error ? err.message : "Network error");
+      captureUnexpectedApiError(error, { path, method: options.method || "GET" });
+      throw error;
     }
 
     let result: any;
@@ -1751,7 +1754,9 @@ class ApiClient {
         }
       }
 
-      throw new ApiError(message, response.status);
+      const error = new ApiError(message, response.status);
+      captureUnexpectedApiError(error, { path, method: options.method || "GET", status: response.status });
+      throw error;
     }
 
     return result as T;
