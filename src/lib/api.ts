@@ -251,6 +251,7 @@ export interface ClientViewProjectPayload {
       overdue: number;
     };
     tasks: Array<{
+      id?: string;
       title: string;
       description?: string | null;
       status?: string | null;
@@ -268,6 +269,7 @@ export interface ClientViewTaskPayload {
   visibilityLevel: "summary" | "detailed";
   canRequestAccess: boolean;
   task: {
+    id?: string;
     title: string;
     description?: string | null;
     status?: string | null;
@@ -277,12 +279,30 @@ export interface ClientViewTaskPayload {
     progress: number;
     assignee?: string | null;
     subtasks: Array<{
+      id?: string;
       title: string;
       status?: string | null;
       priority?: string | null;
       deadline?: string | null;
     }>;
   };
+}
+
+export type ClientAccessLevel = "viewer" | "commenter" | "collaborator";
+
+export interface ClientAccessCapabilities {
+  canView: boolean;
+  canComment: boolean;
+  canUpdateTaskStatus: boolean;
+}
+
+export interface SharedTaskComment {
+  id: string;
+  content: string;
+  parentCommentId?: string | null;
+  createdAt: string;
+  author: string;
+  isMine: boolean;
 }
 
 export type ClientViewPayload =
@@ -295,7 +315,7 @@ export interface ResourceAccessRequest {
   resourceType: ClientViewResourceType;
   resourceId: string;
   requesterUserId: string;
-  accessLevel: "viewer" | "commenter" | "collaborator";
+  accessLevel: ClientAccessLevel;
   status: "pending" | "approved" | "denied" | "revoked";
   reason?: string | null;
   resourceTitle?: string;
@@ -4129,19 +4149,48 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async getSharedWithMe(): Promise<{ status: string; data: { resources: Array<{ id: string; resourceType: ClientViewResourceType; resourceId: string; companyId: string; accessLevel: "viewer" | "commenter" | "collaborator"; grantedAt?: string | null; title: string }> } }> {
+  async getSharedWithMe(): Promise<{ status: string; data: { resources: Array<{ id: string; resourceType: ClientViewResourceType; resourceId: string; companyId: string; accessLevel: ClientAccessLevel; capabilities?: ClientAccessCapabilities; grantedAt?: string | null; title: string }> } }> {
     return this.request("/client-view/shared-with-me", { method: "GET", headers: this.getAuthHeaders(true) });
   }
 
-  async getAuthenticatedSharedResource(resourceType: ClientViewResourceType, resourceId: string): Promise<{ status: string; data: ClientViewPayload & { accessLevel: "viewer" | "commenter" | "collaborator" } }> {
+  async getAuthenticatedSharedResource(resourceType: ClientViewResourceType, resourceId: string): Promise<{ status: string; data: ClientViewPayload & { accessLevel: ClientAccessLevel; capabilities: ClientAccessCapabilities } }> {
     return this.request(`/client-view/shared/${resourceType}/${resourceId}`, { method: "GET", headers: this.getAuthHeaders(true) });
   }
 
   async decideResourceAccessRequest(
     requestId: string,
-    status: "approved" | "denied"
+    status: "approved" | "denied",
+    accessLevel?: ClientAccessLevel
   ): Promise<{ status: string; data: { request: ResourceAccessRequest } }> {
     return this.request(`/client-view/resource-access-requests/${requestId}`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify(accessLevel ? { status, accessLevel } : { status }),
+    });
+  }
+
+  async updateResourceAccessLevel(requestId: string, accessLevel: ClientAccessLevel): Promise<{ status: string; data: { request: ResourceAccessRequest } }> {
+    return this.request(`/client-view/resource-access-requests/${requestId}/access-level`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify({ accessLevel }),
+    });
+  }
+
+  async getSharedTaskComments(resourceType: ClientViewResourceType, resourceId: string, taskId: string): Promise<{ status: string; data: { comments: SharedTaskComment[] } }> {
+    return this.request(`/client-view/shared/${resourceType}/${resourceId}/tasks/${taskId}/comments`, { method: "GET", headers: this.getAuthHeaders(true) });
+  }
+
+  async addSharedTaskComment(resourceType: ClientViewResourceType, resourceId: string, taskId: string, payload: { content: string; parentCommentId?: string }): Promise<{ status: string; data: { comment: SharedTaskComment } }> {
+    return this.request(`/client-view/shared/${resourceType}/${resourceId}/tasks/${taskId}/comments`, {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateSharedTaskStatus(resourceType: ClientViewResourceType, resourceId: string, taskId: string, status: string): Promise<{ status: string; data: { task: { id: string; status: string } } }> {
+    return this.request(`/client-view/shared/${resourceType}/${resourceId}/tasks/${taskId}`, {
       method: "PATCH",
       headers: this.getAuthHeaders(true),
       body: JSON.stringify({ status }),

@@ -2,12 +2,37 @@ import { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { api, ResourceAccessRequest } from "@/lib/api";
+import { api, ClientAccessLevel, ResourceAccessRequest } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, CheckCircle2, XCircle, ShieldCheck, Inbox, Ban } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+const LEVELS: Array<{ value: ClientAccessLevel; label: string; hint: string }> = [
+  { value: "viewer", label: "Viewer", hint: "View only" },
+  { value: "commenter", label: "Commenter", hint: "View and comment" },
+  { value: "collaborator", label: "Collaborator", hint: "Comment and update task status" },
+];
+const levelRank = (level: ClientAccessLevel) => LEVELS.findIndex((item) => item.value === level);
+
+function LevelSelect({ value, maxLevel, disabled, onChange }: {
+  value: ClientAccessLevel;
+  maxLevel?: ClientAccessLevel;
+  disabled?: boolean;
+  onChange: (level: ClientAccessLevel) => void;
+}) {
+  const options = maxLevel ? LEVELS.filter((item) => levelRank(item.value) <= levelRank(maxLevel)) : LEVELS;
+  return (
+    <Select value={value} onValueChange={(v) => onChange(v as ClientAccessLevel)} disabled={disabled}>
+      <SelectTrigger className="h-8 w-[160px]" aria-label="Access level"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {options.map((item) => <SelectItem key={item.value} value={item.value}>{item.label} — {item.hint}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
 
 const ResourceAccessRequests = () => {
   const { workspaceRole } = useAuth();
@@ -22,6 +47,7 @@ const ResourceAccessRequests = () => {
   const [activeAccess, setActiveAccess] = useState<ResourceAccessRequest[]>([]);
   const [tab, setTab] = useState<"requests" | "active">("requests");
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [grantLevels, setGrantLevels] = useState<Record<string, ClientAccessLevel>>({});
   const [revokeTarget, setRevokeTarget] = useState<ResourceAccessRequest | null>(null);
 
   const load = useCallback(async () => {
@@ -53,10 +79,10 @@ const ResourceAccessRequests = () => {
     load();
   }, [load]);
 
-  const decide = async (id: string, status: "approved" | "denied") => {
+  const decide = async (id: string, status: "approved" | "denied", accessLevel?: ClientAccessLevel) => {
     setDecidingId(id);
     try {
-      await api.decideResourceAccessRequest(id, status);
+      await api.decideResourceAccessRequest(id, status, accessLevel);
       toast({ title: status === "approved" ? "Approved" : "Denied" });
       await load();
     } catch (e: any) {
@@ -68,6 +94,17 @@ const ResourceAccessRequests = () => {
     } finally {
       setDecidingId(null);
     }
+  };
+
+  const changeLevel = async (id: string, accessLevel: ClientAccessLevel) => {
+    setDecidingId(id);
+    try {
+      await api.updateResourceAccessLevel(id, accessLevel);
+      setActiveAccess((items) => items.map((item) => (item.id === id ? { ...item, accessLevel } : item)));
+      toast({ title: "Access level updated", description: "The change applies immediately." });
+    } catch (e: any) {
+      toast({ title: "Could not change access level", description: e?.message || "Please try again", variant: "destructive" });
+    } finally { setDecidingId(null); }
   };
 
   const revoke = async () => {
@@ -154,13 +191,15 @@ const ResourceAccessRequests = () => {
                     </p>
                   )}
                   <p className="text-sm font-medium">{r.resourceTitle || "Shared resource"}</p>
-                  <p className="text-[11px] text-muted-foreground">{r.status === "approved" ? `Approved ${r.decidedAt ? new Date(r.decidedAt).toLocaleString() : ""}` : `Requested ${new Date(r.createdAt).toLocaleString()}`} · {r.accessLevel}</p>
+                  <p className="text-[11px] text-muted-foreground">{r.status === "approved" ? `Approved ${r.decidedAt ? new Date(r.decidedAt).toLocaleString() : ""}` : `Requested ${new Date(r.createdAt).toLocaleString()}`} · <span className="capitalize">{r.accessLevel}</span>{r.status === "pending" && " requested"}</p>
+                  {isReviewer && r.status === "approved" && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">Permission level</span><LevelSelect value={r.accessLevel} disabled={decidingId === r.id} onChange={(level) => level !== r.accessLevel && changeLevel(r.id, level)} /></div>}
                   {r.status === "approved" && r.decidedBy && <p className="text-[11px] text-muted-foreground">Approved by {r.decidedBy.firstName} {r.decidedBy.lastName}</p>}
                   {isReviewer && r.status === "pending" && (
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex gap-2 pt-1 items-center flex-wrap">
+                      <LevelSelect value={grantLevels[r.id] || r.accessLevel} maxLevel={r.accessLevel} disabled={decidingId === r.id} onChange={(level) => setGrantLevels((m) => ({ ...m, [r.id]: level }))} />
                       <Button
                         size="sm"
-                        onClick={() => decide(r.id, "approved")}
+                        onClick={() => decide(r.id, "approved", grantLevels[r.id] || r.accessLevel)}
                         disabled={decidingId === r.id}
                         className="gap-1.5"
                       >

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
+  FolderOpen,
   LayoutDashboard,
   Users,
   ClipboardList,
@@ -179,6 +180,11 @@ const DashboardLayout = ({
               icon: <ShieldCheck className="w-[18px] h-[18px]" />,
             },
             {
+              label: "Shared with Me",
+              href: "/shared-with-me",
+              icon: <FolderOpen className="w-[18px] h-[18px]" />,
+            },
+            {
               label: "Workspace Access",
               href: "/workspace-access",
               icon: <ShieldCheck className="w-[18px] h-[18px]" />,
@@ -297,6 +303,11 @@ const DashboardLayout = ({
               icon: <ShieldCheck className="w-[18px] h-[18px]" />,
             },
             {
+              label: "Shared with Me",
+              href: "/shared-with-me",
+              icon: <FolderOpen className="w-[18px] h-[18px]" />,
+            },
+            {
               label: "Workspace Access",
               href: "/workspace-access",
               icon: <ShieldCheck className="w-[18px] h-[18px]" />,
@@ -397,6 +408,11 @@ const DashboardLayout = ({
             href: "/resource-access",
             icon: <ShieldCheck className="w-[18px] h-[18px]" />,
           },
+          {
+            label: "Shared with Me",
+            href: "/shared-with-me",
+            icon: <FolderOpen className="w-[18px] h-[18px]" />,
+          },
         ],
       },
       ...(canPerformRoleOperation("view_workspace_members") ? [{
@@ -440,6 +456,10 @@ const DashboardLayout = ({
 
     if (href === "/workspace-access") {
       return location.pathname === "/workspace-access";
+    }
+
+    if (href === "/shared-with-me") {
+      return location.pathname === href || location.pathname.startsWith("/shared-with-me/");
     }
 
     return location.pathname === href;
