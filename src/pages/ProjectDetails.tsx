@@ -258,10 +258,13 @@ export default function ProjectDetails() {
       }
     } catch (err: any) {
       const listedProject = (queryClient.getQueryData<Project[]>(queryKeys.projects(workspaceId)) || []).some((item) => item.id === id);
-      if (err instanceof ApiError && err.statusCode === 404 && listedProject) {
+      const isKnownListInconsistency = err instanceof ApiError && err.statusCode === 404 && listedProject;
+      if (isKnownListInconsistency) {
         captureProjectDetailInconsistency({ projectId: id, workspaceId: workspaceId || null, route: location.pathname });
       }
-      const errorKind = err instanceof ApiError && err.statusCode === 404
+      const errorKind = isKnownListInconsistency
+        ? "network"
+        : err instanceof ApiError && err.statusCode === 404
         ? "not_found"
         : err instanceof ApiError && err.statusCode === 403
           ? "forbidden"
