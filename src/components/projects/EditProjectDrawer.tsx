@@ -14,7 +14,7 @@ interface EditProjectDrawerProps {
   project: Project | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (project?: Project) => void;
   mode: "create" | "edit";
 }
 
@@ -73,13 +73,14 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
       payload.teamId = form.teamId;
 
       if (mode === "create") {
-        await api.createProject(payload);
+        const response = await api.createProject(payload);
         toast({ title: "Project created" });
+        onSuccess(response.data.project);
       } else if (project) {
-        await api.updateProject(project.id, payload);
+        const response = await api.updateProject(project.id, payload);
         toast({ title: "Project updated" });
+        onSuccess((response.data as any)?.project || project);
       }
-      onSuccess();
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });

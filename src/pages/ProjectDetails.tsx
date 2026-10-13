@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientViewShareButton from "@/components/ClientViewShareButton";
 import {
   api,
+  ApiError,
   Project,
   ProjectChecklist,
   ProjectInvite,
@@ -136,6 +137,7 @@ export default function ProjectDetails() {
 
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
+  const [loadError, setLoadError] = useState<"not_found" | "forbidden" | "network" | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [invites, setInvites] = useState<ProjectInvite[]>([]);
@@ -232,6 +234,7 @@ export default function ProjectDetails() {
     if (!id) return;
 
     try {
+      setLoadError(null);
       const res = await api.getProjectById(id);
       const p = (res as any)?.data?.project || (res as any)?.data;
 
@@ -247,9 +250,19 @@ export default function ProjectDetails() {
         });
       }
     } catch (err: any) {
+      const errorKind = err instanceof ApiError && err.statusCode === 404
+        ? "not_found"
+        : err instanceof ApiError && err.statusCode === 403
+          ? "forbidden"
+          : "network";
+      setLoadError(errorKind);
       toast({
         title: "Failed to load project",
-        description: err.message,
+        description: errorKind === "forbidden"
+          ? "You do not have access to this project."
+          : errorKind === "not_found"
+            ? "This project no longer exists."
+            : "Could not load project. Try again.",
         variant: "destructive",
       });
     } finally {
@@ -614,10 +627,16 @@ export default function ProjectDetails() {
             <Info className="w-7 h-7 text-muted-foreground/60" />
           </div>
 
-          <h1 className="text-lg font-bold mb-2">Project Not Found</h1>
+          <h1 className="text-lg font-bold mb-2">
+            {loadError === "forbidden" ? "Project Access Restricted" : loadError === "network" ? "Could Not Load Project" : "Project Not Found"}
+          </h1>
 
           <p className="text-sm text-muted-foreground mb-4">
-            This project may have been removed or you don't have access.
+            {loadError === "forbidden"
+              ? "You do not have access to this project."
+              : loadError === "network"
+                ? "Try again when your connection is restored."
+                : "This project no longer exists."}
           </p>
 
           <Button onClick={() => navigate("/projects")}>

@@ -54,7 +54,14 @@ export default function Projects() {
     if (searchParams.get("create") === "true") setIsCreateOpen(true);
   }, []);
 
-  const handleProjectCreated = () => {
+  const handleProjectCreated = (createdProject?: Project) => {
+    if (createdProject) {
+      queryClient.setQueryData<Project[]>(queryKeys.projects(activeCompanyId), (current = []) => [
+        createdProject,
+        ...current.filter((project) => project.id !== createdProject.id),
+      ]);
+      navigate(`/projects/${createdProject.id}`);
+    }
     queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeCompanyId) });
   };
 
