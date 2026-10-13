@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientViewShareButton from "@/components/ClientViewShareButton";
 import {
@@ -103,6 +104,8 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { queryKeys } from "@/lib/queryKeys";
+import { captureProjectDetailInconsistency } from "@/lib/sentry";
 
 type MemberRow = {
   id: string;
@@ -119,8 +122,10 @@ const PROJECT_TASK_ACCESS_PERMISSION = "create_project_tasks" as const;
 export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { workspaceRole } = useAuth();
+  const { workspaceRole, activeCompanyId, setActiveCompanyId } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean>(
@@ -232,10 +237,12 @@ export default function ProjectDetails() {
 
   const loadProject = async () => {
     if (!id) return;
+    const workspaceFromRoute = new URLSearchParams(location.search).get("workspace");
+    const workspaceId = workspaceFromRoute || activeCompanyId;
 
     try {
       setLoadError(null);
-      const res = await api.getProjectById(id);
+      const res = await api.getProjectById(id, workspaceId);
       const p = (res as any)?.data?.project || (res as any)?.data;
 
       setProject(p || null);
@@ -250,6 +257,10 @@ export default function ProjectDetails() {
         });
       }
     } catch (err: any) {
+      const listedProject = (queryClient.getQueryData<Project[]>(queryKeys.projects(workspaceId)) || []).some((item) => item.id === id);
+      if (err instanceof ApiError && err.statusCode === 404 && listedProject) {
+        captureProjectDetailInconsistency({ projectId: id, workspaceId: workspaceId || null, route: location.pathname });
+      }
       const errorKind = err instanceof ApiError && err.statusCode === 404
         ? "not_found"
         : err instanceof ApiError && err.statusCode === 403
@@ -356,11 +367,13 @@ export default function ProjectDetails() {
   }, []);
 
   useEffect(() => {
+    const workspaceFromRoute = new URLSearchParams(location.search).get("workspace");
+    if (workspaceFromRoute && workspaceFromRoute !== activeCompanyId) setActiveCompanyId(workspaceFromRoute);
     setLoading(true);
     setTaskPage(1);
     refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, workspaceRole]);
+  }, [id, workspaceRole, activeCompanyId, location.search]);
 
   const addMember = async () => {
     if (!id || !memberEmail.trim()) return;
@@ -668,6 +681,7 @@ export default function ProjectDetails() {
             <ProjectMiniSidebar
               projects={projects}
               currentProjectId={project.id}
+              workspaceId={activeCompanyId}
               onAddProject={() => navigate("/projects?create=true")}
             />
           </div>
@@ -677,7 +691,7 @@ export default function ProjectDetails() {
               {projects.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => navigate(`/projects/${p.id}`)}
+                  onClick={() => navigate(`/projects/${p.id}?workspace=${encodeURIComponent(p.companyId || activeCompanyId || "")}`)}
                   className={cn(
                     "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
                     p.id === project.id

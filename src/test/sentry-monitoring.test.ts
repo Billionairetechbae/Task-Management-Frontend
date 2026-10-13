@@ -9,7 +9,7 @@ const sentry = vi.hoisted(() => ({
 vi.mock("@sentry/react", () => sentry);
 
 import { ApiError, NetworkError } from "@/lib/api";
-import { captureUnexpectedApiError } from "@/lib/sentry";
+import { captureProjectDetailInconsistency, captureUnexpectedApiError } from "@/lib/sentry";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 
 describe("Sentry monitoring privacy and filtering", () => {
@@ -23,6 +23,14 @@ describe("Sentry monitoring privacy and filtering", () => {
   it("does not report expected validation, authentication, permission, or not-found responses", () => {
     for (const status of [400, 401, 403, 404]) captureUnexpectedApiError(new ApiError("expected", status), { path: "/projects", method: "GET", status });
     expect(sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("reports only a list-confirmed Project detail 404 as an inconsistency", () => {
+    captureUnexpectedApiError(new ApiError("not found", 404), { path: "/projects/arbitrary", method: "GET", status: 404 });
+    expect(sentry.captureException).not.toHaveBeenCalled();
+
+    captureProjectDetailInconsistency({ projectId: "project-123", workspaceId: "workspace-456", route: "/projects/project-123" });
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
   });
 
   it("reports unexpected React render failures through the safe boundary", () => {

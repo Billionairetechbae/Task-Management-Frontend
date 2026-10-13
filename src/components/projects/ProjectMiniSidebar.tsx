@@ -8,12 +8,14 @@ import { useState } from "react";
 interface ProjectMiniSidebarProps {
   projects: Project[];
   currentProjectId?: string;
+  workspaceId?: string | null;
   onAddProject?: () => void;
 }
 
 export default function ProjectMiniSidebar({ 
   projects, 
   currentProjectId,
+  workspaceId,
   onAddProject 
 }: ProjectMiniSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -68,7 +70,7 @@ export default function ProjectMiniSidebar({
             <Tooltip key={p.id}>
               <TooltipTrigger asChild>
                 <Link
-                  to={`/projects/${p.id}`}
+                  to={`/projects/${p.id}?workspace=${encodeURIComponent(p.companyId || workspaceId || "")}`}
                   className={cn(
                     "w-9 h-9 rounded-lg flex items-center justify-center transition-all relative group",
                     currentProjectId === p.id 

@@ -3584,13 +3584,15 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async getProjectById(id: string): Promise<{
+  async getProjectById(id: string, workspaceId?: string | null): Promise<{
     status: string;
     data: { project: Project } | any;
   }> {
+    const headers = this.getAuthHeaders();
+    if (workspaceId) (headers as any)["x-company-id"] = workspaceId;
     return this.request(`/projects/${id}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers,
     });
   }
 

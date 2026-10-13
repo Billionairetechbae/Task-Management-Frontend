@@ -43,4 +43,16 @@ export function captureUnexpectedApiError(error: unknown, metadata: { path: stri
   });
 }
 
+export function captureProjectDetailInconsistency(metadata: { projectId: string; workspaceId: string | null; route: string; requestId?: string | null }) {
+  Sentry.withScope((scope) => {
+    scope.setTag("event", "PROJECT_DETAIL_INCONSISTENCY");
+    scope.setTag("operation", "project_detail_load");
+    scope.setTag("project_id", metadata.projectId);
+    scope.setTag("workspace_id", metadata.workspaceId || "none");
+    scope.setTag("route", metadata.route);
+    if (metadata.requestId) scope.setTag("request_id", metadata.requestId);
+    Sentry.captureException(new Error("Project returned by the current list could not be loaded"));
+  });
+}
+
 export { Sentry };

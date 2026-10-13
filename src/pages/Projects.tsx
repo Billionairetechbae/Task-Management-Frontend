@@ -60,7 +60,7 @@ export default function Projects() {
         createdProject,
         ...current.filter((project) => project.id !== createdProject.id),
       ]);
-      navigate(`/projects/${createdProject.id}`);
+      navigate(`/projects/${createdProject.id}?workspace=${encodeURIComponent(createdProject.companyId || activeCompanyId || "")}`);
     }
     queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeCompanyId) });
   };
@@ -137,7 +137,7 @@ export default function Projects() {
               {projects.map((p, i) => (
                 <Card
                   key={p.id}
-                  onClick={() => navigate(`/projects/${p.id}`)}
+                  onClick={() => navigate(`/projects/${p.id}?workspace=${encodeURIComponent(p.companyId || activeCompanyId || "")}`)}
                   className="p-4 cursor-pointer border-border hover:border-primary/30 hover:shadow-elevated transition-all group animate-fade-in"
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
