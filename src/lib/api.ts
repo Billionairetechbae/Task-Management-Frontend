@@ -298,6 +298,9 @@ export interface ResourceAccessRequest {
   accessLevel: "viewer" | "commenter" | "collaborator";
   status: "pending" | "approved" | "denied" | "revoked";
   reason?: string | null;
+  resourceTitle?: string;
+  decidedAt?: string | null;
+  decidedBy?: { firstName: string; lastName: string; email?: string };
   requester?: {
     id: string;
     firstName: string;
@@ -4101,7 +4104,7 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
   }
 
   async getResourceAccessRequests(params: {
-    status?: "pending" | "approved" | "denied";
+    status?: "pending" | "approved" | "denied" | "revoked";
     resourceType?: ClientViewResourceType;
     resourceId?: string;
   } = {}): Promise<{ status: string; data: { requests: ResourceAccessRequest[] } }> {
@@ -4142,6 +4145,13 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       method: "PATCH",
       headers: this.getAuthHeaders(true),
       body: JSON.stringify({ status }),
+    });
+  }
+
+  async revokeResourceAccess(requestId: string): Promise<{ status: string; data: { request: ResourceAccessRequest } }> {
+    return this.request(`/client-view/resource-access-requests/${requestId}/revoke`, {
+      method: "PATCH",
+      headers: this.getAuthHeaders(true),
     });
   }
 
