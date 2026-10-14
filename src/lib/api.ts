@@ -1131,6 +1131,10 @@ export interface NotificationsListResponse {
   };
 }
 
+export type NotificationPreferenceCategory = "assignments" | "mentions_replies" | "status_review" | "due_work" | "project_team" | "client_access" | "workspace_commercial";
+export interface NotificationPreference { category: NotificationPreferenceCategory; inAppEnabled: boolean; emailEnabled: boolean; whatsAppEnabled: boolean; }
+export interface NotificationPreferencesResponse { status: string; data: { preferences: NotificationPreference[]; whatsApp: { linked: boolean; globallyEnabled: boolean } }; }
+
 
 
 
@@ -3494,6 +3498,14 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       method: "DELETE",
       headers: this.getAuthHeaders(),
     });
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferencesResponse> {
+    return this.request("/notification-preferences", { method: "GET", headers: this.getAuthHeaders(false) });
+  }
+
+  async updateNotificationPreferences(preferences: Array<Partial<NotificationPreference> & Pick<NotificationPreference, "category">>): Promise<NotificationPreferencesResponse> {
+    return this.request("/notification-preferences", { method: "PATCH", headers: this.getAuthHeaders(false), body: JSON.stringify({ preferences }) });
   }
 
   /* ============================
