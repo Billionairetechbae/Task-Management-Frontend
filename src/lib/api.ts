@@ -2507,7 +2507,7 @@ class ApiClient {
     });
   }
 
-  async createWorkspace(data: { name: string; industry?: string; size?: string }) {
+  async createWorkspace(data: { name: string; industry?: string; size?: string; plan?: "free" | "team" }) {
     return this.request("/companies", {
       method: "POST",
       headers: this.getAuthHeaders(false),
@@ -2804,7 +2804,7 @@ class ApiClient {
 
   async getActiveCompany(): Promise<{
     status: string;
-    data: { company: Company; commercial?: { activeSeatCount: number; includedSeats: number; billableSeats: number; estimatedMonthlyChargeUsd: number; plan: string | null; planPersistenceAvailable: boolean } };
+    data: { company: Company; commercial?: { activeSeatCount: number; includedSeats: number; billableSeats: number; estimatedMonthlyChargeUsd: number; overFreeLimit: boolean; plan: "free" | "team" | "enterprise"; commercialStatus: string; planPersistenceAvailable: boolean } };
   }> {
     return this.request("/companies/active", {
       method: "GET",

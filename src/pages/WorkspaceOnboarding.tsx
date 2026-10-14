@@ -31,7 +31,8 @@ const WorkspaceOnboarding = () => {
         name: name.trim(),
         industry: industry ? industry : undefined,
         size: size ? size : undefined,
-      } as { name: string; industry?: string; size?: string };
+        plan: selectedPlan,
+      } as { name: string; industry?: string; size?: string; plan: "free" | "team" };
       const res: any = await api.createWorkspace(payload);
       const companyId = res?.data?.company?.id || res?.data?.companyId || res?.companyId;
       const wsRes: any = await api.getWorkspaces();
@@ -102,7 +103,7 @@ const WorkspaceOnboarding = () => {
                       <p className="font-semibold">Enterprise</p><p className="text-sm">Contact us</p><p className="mt-1 text-xs text-muted-foreground">Tailored commercial arrangement.</p>
                     </a>
                   </fieldset>
-                  <p className="text-xs text-muted-foreground">Your choice is used for this onboarding session only; billing plans are not stored yet.</p>
+                  <p className="text-xs text-muted-foreground">Your Free or Team selection is saved with the workspace. Enterprise enquiries are handled manually.</p>
                   <div>
                     <Label>Name</Label>
                     <Input value={name} onChange={(e) => setName(e.target.value)} required />
