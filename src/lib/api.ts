@@ -343,6 +343,8 @@ export interface SignupExecutiveData {
   company: string;
   companySize: string;
   industry: string;
+  /** Cloudflare Turnstile token; verified server-side. */
+  turnstileToken?: string;
 }
 
 export interface SignupAssistantData {
@@ -356,6 +358,7 @@ export interface SignupAssistantData {
   hourlyRate: number;
   bio: string;
   skills: string[];
+  turnstileToken?: string;
 }
 
 export interface LoginData {
@@ -1830,6 +1833,7 @@ class ApiClient {
     email: string;
     password: string;
     companyCode: string;
+    turnstileToken?: string;
   }): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive-join", {
       method: "POST",
@@ -1853,6 +1857,7 @@ class ApiClient {
     hourlyRate?: number;
     bio?: string;
     skills?: string[];
+    turnstileToken?: string;
   }): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/manager", {
       method: "POST",
@@ -1870,6 +1875,7 @@ class ApiClient {
     lastName: string;
     email: string;
     password: string;
+    turnstileToken?: string;
   }): Promise<{ status: string; message: string; token?: string }> {
     const result = await this.request("/auth/signup", {
       method: "POST",

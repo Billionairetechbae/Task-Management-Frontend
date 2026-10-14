@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import TurnstileWidget, { TURNSTILE_SITE_KEY, type TurnstileHandle } from "@/components/TurnstileWidget";
+import { SIGNUP_MESSAGES, signupSecurityMessage } from "@/lib/signupErrors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Check, ArrowRight, MailCheck, RefreshCw, AlertCircle } from "lucide-react";
@@ -16,6 +18,8 @@ const Signup = () => {
   const navigate = useNavigate();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [consent, setConsent] = useState(false);
   const [form, setForm] = useState({
@@ -40,15 +44,20 @@ const Signup = () => {
       setError("Your password must be at least 8 characters long.");
       return;
     }
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError(SIGNUP_MESSAGES.turnstile);
+      return;
+    }
     setLoading(true);
     try {
-      await api.signupUser(form);
+      await api.signupUser({ ...form, turnstileToken: turnstileToken ?? undefined });
       setSubmitted(true);
     } catch (err: any) {
       const statusCode = err?.statusCode ?? err?.status;
+      turnstileRef.current?.reset(); // tokens are single-use
       const message =
-        statusCode === 429
-          ? "Too many attempts. Please wait a moment and try again."
+        signupSecurityMessage(err)
+          ? signupSecurityMessage(err)!
           : statusCode === 409
           ? "An account with this email already exists. Try signing in instead."
           : err?.message || "We couldn't create your account. Please try again.";
@@ -281,7 +290,9 @@ const Signup = () => {
                 </Label>
               </div>
 
-              <Button className="w-full h-10 gap-2 group" type="submit" disabled={loading || !consent}>
+              <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
+              <Button className="w-full h-10 gap-2 group" type="submit" disabled={loading || !consent || (!!TURNSTILE_SITE_KEY && !turnstileToken)}>
                 {loading ? "Creating..." : "Create account"}
                 {!loading && <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />}
               </Button>

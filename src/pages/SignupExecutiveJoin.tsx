@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import TurnstileWidget, { TURNSTILE_SITE_KEY, type TurnstileHandle } from "@/components/TurnstileWidget";
+import { SIGNUP_MESSAGES, signupSecurityMessage } from "@/lib/signupErrors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Crown, CheckCircle2 } from "lucide-react";
@@ -13,6 +15,8 @@ const SignupExecutiveJoin = () => {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [step, setStep] = useState(1);
 
   const [formData, setFormData] = useState({
@@ -29,11 +33,15 @@ const SignupExecutiveJoin = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      toast({ title: "Security check required", description: SIGNUP_MESSAGES.turnstile, variant: "destructive" });
+      return;
+    }
 
     setLoading(true);
 
     try {
-      await api.signupExecutiveJoin(formData);
+      await api.signupExecutiveJoin({ ...formData, turnstileToken: turnstileToken ?? undefined });
 
       toast({
         title: "Executive account created!",
@@ -42,11 +50,8 @@ const SignupExecutiveJoin = () => {
 
       setStep(2);
     } catch (error: any) {
-      const statusCode = error?.statusCode ?? error?.status;
-      const description =
-        statusCode === 429
-          ? "Too many attempts. Please try again shortly."
-          : error?.message || "Invalid company code or email already exists.";
+      turnstileRef.current?.reset(); // tokens are single-use
+      const description = signupSecurityMessage(error) || error?.message || "Invalid company code or email already exists.";
       toast({
         title: "Signup failed",
         description,
@@ -147,7 +152,10 @@ const SignupExecutiveJoin = () => {
               />
             </div>
 
-            <Button type="submit" className="w-full h-12" disabled={loading}>
+            <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
+
+            <Button type="submit" className="w-full h-12" disabled={loading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}>
               {loading ? "Joining..." : "Join as Executive"}
             </Button>
           </form>

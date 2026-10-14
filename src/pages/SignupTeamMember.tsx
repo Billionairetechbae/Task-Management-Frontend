@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
+import TurnstileWidget, { TURNSTILE_SITE_KEY, type TurnstileHandle } from "@/components/TurnstileWidget";
+import { SIGNUP_MESSAGES, signupSecurityMessage } from "@/lib/signupErrors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Users, CheckCircle2, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
@@ -14,6 +16,8 @@ const SignupTeamMember = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [step, setStep] = useState(1); // 1: Registration, 2: Pending approval
   const [formData, setFormData] = useState({
     firstName: "",
@@ -31,21 +35,22 @@ const SignupTeamMember = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      toast({ title: "Security check required", description: SIGNUP_MESSAGES.turnstile, variant: "destructive" });
+      return;
+    }
     setLoading(true);
 
     try {
-      await api.signupTeamMember(formData);
+      await api.signupTeamMember({ ...formData, turnstileToken: turnstileToken ?? undefined });
       toast({
         title: "Application submitted!",
         description: "Your account is pending verification from the company executive",
       });
       setStep(2); // Show pending approval step
     } catch (error: any) {
-      const statusCode = error?.statusCode ?? error?.status;
-      const description =
-        statusCode === 429
-          ? "Too many attempts. Please try again shortly."
-          : error?.message || "Please check your company code and try again";
+      turnstileRef.current?.reset(); // tokens are single-use
+      const description = signupSecurityMessage(error) || error?.message || "Please check your company code and try again";
       toast({
         title: "Registration failed",
         description,
@@ -318,7 +323,10 @@ const SignupTeamMember = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
+            <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
+
+            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}>
               {loading ? "Submitting Application..." : "Join Company as TeamMember"}
             </Button>
           </form>

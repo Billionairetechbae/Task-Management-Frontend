@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
+import TurnstileWidget, { TURNSTILE_SITE_KEY, type TurnstileHandle } from "@/components/TurnstileWidget";
+import { SIGNUP_MESSAGES, signupSecurityMessage } from "@/lib/signupErrors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Building2, CheckCircle2, MailCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import Logo from "@/components/Logo";
@@ -14,6 +16,8 @@ const SignupExecutive = () => {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [step, setStep] = useState<1 | 2>(1); // Step 1 = form, Step 2 = verification message
 
   const [formData, setFormData] = useState({
@@ -30,10 +34,14 @@ const SignupExecutive = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      toast({ title: "Security check required", description: SIGNUP_MESSAGES.turnstile, variant: "destructive" });
+      return;
+    }
     setLoading(true);
 
     try {
-      const response = await api.signupExecutive(formData);
+      const response = await api.signupExecutive({ ...formData, turnstileToken: turnstileToken ?? undefined });
 
       // Store email for success screen
       setEmailForVerification(formData.email);
@@ -45,11 +53,8 @@ const SignupExecutive = () => {
 
       setStep(2);
     } catch (error: any) {
-      const statusCode = error?.statusCode ?? error?.status;
-      const description =
-        statusCode === 429
-          ? "Too many attempts. Please try again shortly."
-          : error?.message || "Something went wrong";
+      turnstileRef.current?.reset(); // tokens are single-use
+      const description = signupSecurityMessage(error) || error?.message || "Something went wrong";
       toast({
         title: "Signup failed",
         description,
@@ -225,7 +230,10 @@ const SignupExecutive = () => {
               </Select>
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full h-12 text-base font-semibold">
+            <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} className="flex justify-center" />
+
+
+            <Button type="submit" disabled={loading || (!!TURNSTILE_SITE_KEY && !turnstileToken)} className="w-full h-12 text-base font-semibold">
               {loading ? "Creating Account..." : "Create Executive Account"}
             </Button>
 
