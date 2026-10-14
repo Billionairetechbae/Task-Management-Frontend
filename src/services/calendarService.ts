@@ -1,4 +1,3 @@
-
 import { api } from "../lib/api";
 import type {
     CalendarFilters,
@@ -7,8 +6,14 @@ import type {
 
 const calendarService = {
     async getEvents(filters: CalendarFilters): Promise<CalendarResponse> {
+        // Send ISO strings: String(Date) drops milliseconds, which hides tasks due at 23:59:59.999
+        // on the last day of a month/week/day.
         const response = await api.get<CalendarResponse>("/calendar/events", {
-            params: filters,
+            params: {
+                ...filters,
+                start: filters.start.toISOString(),
+                end: filters.end.toISOString(),
+            },
         });
 
         return response;

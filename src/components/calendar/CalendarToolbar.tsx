@@ -67,12 +67,14 @@ const CalendarToolbar: React.FC<Props> = ({
                 <div className="flex overflow-hidden rounded-lg border border-gray-300/60 shadow-sm">
                     <button
                         onClick={onPrevious}
+                        aria-label="Previous period"
                         className="border-r border-gray-300/60 p-1.5 hover:bg-gray-50 transition-colors"
                     >
                         <ChevronLeft size={18} className="text-gray-600" />
                     </button>
                     <button
                         onClick={onNext}
+                        aria-label="Next period"
                         className="p-1.5 hover:bg-gray-50 transition-colors"
                     >
                         <ChevronRight size={18} className="text-gray-600" />
@@ -116,6 +118,8 @@ const CalendarToolbar: React.FC<Props> = ({
                 {/* Filter Toggle */}
                 <button
                     onClick={onToggleFilters}
+                    aria-label="Toggle filters"
+                    aria-expanded={showFilters}
                     className={`
                         rounded-lg border p-2 transition-all
                         ${showFilters

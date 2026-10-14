@@ -10,6 +10,7 @@ export interface CalendarFilters {
     scope: CalendarScope;
 
     priority?: string;
+    /** Comma separated Task.status values. Empty = every status (default). */
     status?: string;
     projectId?: string;
 }
@@ -40,7 +41,8 @@ export interface CalendarEvent {
 
     creator: CalendarUser;
 
-    project?: CalendarProject;
+    project?: CalendarProject | null;
+    team?: { id: string; name: string } | null;
 
     assignees: CalendarUser[];
 

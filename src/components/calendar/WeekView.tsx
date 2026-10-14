@@ -60,8 +60,8 @@ export default function WeekView({
                 popup
                 step={30}
                 timeslots={2}
-                min={new Date(1970, 1, 1, 6, 0)}
-                max={new Date(1970, 1, 1, 22, 0)}
+                min={new Date(1970, 1, 1, 0, 0)}
+                max={new Date(1970, 1, 1, 23, 59)}
                 scrollToTime={new Date()}
                 startAccessor="start"
                 endAccessor="end"

@@ -1,5 +1,6 @@
 import React from "react";
-import { X, Filter, ChevronDown } from "lucide-react";
+import { X, Filter } from "lucide-react";
+import { TASK_STATUSES, STATUS_STYLES } from "../../lib/calendarStatus";
 
 interface CalendarFiltersProps {
     filters: {
@@ -8,12 +9,14 @@ interface CalendarFiltersProps {
         status: string;
         projectId: string;
     };
+    projects?: { id: string; name: string }[];
     onChange(filters: CalendarFiltersProps["filters"]): void;
     onClose?: () => void;
 }
 
 export default function CalendarFilters({
     filters,
+    projects = [],
     onChange,
     onClose,
 }: CalendarFiltersProps) {
@@ -22,9 +25,8 @@ export default function CalendarFilters({
             label: "Scope",
             key: "scope",
             options: [
-                { value: "company", label: "Company" },
-                { value: "my", label: "My" },
-                { value: "team", label: "Team" },
+                { value: "company", label: "Everything I can access" },
+                { value: "my", label: "My tasks" },
             ],
         },
         {
@@ -38,18 +40,16 @@ export default function CalendarFilters({
                 { value: "urgent", label: "Urgent" },
             ],
         },
-        {
-            label: "Status",
-            key: "status",
-            options: [
-                { value: "", label: "All" },
-                { value: "todo", label: "To Do" },
-                { value: "in_progress", label: "In Progress" },
-                { value: "review", label: "Review" },
-                { value: "completed", label: "Completed" },
-            ],
-        },
     ];
+
+    // Empty selection = every status (the default). Selecting narrows the calendar.
+    const selectedStatuses = filters.status ? filters.status.split(",").filter(Boolean) : [];
+    const toggleStatus = (status: string) => {
+        const next = selectedStatuses.includes(status)
+            ? selectedStatuses.filter((s) => s !== status)
+            : [...selectedStatuses, status];
+        onChange({ ...filters, status: next.join(",") });
+    };
 
     const handleFilterChange = (key: string, value: string) => {
         onChange({ ...filters, [key]: value });
@@ -96,7 +96,7 @@ export default function CalendarFilters({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filterSections.map((section) => (
                     <div key={section.key}>
                         <label className="mb-1.5 block text-xs font-medium text-gray-600">
@@ -123,17 +123,40 @@ export default function CalendarFilters({
                     <label className="mb-1.5 block text-xs font-medium text-gray-600">
                         Project
                     </label>
-                    <input
-                        type="text"
+                    <select
                         value={filters.projectId}
-                        onChange={(e) =>
-                            handleFilterChange("projectId", e.target.value)
-                        }
-                        placeholder="Search by project ID..."
-                        className="w-full rounded-lg border border-gray-300/60 bg-white px-3 py-2 text-sm text-gray-700 placeholder:text-gray-400 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                    />
+                        onChange={(e) => handleFilterChange("projectId", e.target.value)}
+                        className="w-full rounded-lg border border-gray-300/60 bg-white px-3 py-2 text-sm text-gray-700 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    >
+                        <option value="">All projects</option>
+                        {projects.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
+
+            <fieldset className="mt-4">
+                <legend className="mb-1.5 text-xs font-medium text-gray-600">
+                    Status {selectedStatuses.length === 0 ? "(showing all)" : ""}
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                    {TASK_STATUSES.map((status) => {
+                        const on = selectedStatuses.includes(status);
+                        return (
+                            <button
+                                key={status}
+                                type="button"
+                                aria-pressed={on}
+                                onClick={() => toggleStatus(status)}
+                                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${on ? STATUS_STYLES[status].chip + " ring-2 ring-offset-1 ring-blue-400" : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"}`}
+                            >
+                                {STATUS_STYLES[status].label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </fieldset>
         </div>
     );
 }

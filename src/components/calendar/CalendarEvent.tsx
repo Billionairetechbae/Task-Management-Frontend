@@ -1,166 +1,83 @@
-import { Clock, Flag, User, Calendar as CalendarIcon } from "lucide-react";
+import { Clock, Flag, FolderKanban, Users, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
-import type { CalendarEvent } from "../../types/calendar";
+import type { CalendarEvent as SharedCalendarEvent } from "../../types/calendar";
+import { getStatusStyle, isTaskOverdue } from "../../lib/calendarStatus";
 
 interface Props {
-    event: CalendarEvent;
+    event: SharedCalendarEvent;
     compact?: boolean;
     onClick?: () => void;
 }
 
-const priorityColours = {
-    low: {
-        border: "border-l-emerald-500",
-        badge: "bg-emerald-50 text-emerald-700",
-        solid: "bg-gradient-to-r from-emerald-500 to-emerald-600",
-        ring: "ring-emerald-500/20",
-    },
-    medium: {
-        border: "border-l-blue-500",
-        badge: "bg-blue-50 text-blue-700",
-        solid: "bg-gradient-to-r from-blue-500 to-blue-600",
-        ring: "ring-blue-500/20",
-    },
-    high: {
-        border: "border-l-orange-500",
-        badge: "bg-orange-50 text-orange-700",
-        solid: "bg-gradient-to-r from-orange-500 to-orange-600",
-        ring: "ring-orange-500/20",
-    },
-    urgent: {
-        border: "border-l-red-500",
-        badge: "bg-red-50 text-red-700",
-        solid: "bg-gradient-to-r from-red-500 to-red-600",
-        ring: "ring-red-500/20",
-    },
-};
+const fullName = (u: { firstName?: string; lastName?: string }) => `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
 
-export default function CalendarEvent({
-    event,
-    compact = false,
-    onClick,
-}: Props) {
-    const colours =
-        priorityColours[event.priority as keyof typeof priorityColours] ??
-        priorityColours.medium;
+export default function CalendarEvent({ event, compact = false, onClick }: Props) {
+    const style = getStatusStyle(event.status);
+    const overdue = isTaskOverdue({ status: event.status, deadline: event.task?.deadline ?? event.start });
+    const label = `${event.title} — ${style.label}${overdue ? ", overdue" : ""}`;
 
-    const completed = event.status === "completed";
-
-    // Compact view (Month view)
+    // Month view: compact chip. Status is spelled out (text), not only coloured.
     if (compact) {
         return (
             <div
                 onClick={() => onClick?.()}
-                className={`
-                    cursor-pointer
-                    truncate
-                    rounded-md
-                    px-2
-                    py-1
-                    text-xs
-                    font-medium
-                    text-white
-                    shadow-sm
-                    transition-all
-                    hover:shadow-md
-                    hover:scale-[1.02]
-                    ${colours.solid}
-                    ${completed ? "opacity-60" : ""}
-                `}
+                title={label}
+                aria-label={label}
+                data-testid="calendar-event"
+                data-status={event.status}
+                className={`flex cursor-pointer items-center gap-1 truncate rounded-md border px-1.5 py-0.5 text-xs font-medium ${style.chip} ${overdue ? "ring-1 ring-red-500" : ""}`}
             >
-                {event.title}
+                <span className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`} aria-hidden="true" />
+                <span className={`truncate ${style.strike ? "line-through" : ""}`}>{event.title}</span>
+                <span className="ml-auto shrink-0 text-[10px] font-semibold uppercase opacity-80">
+                    {overdue ? "Overdue" : style.label}
+                </span>
             </div>
         );
     }
 
-    // Full view (Week/Day view)
+    // Week/Day: richer detail.
+    const assignees = event.assignees || [];
     return (
         <div
             onClick={() => onClick?.()}
-            className={`
-                group
-                cursor-pointer
-                rounded-lg
-                border
-                border-l-4
-                bg-white
-                p-3
-                shadow-sm
-                transition-all
-                hover:shadow-md
-                hover:translate-y-[-1px]
-                ${colours.border}
-                ${completed ? "opacity-60" : ""}
-            `}
+            title={label}
+            data-testid="calendar-event"
+            data-status={event.status}
+            className={`group cursor-pointer rounded-lg border p-2 text-xs shadow-sm transition-all hover:shadow-md ${style.chip} ${overdue ? "ring-1 ring-red-500" : ""}`}
         >
-            {/* Title */}
-            <div className="mb-2">
-                <h4 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                    {event.title}
-                </h4>
+            <div className="flex items-start justify-between gap-2">
+                <h4 className={`line-clamp-2 text-sm font-semibold ${style.strike ? "line-through" : ""}`}>{event.title}</h4>
+                <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase">{style.label}</span>
             </div>
 
-            {/* Project */}
-            {event.project && (
-                <div className="mb-2 flex items-center gap-1.5 text-xs text-gray-500">
-                    <CalendarIcon size={12} />
-                    <span>{event.project.name}</span>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="flex items-center gap-1">
+                    <Clock size={12} /> {format(new Date(event.task?.deadline ?? event.start), "h:mm a")}
+                </span>
+                {event.priority && (
+                    <span className="flex items-center gap-1 capitalize">
+                        <Flag size={12} /> {event.priority}
+                    </span>
+                )}
+                {overdue && (
+                    <span className="flex items-center gap-1 font-semibold text-red-700">
+                        <AlertTriangle size={12} /> Overdue
+                    </span>
+                )}
+            </div>
+
+            {(event.project || event.team) && (
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 opacity-90">
+                    {event.project && <span className="flex items-center gap-1"><FolderKanban size={12} />{event.project.name}</span>}
+                    {event.team && <span className="flex items-center gap-1"><Users size={12} />{event.team.name}</span>}
                 </div>
             )}
 
-            {/* Footer */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                    <Clock size={13} className="text-gray-400" />
-                    {format(new Date(event.start), "h:mm a")}
-                    {new Date(event.start).toDateString() !== new Date(event.end).toDateString() && (
-                        <span className="text-gray-400">
-                            → {format(new Date(event.end), "h:mm a")}
-                        </span>
-                    )}
-                </div>
-
-                <div
-                    className={`
-                        flex items-center gap-1.5
-                        rounded-full
-                        px-2.5
-                        py-1
-                        text-[10px]
-                        font-semibold
-                        uppercase
-                        ${colours.badge}
-                    `}
-                >
-                    <Flag size={10} />
-                    {event.priority}
-                </div>
-            </div>
-
-            {/* Assignees */}
-            {event.task?.assignees?.length > 0 && (
-                <div className="mt-3 flex items-center gap-1">
-                    <div className="flex -space-x-2">
-                        {event.task.assignees
-                            .slice(0, 4)
-                            .map((user) => (
-                                <img
-                                    key={user.id}
-                                    src={
-                                        user.profilePictureUrl ||
-                                        "/default-avatar.png"
-                                    }
-                                    alt={`${user.firstName} ${user.lastName}`}
-                                    className="h-6 w-6 rounded-full border-2 border-white object-cover shadow-sm"
-                                />
-                            ))}
-                    </div>
-
-                    {event.task.assignees.length > 4 && (
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600">
-                            +{event.task.assignees.length - 4}
-                        </div>
-                    )}
+            {assignees.length > 0 && (
+                <div className="mt-1 truncate opacity-90">
+                    {assignees.slice(0, 3).map(fullName).join(", ")}
+                    {assignees.length > 3 ? ` +${assignees.length - 3}` : ""}
                 </div>
             )}
         </div>
