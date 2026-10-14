@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { recordTurnstileError } from "@/lib/turnstileDiagnostics";
 
 declare global {
   interface Window {
@@ -12,6 +13,9 @@ declare global {
 
 const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 export const TURNSTILE_SITE_KEY: string | undefined = import.meta.env.VITE_TURNSTILE_SITE_KEY || undefined;
+export const TURNSTILE_ERROR_MESSAGE = "Security check could not complete. Please try again.";
+/** If the widget neither yields a token nor reports an error within this time, treat it as failed (never "Verifying..." forever). */
+export const TURNSTILE_WATCHDOG_MS = 30_000;
 
 let scriptPromise: Promise<void> | null = null;
 function loadScript(): Promise<void> {
@@ -24,7 +28,7 @@ function loadScript(): Promise<void> {
       script.defer = true;
       script.onload = () => resolve();
       script.onerror = () => {
-        scriptPromise = null; // allow a retry on the next mount
+        scriptPromise = null; // allow a retry
         reject(new Error("Turnstile failed to load"));
       };
       document.head.appendChild(script);
@@ -46,44 +50,89 @@ interface Props {
 /**
  * Cloudflare Turnstile challenge. The site key is public (VITE_TURNSTILE_SITE_KEY); the secret key
  * lives only on the backend. Tokens are single-use, so call reset() after any failed submission.
+ *
+ * Failure handling: Cloudflare's own automatic retries are turned off (retry: "never", manual refresh). Any client error
+ * (e.g. 300010), challenge timeout, script-load failure or a 30s silent stall shows one clear message and a
+ * "Try again" button. Retrying is always user-initiated, so there is no retry loop.
  * Renders nothing when no site key is configured (local development with the backend dev bypass).
  */
 const TurnstileWidget = forwardRef<TurnstileHandle, Props>(({ onToken, className }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | undefined>(undefined);
+  const watchdog = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const mounted = useRef(true);
   const onTokenRef = useRef(onToken);
   onTokenRef.current = onToken;
+  const [failed, setFailed] = useState(false);
 
-  useImperativeHandle(ref, () => ({
-    reset: () => {
-      onTokenRef.current(null);
-      if (window.turnstile && widgetId.current !== undefined) window.turnstile.reset(widgetId.current);
-    },
-  }));
+  const clearWatchdog = () => { if (watchdog.current) { clearTimeout(watchdog.current); watchdog.current = undefined; } };
+  const fail = useCallback((code: unknown) => {
+    clearWatchdog();
+    recordTurnstileError(code);
+    onTokenRef.current(null);
+    if (mounted.current) setFailed(true);
+  }, []);
+  const armWatchdog = useCallback(() => {
+    clearWatchdog();
+    watchdog.current = setTimeout(() => fail("client_timeout"), TURNSTILE_WATCHDOG_MS);
+  }, [fail]);
 
-  useEffect(() => {
+  /** Render the widget, or reset it if it already exists. Used for first mount, retry and post-failure reset. */
+  const start = useCallback(() => {
     if (!TURNSTILE_SITE_KEY) return;
-    let cancelled = false;
+    onTokenRef.current(null);
+    setFailed(false);
+    armWatchdog();
     loadScript()
       .then(() => {
-        if (cancelled || !containerRef.current || !window.turnstile) return;
+        if (!mounted.current || !window.turnstile) return;
+        if (widgetId.current !== undefined) { window.turnstile.reset(widgetId.current); return; }
+        if (!containerRef.current) return;
         widgetId.current = window.turnstile.render(containerRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
-          callback: (token: string) => onTokenRef.current(token),
-          "expired-callback": () => onTokenRef.current(null),
-          "error-callback": () => onTokenRef.current(null),
+          retry: "never", // no automatic retry loop
+          "refresh-expired": "manual",
+          "refresh-timeout": "manual",
+          callback: (token: string) => { clearWatchdog(); if (mounted.current) setFailed(false); onTokenRef.current(token); },
+          "expired-callback": () => { clearWatchdog(); onTokenRef.current(null); },
+          "before-interactive-callback": () => clearWatchdog(), // a human step is showing; Cloudflare's own timeout-callback covers it
+          "timeout-callback": () => fail("challenge_timeout"),
+          "unsupported-callback": () => fail("unsupported"),
+          "error-callback": (code: unknown) => { fail(code); return true; }, // true = handled, suppress Cloudflare's console error
         });
       })
-      .catch(() => onTokenRef.current(null));
+      .catch(() => fail("script_load_failed"));
+  }, [armWatchdog, fail]);
+
+  useImperativeHandle(ref, () => ({ reset: start }), [start]);
+
+  useEffect(() => {
+    mounted.current = true;
+    start();
     return () => {
-      cancelled = true;
+      mounted.current = false;
+      clearWatchdog();
       if (window.turnstile && widgetId.current !== undefined) window.turnstile.remove(widgetId.current);
       widgetId.current = undefined;
     };
-  }, []);
+  }, [start]);
 
   if (!TURNSTILE_SITE_KEY) return null;
-  return <div ref={containerRef} className={className} data-testid="turnstile-widget" />;
+  return (
+    <div className={className}>
+      <div className="flex flex-col items-center gap-2">
+        <div ref={containerRef} data-testid="turnstile-widget" />
+        {failed && (
+          <div role="alert" className="text-center text-sm text-destructive" data-testid="turnstile-error">
+            <p>{TURNSTILE_ERROR_MESSAGE}</p>
+            <button type="button" onClick={start} className="mt-1 underline underline-offset-2 hover:no-underline" data-testid="turnstile-retry">
+              Try again
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 });
 TurnstileWidget.displayName = "TurnstileWidget";
 

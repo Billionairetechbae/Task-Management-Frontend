@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +17,7 @@ vi.mock("@/components/GoogleAuthButton", () => ({ GoogleAuthButton: () => null }
 // A controllable stand-in for Cloudflare's global.
 let widgetCallback: ((t: string) => void) | undefined;
 let widgetExpired: (() => void) | undefined;
+let widgetError: ((code: string) => unknown) | undefined;
 const turnstile = { render: vi.fn(), reset: vi.fn(), remove: vi.fn() };
 
 async function loadPages(siteKey: string | undefined) {
@@ -30,7 +31,7 @@ async function loadPages(siteKey: string | undefined) {
 
 beforeEach(() => {
   h.signupUser.mockReset(); h.signupExecutive.mockReset(); h.toast.mockReset();
-  turnstile.render.mockReset().mockImplementation((_el: HTMLElement, opts: any) => { widgetCallback = opts.callback; widgetExpired = opts["expired-callback"]; return "w1"; });
+  turnstile.render.mockReset().mockImplementation((_el: HTMLElement, opts: any) => { widgetCallback = opts.callback; widgetExpired = opts["expired-callback"]; widgetError = opts["error-callback"]; return "w1"; });
   turnstile.reset.mockReset(); turnstile.remove.mockReset();
   (window as any).turnstile = turnstile;
 });
@@ -107,6 +108,48 @@ describe("signup Turnstile (frontend)", () => {
     await userEvent.click(submitBtn());
     await waitFor(() => expect(h.signupUser).toHaveBeenCalled());
     expect(h.signupUser.mock.calls[0][0].turnstileToken).toBeUndefined();
+  });
+});
+
+describe("signup after Turnstile trouble", () => {
+  it("client error 300010 -> message + retry -> new token -> signup succeeds with that token", async () => {
+    const { Signup } = await loadPages("k");
+    h.signupUser.mockResolvedValue({ status: "success", message: "ok" });
+    render(<MemoryRouter><Signup /></MemoryRouter>);
+    await waitFor(() => expect(turnstile.render).toHaveBeenCalled());
+    await fillSignup();
+    act(() => { widgetError!("300010"); });
+    expect(await screen.findByText("Security check could not complete. Please try again.")).toBeInTheDocument();
+    expect(submitBtn()).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(turnstile.reset).toHaveBeenCalledWith("w1"));
+    expect(screen.queryByText("Security check could not complete. Please try again.")).toBeNull();
+    act(() => { widgetCallback!("token-after-retry"); });
+    await waitFor(() => expect(submitBtn()).not.toBeDisabled());
+    await userEvent.click(submitBtn());
+    await waitFor(() => expect(h.signupUser).toHaveBeenCalledTimes(1));
+    expect(h.signupUser.mock.calls[0][0].turnstileToken).toBe("token-after-retry");
+  });
+
+  it("failed signup resets the challenge; the next attempt uses a NEW token and succeeds", async () => {
+    const { Signup } = await loadPages("k");
+    h.signupUser
+      .mockRejectedValueOnce(Object.assign(new Error("Please complete the security check and try again."), { statusCode: 400 }))
+      .mockResolvedValueOnce({ status: "success", message: "ok" });
+    render(<MemoryRouter><Signup /></MemoryRouter>);
+    await waitFor(() => expect(turnstile.render).toHaveBeenCalled());
+    await fillSignup();
+    act(() => { widgetCallback!("first-token"); });
+    await waitFor(() => expect(submitBtn()).not.toBeDisabled());
+    await userEvent.click(submitBtn());
+    await waitFor(() => expect(turnstile.reset).toHaveBeenCalledWith("w1"));
+    await waitFor(() => expect(submitBtn()).toBeDisabled()); // old (spent) token is gone
+    expect(turnstile.reset).toHaveBeenCalledTimes(1); // one reset, no loop
+    act(() => { widgetCallback!("second-token"); });
+    await waitFor(() => expect(submitBtn()).not.toBeDisabled());
+    await userEvent.click(submitBtn());
+    await waitFor(() => expect(h.signupUser).toHaveBeenCalledTimes(2));
+    expect(h.signupUser.mock.calls.map((c) => c[0].turnstileToken)).toEqual(["first-token", "second-token"]);
   });
 });
 
