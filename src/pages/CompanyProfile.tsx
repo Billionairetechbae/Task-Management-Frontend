@@ -54,6 +54,7 @@ const CompanyProfile = () => {
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [commercial, setCommercial] = useState<{ activeSeatCount: number; includedSeats: number; billableSeats: number; estimatedMonthlyChargeUsd: number } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     size: "",
@@ -86,6 +87,7 @@ const CompanyProfile = () => {
       setLoading(true);
       const res = await api.getActiveCompany();
       const company = res.data.company;
+      setCommercial(res.data.commercial || null);
       setFormData({
         name: company.name || "",
         size: company.size || "",
@@ -281,6 +283,16 @@ const CompanyProfile = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
           {/* Left Column - Company Information */}
           <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Plan & billing</CardTitle><CardDescription>Commercial figures are based on active internal workspace members.</CardDescription></CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div><p className="text-xs text-muted-foreground">Current plan</p><p className="font-semibold">Not configured</p></div>
+                <div><p className="text-xs text-muted-foreground">Active members</p><p className="font-semibold">{commercial?.activeSeatCount ?? "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Included seats</p><p className="font-semibold">{commercial?.includedSeats ?? 3}</p></div>
+                <div><p className="text-xs text-muted-foreground">Est. monthly charge</p><p className="font-semibold">${commercial?.estimatedMonthlyChargeUsd ?? 0}</p></div>
+                <p className="col-span-full text-xs text-muted-foreground">No payment method required yet.</p>
+              </CardContent>
+            </Card>
             {/* Basic Information Card */}
             <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
               <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">

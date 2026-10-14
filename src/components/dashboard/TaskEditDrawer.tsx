@@ -468,8 +468,8 @@ export default function TaskEditDrawer({
   const assigneeIdSet = useMemo(() => new Set(selectedAssigneeIds), [selectedAssigneeIds]);
 
   const availableToAdd = useMemo(() => {
-    return members.filter((m) => !assigneeIdSet.has(m.userId));
-  }, [members, assigneeIdSet]);
+    return members.filter((m) => !assigneeIdSet.has(m.userId)).sort((a, b) => (a.userId === user?.id ? -1 : b.userId === user?.id ? 1 : 0));
+  }, [members, assigneeIdSet, user?.id]);
 
   const body = (
     <>

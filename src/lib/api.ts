@@ -2804,7 +2804,7 @@ class ApiClient {
 
   async getActiveCompany(): Promise<{
     status: string;
-    data: { company: Company };
+    data: { company: Company; commercial?: { activeSeatCount: number; includedSeats: number; billableSeats: number; estimatedMonthlyChargeUsd: number; plan: string | null; planPersistenceAvailable: boolean } };
   }> {
     return this.request("/companies/active", {
       method: "GET",

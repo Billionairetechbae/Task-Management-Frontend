@@ -21,6 +21,7 @@ const WorkspaceOnboarding = () => {
   const [size, setSize] = useState<string>("");
   const [companyCode, setCompanyCode] = useState("");
   const [resolvedWorkspace, setResolvedWorkspace] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<"free" | "team">("free");
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,10 +86,23 @@ const WorkspaceOnboarding = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Create workspace</CardTitle>
-                <CardDescription>Enter a name. Industry and size are optional.</CardDescription>
+                <CardDescription>Choose how you expect to use Admiino, then enter a name. No payment method is required.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form className="space-y-3" onSubmit={onCreate}>
+                  <fieldset className="grid gap-3 md:grid-cols-3">
+                    <legend className="mb-2 text-sm font-medium">Choose a plan</legend>
+                    <button type="button" onClick={() => setSelectedPlan("free")} className={`rounded-lg border p-3 text-left ${selectedPlan === "free" ? "border-primary ring-1 ring-primary" : "border-border"}`}>
+                      <p className="font-semibold">Free</p><p className="text-sm">$0/month</p><p className="mt-1 text-xs text-muted-foreground">Up to 3 internal members.</p>
+                    </button>
+                    <button type="button" onClick={() => setSelectedPlan("team")} className={`rounded-lg border p-3 text-left ${selectedPlan === "team" ? "border-primary ring-1 ring-primary" : "border-border"}`}>
+                      <p className="font-semibold">Team</p><p className="text-sm">$5/additional member/month</p><p className="mt-1 text-xs text-muted-foreground">First 3 internal members included.</p>
+                    </button>
+                    <a href="mailto:hello@admiino.com?subject=Enterprise%20enquiry" className="rounded-lg border border-border p-3 text-left hover:border-primary">
+                      <p className="font-semibold">Enterprise</p><p className="text-sm">Contact us</p><p className="mt-1 text-xs text-muted-foreground">Tailored commercial arrangement.</p>
+                    </a>
+                  </fieldset>
+                  <p className="text-xs text-muted-foreground">Your choice is used for this onboarding session only; billing plans are not stored yet.</p>
                   <div>
                     <Label>Name</Label>
                     <Input value={name} onChange={(e) => setName(e.target.value)} required />

@@ -400,9 +400,9 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {members.map((m) => (
+                  {[...members].sort((a, b) => (a.userId === user?.id ? -1 : b.userId === user?.id ? 1 : 0)).map((m) => (
                     <SelectItem key={m.userId} value={m.userId}>
-                      {m.user.firstName} {m.user.lastName}
+                      {m.userId === user?.id ? "Me — " : ""}{m.user.firstName} {m.user.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
