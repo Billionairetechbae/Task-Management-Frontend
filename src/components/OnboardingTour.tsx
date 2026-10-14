@@ -23,6 +23,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOnboardingIntent, useOnboardingSlot } from "@/lib/overlayCoordinator";
 
 interface TourStep {
   title: string;
@@ -205,14 +206,20 @@ const OnboardingTour = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  // Onboarding overlays take turns and own the screen: workspace selectors cannot open meanwhile.
+  const [pending, setPending] = useState(false); // tour will show shortly (it waits 1s for the page to settle)
+  useOnboardingIntent("onboarding:tour", pending); // locks selectors / holds the setup redirect from the start
+  const myTurn = useOnboardingSlot("onboarding:tour", isOpen);
 
   useEffect(() => {
+    setPending(false);
     if (!user) return;
 
     // Check if user has completed onboarding
     const completedOnboarding = localStorage.getItem(`${ONBOARDING_STORAGE_KEY}_${user.id}`);
     
     if (!completedOnboarding) {
+      setPending(true);
       // Show tour after a brief delay to let the dashboard load
       const timer = setTimeout(() => {
         setIsOpen(true);
@@ -260,6 +267,7 @@ const OnboardingTour = () => {
     if (user) {
       localStorage.setItem(`${ONBOARDING_STORAGE_KEY}_${user.id}`, "true");
     }
+    setPending(false);
     setIsOpen(false);
     setCurrentStep(0);
   };
@@ -271,7 +279,7 @@ const OnboardingTour = () => {
   if (!user) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen && myTurn} onOpenChange={(next) => { if (!next) setPending(false); setIsOpen(next); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="sr-only">
           <DialogTitle>{currentTourStep?.title}</DialogTitle>

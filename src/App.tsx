@@ -58,6 +58,7 @@ import WorkspaceInsights from "@/pages/WorkspaceInsights";
 import AuditExport from "@/pages/AuditExport";
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
 import OnboardingTour from "@/components/OnboardingTour";
+import OnboardingFlowController from "@/components/OnboardingFlowController";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import Integrations from "./pages/Integrations";
 
@@ -97,6 +98,7 @@ const App = () => {
       <Toaster />
       <Sonner />
       <OnboardingTour />
+      <OnboardingFlowController />
 
       <OnboardingProfileModal
         isOpen={showOnboardingModal}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Building2, ChevronDown, Check, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,20 @@ import CreateWorkspaceDialog from "@/components/CreateWorkspaceDialog";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { paginateWorkspaces } from "@/lib/workspaceLifecycle";
+import { useOverlay, useSwitcherRegistration } from "@/lib/overlayCoordinator";
 
 const WorkspaceSwitcher = () => {
   const { workspaces, activeCompanyId, setActiveCompanyId, user, workspaceRole, activeWorkspace } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  // Open state lives in the shared overlay coordinator (not a local boolean) so that only ONE overlay is ever open
+  // and nothing can open while first-run onboarding owns the screen.
+  const instanceId = useId();
+  const menu = useOverlay(`workspace-switcher:${instanceId}`);
+  const createDialog = useOverlay(`workspace-create:${instanceId}`);
+  const open = menu.isOpen;
+  const blocked = menu.blocked; // onboarding is showing
+  // No workspace yet => nothing to switch between; the setup page (create / join) is the only path.
+  const available = workspaces.length > 0;
+  useSwitcherRegistration(`workspace-switcher:${instanceId}`, available);
   const [search, setSearch] = useState("");
   const [visibleCount, setVisibleCount] = useState(5);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -36,11 +45,9 @@ const WorkspaceSwitcher = () => {
     requestAnimationFrame(() => searchRef.current?.focus());
   }, [open]);
 
-  useEffect(() => {
-    const handler = () => setOpen(true);
-    window.addEventListener("workspace:switcher-open", handler);
-    return () => window.removeEventListener("workspace:switcher-open", handler);
-  }, []);
+  const setOpen = (next: boolean) => { if (next) menu.open(); else menu.close(); };
+
+  if (!available) return null;
 
   const label = activeWorkspace?.name || "Select workspace";
   const subtitle = workspaceRole ? workspaceRole.toUpperCase() : user?.role?.toUpperCase();
@@ -54,6 +61,9 @@ const WorkspaceSwitcher = () => {
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={blocked}
+                aria-disabled={blocked}
+                data-testid="workspace-switcher-trigger"
                 className="flex items-center gap-2 px-2 sm:px-3 h-8 border border-border hover:border-primary/30 bg-background"
               >
                 <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -152,7 +162,7 @@ const WorkspaceSwitcher = () => {
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => setCreateOpen(true)}
+            onClick={() => createDialog.open()}
             className="text-primary cursor-pointer gap-2 py-2.5"
           >
             <Plus className="h-4 w-4" />
@@ -160,7 +170,10 @@ const WorkspaceSwitcher = () => {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateWorkspaceDialog
+        open={createDialog.isOpen}
+        onOpenChange={(next) => { if (next) createDialog.open(); else createDialog.close(); }}
+      />
     </>
   );
 };

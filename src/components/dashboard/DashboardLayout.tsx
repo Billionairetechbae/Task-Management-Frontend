@@ -47,6 +47,7 @@ import NotificationsDropdown from "@/components/notifications/NotificationsDropd
 import { WebSocketStatus } from "@/components/WebSocketStatus";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { readPreferences } from "@/hooks/use-local-preferences";
+import { useViewportWidth, SM_BREAKPOINT, MD_BREAKPOINT } from "@/hooks/use-viewport-width";
 
 interface NavItem {
   label: string;
@@ -92,6 +93,14 @@ const DashboardLayout = ({
     return !sidebarCollapsedByDefault;
   });
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Exactly ONE workspace selector is mounted by this layout at any time (previously the desktop sidebar, the
+  // always-mounted off-screen mobile drawer copy and the header all rendered one, and all opened together):
+  //   >= md : the desktop sidebar owns it while expanded; the header owns it when the sidebar is collapsed
+  //   <  md : the open mobile drawer owns it; otherwise the header does (from sm up)
+  const viewportWidth = useViewportWidth();
+  const isDesktop = viewportWidth >= MD_BREAKPOINT;
+  const showHeaderSwitcher = viewportWidth >= SM_BREAKPOINT && !mobileOpen && (!isDesktop || !sidebarOpen);
 
   // Collapse automatically when navigating into settings, restore when leaving.
   const prevPathRef = useRef(location.pathname);
@@ -633,7 +642,7 @@ const DashboardLayout = ({
         </div>
       </div>
 
-      {sidebarOpen && (
+      {(sidebarOpen || !isDesktop) && (
         <div className="px-3 py-3 border-b border-sidebar-border">
           <WorkspaceSwitcher />
         </div>
@@ -732,7 +741,7 @@ const DashboardLayout = ({
             sidebarOpen ? "w-[240px]" : "w-[56px]"
           )}
         >
-          <SidebarContent />
+          {isDesktop && <SidebarContent />}
         </aside>
 
         {mobileOpen && (
@@ -759,7 +768,7 @@ const DashboardLayout = ({
             </Button>
           </div>
 
-          <SidebarContent />
+          {!isDesktop && mobileOpen && <SidebarContent />}
         </aside>
 
         <div
@@ -797,9 +806,11 @@ const DashboardLayout = ({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <div className="hidden sm:block">
-                  <WorkspaceSwitcher />
-                </div>
+                {showHeaderSwitcher && (
+                  <div className="hidden sm:block">
+                    <WorkspaceSwitcher />
+                  </div>
+                )}
 
                 <div className="hidden sm:block">
                   <WebSocketStatus />

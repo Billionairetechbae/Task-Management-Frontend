@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import useTheme, { type ThemeMode } from "@/hooks/use-theme";
 import useLocalPreferences from "@/hooks/use-local-preferences";
+import { useOnboardingSlot } from "@/lib/overlayCoordinator";
 import {
   ArrowLeft,
   ArrowRight,
@@ -52,6 +53,8 @@ export default function OnboardingProfileModal({
   const [gender, setGender] = useState("");
   const [age, setAge] = useState("");
   const [loading, setLoading] = useState(false);
+  // Onboarding overlays take turns and own the screen: workspace selectors cannot open meanwhile.
+  const myTurn = useOnboardingSlot("onboarding:profile", isOpen);
   const { toast } = useToast();
   const { refreshUser, user } = useAuth() as any;
   const { theme, setTheme } = useTheme();
@@ -104,7 +107,7 @@ export default function OnboardingProfileModal({
   const ActiveIcon = STEPS[step].icon;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen && myTurn} onOpenChange={handleClose}>
       <DialogContent className="p-0 overflow-hidden sm:max-w-[560px] border-border/70">
         {/* Header */}
         <div className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-6 pt-6 pb-5">
