@@ -1603,7 +1603,10 @@ export interface ProjectHealthSummary {
    API BASE URL
 ============================ */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Local Vite development talks to the local backend by default. Production
+// still requires its hosting environment to provide VITE_API_BASE_URL; the
+// empty production fallback preserves the existing same-origin behaviour.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5001/api/v1" : "");
 import { captureUnexpectedApiError } from "@/lib/sentry";
 
 /* ============================

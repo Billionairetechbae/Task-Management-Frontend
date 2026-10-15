@@ -1,6 +1,5 @@
 // src/lib/websocket.ts - Updated for Render
 import { toast } from "@/hooks/use-toast";
-import { envOr } from "@/lib/env";
 
 export interface WebSocketMessage {
   type: string;
@@ -31,8 +30,8 @@ class WebSocketService {
   }
 
   private getWebSocketUrl(token: string): string {
-    // const apiBaseUrl = envOr("VITE_API_BASE_URL", "http://localhost:5000/api/v1");
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5001/api/v1" : "");
+    if (!apiBaseUrl) throw new Error("VITE_API_BASE_URL is required outside local development");
     
     // Remove /api/v1 from the end
     const baseUrl = apiBaseUrl.replace('/api/v1', '');
