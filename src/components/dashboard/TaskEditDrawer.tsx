@@ -1,4 +1,5 @@
 import { triggerBlobDownload } from "@/lib/api";
+import { dependencyWarningMessage } from "@/lib/taskDependencies";
 // src/components/dashboard/TaskEditDrawer.tsx
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -234,7 +235,7 @@ export default function TaskEditDrawer({
 
         setTask(updated);
         onTaskUpdated(updated);
-        toast({ title: "Progress updated" });
+        toast({ title: "Progress updated", description: dependencyWarningMessage((res as any).warnings) || undefined });
         return;
       }
 
@@ -274,7 +275,7 @@ export default function TaskEditDrawer({
 
         setTask(updated);
         onTaskUpdated(updated);
-        toast({ title: "Task updated" });
+        toast({ title: "Task updated", description: dependencyWarningMessage((res as any).warnings) || undefined });
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });

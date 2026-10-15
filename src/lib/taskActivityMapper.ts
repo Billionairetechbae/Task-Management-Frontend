@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   FilePlus2,
   FileX2,
+  Link2,
   ListChecks,
   MessageSquarePlus,
   Pencil,
@@ -13,6 +14,8 @@ import {
 
 export type TaskActivityPresentation = {
   label: string;
+  /** Optional secondary line. Never contains another task's title (activity stores ids only). */
+  detail?: string;
   icon: any;
   toneClass: string;
 };
@@ -33,7 +36,22 @@ const activityMap: Record<string, TaskActivityPresentation> = {
   subtask_deleted: { label: "Subtask deleted", icon: ListChecks, toneClass: "text-rose-600" },
 };
 
-export const getTaskActivityPresentation = (actionType?: string): TaskActivityPresentation => {
+const dependencyDetail = (actionType: string, metadata?: Record<string, any> | null) => {
+  const added = actionType === "dependency_added";
+  if (metadata?.direction === "blocks") return added ? "Another task now depends on this task" : "Another task no longer depends on this task";
+  if (metadata?.direction === "depends_on") return added ? "This task now depends on another task" : "This task no longer depends on another task";
+  return undefined;
+};
+
+export const getTaskActivityPresentation = (actionType?: string, metadata?: Record<string, any> | null): TaskActivityPresentation => {
+  if (actionType === "dependency_added" || actionType === "dependency_removed") {
+    return {
+      label: actionType === "dependency_added" ? "Dependency added" : "Dependency removed",
+      detail: dependencyDetail(actionType, metadata),
+      icon: Link2,
+      toneClass: actionType === "dependency_added" ? "text-indigo-600" : "text-rose-600",
+    };
+  }
   if (!actionType) {
     return { label: "Task activity", icon: Activity, toneClass: "text-muted-foreground" };
   }

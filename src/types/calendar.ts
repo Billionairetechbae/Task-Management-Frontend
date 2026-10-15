@@ -59,6 +59,11 @@ export interface CalendarEvent {
     companyId?: string;
     workspace?: CalendarWorkspaceRef;
 
+    /** Derived from dependencies; informational only (dates are never moved). */
+    isBlocked?: boolean;
+    blockedByCount?: number;
+    hasCancelledDependency?: boolean;
+
     task: any;
 }
 

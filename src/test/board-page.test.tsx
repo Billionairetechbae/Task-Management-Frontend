@@ -12,6 +12,8 @@ const h = vi.hoisted(() => ({
   auth: { user: { id: "me" }, activeCompanyId: "ws-1", workspaceRole: "member" as string },
   handlers: {} as Record<string, () => void>,
   toastError: vi.fn(),
+  toastWarning: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({ api: { getAllTasksCrossWorkspace: h.getAll, updateTask: h.updateTask, getProjects: h.getProjects, listTeams: h.listTeams } }));
@@ -21,7 +23,7 @@ vi.mock("@/contexts/WebSocketContext", () => ({
 }));
 vi.mock("@/components/dashboard/DashboardLayout", () => ({ default: ({ children }: any) => <div>{children}</div> }));
 vi.mock("@/components/WorkspaceSwitcher", () => ({ default: () => null }));
-vi.mock("sonner", () => ({ toast: { error: h.toastError, success: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { error: h.toastError, success: h.toastSuccess, warning: h.toastWarning } }));
 
 import Board from "../pages/Board";
 
@@ -44,7 +46,7 @@ function renderBoard() {
 const resolved = (tasks: any[]) => ({ data: { tasks } });
 
 beforeEach(() => {
-  h.getAll.mockReset(); h.updateTask.mockReset(); h.toastError.mockReset();
+  h.getAll.mockReset(); h.updateTask.mockReset(); h.toastError.mockReset(); h.toastWarning.mockReset(); h.toastSuccess.mockReset();
   h.getProjects.mockResolvedValue({ data: { projects: [{ id: "p1", name: "Finance" }] } });
   h.listTeams.mockResolvedValue({ data: { teams: [{ id: "team-1", name: "Operations" }] } });
   h.auth.workspaceRole = "member";
@@ -170,5 +172,41 @@ describe("Board page", () => {
     await waitFor(() => expect(within(screen.getByTestId("board-panel-pending")).getByText("Task a")).toBeInTheDocument());
     await waitFor(() => expect(screen.getByTestId("board-card").getAttribute("data-state")).toBe("idle"), { timeout: 2000 });
     expect(within(screen.getByTestId("board-panel-completed")).queryByText("Task a")).toBeNull();
+  });
+
+  it("shows a 'Blocked · N' badge on blocked cards only, and adds no Blocked column or Blocked-only filter", async () => {
+    h.getAll.mockResolvedValue(resolved([
+      task("a", "pending", { isBlocked: true, unresolvedDependencyCount: 2 }),
+      task("b", "pending", { isBlocked: false, unresolvedDependencyCount: 0 }),
+    ]));
+    renderBoard();
+    const blocked = (await screen.findByText("Task a")).closest("article")!;
+    expect(within(blocked).getByTestId("blocked-badge")).toHaveTextContent("Blocked · 2");
+    expect(within(screen.getByText("Task b").closest("article")!).queryByTestId("blocked-badge")).toBeNull();
+    expect(screen.queryByRole("region", { name: /blocked column/i })).toBeNull();
+    expect(screen.queryByLabelText(/blocked only/i)).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /blocked/i })).toBeNull();
+  });
+
+  it("moving a blocked task still succeeds and shows the advisory warning from the server", async () => {
+    h.auth.workspaceRole = "manager";
+    h.getAll.mockResolvedValue(resolved([task("a", "pending", { isBlocked: true, unresolvedDependencyCount: 2 })]));
+    h.updateTask.mockResolvedValue({ status: "success", data: { task: {} }, warnings: [{ code: "BLOCKED_BY_INCOMPLETE_DEPENDENCIES", count: 2 }] });
+    renderBoard();
+    await userEvent.selectOptions(await screen.findByLabelText("Move Task a to"), "in_progress");
+    await waitFor(() => expect(h.updateTask).toHaveBeenCalledWith("a", { status: "in_progress" }));
+    await waitFor(() => expect(h.toastWarning).toHaveBeenCalledWith("Moved, but 2 dependencies are unfinished."));
+    expect(h.toastSuccess).not.toHaveBeenCalled();
+    expect(h.toastError).not.toHaveBeenCalled();
+  });
+
+  it("a normal move (no warnings) keeps the plain success toast", async () => {
+    h.auth.workspaceRole = "manager";
+    h.getAll.mockResolvedValue(resolved([task("a", "pending")]));
+    h.updateTask.mockResolvedValue({ status: "success", data: { task: {} } });
+    renderBoard();
+    await userEvent.selectOptions(await screen.findByLabelText("Move Task a to"), "in_progress");
+    await waitFor(() => expect(h.toastSuccess).toHaveBeenCalledWith("Task status updated"));
+    expect(h.toastWarning).not.toHaveBeenCalled();
   });
 });

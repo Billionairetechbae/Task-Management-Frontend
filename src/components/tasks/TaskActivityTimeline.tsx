@@ -51,7 +51,7 @@ const TaskActivityTimeline = ({ taskId, initialActivities = [], maxVisible = 8 }
   return (
     <div className="space-y-3">
       {visibleActivities.map((activity) => {
-        const presentation = getTaskActivityPresentation(activity.actionType);
+        const presentation = getTaskActivityPresentation(activity.actionType, (activity as any).metadata);
         const Icon = presentation.icon;
         const oldValue = stringifyActivityValue(activity.oldValue);
         const newValue = stringifyActivityValue(activity.newValue);
@@ -65,6 +65,7 @@ const TaskActivityTimeline = ({ taskId, initialActivities = [], maxVisible = 8 }
                   {new Date(activity.createdAt).toLocaleString()}
                 </Badge>
               </div>
+              {presentation.detail && <p className="text-xs text-muted-foreground">{presentation.detail}</p>}
               {activity.user && (
                 <p className="text-xs text-muted-foreground">
                   {activity.user.firstName} {activity.user.lastName}

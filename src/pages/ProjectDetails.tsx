@@ -106,6 +106,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { queryKeys } from "@/lib/queryKeys";
 import { captureProjectDetailInconsistency } from "@/lib/sentry";
+import BlockedBadge from "@/components/tasks/BlockedBadge";
 
 type MemberRow = {
   id: string;
@@ -1465,6 +1466,7 @@ export default function ProjectDetails() {
                                 >
                                   {task.title}
                                 </p>
+                                <BlockedBadge task={task} />
 
                                 {task.assignee && (
                                   <Tooltip>
@@ -1765,6 +1767,7 @@ export default function ProjectDetails() {
                             task.status === "cancelled" ? "bg-destructive" : "bg-warning"
                           )} />
                           <p className="text-sm font-medium truncate flex-1">{task.title}</p>
+                          <BlockedBadge task={task} />
                         </div>
                         <div className="mt-1 flex items-center gap-2 flex-wrap pl-3.5">
                           <Badge variant="outline" className={cn("text-[9px] px-1.5 h-4", getStatusBadgeClass(task.status))}>

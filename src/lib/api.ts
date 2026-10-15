@@ -527,6 +527,68 @@ export interface Task {
   /** Optional per-user access hint (list items). GET /tasks/:id is authoritative. */
   access?: TaskAccess | null;
   execution?: TaskExecutionSummary | null;
+
+  // Derived dependency summary on list responses (never a persisted status)
+  isBlocked?: boolean | null;
+  unresolvedDependencyCount?: number | null;
+  dependsOnCount?: number | null;
+  blockingCount?: number | null;
+  hasCancelledDependency?: boolean | null;
+}
+
+/** Advisory notice returned with a successful status change. */
+export interface TaskMutationWarning {
+  code: "BLOCKED_BY_INCOMPLETE_DEPENDENCIES" | string;
+  count?: number;
+}
+
+export interface TaskDependencyAssignee {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  profilePictureUrl?: string | null;
+}
+
+/** One side of a dependency link. `restricted` items carry status only (no title/details). */
+export interface TaskDependencyItem {
+  linkId: string;
+  createdAt?: string;
+  status: TaskStatus | string;
+  resolved: boolean;
+  cancelled: boolean;
+  restricted: boolean;
+  /** Present on restricted predecessors only, so an authorised manager can still remove a stale link. */
+  taskId?: string;
+  task?: {
+    id: string;
+    title: string;
+    status: TaskStatus | string;
+    deadline?: string | null;
+    projectId?: string | null;
+    teamId?: string | null;
+    parentTaskId?: string | null;
+    assignees: TaskDependencyAssignee[];
+  };
+}
+
+export interface TaskDependencyGraph {
+  dependsOn: TaskDependencyItem[];
+  blocking: TaskDependencyItem[];
+  isBlocked: boolean;
+  unresolvedDependencyCount: number;
+  dependsOnCount: number;
+  blockingCount: number;
+  hasCancelledDependency: boolean;
+  canManageDependencies: boolean;
+}
+
+export interface TaskDependencyCandidate {
+  id: string;
+  title: string;
+  status: TaskStatus | string;
+  deadline?: string | null;
+  projectId?: string | null;
+  parentTaskId?: string | null;
 }
 
 export interface CreateTaskData {
@@ -2239,6 +2301,35 @@ class ApiClient {
     });
   }
 
+  /* ---- Task dependencies (graph mutations never go through updateTask) ---- */
+
+  async getTaskDependencies(taskId: string): Promise<{ status: string; data: TaskDependencyGraph }> {
+    return this.request(`/tasks/${taskId}/dependencies`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async getTaskDependencyCandidates(
+    taskId: string,
+    params: { q?: string; limit?: number } = {}
+  ): Promise<{ status: string; data: { tasks: TaskDependencyCandidate[] } }> {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.limit) query.set("limit", String(params.limit));
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return this.request(`/tasks/${taskId}/dependencies/candidates${suffix}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async addTaskDependency(taskId: string, dependsOnTaskId: string): Promise<{ status: string; data: TaskDependencyGraph }> {
+    return this.request(`/tasks/${taskId}/dependencies`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ dependsOnTaskId }),
+    });
+  }
+
+  async removeTaskDependency(taskId: string, dependsOnTaskId: string): Promise<{ status: string; data: TaskDependencyGraph }> {
+    return this.request(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, { method: "DELETE", headers: this.getAuthHeaders() });
+  }
+
   async watchTask(taskId: string): Promise<{ status: string; message?: string; data?: any }> {
     return this.request(`/tasks/${taskId}/watch`, {
       method: "POST",
@@ -2256,7 +2347,7 @@ class ApiClient {
   async updateTask(
     taskId: string,
     data: UpdateTaskData | FormData
-  ): Promise<{ status: string; message: string; data: { task: Task } }> {
+  ): Promise<{ status: string; message: string; data: { task: Task }; warnings?: TaskMutationWarning[] }> {
     const isFormData = data instanceof FormData;
 
     const headers: HeadersInit = isFormData

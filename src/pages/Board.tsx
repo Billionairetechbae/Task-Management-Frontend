@@ -10,6 +10,8 @@ import { resolveTaskPath } from "@/lib/taskExecutionRoutes";
 import { getStatusStyle, isTaskOverdue, TASK_STATUSES } from "@/lib/calendarStatus";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
+import BlockedBadge from "@/components/tasks/BlockedBadge";
+import { dependencyWarningMessage } from "@/lib/taskDependencies";
 
 const BOARD_KEY = "board-tasks";
 const STATUS_LABELS = Object.fromEntries(TASK_STATUSES.map((status) => [status, getStatusStyle(status).label])) as Record<TaskStatus, string>;
@@ -91,7 +93,11 @@ export default function Board() {
       flash(values.id);
       toast.error("Couldn’t move task", { description: error?.message || "Your permissions may have changed." });
     },
-    onSuccess: () => toast.success("Task status updated"),
+    // Advisory only: the move already succeeded; the server tells us when dependencies are still unfinished.
+    onSuccess: (res) => {
+      const warning = dependencyWarningMessage(res?.warnings);
+      if (warning) toast.warning(warning); else toast.success("Task status updated");
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: [BOARD_KEY] }),
   });
 
@@ -152,6 +158,7 @@ export default function Board() {
                   <button onClick={() => navigate(resolveTaskPath(task, task.teamId ? "team" : "workbench"))} className="w-full text-left text-sm font-semibold leading-snug hover:text-blue-700 hover:underline focus:outline-none focus-visible:underline">{task.title}</button>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium capitalize text-slate-700">{task.priority}</span>
+                    <BlockedBadge task={task} />
                     {task.deadline && (overdue
                       ? <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-semibold text-red-700"><AlertTriangle size={12} />Overdue · {dueLabel(task.deadline)}</span>
                       : <span className="flex items-center gap-1 text-muted-foreground"><CalendarDays size={12} />{dueLabel(task.deadline)}</span>)}

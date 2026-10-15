@@ -47,6 +47,9 @@ import FilePreviewCard from "@/components/tasks/FilePreviewCard";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
+import TaskDependencySection from "@/components/tasks/TaskDependencySection";
+import BlockedBadge from "@/components/tasks/BlockedBadge";
+import { dependencyWarningMessage } from "@/lib/taskDependencies";
 import GoogleDrivePickerDialog from "@/components/tasks/GoogleDrivePickerDialog";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
@@ -511,12 +514,14 @@ const TaskDetails = () => {
         user?.role === "manager" ||
         user?.id === task.creator?.id;
 
+      let warning: string | null = null;
       if (isPrivileged) {
-        await api.updateTask(task.id, { status: newStatus as any });
+        const res = await api.updateTask(task.id, { status: newStatus as any });
+        warning = dependencyWarningMessage(res?.warnings);
       } else {
         await api.updateTaskProgress(task.id, { status: newStatus });
       }
-      toast({ title: "Success", description: "Task status updated" });
+      toast({ title: "Success", description: warning || "Task status updated" });
       taskQuery.refetch();
     } catch (error: any) {
       toast({
@@ -1218,6 +1223,7 @@ const TaskDetails = () => {
                   <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", priorityDot(t.priority))} />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm truncate">{t.title}</p>
+                    <BlockedBadge task={t} className="mt-1" />
                     {t.description && (
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{t.description}</p>
                     )}
@@ -1719,6 +1725,13 @@ const TaskDetails = () => {
                 onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
               />
             </section>
+
+            {/* Dependencies (advisory, finish-to-start): all logic lives in the section + backend */}
+            {task.id && (
+              <div className="rounded-lg border bg-card p-4">
+                <TaskDependencySection taskId={task.id} />
+              </div>
+            )}
 
             {/* Watchers */}
             <section className="rounded-lg border bg-card p-4">

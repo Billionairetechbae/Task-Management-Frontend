@@ -35,6 +35,8 @@ import { cn } from "@/lib/utils";
 import { getTaskSubtaskCount, getTaskWatcherCount, isTaskReadOnlyForUser } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import BlockedBadge from "@/components/tasks/BlockedBadge";
+import { dependencyWarningMessage } from "@/lib/taskDependencies";
 
 interface TaskTableProps {
   tasks: Task[];
@@ -188,12 +190,14 @@ export const InlineStatusSelect = ({
     setValue(next);
     setSaving(true);
     try {
+      let warning: string | null = null;
       if (isPrivileged || isCreator) {
-        await api.updateTask(task.id, { status: next as any });
+        const res = await api.updateTask(task.id, { status: next as any });
+        warning = dependencyWarningMessage(res?.warnings);
       } else {
         await api.updateTaskProgress(task.id, { status: next });
       }
-      toast({ title: "Status updated", description: `Task is now ${getStatusDisplay(next)}.` });
+      toast({ title: "Status updated", description: warning || `Task is now ${getStatusDisplay(next)}.` });
       onChanged?.(task.id, next);
     } catch (e: any) {
       setValue(prev);
@@ -300,6 +304,7 @@ export const TaskTable = ({
                     <div className="flex items-center gap-2">
                       <CompanyBadge company={task.company} />
                       <p className="truncate text-[13px] font-medium">{task.title}</p>
+                      <BlockedBadge task={task} />
                       {isTaskReadOnlyForUser(task, user?.id) && (
                         <Badge
                           variant="outline"
@@ -456,6 +461,7 @@ export const TaskTable = ({
                 <div className="flex items-center gap-2">
                   <CompanyBadge company={task.company} />
                   <h4 className="truncate text-sm font-semibold">{task.title}</h4>
+                  <BlockedBadge task={task} />
                   {isTaskReadOnlyForUser(task, user?.id) && (
                     <Badge
                       variant="outline"

@@ -254,6 +254,32 @@ const WSA = { id: "ws-1", name: "Admiino" };
 const WSB = { id: "ws-2", name: "Richie Tech" };
 const wsEv = (id: string, ws: { id: string; name: string }, over: any = {}) => ev(id, "pending", { title: `Task ${id}`, companyId: ws.id, workspace: ws, ...over });
 
+describe("calendar dependency indicators (informational only)", () => {
+  it("shows a Blocked indicator on the chip and 'Blocked by N unfinished tasks' in the popover, without moving the event", async () => {
+    const blocked = ev("b1", "pending", { title: "Blocked task", isBlocked: true, blockedByCount: 2 });
+    h.getEvents.mockResolvedValue({ success: true, events: [blocked, ev("ok", "pending", { title: "Free task" })], workspaces: [] });
+    renderPage();
+    const chips = await screen.findAllByTestId("calendar-event");
+    expect(chips).toHaveLength(2);
+    expect(screen.getAllByTestId("calendar-blocked-icon")).toHaveLength(1);
+    expect(within(chips.find((c) => c.getAttribute("aria-label")?.includes("Blocked task"))!).getByTestId("calendar-blocked-icon")).toBeInTheDocument();
+    const before = new Date(blocked.start).toISOString();
+    await userEvent.click(chips.find((c) => c.getAttribute("aria-label")?.includes("Blocked task"))!);
+    const pop = await screen.findByRole("dialog", { name: "Calendar task details" });
+    expect(within(pop).getByTestId("calendar-blocked-row")).toHaveTextContent("Blocked by 2 unfinished tasks");
+    expect(new Date(blocked.start).toISOString()).toBe(before); // dependencies never alter dates
+  });
+
+  it("an unblocked task shows no blocked row; a cancelled dependency is mentioned instead", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [ev("c1", "pending", { title: "Was blocked", isBlocked: false, hasCancelledDependency: true })], workspaces: [] });
+    renderPage();
+    await userEvent.click(await screen.findByTestId("calendar-event"));
+    const pop = await screen.findByRole("dialog", { name: "Calendar task details" });
+    expect(within(pop).queryByTestId("calendar-blocked-row")).toBeNull();
+    expect(pop).toHaveTextContent("A dependency was cancelled");
+  });
+});
+
 describe("personal cross-workspace calendar", () => {
   it("defaults to my tasks across ALL workspaces and ignores the globally active workspace", async () => {
     h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
