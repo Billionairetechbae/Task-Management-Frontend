@@ -15,6 +15,8 @@ export interface CalendarFilters {
     projectId?: string;
     /** Explicit, server-authorized team filter. */
     teamId?: string;
+    /** Narrow the personal calendar to one workspace. Empty = all workspaces. Never changes the active workspace. */
+    workspaceId?: string;
 }
 
 export interface CalendarUser {
@@ -25,6 +27,11 @@ export interface CalendarUser {
 }
 
 export interface CalendarProject {
+    id: string;
+    name: string;
+}
+
+export interface CalendarWorkspaceRef {
     id: string;
     name: string;
 }
@@ -48,10 +55,16 @@ export interface CalendarEvent {
 
     assignees: CalendarUser[];
 
+    /** Workspace the task belongs to. */
+    companyId?: string;
+    workspace?: CalendarWorkspaceRef;
+
     task: any;
 }
 
 export interface CalendarResponse {
     success: boolean;
     events: CalendarEvent[];
+    /** Every workspace the user currently belongs to (independent of the filter). */
+    workspaces?: (CalendarWorkspaceRef & { role?: string })[];
 }

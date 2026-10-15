@@ -9,7 +9,9 @@ interface CalendarFiltersProps {
         status: string;
         projectId: string;
         teamId: string;
+        workspaceId: string;
     };
+    workspaces?: { id: string; name: string }[];
     projects?: { id: string; name: string }[];
     teams?: { id: string; name: string }[];
     onChange(filters: CalendarFiltersProps["filters"]): void;
@@ -18,6 +20,7 @@ interface CalendarFiltersProps {
 
 export default function CalendarFilters({
     filters,
+    workspaces = [],
     projects = [],
     teams = [],
     onChange,
@@ -28,8 +31,9 @@ export default function CalendarFilters({
             label: "Scope",
             key: "scope",
             options: [
-                { value: "company", label: "Everything I can access" },
-                { value: "my", label: "My tasks" },
+                { value: "my", label: "My tasks (created or assigned)" },
+                // Explicit single-workspace mode; never the default and needs a workspace chosen.
+                { value: "company", label: "All tasks I can access (one workspace)", disabled: !filters.workspaceId },
             ],
         },
         {
@@ -60,15 +64,16 @@ export default function CalendarFilters({
 
     const clearFilters = () => {
         onChange({
-            scope: "company",
+            scope: "my",
             priority: "",
             status: "",
             projectId: "",
             teamId: "",
+            workspaceId: "",
         });
     };
 
-    const hasActiveFilters = filters.priority || filters.status || filters.projectId;
+    const hasActiveFilters = filters.priority || filters.status || filters.projectId || filters.teamId || filters.workspaceId || filters.scope !== "my";
 
     return (
         <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200/60 shadow-sm p-4">
@@ -113,8 +118,8 @@ export default function CalendarFilters({
                             }
                             className="w-full rounded-lg border border-gray-300/60 bg-white px-3 py-2 text-sm text-gray-700 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                         >
-                            {section.options.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
+                            {section.options.map((opt: { value: string; label: string; disabled?: boolean }) => (
+                                <option key={opt.value} value={opt.value} disabled={opt.disabled}>
                                     {opt.label}
                                 </option>
                             ))}
@@ -122,12 +127,27 @@ export default function CalendarFilters({
                     </div>
                 ))}
 
+                {/* Workspace Filter: filters the calendar only, never switches the app's active workspace */}
+                <div>
+                    <label htmlFor="calendar-workspace-filter" className="mb-1.5 block text-xs font-medium text-gray-600">Workspace</label>
+                    <select
+                        id="calendar-workspace-filter"
+                        value={filters.workspaceId}
+                        onChange={(e) => onChange({ ...filters, workspaceId: e.target.value, projectId: "", teamId: "", scope: e.target.value ? filters.scope : "my" })}
+                        className="w-full rounded-lg border border-gray-300/60 bg-white px-3 py-2 text-sm text-gray-700 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    >
+                        <option value="">All workspaces</option>
+                        {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                </div>
+
                 {/* Project Filter */}
                 <div>
-                    <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                    <label htmlFor="calendar-project-filter" className="mb-1.5 block text-xs font-medium text-gray-600">
                         Project
                     </label>
                     <select
+                        id="calendar-project-filter"
                         value={filters.projectId}
                         onChange={(e) => handleFilterChange("projectId", e.target.value)}
                         className="w-full rounded-lg border border-gray-300/60 bg-white px-3 py-2 text-sm text-gray-700 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"

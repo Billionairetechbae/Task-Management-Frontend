@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -9,14 +9,26 @@ const h = vi.hoisted(() => ({
   getProjects: vi.fn(),
   listTeams: vi.fn(),
   auth: { activeCompanyId: "ws-1" as string | null },
+  listeners: new Set<() => void>(),
+  setActive: vi.fn(),
+  toast: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams } }));
 vi.mock("../lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams } }));
 vi.mock("../services/calendarService", () => ({ default: { getEvents: h.getEvents } }));
-vi.mock("../contexts/AuthContext", () => ({ useAuth: () => h.auth }));
+vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: h.toast }), toast: h.toast }));
+vi.mock("../contexts/AuthContext", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    useAuth: () => {
+      const activeCompanyId = useSyncExternalStore((cb) => { h.listeners.add(cb); return () => h.listeners.delete(cb); }, () => h.auth.activeCompanyId);
+      return { activeCompanyId, setActiveCompanyId: (id: string) => { h.setActive(id); h.auth.activeCompanyId = id; h.listeners.forEach((l) => l()); } };
+    },
+  };
+});
 vi.mock("../components/dashboard/DashboardLayout", () => ({ default: ({ children }: any) => <div>{children}</div> }));
-vi.mock("../components/CreateTaskDialog", () => ({ default: () => null }));
+vi.mock("../components/CreateTaskDialog", () => ({ default: ({ open, initialDeadline }: any) => (open ? <div data-testid="create-dialog" data-deadline={initialDeadline ?? ""} data-workspace={h.auth.activeCompanyId ?? ""} /> : null) }));
 vi.mock("../components/WorkspaceSwitcher", () => ({ default: () => null, WorkspaceSwitcher: () => null }));
 
 import CalendarPage from "../pages/Calendar";
@@ -63,9 +75,13 @@ function renderPage() {
 
 beforeEach(() => {
   h.getEvents.mockReset();
+  h.getProjects.mockReset();
+  h.listTeams.mockReset();
   h.getProjects.mockResolvedValue({ data: { projects: [{ id: "p1", name: "Finance" }] } });
   h.listTeams.mockResolvedValue({ data: { teams: [{ id: "team-1", name: "Operations" }] } });
   h.auth.activeCompanyId = "ws-1";
+  h.setActive.mockReset();
+  h.toast.mockReset();
 });
 
 describe("Calendar page", () => {
@@ -129,13 +145,45 @@ describe("Calendar page", () => {
     expect(chips[0].getAttribute("aria-label")).toContain("Payroll");
   });
 
-  it("clicking a task opens quick view, whose action opens its workbench route", async () => {
-    h.getEvents.mockResolvedValue({ success: true, events: [ev("t1", "pending", { title: "Standalone" })] });
+  it("clicking a task opens an anchored popover (not a drawer) whose action opens its workbench route", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [ev("t1", "pending", { title: "Standalone", project: { id: "p1", name: "Finance" }, team: { id: "tm9", name: "Ops" }, assignees: [{ id: "u1", firstName: "Ada", lastName: "Lovelace" }] })] });
     renderPage();
     await userEvent.click(await screen.findByTestId("calendar-event"));
-    expect(await screen.findByRole("complementary", { name: "Calendar task quick view" })).toHaveTextContent("Standalone");
+    const pop = await screen.findByRole("dialog", { name: "Calendar task details" });
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(pop).toHaveAttribute("data-side");
+    for (const text of ["Standalone", "Pending", "medium priority", "Finance", "Ops", "Ada Lovelace"]) expect(pop).toHaveTextContent(text);
     await userEvent.click(screen.getByRole("button", { name: "Open task" }));
     expect(await screen.findByTestId("where")).toHaveTextContent("/task-details/t1");
+  });
+
+  it("the task popover closes on Escape and on outside click without navigating", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [ev("t1", "pending")] });
+    renderPage();
+    await userEvent.click(await screen.findByTestId("calendar-event"));
+    await screen.findByRole("dialog", { name: "Calendar task details" });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Calendar task details" })).toBeNull());
+    await userEvent.click(await screen.findByTestId("calendar-event"));
+    await screen.findByRole("dialog", { name: "Calendar task details" });
+    fireEvent.pointerDown(document.body);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Calendar task details" })).toBeNull());
+    expect(screen.queryByTestId("where")).toBeNull();
+  });
+
+  it("the task popover also opens from week and day views", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [ev("t1", "pending", { title: "Weekly" })] });
+    renderPage();
+    for (const view of ["Week", "Day"]) {
+      await userEvent.click(screen.getAllByRole("button", { name: view }).at(-1)!);
+      const chip = await screen.findAllByTestId("calendar-event");
+      if (chip.length) {
+        await userEvent.click(chip[0]);
+        expect(await screen.findByRole("dialog", { name: "Calendar task details" })).toHaveTextContent("Weekly");
+        await userEvent.keyboard("{Escape}");
+        await waitFor(() => expect(screen.queryByRole("dialog", { name: "Calendar task details" })).toBeNull());
+      }
+    }
   });
 
   it("team task opens the team task route", async () => {
@@ -202,23 +250,187 @@ describe("navigation", () => {
   });
 });
 
-describe("workspace isolation", () => {
-  it("includes the workspace in the cache key: switching workspace refetches and never shows the previous workspace's tasks", async () => {
-    h.getEvents.mockImplementation(async () => {
-      return { success: true, events: [ev(h.auth.activeCompanyId === "ws-1" ? "one" : "two", "pending", { title: h.auth.activeCompanyId === "ws-1" ? "WS1 task" : "WS2 task" })] };
-    });
+const WSA = { id: "ws-1", name: "Admiino" };
+const WSB = { id: "ws-2", name: "Richie Tech" };
+const wsEv = (id: string, ws: { id: string; name: string }, over: any = {}) => ev(id, "pending", { title: `Task ${id}`, companyId: ws.id, workspace: ws, ...over });
+
+describe("personal cross-workspace calendar", () => {
+  it("defaults to my tasks across ALL workspaces and ignores the globally active workspace", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    await waitFor(() => expect(h.getEvents).toHaveBeenCalled());
+    const first = h.getEvents.mock.calls[0][0];
+    expect(first.scope).toBe("my");
+    expect(first.workspaceId).toBe("");
+    expect(first.companyId).toBeUndefined();
+  });
+
+  it("switching the global workspace neither refetches nor changes the calendar", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [wsEv("a", WSA), wsEv("b", WSB)], workspaces: [WSA, WSB] });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const tree = () => (
-      <QueryClientProvider client={client}>
-        <MemoryRouter><CalendarPage /></MemoryRouter>
-      </QueryClientProvider>
-    );
+    const tree = () => (<QueryClientProvider client={client}><MemoryRouter><CalendarPage /></MemoryRouter></QueryClientProvider>);
     const { rerender } = render(tree());
-    expect((await screen.findByTestId("calendar-event")).getAttribute("aria-label")).toContain("WS1 task");
+    expect(await screen.findAllByTestId("calendar-event")).toHaveLength(2);
     h.auth.activeCompanyId = "ws-2";
+    h.listeners.forEach((l) => l());
     rerender(tree());
-    await waitFor(() => expect(screen.getByTestId("calendar-event").getAttribute("aria-label")).toContain("WS2 task"));
-    expect(screen.queryByText(/WS1 task/)).toBeNull();
-    expect(h.getEvents).toHaveBeenCalledTimes(2);
+    expect(await screen.findAllByTestId("calendar-event")).toHaveLength(2);
+    expect(h.getEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders events from several workspaces together, each with a small workspace badge", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [wsEv("a", WSA), wsEv("b", WSB)], workspaces: [WSA, WSB] });
+    renderPage();
+    const badges = await screen.findAllByTestId("workspace-badge");
+    expect(badges.map((b) => b.textContent).sort()).toEqual(["Admiino", "Richie Tech"]);
+  });
+
+  it("the event popover shows the workspace name", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [wsEv("b", WSB)], workspaces: [WSA, WSB] });
+    renderPage();
+    await waitFor(() => expect(h.listTeams).toHaveBeenCalledWith("ws-2")); // let background option queries settle first
+    await userEvent.click(await screen.findByTestId("calendar-event"));
+    expect(await screen.findByRole("dialog", { name: "Calendar task details" })).toHaveTextContent("Workspace: Richie Tech");
+  });
+
+  it("Workspace filter defaults to All workspaces, lists memberships, sends workspaceId and never switches the active workspace", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Toggle filters" }));
+    const select = (await screen.findByLabelText("Workspace")) as HTMLSelectElement;
+    expect(select.value).toBe("");
+    expect(within(select).getByRole("option", { name: "All workspaces" })).toBeInTheDocument();
+    await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(3));
+    await userEvent.selectOptions(select, "ws-2");
+    await waitFor(() => expect(h.getEvents.mock.calls.at(-1)![0].workspaceId).toBe("ws-2"));
+    expect(h.setActive).not.toHaveBeenCalled();
+    expect(h.auth.activeCompanyId).toBe("ws-1");
+  });
+
+  it("project and team options are fetched per workspace (never assumed to be the active one), qualified when mixed, and compose with the workspace filter", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    h.getProjects.mockImplementation(async (f?: any) => ({ data: { projects: [{ id: f?.workspaceId === "ws-2" ? "pB" : "pA", name: "Finance" }] } }));
+    h.listTeams.mockImplementation(async (w?: string) => ({ data: { teams: [{ id: w === "ws-2" ? "tB" : "tA", name: "Ops" }] } }));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Toggle filters" }));
+    expect(await screen.findByRole("option", { name: "Finance · Admiino" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Finance · Richie Tech" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Ops · Richie Tech" })).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Project"), "pB");
+    await waitFor(() => expect(h.getEvents.mock.calls.at(-1)![0]).toMatchObject({ projectId: "pB", workspaceId: "" }));
+    // choosing a workspace narrows the option lists and clears now-ambiguous project/team picks
+    await userEvent.selectOptions(screen.getByLabelText("Workspace"), "ws-1");
+    await waitFor(() => expect(h.getEvents.mock.calls.at(-1)![0]).toMatchObject({ workspaceId: "ws-1", projectId: "", teamId: "" }));
+    await waitFor(() => expect(within(screen.getByLabelText("Project")).queryByRole("option", { name: /Richie Tech/ })).toBeNull());
+    expect(within(screen.getByLabelText("Team")).queryByRole("option", { name: /Richie Tech/ })).toBeNull();
+    expect(h.getProjects).toHaveBeenCalledWith({ workspaceId: "ws-1" });
+    expect(h.listTeams).toHaveBeenCalledWith("ws-1");
+  });
+
+  it("the summary counts exactly the events shown (same data as the calendar, after search)", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [wsEv("a", WSA, { status: "completed", title: "Alpha" }), wsEv("b", WSB, { title: "Beta" }), wsEv("c", WSB, { title: "Gamma" })], workspaces: [WSA, WSB] });
+    renderPage();
+    await screen.findAllByTestId("calendar-event");
+    const total = () => screen.getAllByText("Total")[0].closest("div")!.parentElement!.parentElement!;
+    await waitFor(() => expect(total()).toHaveTextContent("3"));
+    await userEvent.type(screen.getByPlaceholderText(/Search title/), "Beta");
+    await waitFor(() => expect(screen.getAllByTestId("calendar-event")).toHaveLength(1));
+    await waitFor(() => expect(total()).toHaveTextContent("1"));
+  });
+
+  const openPicker = async () => {
+    await screen.findByRole("heading", { level: 2 });
+    await waitFor(() => expect(h.getEvents).toHaveBeenCalled());
+    await userEvent.click((await screen.findAllByRole("button", { name: /New Task/i }))[0]);
+    return screen.findByRole("dialog", { name: "Which workspace?" });
+  };
+  const chooseWorkspace = async (picker: HTMLElement, id: string) => {
+    await userEvent.selectOptions(within(picker).getByLabelText("Workspace"), id);
+    await userEvent.click(within(picker).getByRole("button", { name: "Continue" }));
+  };
+
+  it("All workspaces: New Task asks for a destination first (nothing preselected) and touches nothing until chosen", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    const picker = await openPicker();
+    expect(screen.queryByTestId("create-dialog")).toBeNull();
+    expect(h.setActive).not.toHaveBeenCalled();
+    expect(within(picker).getByRole("button", { name: "Continue" })).toBeDisabled();
+  });
+
+  it("destination == active workspace: opens the task dialog with no confirmation and no switch", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    await chooseWorkspace(await openPicker(), "ws-1");
+    expect((await screen.findByTestId("create-dialog")).getAttribute("data-workspace")).toBe("ws-1");
+    expect(screen.queryByRole("dialog", { name: /Create task in/ })).toBeNull();
+    expect(h.setActive).not.toHaveBeenCalled();
+  });
+
+  it("destination != active: asks for confirmation first; nothing is switched or opened yet", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    await chooseWorkspace(await openPicker(), "ws-2");
+    const confirm = await screen.findByRole("dialog", { name: "Create task in Richie Tech?" });
+    expect(confirm).toHaveTextContent("Richie Tech needs to become your active workspace while this task is created. Your Calendar will continue showing tasks across all workspaces.");
+    expect(h.setActive).not.toHaveBeenCalled();
+    expect(h.auth.activeCompanyId).toBe("ws-1");
+    expect(screen.queryByTestId("create-dialog")).toBeNull();
+  });
+
+  it("Cancel: no switch and no task dialog", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    await chooseWorkspace(await openPicker(), "ws-2");
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "Create task in Richie Tech?" })).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /Create task in/ })).toBeNull());
+    expect(h.setActive).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("create-dialog")).toBeNull();
+    expect(h.auth.activeCompanyId).toBe("ws-1");
+  });
+
+  it("Continue: switches via the existing mechanism, then opens the dialog in the new workspace", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    await chooseWorkspace(await openPicker(), "ws-2");
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "Create task in Richie Tech?" })).getByRole("button", { name: "Continue" }));
+    const dialog = await screen.findByTestId("create-dialog");
+    expect(h.setActive).toHaveBeenCalledTimes(1);
+    expect(h.setActive).toHaveBeenCalledWith("ws-2");
+    expect(dialog.getAttribute("data-workspace")).toBe("ws-2");
+    // the personal calendar itself was not refetched or re-scoped by the switch
+    expect(h.getEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it("switch failure: no task dialog, a clear error, and the workspace is left unchanged", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    h.setActive.mockImplementationOnce(() => { throw new Error("boom"); });
+    renderPage();
+    await chooseWorkspace(await openPicker(), "ws-2");
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "Create task in Richie Tech?" })).getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Couldn't switch workspace", variant: "destructive" })));
+    expect(screen.queryByTestId("create-dialog")).toBeNull();
+    expect(h.auth.activeCompanyId).toBe("ws-1");
+  });
+
+  it("the selected date survives the confirmed switch into the task dialog", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Toggle filters" }));
+    await waitFor(() => expect(within(screen.getByLabelText("Workspace")).getAllByRole("option")).toHaveLength(3));
+    await userEvent.selectOptions(screen.getByLabelText("Workspace"), "ws-2");
+    await userEvent.click((await screen.findAllByRole("button", { name: /New Task/i }))[0]);
+    expect(screen.queryByRole("dialog", { name: "Which workspace?" })).toBeNull(); // filter already names the destination
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "Create task in Richie Tech?" })).getByRole("button", { name: "Continue" }));
+    expect((await screen.findByTestId("create-dialog")).getAttribute("data-workspace")).toBe("ws-2");
+  });
+
+  it("a user with a single workspace is not asked", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA] });
+    renderPage();
+    await waitFor(() => expect(h.getEvents).toHaveBeenCalled());
+    await userEvent.click((await screen.findAllByRole("button", { name: /New Task/i }))[0]);
+    expect(await screen.findByTestId("create-dialog")).toBeInTheDocument();
+    expect(h.setActive).not.toHaveBeenCalled();
   });
 });

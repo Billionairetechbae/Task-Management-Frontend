@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, CheckSquare, ChevronDown, FolderKanban, Users } from "lucide-react";
@@ -13,6 +13,19 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 
 const BOARD_KEY = "board-tasks";
 const STATUS_LABELS = Object.fromEntries(TASK_STATUSES.map((status) => [status, getStatusStyle(status).label])) as Record<TaskStatus, string>;
+
+// Literal class names so Tailwind can see them. Subtle tints: the accent identifies the lane, text labels still carry the meaning.
+const STATUS_ACCENT: Record<TaskStatus, { bar: string; panel: string; badge: string; dot: string }> = {
+  pending: { bar: "border-t-slate-400", panel: "bg-slate-50/80", badge: "bg-slate-200 text-slate-700", dot: "bg-slate-400" },
+  in_progress: { bar: "border-t-blue-500", panel: "bg-blue-50/60", badge: "bg-blue-100 text-blue-800", dot: "bg-blue-500" },
+  in_review: { bar: "border-t-amber-500", panel: "bg-amber-50/60", badge: "bg-amber-100 text-amber-900", dot: "bg-amber-500" },
+  completed: { bar: "border-t-emerald-500", panel: "bg-emerald-50/60", badge: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
+  delayed: { bar: "border-t-red-500", panel: "bg-red-50/50", badge: "bg-red-100 text-red-800", dot: "bg-red-500" },
+  cancelled: { bar: "border-t-gray-400", panel: "bg-gray-50/80", badge: "bg-gray-200 text-gray-600", dot: "bg-gray-400" },
+};
+const LEAVE_MS = 160;
+const SETTLE_MS = 700;
+const prefersReducedMotion = () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
 
 type Filters = { projectId: string; teamId: string; search: string };
 
@@ -37,6 +50,13 @@ export default function Board() {
   const ws = useWebSocket();
   const [filters, setFilters] = useState<Filters>({ projectId: "", teamId: "", search: "" });
   const queryKey = [BOARD_KEY, activeCompanyId, filters] as const;
+  // Purely visual: which card is animating out of its lane / settling into a lane. Task data stays in react-query.
+  const [leavingId, setLeavingId] = useState<string | null>(null);
+  const [settledId, setSettledId] = useState<string | null>(null);
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+  const later = useCallback((fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); }, []);
+  const flash = useCallback((id: string) => { setSettledId(id); later(() => setSettledId((cur) => (cur === id ? null : cur)), SETTLE_MS); }, [later]);
 
   const { data: result, isLoading, isError } = useQuery({
     queryKey,
@@ -61,16 +81,28 @@ export default function Board() {
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: [BOARD_KEY] });
       const previous = queryClient.getQueryData(queryKey);
+      setLeavingId(null);
+      flash(id);
       queryClient.setQueryData(queryKey, (old: any) => old ? { ...old, data: { ...old.data, tasks: old.data.tasks.map((task: Task) => task.id === id ? { ...task, status } : task) } } : old);
       return { previous };
     },
-    onError: (error: any, _values, context) => {
+    onError: (error: any, values, context) => {
       queryClient.setQueryData(queryKey, context?.previous);
+      flash(values.id);
       toast.error("Couldn’t move task", { description: error?.message || "Your permissions may have changed." });
     },
     onSuccess: () => toast.success("Task status updated"),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [BOARD_KEY] }),
   });
+
+  const startMove = (task: Task, status: TaskStatus) => {
+    if (!task.id || status === task.status) return;
+    const id = task.id;
+    if (prefersReducedMotion()) { move.mutate({ id, status }); return; }
+    // Let the card fade out of its lane first; the optimistic update then reflows it into the new lane.
+    setLeavingId(id);
+    later(() => move.mutate({ id, status }), LEAVE_MS);
+  };
 
   const columns = useMemo(() => Object.fromEntries(TASK_STATUSES.map((status) => [status, tasks.filter((task) => task.status === status).sort((a, b) => {
     const overdueA = isTaskOverdue(a) ? 1 : 0; const overdueB = isTaskOverdue(b) ? 1 : 0;
@@ -79,30 +111,63 @@ export default function Board() {
   })])), [tasks]);
 
   return <DashboardLayout hidePadding fullWidth>
-    <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-slate-50">
-      <header className="flex flex-wrap items-center gap-3 border-b bg-white px-4 py-3 sm:px-6">
+    <main className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col overflow-hidden bg-slate-100/70">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
         <WorkspaceSwitcher />
         <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold">Board</h1><p className="text-sm text-muted-foreground">Active workspace tasks by status</p></div>
-        <input aria-label="Search board tasks" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search tasks" className="h-9 w-full rounded-md border px-3 text-sm sm:w-52" />
+        <input aria-label="Search board tasks" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search tasks" className="h-9 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-52" />
         <select aria-label="Filter board by project" value={filters.projectId} onChange={(e) => setFilters({ ...filters, projectId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All projects</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
         <select aria-label="Filter board by team" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All teams</option>{teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
       </header>
       {isError && <p role="alert" className="m-4 text-sm text-destructive">Could not load board tasks. Please try again.</p>}
-      <section aria-label="Task board" className="flex flex-1 gap-3 overflow-x-auto p-4 sm:p-6">
-        {TASK_STATUSES.map((status) => <section key={status} aria-label={`${STATUS_LABELS[status]} column`} className="flex w-[17rem] shrink-0 flex-col rounded-xl border bg-slate-100/70 p-2 sm:w-72">
-          <header className="flex items-center justify-between px-2 pb-2"><span className="font-medium">{STATUS_LABELS[status]}</span><span className="rounded-full bg-white px-2 py-0.5 text-xs text-muted-foreground">{columns[status].length}</span></header>
-          <div className="space-y-2">{isLoading ? <p className="p-2 text-sm text-muted-foreground">Loading…</p> : columns[status].length === 0 ? <p className="rounded-lg border border-dashed bg-white/70 p-3 text-sm text-muted-foreground">No tasks</p> : columns[status].map((task) => {
-            const overdue = isTaskOverdue(task); const canMove = userCanMove(task, user?.id, workspaceRole);
-            return <article key={task.id} className="rounded-lg border bg-white p-3 shadow-sm">
-              <button onClick={() => navigate(resolveTaskPath(task, task.teamId ? "team" : "workbench"))} className="w-full text-left font-medium hover:underline">{task.title}</button>
-              <div className="mt-2 flex flex-wrap gap-1 text-xs text-muted-foreground"><span className="rounded bg-slate-100 px-1.5 py-0.5 capitalize">{task.priority}</span>{task.deadline && <span className={overdue ? "flex items-center gap-1 font-medium text-red-700" : "flex items-center gap-1"}>{overdue ? <AlertTriangle size={12} /> : <CalendarDays size={12} />}{overdue ? "Overdue" : dueLabel(task.deadline)}</span>}</div>
-              {((task as any).project || task.team) && <div className="mt-2 space-y-1 text-xs text-muted-foreground">{(task as any).project && <div className="flex items-center gap-1"><FolderKanban size={12} />{(task as any).project.name}</div>}{task.team && <div className="flex items-center gap-1"><Users size={12} />{task.team.name}</div>}</div>}
-              {Number(task.subtaskCount || 0) > 0 && <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground"><CheckSquare size={12} />{task.subtaskCount} subtask{task.subtaskCount === 1 ? "" : "s"}</div>}
-              {(task.assignees?.length || task.assignee) && <p className="mt-2 truncate text-xs text-muted-foreground">{(task.assignees || [task.assignee]).filter(Boolean).slice(0, 3).map((assignee: any) => `${assignee.firstName || ""} ${assignee.lastName || ""}`.trim()).join(", ")}</p>}
-              {canMove && <label className="mt-3 flex items-center gap-1 text-xs font-medium">Move to <ChevronDown size={13} /><select aria-label={`Move ${task.title} to`} value={task.status || "pending"} disabled={move.isPending} onChange={(e) => { if (task.id && e.target.value !== task.status) move.mutate({ id: task.id, status: e.target.value as TaskStatus }); }} className="min-w-0 flex-1 rounded border bg-white p-1 text-xs">{TASK_STATUSES.map((next) => <option key={next} value={next}>{STATUS_LABELS[next]}</option>)}</select></label>}
-            </article>;
-          })}</div>
-        </section>)}
+      {/* Mobile: swipeable lanes. Tablet: 2 columns (grid scrolls). Desktop (xl): fixed 3 x 2 grid, only the lanes scroll. */}
+      <section
+        aria-label="Task board"
+        data-testid="board-grid"
+        className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto p-3 sm:p-4 md:grid md:snap-none md:grid-cols-2 md:content-start md:overflow-y-auto md:overflow-x-hidden xl:grid-cols-3 xl:grid-rows-2 xl:overflow-hidden"
+      >
+        {TASK_STATUSES.map((status) => {
+          const accent = STATUS_ACCENT[status];
+          return <section
+            key={status}
+            aria-label={`${STATUS_LABELS[status]} column`}
+            data-testid={`board-panel-${status}`}
+            className={`flex h-full w-[86vw] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm md:h-[26rem] md:w-auto md:shrink xl:h-auto xl:min-h-0 ${accent.bar} ${accent.panel}`}
+          >
+            <header className="flex shrink-0 items-center justify-between border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
+              <span className="flex items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
+              <span aria-label={`${columns[status].length} tasks`} className={`min-w-[1.75rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{columns[status].length}</span>
+            </header>
+            <div data-testid={`board-scroll-${status}`} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-2.5">
+              {isLoading ? <p className="p-2 text-sm text-muted-foreground">Loading…</p> : columns[status].length === 0 ? <p className="rounded-lg border border-dashed bg-white/60 p-4 text-center text-sm text-muted-foreground">No tasks</p> : columns[status].map((task) => {
+                const overdue = isTaskOverdue(task); const canMove = userCanMove(task, user?.id, workspaceRole);
+                const leaving = leavingId === task.id; const settled = settledId === task.id;
+                const people = ((task.assignees && task.assignees.length ? task.assignees : [task.assignee]).filter(Boolean) as any[]).map((a) => `${a.firstName || ""} ${a.lastName || ""}`.trim()).filter(Boolean);
+                return <article
+                  key={task.id}
+                  data-testid="board-card"
+                  data-state={leaving ? "leaving" : settled ? "settled" : "idle"}
+                  className={`group rounded-lg border bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md focus-within:ring-2 focus-within:ring-blue-500/30 ${overdue ? "border-l-4 border-l-red-500 bg-red-50/40" : ""} ${leaving ? "scale-95 opacity-0" : ""} ${settled ? "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-left-3 ring-2 ring-blue-400/50" : ""}`}
+                >
+                  <button onClick={() => navigate(resolveTaskPath(task, task.teamId ? "team" : "workbench"))} className="w-full text-left text-sm font-semibold leading-snug hover:text-blue-700 hover:underline focus:outline-none focus-visible:underline">{task.title}</button>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium capitalize text-slate-700">{task.priority}</span>
+                    {task.deadline && (overdue
+                      ? <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-semibold text-red-700"><AlertTriangle size={12} />Overdue · {dueLabel(task.deadline)}</span>
+                      : <span className="flex items-center gap-1 text-muted-foreground"><CalendarDays size={12} />{dueLabel(task.deadline)}</span>)}
+                  </div>
+                  {((task as any).project || task.team || Number(task.subtaskCount || 0) > 0) && <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {(task as any).project && <span className="flex min-w-0 items-center gap-1"><FolderKanban size={12} className="shrink-0" /><span className="truncate">{(task as any).project.name}</span></span>}
+                    {task.team && <span className="flex min-w-0 items-center gap-1"><Users size={12} className="shrink-0" /><span className="truncate">{task.team.name}</span></span>}
+                    {Number(task.subtaskCount || 0) > 0 && <span className="flex items-center gap-1"><CheckSquare size={12} />{task.subtaskCount} subtask{task.subtaskCount === 1 ? "" : "s"}</span>}
+                  </div>}
+                  {people.length > 0 && <p className="mt-2 truncate text-xs text-muted-foreground">{people.slice(0, 3).join(", ")}{people.length > 3 ? ` +${people.length - 3}` : ""}</p>}
+                  {canMove && <label className="mt-3 flex items-center gap-1 border-t pt-2 text-xs font-medium text-slate-600">Move to <ChevronDown size={13} /><select aria-label={`Move ${task.title} to`} value={task.status || "pending"} disabled={move.isPending || leaving} onChange={(e) => startMove(task, e.target.value as TaskStatus)} className="min-w-0 flex-1 rounded border bg-white p-1 text-xs hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30">{TASK_STATUSES.map((next) => <option key={next} value={next}>{STATUS_LABELS[next]}</option>)}</select></label>}
+                </article>;
+              })}
+            </div>
+          </section>;
+        })}
       </section>
     </main>
   </DashboardLayout>;

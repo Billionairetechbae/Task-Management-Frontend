@@ -23,9 +23,11 @@ interface CreateTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   projectId?: string;
+  /** Pre-fills the Deadline field (datetime-local value) when the dialog opens, e.g. from a calendar date. */
+  initialDeadline?: string;
 }
 
-const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTaskDialogProps) => {
+const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDeadline }: CreateTaskDialogProps) => {
   const { toast } = useToast();
   const { workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
@@ -55,6 +57,10 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId }: CreateTa
 
   const canAssignOthers = canPerformRoleOperation("assign_workspace_members");
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (open && initialDeadline) setFormData((prev) => ({ ...prev, deadline: initialDeadline }));
+  }, [open, initialDeadline]);
 
   useEffect(() => {
     if (open && canAssignOthers) fetchMembers();

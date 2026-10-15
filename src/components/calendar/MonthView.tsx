@@ -12,6 +12,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import CalendarEvent from "./CalendarEvent";
 import type { CalendarEvent as SharedCalendarEvent } from "../../types/calendar";
+import { anchorFromEvent, toCalendarSlot, type AnchorRect, type CalendarSlot } from "./calendarAnchor";
 
 const locales = {
     "en-US": enUS,
@@ -30,7 +31,8 @@ interface Props {
     events: SharedCalendarEvent[];
     loading?: boolean;
     onNavigate: (date: Date) => void;
-    onSelectEvent?: (event: SharedCalendarEvent) => void;
+    onSelectEvent?: (event: SharedCalendarEvent, anchor: AnchorRect) => void;
+    onSelectSlot?: (slot: CalendarSlot) => void;
 }
 
 export default function MonthView({
@@ -39,6 +41,7 @@ export default function MonthView({
     loading = false,
     onNavigate,
     onSelectEvent,
+    onSelectSlot,
 }: Props) {
     if (loading) {
         return (
@@ -65,9 +68,10 @@ export default function MonthView({
                 endAccessor="end"
                 titleAccessor="title"
                 style={{ height: "100%" }}
-                onSelectEvent={(event) =>
-                    onSelectEvent?.(event as SharedCalendarEvent)
+                onSelectEvent={(event: any, e: any) =>
+                    onSelectEvent?.(event as SharedCalendarEvent, anchorFromEvent(e))
                 }
+                onSelectSlot={(slot: any) => onSelectSlot?.(toCalendarSlot(slot))}
                 components={{
                     event: ({ event }) => (
                         <CalendarEvent

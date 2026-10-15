@@ -119,4 +119,56 @@ describe("Board page", () => {
     h.handlers.task_updated();
     await waitFor(() => expect(h.getAll.mock.calls.length).toBeGreaterThan(1));
   });
+
+  it("desktop layout is a fixed 3 x 2 grid; each lane has its own scroll area and the page does not scroll", async () => {
+    h.getAll.mockResolvedValue(resolved([task("a", "pending")]));
+    renderBoard();
+    const grid = await screen.findByTestId("board-grid");
+    expect(grid.className).toContain("xl:grid-cols-3");
+    expect(grid.className).toContain("xl:grid-rows-2");
+    expect(grid.className).toContain("xl:overflow-hidden");
+    expect(grid.closest("main")!.className).toContain("overflow-hidden");
+    const order = Array.from(grid.children).map((el) => el.getAttribute("data-testid"));
+    expect(order).toEqual(["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"].map((s) => `board-panel-${s}`));
+    for (const status of ["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"]) {
+      const scroll = screen.getByTestId(`board-scroll-${status}`);
+      expect(scroll.className).toContain("overflow-y-auto");
+      expect(scroll.className).toContain("min-h-0");
+      // lane header sits outside the scroll area, so it stays visible
+      expect(scroll.previousElementSibling?.tagName).toBe("HEADER");
+    }
+  });
+
+  it("falls back to swipeable lanes on mobile and two columns on tablet", async () => {
+    h.getAll.mockResolvedValue(resolved([]));
+    renderBoard();
+    const grid = await screen.findByTestId("board-grid");
+    expect(grid.className).toContain("overflow-x-auto");
+    expect(grid.className).toContain("snap-x");
+    expect(grid.className).toContain("md:grid-cols-2");
+    expect(screen.getByTestId("board-panel-pending").className).toContain("w-[86vw]");
+  });
+
+  it("shows the lane count and a stronger overdue treatment", async () => {
+    h.getAll.mockResolvedValue(resolved([task("late", "pending", { deadline: "2020-01-01T10:00:00.000Z" }), task("b", "pending")]));
+    renderBoard();
+    expect(await screen.findByLabelText("2 tasks")).toHaveTextContent("2");
+    const late = screen.getByText("Task late").closest("article")!;
+    expect(late.className).toContain("border-l-red-500");
+    expect(within(late).getByText(/Overdue/)).toBeInTheDocument();
+  });
+
+  it("animates a move (leaving then settled) and still rolls back cleanly on failure", async () => {
+    h.auth.workspaceRole = "manager";
+    h.getAll.mockResolvedValue(resolved([task("a", "pending")]));
+    h.updateTask.mockRejectedValue(new Error("nope"));
+    renderBoard();
+    await userEvent.selectOptions(await screen.findByLabelText("Move Task a to"), "completed");
+    await waitFor(() => expect(screen.getByTestId("board-card").getAttribute("data-state")).toBe("leaving"));
+    await waitFor(() => expect(h.toastError).toHaveBeenCalled());
+    // rolled back into the original lane, animation state cleared afterwards
+    await waitFor(() => expect(within(screen.getByTestId("board-panel-pending")).getByText("Task a")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("board-card").getAttribute("data-state")).toBe("idle"), { timeout: 2000 });
+    expect(within(screen.getByTestId("board-panel-completed")).queryByText("Task a")).toBeNull();
+  });
 });

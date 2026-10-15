@@ -2543,8 +2543,11 @@ class ApiClient {
     });
   }
 
-  async listTeams(): Promise<{ status: string; results: number; data: { teams: Team[] } }> {
-    return this.request("/team/teams", { method: "GET", headers: this.getAuthHeaders() });
+  async listTeams(workspaceId?: string): Promise<{ status: string; results: number; data: { teams: Team[] } }> {
+    return this.request("/team/teams", {
+      method: "GET",
+      headers: workspaceId ? { ...this.getAuthHeaders(false), "x-company-id": workspaceId } : this.getAuthHeaders(),
+    });
   }
 
   async getTeam(teamId: string): Promise<{ status: string; data: { team: Team } }> {
@@ -3621,7 +3624,7 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async getProjects(filters?: { teamId?: string }): Promise<{
+  async getProjects(filters?: { teamId?: string; workspaceId?: string }): Promise<{
     status: string;
     results?: number;
     data: { projects: Project[] } | { items?: Project[] } | any;
@@ -3629,7 +3632,9 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     const query = filters?.teamId ? `?teamId=${encodeURIComponent(filters.teamId)}` : "";
     return this.request(`/projects${query}`, {
       method: "GET",
-      headers: this.getAuthHeaders(),
+      headers: filters?.workspaceId
+        ? { ...this.getAuthHeaders(false), "x-company-id": filters.workspaceId }
+        : this.getAuthHeaders(),
     });
   }
 

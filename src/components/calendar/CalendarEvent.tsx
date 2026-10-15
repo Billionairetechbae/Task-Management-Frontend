@@ -11,6 +11,15 @@ interface Props {
 
 const fullName = (u: { firstName?: string; lastName?: string }) => `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
 
+/** Small, low-contrast workspace tag; never competes with the status chip. */
+export function WorkspaceBadge({ name }: { name: string }) {
+    return (
+        <span data-testid="workspace-badge" title={`Workspace: ${name}`} className="hidden max-w-[5.5rem] shrink truncate rounded bg-white/60 px-1 text-[10px] font-normal text-gray-600 sm:inline-block">
+            {name}
+        </span>
+    );
+}
+
 export default function CalendarEvent({ event, compact = false, onClick }: Props) {
     const style = getStatusStyle(event.status);
     const overdue = isTaskOverdue({ status: event.status, deadline: event.task?.deadline ?? event.start });
@@ -29,6 +38,7 @@ export default function CalendarEvent({ event, compact = false, onClick }: Props
             >
                 <span className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`} aria-hidden="true" />
                 <span className={`truncate ${style.strike ? "line-through" : ""}`}>{event.title}</span>
+                {event.workspace?.name && <WorkspaceBadge name={event.workspace.name} />}
                 <span className="ml-auto shrink-0 text-[10px] font-semibold uppercase opacity-80">
                     {overdue ? "Overdue" : style.label}
                 </span>
@@ -65,6 +75,7 @@ export default function CalendarEvent({ event, compact = false, onClick }: Props
                         <AlertTriangle size={12} /> Overdue
                     </span>
                 )}
+                {event.workspace?.name && <WorkspaceBadge name={event.workspace.name} />}
             </div>
 
             {(event.project || event.team) && (
