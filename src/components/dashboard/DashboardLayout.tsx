@@ -40,6 +40,7 @@ import {
   ShieldCheck,
   Plug,
   Columns3,
+  LayoutTemplate,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 
@@ -137,6 +138,11 @@ const DashboardLayout = ({
               label: "All Projects",
               href: "/projects",
               icon: <FolderKanban className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Templates",
+              href: "/templates",
+              icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
             },
             {
               label: "Create Project",
@@ -272,6 +278,11 @@ const DashboardLayout = ({
               icon: <FolderKanban className="w-[18px] h-[18px]" />,
             },
             {
+              label: "Templates",
+              href: "/templates",
+              icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
+            },
+            {
               label: "Project Health",
               href: "/project-health",
               icon: <Activity className="w-[18px] h-[18px]" />,
@@ -372,6 +383,11 @@ const DashboardLayout = ({
             href: "/projects",
             icon: <FolderKanban className="w-[18px] h-[18px]" />,
           },
+          {
+            label: "Templates",
+            href: "/templates",
+            icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
+          },
         ],
       },
       {
@@ -466,6 +482,9 @@ const DashboardLayout = ({
       return location.pathname === "/dashboard";
     }
 
+    if (href === "/templates") {
+      return location.pathname.startsWith("/templates");
+    }
     if (href === "/projects") {
       return location.pathname.startsWith("/projects");
     }

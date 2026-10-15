@@ -596,6 +596,70 @@ export interface TaskRecurrencePreview {
   occurrences: string[];
 }
 
+/* ---- Templates (Phase 4C) ---- */
+export type TemplateType = "task" | "project";
+export type TemplateStatus = "active" | "archived";
+export type TemplateAssigneeMode = "none" | "instantiator" | "member" | "teamLead" | "projectLead";
+export interface TemplateAssigneeConfig { mode: TemplateAssigneeMode; userId?: string }
+export interface TemplateTeamConfig { mode: "none" | "inherit" | "team"; teamId?: string }
+export interface TemplateRecurrenceConfig {
+  frequency: TaskRecurrenceFrequency; interval: number; byWeekday: number[] | null; byMonthDay: number | null; maxOccurrences: number | null;
+}
+export interface TemplateTaskFields {
+  title: string; description: string | null; priority: "low" | "medium" | "high" | "urgent"; category: string | null; estimatedHours: number | null;
+  /** Calendar days from the chosen start date; null = no due date */
+  dueOffsetDays: number | null;
+  /** Explicit wall-clock time; null = the user picks a default time when using the template (never an implicit time) */
+  localTime: string | null;
+  assignee: TemplateAssigneeConfig;
+}
+export interface TemplateSubtaskNode extends TemplateTaskFields { key: string }
+export interface TaskTemplateBody {
+  schemaVersion: 1;
+  task: TemplateTaskFields & { team: TemplateTeamConfig; recurrence?: TemplateRecurrenceConfig | null; subtasks: TemplateSubtaskNode[] };
+}
+export interface ProjectTemplateTaskNode extends TemplateTaskFields {
+  key: string; parentKey: string | null; position: number; team: TemplateTeamConfig; dependsOn: string[];
+}
+export interface ProjectTemplateBody {
+  schemaVersion: 1;
+  project: { name: string; description: string | null; color: string | null; visibility: "private" | "workspace"; team: TemplateTeamConfig; lead: TemplateAssigneeConfig; members: { userId: string }[] };
+  tasks: ProjectTemplateTaskNode[];
+}
+export interface TemplateSummary {
+  id: string; type: TemplateType; scope: "workspace"; name: string; description: string | null; category: string | null; status: TemplateStatus;
+  currentVersion: number; createdAt: string; updatedAt: string; archivedAt: string | null; canManage: boolean;
+  summary: { taskCount: number; subtaskCount: number; dependencyCount: number; hasRecurrence: boolean } | null;
+}
+export interface TemplateDetail extends Omit<TemplateSummary, "summary"> {
+  body: TaskTemplateBody | ProjectTemplateBody;
+  summary: { taskCount: number; subtaskCount: number; dependencyCount: number; hasRecurrence: boolean };
+  versions: { version: number; schemaVersion: number; createdBy: string | null; createdAt: string }[] | null;
+}
+export interface TemplateIssue { code: string; message: string; key?: string; userId?: string }
+export interface TemplatePlanNode {
+  key: string; parentKey: string | null; position: number; title: string; description: string | null; priority: string; category: string | null;
+  estimatedHours: number | null; deadline: string | null; teamId: string | null; assignees: { userId: string; name: string }[]; dependsOn: string[];
+}
+export interface TemplatePreview {
+  ok: boolean; errors: TemplateIssue[]; warnings: TemplateIssue[]; requiresDefaultDueTime: boolean;
+  plan: null | {
+    type: TemplateType; template: { id: string; name: string; version: number }; timezone: string; startDate: string | null;
+    project: null | { name: string; description: string | null; color: string | null; visibility: "private" | "workspace"; teamId: string | null; leadUserId: string | null };
+    summary: { taskCount: number; subtaskCount: number; dependencyCount: number; assignees: { userId: string; name: string; taskCount: number }[] };
+    recurrence: { summary: string } | null; nodes: TemplatePlanNode[]; projectMembers: { userId: string; name: string }[];
+  };
+}
+/** What the "use template" request sends. `idempotencyKey` is generated once per use-template flow and reused for retries. */
+export interface TemplateUseInput {
+  idempotencyKey: string; timezone: string; startDate?: string; defaultDueTime?: string; dueAt?: string; title?: string; acceptWarnings?: boolean;
+  overrides?: { assignees?: Record<string, string | null> };
+  name?: string; description?: string | null; visibility?: "private" | "workspace"; teamId?: string | null; leadUserId?: string | null; memberUserIds?: string[];
+}
+export interface TemplateUseResult {
+  replayed: boolean; instantiationId: string; templateId: string; templateVersion: number; projectId: string | null; taskIds: Record<string, string>; summary: Record<string, any>;
+}
+
 /** Advisory notice returned with a successful status change. */
 export interface TaskMutationWarning {
   code: "BLOCKED_BY_INCOMPLETE_DEPENDENCIES" | string;
@@ -1739,13 +1803,17 @@ import { captureUnexpectedApiError } from "@/lib/sentry";
 export class ApiError extends Error {
   statusCode: number;
   status: string;
+  /** The parsed error response (e.g. template validation `errors`, `warnings`, `code`, `currentVersion`). */
+  body?: any;
   constructor(
     message: string,
-    statusCode: number
+    statusCode: number,
+    body?: any
   ) {
     super(message);
     this.statusCode = statusCode;
     this.name = "ApiError";
+    this.body = body;
   }
 }
 
@@ -1912,7 +1980,7 @@ class ApiClient {
         }
       }
 
-      const error = new ApiError(message, response.status);
+      const error = new ApiError(message, response.status, result);
       captureUnexpectedApiError(error, { path, method: options.method || "GET", status: response.status });
       throw error;
     }
@@ -2430,6 +2498,47 @@ class ApiClient {
 
   async useTaskDetailsForFutureOccurrences(taskId: string): Promise<{ status: string; data: TaskRecurrenceResponse }> {
     return this.request(`/tasks/${taskId}/recurrence/use-task-details`, { method: "POST", headers: this.getAuthHeaders() });
+  }
+
+  /* ---- Templates (workspace scoped; the active workspace header is sent) ---- */
+
+  async listTemplates(params: { type?: TemplateType; status?: TemplateStatus | "all" } = {}): Promise<{ status: string; data: { templates: TemplateSummary[] } }> {
+    const q = new URLSearchParams();
+    if (params.type) q.set("type", params.type);
+    if (params.status) q.set("status", params.status);
+    return this.request(`/templates${q.toString() ? `?${q}` : ""}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async getTemplate(id: string, version?: number): Promise<{ status: string; data: { template: TemplateDetail } }> {
+    return this.request(`/templates/${id}${version ? `?version=${version}` : ""}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async createTemplate(data: { type: TemplateType; name: string; description?: string | null; category?: string | null; body: TaskTemplateBody | ProjectTemplateBody }): Promise<{ status: string; data: { template: TemplateDetail } }> {
+    return this.request(`/templates`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  }
+
+  async updateTemplate(id: string, data: { expectedVersion: number; name?: string; description?: string | null; category?: string | null; body?: TaskTemplateBody | ProjectTemplateBody }): Promise<{ status: string; data: { template: TemplateDetail } }> {
+    return this.request(`/templates/${id}`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  }
+
+  async archiveTemplate(id: string): Promise<{ status: string; data: { template: TemplateDetail } }> {
+    return this.request(`/templates/${id}/archive`, { method: "POST", headers: this.getAuthHeaders() });
+  }
+
+  async restoreTemplate(id: string): Promise<{ status: string; data: { template: TemplateDetail } }> {
+    return this.request(`/templates/${id}/restore`, { method: "POST", headers: this.getAuthHeaders() });
+  }
+
+  async previewTemplate(id: string, input: Partial<TemplateUseInput>): Promise<{ status: string; data: TemplatePreview }> {
+    return this.request(`/templates/${id}/preview`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  }
+
+  async instantiateTemplate(id: string, input: TemplateUseInput): Promise<{ status: string; data: TemplateUseResult }> {
+    return this.request(`/templates/${id}/instantiate`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  }
+
+  async saveTaskAsTemplate(taskId: string, data: { name?: string; description?: string | null; category?: string | null; options?: { keepAssignees?: boolean; deriveDueOffsets?: boolean; includeRecurrence?: boolean } }): Promise<{ status: string; data: { template: TemplateDetail } }> {
+    return this.request(`/templates/from-task/${taskId}`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
   }
 
   async watchTask(taskId: string): Promise<{ status: string; message?: string; data?: any }> {

@@ -16,11 +16,13 @@ import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { useProjectsQuery } from "@/hooks/useCoreQueries";
 import { queryKeys } from "@/lib/queryKeys";
 import { SkeletonProjectGrid, RefreshingIndicator } from "@/components/skeletons/AppSkeletons";
+import UseTemplateFlow from "@/components/templates/UseTemplateFlow";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function Projects() {
   const navigate = useNavigate();
+  const [templateFlowOpen, setTemplateFlowOpen] = useState(false);
   const { toast } = useToast();
   const { workspaceRole, activeCompanyId } = useAuth();
   const queryClient = useQueryClient();
@@ -96,6 +98,8 @@ export default function Projects() {
                 </p>
               )}
             </div>
+            <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setTemplateFlowOpen(true)} disabled={!canCreateProject} className="gap-2">New from template</Button>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button onClick={() => setIsCreateOpen(true)} disabled={!canCreateProject} className="gap-2 shadow-soft active:scale-[0.97] transition-transform">
@@ -105,6 +109,7 @@ export default function Projects() {
               </TooltipTrigger>
               <TooltipContent>Create a new project</TooltipContent>
             </Tooltip>
+            </div>
           </div>
 
           {hasProjectViewFilter && (
@@ -204,6 +209,8 @@ export default function Projects() {
         mode="create"
       />
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Move project to Trash?</AlertDialogTitle><AlertDialogDescription>This project and its active tasks/files will be removed from the workspace and kept in Trash for 30 days.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={deleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Move to Trash</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <UseTemplateFlow type="project" open={templateFlowOpen} onOpenChange={setTemplateFlowOpen}
+        onCreated={(r) => { setTemplateFlowOpen(false); queryClient.invalidateQueries({ queryKey: queryKeys.projects(activeCompanyId) }); if (r.projectId) navigate(`/projects/${r.projectId}`); }} />
     </DashboardLayout>
   );
 }

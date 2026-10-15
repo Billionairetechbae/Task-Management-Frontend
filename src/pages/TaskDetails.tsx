@@ -51,6 +51,7 @@ import TaskDependencySection from "@/components/tasks/TaskDependencySection";
 import BlockedBadge from "@/components/tasks/BlockedBadge";
 import TaskRecurrenceSection from "@/components/tasks/TaskRecurrenceSection";
 import RepeatBadge from "@/components/tasks/RepeatBadge";
+import SaveAsTemplateDialog from "@/components/templates/SaveAsTemplateDialog";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
 import GoogleDrivePickerDialog from "@/components/tasks/GoogleDrivePickerDialog";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
@@ -94,7 +95,9 @@ interface CorrectedTaskComment extends Omit<TaskComment, 'user'> {
 const TaskDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, activeCompanyId } = useAuth();
+  const { user, activeCompanyId, workspaceRole } = useAuth();
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const canSaveAsTemplate = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
   const { isConnected, joinTaskRoom, leaveTaskRoom, sendComment, sendTypingIndicator, on, off } = useWebSocket();
@@ -1739,6 +1742,13 @@ const TaskDetails = () => {
             {task.id && !task.parentTaskId && (
               <div className="rounded-lg border bg-card p-4">
                 <TaskRecurrenceSection taskId={task.id} taskDeadline={task.deadline} />
+              </div>
+            )}
+
+            {canSaveAsTemplate && task.id && !task.parentTaskId && (
+              <div className="rounded-lg border bg-card p-4">
+                <Button type="button" variant="outline" size="sm" onClick={() => setSaveTemplateOpen(true)}>Save as template</Button>
+                <SaveAsTemplateDialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen} taskId={task.id} taskTitle={task.title} hasDueDate={Boolean(task.deadline)} isRecurring={Boolean(task.isRecurring)} />
               </div>
             )}
 

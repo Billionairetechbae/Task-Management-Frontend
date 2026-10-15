@@ -44,6 +44,7 @@ import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
 import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
+import Templates from "./pages/Templates";
 import ProjectDetails from "./pages/ProjectDetails";
 import Drive from "./pages/Drive";
 import ProjectInvite from "./pages/ProjectInvite";
@@ -327,6 +328,14 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
               <Projects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/templates"
+          element={
+            <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+              <Templates />
             </ProtectedRoute>
           }
         />

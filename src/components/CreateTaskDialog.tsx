@@ -17,6 +17,7 @@ import { getFileIcon } from "@/utils/fileIcons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import TeamSelector from "@/components/TeamSelector";
+import UseTemplateFlow from "@/components/templates/UseTemplateFlow";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ interface CreateTaskDialogProps {
 }
 
 const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDeadline }: CreateTaskDialogProps) => {
+  const [templateOpen, setTemplateOpen] = useState(false);
   const { toast } = useToast();
   const { workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
@@ -212,6 +214,12 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
             Create New Task
           </DialogTitle>
         </DialogHeader>
+
+        {!projectId && (
+          <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => setTemplateOpen(true)}>
+            Use template
+          </Button>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -434,6 +442,8 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
           </div>
         </form>
       </DialogContent>
+      <UseTemplateFlow type="task" open={templateOpen} onOpenChange={setTemplateOpen}
+        onCreated={() => { setTemplateOpen(false); onOpenChange(false); onSuccess(); }} />
     </Dialog>
   );
 };
