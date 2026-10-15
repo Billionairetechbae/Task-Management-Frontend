@@ -8,8 +8,10 @@ interface CalendarFiltersProps {
         priority: string;
         status: string;
         projectId: string;
+        teamId: string;
     };
     projects?: { id: string; name: string }[];
+    teams?: { id: string; name: string }[];
     onChange(filters: CalendarFiltersProps["filters"]): void;
     onClose?: () => void;
 }
@@ -17,6 +19,7 @@ interface CalendarFiltersProps {
 export default function CalendarFilters({
     filters,
     projects = [],
+    teams = [],
     onChange,
     onClose,
 }: CalendarFiltersProps) {
@@ -61,6 +64,7 @@ export default function CalendarFilters({
             priority: "",
             status: "",
             projectId: "",
+            teamId: "",
         });
     };
 
@@ -132,6 +136,14 @@ export default function CalendarFilters({
                         {projects.map((p) => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label htmlFor="calendar-team-filter" className="mb-1.5 block text-xs font-medium text-gray-600">Team</label>
+                    <select id="calendar-team-filter" value={filters.teamId} onChange={(e) => handleFilterChange("teamId", e.target.value)} className="w-full rounded-lg border border-gray-300/60 bg-white px-3 py-2 text-sm text-gray-700 transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <option value="">All teams</option>
+                        {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
                     </select>
                 </div>
             </div>

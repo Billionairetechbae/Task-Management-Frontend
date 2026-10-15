@@ -10,7 +10,6 @@ import {
     X,
 } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
-import { format } from "date-fns";
 
 type CalendarView = "month" | "week" | "day";
 
@@ -18,6 +17,7 @@ interface Props {
     view: CalendarView;
     setView(view: CalendarView): void;
     currentDate: Date;
+    heading: string;
     onPrevious(): void;
     onNext(): void;
     onToday(): void;
@@ -30,6 +30,7 @@ const CalendarToolbar: React.FC<Props> = ({
     view,
     setView,
     currentDate,
+    heading,
     onPrevious,
     onNext,
     onToday,
@@ -43,14 +44,8 @@ const CalendarToolbar: React.FC<Props> = ({
         { key: "day", label: "Day", icon: CalendarDays },
     ];
 
-    const dateRange = () => {
-        const start = currentDate;
-        const end = currentDate;
-        return format(start, "MMMM yyyy");
-    };
-
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-200/60 bg-white/80 backdrop-blur-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4 border-b border-gray-200/60 bg-white/80 backdrop-blur-sm">
             {/* Left Section */}
             <div className="flex items-center gap-3 min-w-0">
                 <WorkspaceSwitcher />
@@ -83,8 +78,8 @@ const CalendarToolbar: React.FC<Props> = ({
 
                 <div className="flex items-center gap-2">
                     <CalendarDays size={20} className="text-blue-600" />
-                    <h2 className="text-lg font-semibold text-gray-900 whitespace-nowrap">
-                        {dateRange()}
+                    <h2 className="max-w-[13rem] truncate text-sm font-semibold text-gray-900 sm:max-w-none sm:text-lg whitespace-nowrap">
+                        {heading}
                     </h2>
                 </div>
             </div>
@@ -136,7 +131,7 @@ const CalendarToolbar: React.FC<Props> = ({
                 {/* Create Task Button */}
                 <button
                     onClick={onCreateTask}
-                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-md active:scale-95"
+                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-md active:scale-95 sm:px-4"
                 >
                     <Plus size={18} />
                     <span className="hidden sm:inline">New Task</span>

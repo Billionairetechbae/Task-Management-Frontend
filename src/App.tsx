@@ -63,6 +63,7 @@ import AuthGoogleCallback from "./pages/AuthGoogleCallback";
 import Integrations from "./pages/Integrations";
 
 import Calendar from "./pages/Calendar";
+import Board from "./pages/Board";
 import Help from "./pages/Help";
 import Trash from "./pages/Trash";
 
@@ -125,6 +126,7 @@ const App = () => {
         <Route path="/project-invite/:token" element={<ProjectInvite />} />
         <Route path="/client-view/:token" element={<ClientView />} />
         <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+        <Route path="/board" element={<ProtectedRoute><Board /></ProtectedRoute>} />
         <Route path="/help" element={<Help />} />
 
         {/* TeamMembers Page */}

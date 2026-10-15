@@ -39,6 +39,7 @@ import {
   Activity,
   ShieldCheck,
   Plug,
+  Columns3,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 
@@ -161,6 +162,11 @@ const DashboardLayout = ({
               label: "Task Workbench",
               href: "/tasks/workbench",
               icon: <ClipboardList className="w-[18px] h-[18px]" />,
+            },
+            {
+              label: "Board",
+              href: "/board",
+              icon: <Columns3 className="w-[18px] h-[18px]" />,
             },
           ],
         },
@@ -385,6 +391,11 @@ const DashboardLayout = ({
             label: "Task Workbench",
             href: "/tasks/workbench",
             icon: <ClipboardList className="w-[18px] h-[18px]" />,
+          },
+          {
+            label: "Board",
+            href: "/board",
+            icon: <Columns3 className="w-[18px] h-[18px]" />,
           },
         ],
       },

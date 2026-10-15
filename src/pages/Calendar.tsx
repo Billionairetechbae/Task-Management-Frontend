@@ -14,6 +14,7 @@ import {
     endOfWeek,
     startOfDay,
     endOfDay,
+    format,
 } from "date-fns";
 import { Search } from "lucide-react";
 
@@ -23,6 +24,7 @@ import CalendarFilters from "../components/calendar/CalendarFilters";
 import MonthView from "../components/calendar/MonthView";
 import WeekView from "../components/calendar/WeekView";
 import DayView from "../components/calendar/DayView";
+import { CalendarQuickView } from "../components/calendar/CalendarQuickView";
 import CreateTaskDialog from "../components/CreateTaskDialog";
 
 import calendarService from "../services/calendarService";
@@ -30,6 +32,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { isTaskOverdue, matchesCalendarSearch, resolveCalendarTaskPath, toCalendarEvents } from "../lib/calendarStatus";
 import type { CalendarFilters as SharedCalendarFilters } from "../types/calendar";
+import type { CalendarEvent } from "../types/calendar";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 
 export type CalendarView = "month" | "week" | "day";
@@ -46,14 +49,16 @@ export default function CalendarPage() {
     const [showFilters, setShowFilters] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [search, setSearch] = useState("");
+    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
     const [filters, setFilters] = useState<
-        Required<Pick<SharedCalendarFilters, "scope" | "priority" | "status" | "projectId">>
+        Required<Pick<SharedCalendarFilters, "scope" | "priority" | "status" | "projectId" | "teamId">>
     >({
         scope: "company",
         priority: "",
         status: "",
         projectId: "",
+        teamId: "",
     });
 
     const range = useMemo(() => {
@@ -89,6 +94,7 @@ export default function CalendarPage() {
             filters.priority,
             filters.status,
             filters.projectId,
+            filters.teamId,
         ],
         queryFn: async () => {
             const response = await calendarService.getEvents({
@@ -111,6 +117,21 @@ export default function CalendarPage() {
         },
         staleTime: 60_000,
     });
+
+    const { data: teams = [] } = useQuery({
+        queryKey: ["calendar-teams", activeCompanyId],
+        queryFn: async () => {
+            const res = await api.listTeams();
+            return (res?.data?.teams ?? []).map((team) => ({ id: team.id, name: team.name }));
+        },
+        staleTime: 60_000,
+    });
+
+    const heading = useMemo(() => {
+        if (view === "month") return format(currentDate, "MMMM yyyy");
+        if (view === "day") return format(currentDate, "EEEE, MMMM d, yyyy");
+        return `${format(startOfWeek(currentDate), "MMM d")} – ${format(endOfWeek(currentDate), "MMM d, yyyy")}`;
+    }, [currentDate, view]);
 
     const allEvents = useMemo(() => toCalendarEvents(rawEvents), [rawEvents]);
     const events = useMemo(
@@ -150,8 +171,11 @@ export default function CalendarPage() {
         setCurrentDate(new Date());
     };
 
-    const handleEventClick = (event: any) => {
-        navigate(resolveCalendarTaskPath({ ...(event.task ?? {}), id: event.taskId ?? event.task?.id }));
+    const handleEventClick = (event: CalendarEvent) => setSelectedEvent(event);
+    const openSelectedTask = () => {
+        if (!selectedEvent) return;
+        navigate(resolveCalendarTaskPath({ ...(selectedEvent.task ?? {}), id: selectedEvent.taskId ?? selectedEvent.task?.id }));
+        setSelectedEvent(null);
     };
 
     const handleTaskCreated = () => {
@@ -182,6 +206,7 @@ export default function CalendarPage() {
                     view={view}
                     setView={setView}
                     currentDate={currentDate}
+                    heading={heading}
                     onPrevious={handlePrevious}
                     onNext={handleNext}
                     onToday={handleToday}
@@ -190,7 +215,7 @@ export default function CalendarPage() {
                     showFilters={showFilters}
                 />
 
-                <div className="px-6 pt-4">
+                <div className="px-3 pt-3 sm:px-6 sm:pt-4">
                     <label className="relative block max-w-md">
                         <span className="sr-only">Search calendar tasks</span>
                         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -208,17 +233,18 @@ export default function CalendarPage() {
                 </div>
 
                 {showFilters && (
-                    <div className="px-6 pt-4 animate-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 pt-3 sm:px-6 sm:pt-4 animate-in slide-in-from-top-2 duration-200">
                         <CalendarFilters
                             filters={filters}
                             projects={projects}
+                            teams={teams}
                             onChange={setFilters}
                             onClose={() => setShowFilters(false)}
                         />
                     </div>
                 )}
 
-                <div className="flex-1 overflow-auto p-6 pt-4">
+                <div className="flex-1 overflow-auto p-3 pt-3 sm:p-6 sm:pt-4">
                     <div className="h-full rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm border border-white/50 overflow-hidden">
                         {view === "month" && (
                             <MonthView
@@ -256,6 +282,7 @@ export default function CalendarPage() {
                 onOpenChange={setCreateTaskOpen}
                 onSuccess={handleTaskCreated}
             />
+            <CalendarQuickView event={selectedEvent} onClose={() => setSelectedEvent(null)} onOpen={openSelectedTask} />
         </div>
       </DashboardLayout>
     );

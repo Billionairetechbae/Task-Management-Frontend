@@ -585,6 +585,7 @@ export interface AllTasksFilters {
   priority?: string;
   companyId?: string;
   teamId?: string;
+  projectId?: string;
   scope?: "workspace" | "all_workspaces" | "assigned_all" | "assigned_workspace";
 }
 
@@ -2109,13 +2110,14 @@ class ApiClient {
   }
 
   async getTasks(
-    filters?: TaskFilters & { teamId?: string }
+    filters?: TaskFilters & { teamId?: string; projectId?: string }
   ): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
     const queryParams = new URLSearchParams();
     if (filters?.status) queryParams.append("status", filters.status);
     if (filters?.priority) queryParams.append("priority", filters.priority);
     if (filters?.category) queryParams.append("category", filters.category);
     if (filters?.teamId) queryParams.append("teamId", filters.teamId);
+    if (filters?.projectId) queryParams.append("projectId", filters.projectId);
 
     return this.request(`/tasks?${queryParams.toString()}`, {
       method: "GET",
@@ -2136,6 +2138,7 @@ class ApiClient {
     if (filters?.priority) queryParams.append("priority", filters.priority);
     if (filters?.companyId) queryParams.append("companyId", filters.companyId);
     if (filters?.teamId) queryParams.append("teamId", filters.teamId);
+    if (filters?.projectId) queryParams.append("projectId", filters.projectId);
 
     // For workspace scopes, we need to send x-company-id header
     const useCompanyHeader = scope === "workspace" || scope === "assigned_workspace";

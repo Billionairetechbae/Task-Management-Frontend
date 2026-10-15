@@ -7,11 +7,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   getEvents: vi.fn(),
   getProjects: vi.fn(),
+  listTeams: vi.fn(),
   auth: { activeCompanyId: "ws-1" as string | null },
 }));
 
-vi.mock("@/lib/api", () => ({ api: { getProjects: h.getProjects } }));
-vi.mock("../lib/api", () => ({ api: { getProjects: h.getProjects } }));
+vi.mock("@/lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams } }));
+vi.mock("../lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams } }));
 vi.mock("../services/calendarService", () => ({ default: { getEvents: h.getEvents } }));
 vi.mock("../contexts/AuthContext", () => ({ useAuth: () => h.auth }));
 vi.mock("../components/dashboard/DashboardLayout", () => ({ default: ({ children }: any) => <div>{children}</div> }));
@@ -63,6 +64,7 @@ function renderPage() {
 beforeEach(() => {
   h.getEvents.mockReset();
   h.getProjects.mockResolvedValue({ data: { projects: [{ id: "p1", name: "Finance" }] } });
+  h.listTeams.mockResolvedValue({ data: { teams: [{ id: "team-1", name: "Operations" }] } });
   h.auth.activeCompanyId = "ws-1";
 });
 
@@ -99,6 +101,24 @@ describe("Calendar page", () => {
     await waitFor(() => expect(h.getEvents.mock.calls.at(-1)![0].status).toBe(""));
   });
 
+  it("sends the selected team filter to the server", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [] });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Toggle filters" }));
+    await userEvent.selectOptions(await screen.findByLabelText("Team"), "team-1");
+    await waitFor(() => expect(h.getEvents.mock.calls.at(-1)![0].teamId).toBe("team-1"));
+  });
+
+  it("changes the toolbar heading for week and day views", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [] });
+    renderPage();
+    expect(await screen.findByRole("heading", { level: 2 })).toHaveTextContent(String(new Date().getFullYear()));
+    await userEvent.click(screen.getAllByRole("button", { name: "Week" }).at(-1)!);
+    expect(await screen.findByRole("heading", { level: 2 })).toHaveTextContent("–");
+    await userEvent.click(screen.getAllByRole("button", { name: "Day" }).at(-1)!);
+    expect(await screen.findByRole("heading", { level: 2 })).toHaveTextContent(String(new Date().getFullYear()));
+  });
+
   it("search narrows events client-side", async () => {
     h.getEvents.mockResolvedValue({ success: true, events: [ev("1", "pending", { title: "Monthly report" }), ev("2", "completed", { title: "Payroll" })] });
     renderPage();
@@ -109,10 +129,12 @@ describe("Calendar page", () => {
     expect(chips[0].getAttribute("aria-label")).toContain("Payroll");
   });
 
-  it("clicking a task opens its workbench route; team tasks open the team route", async () => {
+  it("clicking a task opens quick view, whose action opens its workbench route", async () => {
     h.getEvents.mockResolvedValue({ success: true, events: [ev("t1", "pending", { title: "Standalone" })] });
     renderPage();
     await userEvent.click(await screen.findByTestId("calendar-event"));
+    expect(await screen.findByRole("complementary", { name: "Calendar task quick view" })).toHaveTextContent("Standalone");
+    await userEvent.click(screen.getByRole("button", { name: "Open task" }));
     expect(await screen.findByTestId("where")).toHaveTextContent("/task-details/t1");
   });
 
@@ -120,6 +142,7 @@ describe("Calendar page", () => {
     h.getEvents.mockResolvedValue({ success: true, events: [ev("t2", "pending", { task: { id: "t2", teamId: "tm1", deadline: day(), status: "pending" } })] });
     renderPage();
     await userEvent.click(await screen.findByTestId("calendar-event"));
+    await userEvent.click(await screen.findByRole("button", { name: "Open task" }));
     expect(await screen.findByTestId("where")).toHaveTextContent("/teams/tm1/tasks/t2");
   });
 

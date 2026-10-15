@@ -13,6 +13,8 @@ export interface CalendarFilters {
     /** Comma separated Task.status values. Empty = every status (default). */
     status?: string;
     projectId?: string;
+    /** Explicit, server-authorized team filter. */
+    teamId?: string;
 }
 
 export interface CalendarUser {
