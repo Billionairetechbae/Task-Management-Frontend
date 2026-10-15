@@ -280,6 +280,33 @@ describe("calendar dependency indicators (informational only)", () => {
   });
 });
 
+describe("calendar recurrence indicators (generated occurrences are ordinary events)", () => {
+  it("shows a repeat marker on the chip and the series summary in the popover; non-recurring events show neither; dates are untouched", async () => {
+    const repeating = ev("rp", "pending", { title: "Weekly report", isRecurring: true, recurrenceSummary: "Weekly on Fri at 17:00", recurrenceSequence: 3 });
+    h.getEvents.mockResolvedValue({ success: true, events: [repeating, ev("one", "pending", { title: "One-off" })], workspaces: [] });
+    renderPage();
+    const chips = await screen.findAllByTestId("calendar-event");
+    expect(chips).toHaveLength(2);
+    expect(screen.getAllByTestId("calendar-repeat-icon")).toHaveLength(1);
+    const chip = chips.find((c) => c.getAttribute("aria-label")?.includes("Weekly report"))!;
+    expect(within(chip).getByTestId("calendar-repeat-icon")).toBeInTheDocument();
+    const before = new Date(repeating.start).toISOString();
+    await userEvent.click(chip);
+    const pop = await screen.findByRole("dialog", { name: "Calendar task details" });
+    expect(within(pop).getByTestId("calendar-repeat-row")).toHaveTextContent("Weekly on Fri at 17:00 · #3");
+    expect(new Date(repeating.start).toISOString()).toBe(before);
+  });
+
+  it("a non-recurring event has no repeat marker and no repeat row", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [ev("one", "pending", { title: "One-off" })], workspaces: [] });
+    renderPage();
+    expect(screen.queryByTestId("calendar-repeat-icon")).toBeNull();
+    await userEvent.click(await screen.findByTestId("calendar-event"));
+    expect(within(await screen.findByRole("dialog", { name: "Calendar task details" })).queryByTestId("calendar-repeat-row")).toBeNull();
+    expect(screen.queryByTestId("calendar-repeat-icon")).toBeNull();
+  });
+});
+
 describe("personal cross-workspace calendar", () => {
   it("defaults to my tasks across ALL workspaces and ignores the globally active workspace", async () => {
     h.getEvents.mockResolvedValue({ success: true, events: [], workspaces: [WSA, WSB] });

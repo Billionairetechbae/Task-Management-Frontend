@@ -49,6 +49,8 @@ import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import TaskDependencySection from "@/components/tasks/TaskDependencySection";
 import BlockedBadge from "@/components/tasks/BlockedBadge";
+import TaskRecurrenceSection from "@/components/tasks/TaskRecurrenceSection";
+import RepeatBadge from "@/components/tasks/RepeatBadge";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
 import GoogleDrivePickerDialog from "@/components/tasks/GoogleDrivePickerDialog";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
@@ -1223,7 +1225,7 @@ const TaskDetails = () => {
                   <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", priorityDot(t.priority))} />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm truncate">{t.title}</p>
-                    <BlockedBadge task={t} className="mt-1" />
+                    <div className="mt-1 flex flex-wrap gap-1"><BlockedBadge task={t} /><RepeatBadge task={t} /></div>
                     {t.description && (
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{t.description}</p>
                     )}
@@ -1730,6 +1732,13 @@ const TaskDetails = () => {
             {task.id && (
               <div className="rounded-lg border bg-card p-4">
                 <TaskDependencySection taskId={task.id} />
+              </div>
+            )}
+
+            {/* Recurring series (generated occurrences are ordinary tasks; all rules live in the backend + the section) */}
+            {task.id && !task.parentTaskId && (
+              <div className="rounded-lg border bg-card p-4">
+                <TaskRecurrenceSection taskId={task.id} taskDeadline={task.deadline} />
               </div>
             )}
 

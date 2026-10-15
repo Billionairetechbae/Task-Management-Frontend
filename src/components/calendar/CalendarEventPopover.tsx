@@ -1,4 +1,4 @@
-import { AlertTriangle, Building2, Lock, CalendarDays, Flag, FolderKanban, ListChecks, Users } from "lucide-react";
+import { AlertTriangle, Building2, Lock, Repeat, CalendarDays, Flag, FolderKanban, ListChecks, Users } from "lucide-react";
 import type { CalendarEvent } from "@/types/calendar";
 import { getStatusStyle, isTaskOverdue } from "@/lib/calendarStatus";
 
@@ -16,6 +16,7 @@ export function CalendarEventPopoverBody({ event, onOpen }: { event: CalendarEve
             <dl className="mt-3 space-y-2.5 text-sm">
                 <div className="flex gap-2"><CalendarDays size={16} className="mt-0.5 shrink-0 text-muted-foreground" /><div><dt className="sr-only">Due</dt><dd className={overdue ? "font-medium text-red-700" : ""}>{overdue && <AlertTriangle className="mr-1 inline" size={14} />}{overdue ? "Overdue — " : ""}{due}</dd></div></div>
                 <div className="flex gap-2"><Flag size={16} className="mt-0.5 shrink-0 text-muted-foreground" /><div><dt className="sr-only">Priority</dt><dd className="capitalize">{event.priority || "medium"} priority</dd></div></div>
+                {event.isRecurring && <div className="flex gap-2" data-testid="calendar-repeat-row"><Repeat size={16} className="mt-0.5 shrink-0 text-indigo-600" /><div><dt className="sr-only">Repeats</dt><dd>{event.recurrenceSummary || "Part of a recurring series"}{event.recurrenceSequence ? ` · #${event.recurrenceSequence}` : ""}</dd></div></div>}
                 {event.isBlocked && <div className="flex gap-2" data-testid="calendar-blocked-row"><Lock size={16} className="mt-0.5 shrink-0 text-red-600" /><div><dt className="sr-only">Dependencies</dt><dd className="font-medium text-red-700">Blocked by {event.blockedByCount ?? 1} unfinished {(event.blockedByCount ?? 1) === 1 ? "task" : "tasks"}</dd></div></div>}
                 {!event.isBlocked && event.hasCancelledDependency && <div className="flex gap-2"><AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600" /><div><dt className="sr-only">Dependencies</dt><dd className="text-amber-800">A dependency was cancelled</dd></div></div>}
                 {event.workspace?.name && <div className="flex gap-2"><Building2 size={16} className="mt-0.5 shrink-0 text-muted-foreground" /><div><dt className="sr-only">Workspace</dt><dd>Workspace: {event.workspace.name}</dd></div></div>}

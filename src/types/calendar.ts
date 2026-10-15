@@ -64,6 +64,11 @@ export interface CalendarEvent {
     blockedByCount?: number;
     hasCancelledDependency?: boolean;
 
+    /** Generated occurrences are ordinary tasks; this only marks that they repeat. */
+    isRecurring?: boolean;
+    recurrenceSummary?: string | null;
+    recurrenceSequence?: number;
+
     task: any;
 }
 

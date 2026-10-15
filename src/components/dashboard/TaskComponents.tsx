@@ -36,6 +36,7 @@ import { getTaskSubtaskCount, getTaskWatcherCount, isTaskReadOnlyForUser } from 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import BlockedBadge from "@/components/tasks/BlockedBadge";
+import RepeatBadge from "@/components/tasks/RepeatBadge";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
 
 interface TaskTableProps {
@@ -305,6 +306,7 @@ export const TaskTable = ({
                       <CompanyBadge company={task.company} />
                       <p className="truncate text-[13px] font-medium">{task.title}</p>
                       <BlockedBadge task={task} />
+                      <RepeatBadge task={task} />
                       {isTaskReadOnlyForUser(task, user?.id) && (
                         <Badge
                           variant="outline"

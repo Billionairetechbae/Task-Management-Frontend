@@ -6,6 +6,7 @@ import {
   FileX2,
   Link2,
   ListChecks,
+  Repeat,
   MessageSquarePlus,
   Pencil,
   UserMinus,
@@ -43,7 +44,24 @@ const dependencyDetail = (actionType: string, metadata?: Record<string, any> | n
   return undefined;
 };
 
+const RECURRENCE_LABELS: Record<string, string> = {
+  recurrence_created: "Recurrence created",
+  recurrence_updated: "Recurrence updated",
+  recurrence_paused: "Recurrence paused",
+  recurrence_resumed: "Recurrence resumed",
+  recurrence_stopped: "Recurrence stopped",
+};
+
 export const getTaskActivityPresentation = (actionType?: string, metadata?: Record<string, any> | null): TaskActivityPresentation => {
+  if (actionType && RECURRENCE_LABELS[actionType]) {
+    const detail = actionType === "recurrence_updated" && metadata?.change === "template"
+      ? "Future occurrences will use this task's details"
+      : metadata?.automatic ? "Paused automatically" : undefined;
+    return { label: RECURRENCE_LABELS[actionType], detail, icon: Repeat, toneClass: actionType === "recurrence_stopped" ? "text-rose-600" : "text-indigo-600" };
+  }
+  if (actionType === "task_created" && metadata?.source === "recurrence") {
+    return { label: "Task created", detail: "Created automatically from recurring series", icon: Repeat, toneClass: "text-emerald-600" };
+  }
   if (actionType === "dependency_added" || actionType === "dependency_removed") {
     return {
       label: actionType === "dependency_added" ? "Dependency added" : "Dependency removed",

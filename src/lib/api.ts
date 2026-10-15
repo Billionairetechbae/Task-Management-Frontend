@@ -534,6 +534,66 @@ export interface Task {
   dependsOnCount?: number | null;
   blockingCount?: number | null;
   hasCancelledDependency?: boolean | null;
+
+  // Derived from the recurrence ledger on list responses (generated occurrences are ordinary tasks)
+  isRecurring?: boolean | null;
+  recurrenceId?: string | null;
+  recurrenceSequence?: number | null;
+  recurrenceStatus?: TaskRecurrenceStatus | null;
+  recurrenceSummary?: string | null;
+}
+
+export type TaskRecurrenceStatus = "active" | "paused" | "stopped" | "completed";
+export type TaskRecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
+
+export interface TaskRecurrenceDetails {
+  id: string;
+  status: TaskRecurrenceStatus;
+  pausedReason: string | null;
+  timezone: string;
+  frequency: TaskRecurrenceFrequency;
+  interval: number;
+  /** 0 = Sunday ... 6 = Saturday */
+  byWeekday: number[] | null;
+  /** 1-31, or -1 for the last day */
+  byMonthDay: number | null;
+  /** "HH:mm" wall-clock time in `timezone` */
+  localTime: string;
+  startsAt: string;
+  endsAt: string | null;
+  maxOccurrences: number | null;
+  occurrencesGenerated: number;
+  nextOccurrenceAt: string | null;
+  lastGeneratedAt: string | null;
+  lastRunNote: string | null;
+  summary: string;
+  upcoming: string[];
+  /** Present for managers only */
+  template?: Record<string, any>;
+}
+
+export interface TaskRecurrenceResponse {
+  recurrence: TaskRecurrenceDetails | null;
+  occurrence: { sequence: number; occurrenceAt: string; status: string; isSource: boolean } | null;
+  canManageRecurrence: boolean;
+}
+
+/** Structured schedule sent to the recurrence API (the browser's IANA timezone is required on create and preview). */
+export interface TaskRecurrenceInput {
+  timezone?: string;
+  frequency?: TaskRecurrenceFrequency;
+  interval?: number;
+  byWeekday?: number[] | null;
+  byMonthDay?: number | null;
+  localTime?: string;
+  startsAt?: string;
+  endsAt?: string | null;
+  maxOccurrences?: number | null;
+}
+
+export interface TaskRecurrencePreview {
+  summary: string;
+  occurrences: string[];
 }
 
 /** Advisory notice returned with a successful status change. */
@@ -2328,6 +2388,48 @@ class ApiClient {
 
   async removeTaskDependency(taskId: string, dependsOnTaskId: string): Promise<{ status: string; data: TaskDependencyGraph }> {
     return this.request(`/tasks/${taskId}/dependencies/${dependsOnTaskId}`, { method: "DELETE", headers: this.getAuthHeaders() });
+  }
+
+  /* ---- Recurring tasks (series are managed through these task-scoped endpoints only) ---- */
+
+  async getTaskRecurrence(taskId: string): Promise<{ status: string; data: TaskRecurrenceResponse }> {
+    return this.request(`/tasks/${taskId}/recurrence`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async previewTaskRecurrence(taskId: string, input: TaskRecurrenceInput): Promise<{ status: string; data: TaskRecurrencePreview }> {
+    return this.request(`/tasks/${taskId}/recurrence/preview`, {
+      method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(input),
+    });
+  }
+
+  async createTaskRecurrence(taskId: string, input: TaskRecurrenceInput): Promise<{ status: string; data: TaskRecurrenceResponse }> {
+    return this.request(`/tasks/${taskId}/recurrence`, {
+      method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(input),
+    });
+  }
+
+  async updateTaskRecurrence(taskId: string, input: TaskRecurrenceInput): Promise<{ status: string; data: TaskRecurrenceResponse }> {
+    return this.request(`/tasks/${taskId}/recurrence`, {
+      method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(input),
+    });
+  }
+
+  async pauseTaskRecurrence(taskId: string): Promise<{ status: string; data: TaskRecurrenceResponse }> {
+    return this.request(`/tasks/${taskId}/recurrence/pause`, { method: "POST", headers: this.getAuthHeaders() });
+  }
+
+  async resumeTaskRecurrence(taskId: string, options: { takeOwnership?: boolean } = {}): Promise<{ status: string; data: TaskRecurrenceResponse }> {
+    return this.request(`/tasks/${taskId}/recurrence/resume`, {
+      method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(options),
+    });
+  }
+
+  async stopTaskRecurrence(taskId: string): Promise<{ status: string; data: TaskRecurrenceResponse }> {
+    return this.request(`/tasks/${taskId}/recurrence/stop`, { method: "POST", headers: this.getAuthHeaders() });
+  }
+
+  async useTaskDetailsForFutureOccurrences(taskId: string): Promise<{ status: string; data: TaskRecurrenceResponse }> {
+    return this.request(`/tasks/${taskId}/recurrence/use-task-details`, { method: "POST", headers: this.getAuthHeaders() });
   }
 
   async watchTask(taskId: string): Promise<{ status: string; message?: string; data?: any }> {

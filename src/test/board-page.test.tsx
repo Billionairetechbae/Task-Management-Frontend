@@ -209,4 +209,29 @@ describe("Board page", () => {
     await waitFor(() => expect(h.toastSuccess).toHaveBeenCalledWith("Task status updated"));
     expect(h.toastWarning).not.toHaveBeenCalled();
   });
+
+  it("generated occurrences are ordinary cards with a subtle repeat badge (no extra column, status or filter)", async () => {
+    h.getAll.mockResolvedValue(resolved([
+      task("r1", "pending", { isRecurring: true, recurrenceSummary: "Weekly on Fri at 17:00", recurrenceSequence: 4 }),
+      task("plain", "pending"),
+    ]));
+    renderBoard();
+    const recurring = (await screen.findByText("Task r1")).closest("article")!;
+    const badge = within(recurring).getByTestId("repeat-badge");
+    expect(badge).toHaveTextContent("#4");
+    expect(badge).toHaveAttribute("title", "Repeats: Weekly on Fri at 17:00");
+    expect(within(screen.getByText("Task plain").closest("article")!).queryByTestId("repeat-badge")).toBeNull();
+    expect(recurring.closest("[data-testid='board-panel-pending']")).not.toBeNull(); // sits in its normal status lane
+    expect(screen.queryByRole("region", { name: /recurring column/i })).toBeNull();
+    expect(screen.getAllByTestId(/^board-panel-/)).toHaveLength(6);
+  });
+
+  it("a recurring occurrence moves like any other task (existing PATCH, no special handling)", async () => {
+    h.auth.workspaceRole = "manager";
+    h.getAll.mockResolvedValue(resolved([task("r1", "pending", { isRecurring: true, recurrenceSummary: "Daily at 09:00", recurrenceSequence: 2 })]));
+    h.updateTask.mockResolvedValue({ status: "success", data: { task: {} } });
+    renderBoard();
+    await userEvent.selectOptions(await screen.findByLabelText("Move Task r1 to"), "in_progress");
+    await waitFor(() => expect(h.updateTask).toHaveBeenCalledWith("r1", { status: "in_progress" }));
+  });
 });

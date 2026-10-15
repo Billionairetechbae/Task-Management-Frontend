@@ -1,4 +1,4 @@
-import { Clock, Flag, FolderKanban, Users, AlertTriangle, Lock } from "lucide-react";
+import { Clock, Flag, FolderKanban, Users, AlertTriangle, Lock, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import type { CalendarEvent as SharedCalendarEvent } from "../../types/calendar";
 import { getStatusStyle, isTaskOverdue } from "../../lib/calendarStatus";
@@ -38,6 +38,7 @@ export default function CalendarEvent({ event, compact = false, onClick }: Props
             >
                 <span className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`} aria-hidden="true" />
                 {event.isBlocked && <Lock size={10} className="shrink-0 text-red-600" aria-label="Blocked" data-testid="calendar-blocked-icon" />}
+                {event.isRecurring && <Repeat size={10} className="shrink-0 text-indigo-600" aria-label="Repeats" data-testid="calendar-repeat-icon" />}
                 <span className={`truncate ${style.strike ? "line-through" : ""}`}>{event.title}</span>
                 {event.workspace?.name && <WorkspaceBadge name={event.workspace.name} />}
                 <span className="ml-auto shrink-0 text-[10px] font-semibold uppercase opacity-80">
@@ -74,6 +75,11 @@ export default function CalendarEvent({ event, compact = false, onClick }: Props
                 {overdue && (
                     <span className="flex items-center gap-1 font-semibold text-red-700">
                         <AlertTriangle size={12} /> Overdue
+                    </span>
+                )}
+                {event.isRecurring && (
+                    <span className="flex items-center gap-1 text-indigo-700" data-testid="calendar-repeat-icon">
+                        <Repeat size={12} /> Repeats
                     </span>
                 )}
                 {event.isBlocked && (
