@@ -2032,6 +2032,27 @@ class ApiClient {
     return this.request(`/connected-storage/connections/${encodeURIComponent(connectionId)}`, { method: "DELETE", headers: this.getAuthHeaders() });
   }
 
+  /* Connected Storage browse / search / get-item (Phase 3B). Read-only; every call carries the intended target and is re-authorized server-side. */
+  private connectedStorageTargetQuery(target: ConnectedStorageTarget, extra: Record<string, string | undefined> = {}): string {
+    const params = new URLSearchParams({ targetType: target.targetType });
+    if (target.targetId) params.set("targetId", target.targetId);
+    if (target.taskId) params.set("taskId", target.taskId);
+    for (const [key, value] of Object.entries(extra)) if (value) params.set(key, value);
+    return params.toString();
+  }
+  async listConnectedStorageItems(connectionId: string, target: ConnectedStorageTarget, options: { parentId?: string | null; cursor?: string | null } = {}): Promise<{ status: string; data: ConnectedStorageListing }> {
+    const query = this.connectedStorageTargetQuery(target, { parentId: options.parentId || undefined, cursor: options.cursor || undefined });
+    return this.request(`/connected-storage/connections/${encodeURIComponent(connectionId)}/items?${query}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+  async searchConnectedStorage(connectionId: string, target: ConnectedStorageTarget, q: string, cursor?: string | null): Promise<{ status: string; data: ConnectedStorageSearchResult }> {
+    const query = this.connectedStorageTargetQuery(target, { q, cursor: cursor || undefined });
+    return this.request(`/connected-storage/connections/${encodeURIComponent(connectionId)}/search?${query}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+  async getConnectedStorageItem(connectionId: string, target: ConnectedStorageTarget, providerItemId: string): Promise<{ status: string; data: { provider: string; item: ConnectedStorageItem } }> {
+    // Provider ids (e.g. "id:abc") are encoded as a single path segment and never rewritten.
+    return this.request(`/connected-storage/connections/${encodeURIComponent(connectionId)}/items/${encodeURIComponent(providerItemId)}?${this.connectedStorageTargetQuery(target)}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive", {
       method: "POST",
@@ -4735,5 +4756,24 @@ export interface ConnectedStorageConnectionSummary {
   canManage?: boolean;
 }
 export interface ConnectedStorageListResponse { canManage: boolean; connections: ConnectedStorageConnectionSummary[] }
+
+export type ConnectedStorageTargetType = "project" | "task" | "comment";
+/** The Project / Task / comment a file is being picked for. A new comment is identified by its task (`taskId`) instead of a comment id. */
+export interface ConnectedStorageTarget { targetType: ConnectedStorageTargetType; targetId?: string; taskId?: string }
+export interface ConnectedStorageItem {
+  providerItemId: string;
+  itemType: "file" | "folder";
+  name: string;
+  mimeType: string | null;
+  size: number | null;
+  revision: string | null;
+  modifiedAt: string | null;
+  /** Display only. The provider item id is the only identity. */
+  displayPath: string | null;
+  thumbnailUrl: null;
+  selectable: boolean;
+}
+export interface ConnectedStorageListing { provider: string; parentId: string | null; folders: ConnectedStorageItem[]; files: ConnectedStorageItem[]; hasMore: boolean; cursor: string | null }
+export interface ConnectedStorageSearchResult { provider: string; query: string; items: ConnectedStorageItem[]; hasMore: boolean; cursor: string | null }
 
 export const api = new ApiClient();
