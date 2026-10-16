@@ -9,11 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import TemplateEditorDialog from "@/components/templates/TemplateEditorDialog";
 import TemplateOutline from "@/components/templates/TemplateOutline";
 import UseTemplateDialog from "@/components/templates/UseTemplateDialog";
-import { useNavigate } from "react-router-dom";
+import { useTemplateNavigation } from "@/components/templates/useTemplateNavigation";
 
 export default function Templates() {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TemplateType>("task");
   const [showArchived, setShowArchived] = useState(false);
@@ -21,6 +20,9 @@ export default function Templates() {
   const [preview, setPreview] = useState<TemplateDetail | null>(null);
   const [using, setUsing] = useState<TemplateSummary | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const goTask = useTemplateNavigation("task");
+  const goProject = useTemplateNavigation("project");
+  const onCreated = (r: TemplateUseResult) => { const type = using?.type ?? "task"; setUsing(null); (type === "project" ? goProject : goTask)(r); };
 
   const list = useQuery({
     queryKey: ["templates", tab, showArchived], retry: false, staleTime: 0,
@@ -44,11 +46,6 @@ export default function Templates() {
       const err = e as ApiError;
       toast({ title: kind === "restore" && err.statusCode === 409 ? "Name already in use" : "Action failed", description: err.statusCode === 409 && kind === "restore" ? "An active template already has this name. Rename one of them (edit this template, then restore)." : err.message, variant: "destructive" });
     } finally { setBusy(null); }
-  };
-  const onCreated = (r: TemplateUseResult) => {
-    setUsing(null);
-    if (r.projectId) navigate(`/projects/${r.projectId}`);
-    else navigate("/tasks");
   };
 
   return (

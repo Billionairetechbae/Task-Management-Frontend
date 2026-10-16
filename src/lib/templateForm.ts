@@ -134,3 +134,14 @@ export const subtaskDefaults = (key: string): TemplateSubtaskNode => ({ key, ...
 export const projectTaskDefaults = (key: string, position: number, parentKey: string | null = null): ProjectTemplateTaskNode => ({
   key, parentKey, position, ...blankTaskFields(""), team: { mode: parentKey ? "inherit" : "none" }, dependsOn: [],
 });
+
+/**
+ * Where to go after a template was used. Task templates open the created root task on the canonical task-detail route
+ * (the same one task cards use); project templates open the new project. `ok:false` means the result carried no id
+ * (never expected): fall back to an existing page instead of an undefined route.
+ */
+export function templateDestination(type: "task" | "project", result: { projectId?: string | null; taskIds?: Record<string, string> | null }): { path: string; ok: boolean } {
+  const id = type === "project" ? result.projectId : result.taskIds?.root;
+  if (id) return { path: type === "project" ? `/projects/${id}` : `/task-details/${id}`, ok: true };
+  return { path: type === "project" ? "/projects" : "/templates", ok: false };
+}

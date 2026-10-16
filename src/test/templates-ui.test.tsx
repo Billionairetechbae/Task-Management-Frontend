@@ -193,3 +193,67 @@ describe("TemplateEditorDialog", () => {
     expect(await screen.findByTestId("template-errors")).toHaveTextContent(/version/i);
   });
 });
+
+describe("post-use navigation", () => {
+  const okPreview = { data: { ok: true, errors: [], warnings: [], requiresDefaultDueTime: false, plan: { type: "task", nodes: [], summary: {}, projectMembers: [], recurrence: null } } };
+  async function useFromPage(type: "task" | "project", instResult: any | Error) {
+    const body = type === "project" ? (() => { const b = blankProjectBody(); b.project.name = "Onboarding"; return b; })() : blankTaskBody();
+    if (type === "task") (body as any).task.title = "Weekly report";
+    h.list.mockResolvedValue({ data: { templates: [summary({ type })] } });
+    h.get.mockResolvedValue({ data: { template: detail({ type, body }) } });
+    h.preview.mockResolvedValue(okPreview);
+    if (instResult instanceof Error) h.inst.mockRejectedValue(instResult); else h.inst.mockResolvedValue({ data: instResult });
+    wrap(<Templates />);
+    if (type === "project") await userEvent.click(await screen.findByRole("tab", { name: "Project Templates" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Use template/ }));
+    const submit = await screen.findByRole("button", { name: type === "project" ? "Create project" : "Create task" });
+    await waitFor(() => expect(submit).toBeEnabled(), { timeout: 3000 });
+    await userEvent.click(submit);
+  }
+  const base = { instantiationId: "i1", templateId: "t1", templateVersion: 2, summary: {} };
+
+  it("task template: opens the created task's canonical detail route, never /tasks", async () => {
+    await useFromPage("task", { ...base, replayed: false, projectId: null, taskIds: { root: "task-123" } });
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith("/task-details/task-123"));
+    expect(h.navigate).not.toHaveBeenCalledWith("/tasks");
+  });
+
+  it("an idempotent replay navigates to the SAME task", async () => {
+    await useFromPage("task", { ...base, replayed: true, projectId: null, taskIds: { root: "task-123" } });
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith("/task-details/task-123"));
+    expect(h.navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed instantiation does not navigate", async () => {
+    await useFromPage("task", new (ApiError as any)("boom", 500, {}));
+    await screen.findByTestId("use-failure");
+    expect(h.navigate).not.toHaveBeenCalled();
+  });
+
+  it("project template (first run and replay) opens the project", async () => {
+    await useFromPage("project", { ...base, replayed: false, projectId: "proj-9", taskIds: {} });
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith("/projects/proj-9"));
+  });
+
+  it("project replay opens the same project", async () => {
+    await useFromPage("project", { ...base, replayed: true, projectId: "proj-9", taskIds: {} });
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith("/projects/proj-9"));
+  });
+
+  it("a success without the expected id falls back to an existing page and says so", async () => {
+    await useFromPage("task", { ...base, replayed: false, projectId: null, taskIds: {} });
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith("/templates"));
+    expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Task created" }));
+  });
+});
+
+describe("route regression", () => {
+  it("no template-use code navigates to the undefined /tasks route; every destination is a defined route", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const files = ["src/pages/Templates.tsx", "src/pages/Projects.tsx", "src/components/CreateTaskDialog.tsx", "src/lib/templateForm.ts",
+      ...readdirSync("src/components/templates").map((f) => `src/components/templates/${f}`)];
+    for (const f of files) expect(readFileSync(f, "utf8"), f).not.toMatch(/navigate\(\s*["'`]\/tasks["'`]/);
+    const app = readFileSync("src/App.tsx", "utf8");
+    for (const route of ['path="/task-details/:id"', 'path="/projects/:id"', 'path="/templates"', 'path="/projects"']) expect(app).toContain(route);
+  });
+});
