@@ -54,6 +54,10 @@ import RepeatBadge from "@/components/tasks/RepeatBadge";
 import SaveAsTemplateDialog from "@/components/templates/SaveAsTemplateDialog";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
 import GoogleDrivePickerDialog from "@/components/tasks/GoogleDrivePickerDialog";
+import { ConnectedStorageAttachmentsSection } from "@/components/connectedStorage/ConnectedStorageAttachmentsSection";
+import { ConnectedStorageAttachmentList } from "@/components/connectedStorage/ConnectedStorageAttachmentList";
+import { ConnectedStoragePickerButton } from "@/components/connectedStorage/ConnectedStoragePickerButton";
+import type { ConnectedStorageItem } from "@/lib/api";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { useGoogleDriveFiles } from "@/hooks/useGoogleDriveFiles";
@@ -110,6 +114,8 @@ const TaskDetails = () => {
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
   const [replyToComment, setReplyToComment] = useState<CorrectedTaskComment | null>(null);
   const [pendingCommentFiles, setPendingCommentFiles] = useState<File[]>([]);
+  // Dropbox files chosen in the composer. They become visible attachments only after the comment is posted successfully.
+  const [pendingConnectedStorage, setPendingConnectedStorage] = useState<Array<{ connectionId: string; item: ConnectedStorageItem }>>([]);
   
   // NEW: State for description expansion
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -357,6 +363,7 @@ const TaskDetails = () => {
     const handleTaskUpdated = (message: any) => {
       if (message.task && message.task.id === id) {
         setTask(message.task);
+        queryClient.invalidateQueries({ queryKey: ["connected-storage-attachments", "task", id] });
         toast({
           title: "Task updated",
           description: "Task has been updated",
@@ -760,7 +767,7 @@ const TaskDetails = () => {
       optimisticCommentRef.current.set(messageId, optimisticComment);
       
       // Try WebSocket first if connected
-      if (isConnected && !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0) {
+      if (isConnected && !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0 && pendingConnectedStorage.length === 0) {
         try {
           // Ensure we are in the room; backend also auto-joins, but this keeps UX consistent
           joinTaskRoom(id);
@@ -802,6 +809,7 @@ const TaskDetails = () => {
       setNewComment("");
       setReplyToComment(null);
       setPendingCommentFiles([]);
+      setPendingConnectedStorage([]);
       
       // Clear typing indicator
       if (typingTimeoutRef.current) {
@@ -831,7 +839,7 @@ const TaskDetails = () => {
     try {
       const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
       const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
-      const response = await api.addTaskComment(id!, content, { parentCommentId: replyToComment?.id || null, mentionedUserIds, files: pendingCommentFiles });
+      const response = await api.addTaskComment(id!, content, { parentCommentId: replyToComment?.id || null, mentionedUserIds, files: pendingCommentFiles, connectedStorageAttachments: pendingConnectedStorage.map(({ connectionId, item }) => ({ connectionId, providerItemId: item.providerItemId })) });
       
       // Fix the profile picture in the response
       const fixedComment = fixCommentProfilePicture(response.comment);
@@ -1932,6 +1940,15 @@ const TaskDetails = () => {
                       ))}
                     </div>
                   )}
+                  {comment.connectedStorageAttachments && comment.connectedStorageAttachments.length > 0 && (
+                    <div className="mt-2">
+                      <ConnectedStorageAttachmentList
+                        compact
+                        attachments={comment.connectedStorageAttachments}
+                        onChanged={() => queryClient.invalidateQueries({ queryKey: ["task-comments", id] })}
+                      />
+                    </div>
+                  )}
                   {canCollaborate && !comment.isSystemMessage && (
                     <Button variant="ghost" size="sm" className="h-7 px-1 text-xs text-muted-foreground" onClick={() => setReplyToComment(comment)}>
                       <Reply className="mr-1 h-3 w-3" /> Reply
@@ -1966,11 +1983,30 @@ const TaskDetails = () => {
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={sendingComment || !canCollaborate}>
               <Paperclip className="w-3.5 h-3.5" />
             </Button>
-            <Button size="icon" className="h-8 w-8" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || !canCollaborate}>
+            {canCollaborate && id && (
+              <ConnectedStoragePickerButton
+                iconOnly
+                label="Attach from Dropbox"
+                targetType="comment"
+                taskId={id}
+                disabled={sendingComment}
+                onSelect={(item, connectionId) => setPendingConnectedStorage((current) => (current.some((entry) => entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId) ? current : [...current, { connectionId, item }]))}
+              />
+            )}
+            <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || !canCollaborate}>
               {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
           </div>
         </div>
+        {pendingConnectedStorage.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1" data-testid="pending-connected-storage">
+            {pendingConnectedStorage.map(({ connectionId, item }) => (
+              <button key={`${connectionId}:${item.providerItemId}`} type="button" className="rounded border px-2 py-1 text-[11px]" aria-label={`Remove ${item.name} from this comment`} onClick={() => setPendingConnectedStorage((current) => current.filter((entry) => !(entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId)))}>
+                Dropbox: {item.name} ×
+              </button>
+            ))}
+          </div>
+        )}
         {pendingCommentFiles.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {pendingCommentFiles.map((file, index) => (
@@ -2040,6 +2076,11 @@ const TaskDetails = () => {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
+        {id && (
+          <div className="mb-3">
+            <ConnectedStorageAttachmentsSection targetType="task" targetId={id} canAttach={!isReadOnly} initialAttachments={taskQuery.data?.connectedStorageAttachments} />
+          </div>
+        )}
         {task.attachments?.filter(Boolean).length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {task.attachments.filter(Boolean).map((file) => {

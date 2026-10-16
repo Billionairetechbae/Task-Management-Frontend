@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { ConnectedStorageAttachmentsSection } from "@/components/connectedStorage/ConnectedStorageAttachmentsSection";
+import type { ConnectedStorageAttachment } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientViewShareButton from "@/components/ClientViewShareButton";
 import {
@@ -127,7 +129,7 @@ export default function ProjectDetails() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { workspaceRole, activeCompanyId, setActiveCompanyId } = useAuth();
+  const { workspaceRole, activeCompanyId, setActiveCompanyId, user: authUser } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean>(
@@ -149,6 +151,7 @@ export default function ProjectDetails() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [invites, setInvites] = useState<ProjectInvite[]>([]);
   const [checklists, setChecklists] = useState<ProjectChecklist[]>([]);
+  const [connectedStorageAttachments, setConnectedStorageAttachments] = useState<ConnectedStorageAttachment[] | undefined>(undefined);
   const [tasks, setTasks] = useState<any[]>([]);
 
   const [isLogoOpen, setIsLogoOpen] = useState(false);
@@ -248,6 +251,7 @@ export default function ProjectDetails() {
       const p = (res as any)?.data?.project || (res as any)?.data;
 
       setProject(p || null);
+      setConnectedStorageAttachments((res as any)?.data?.connectedStorageAttachments);
 
       if (p) {
         setSettingsForm({
@@ -671,6 +675,13 @@ export default function ProjectDetails() {
     inProgress: tasks.filter((t) => t.status === "in_progress").length,
     pending: tasks.filter((t) => t.status === "pending").length,
   };
+
+  // Connected Storage (Dropbox) files. UI hint mirrors the server rule for modifying a Project: owner/admin/manager or a Project owner/admin.
+  const myProjectRole = members.find((member: any) => String((member as any).userId ?? (member as any).id) === String(authUser?.id))?.role as string | undefined;
+  const canAttachProjectFiles = ["owner", "admin", "manager"].includes(String(workspaceRole)) || ["owner", "admin"].includes(String(myProjectRole));
+  const projectFiles = (
+    <ConnectedStorageAttachmentsSection targetType="project" targetId={project.id} canAttach={canAttachProjectFiles} initialAttachments={connectedStorageAttachments} />
+  );
 
   const totalTaskPages = Math.ceil(tasks.length / tasksPerPage);
   const paginatedTasks = tasks.slice(
@@ -1696,6 +1707,7 @@ export default function ProjectDetails() {
                       )}
                     </div>
                   </CollapsiblePanel>
+                  <div className="px-3 py-3 border-t">{projectFiles}</div>
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -1845,6 +1857,8 @@ export default function ProjectDetails() {
                   ))
                 )}
               </CollapsiblePanel>
+
+              <div className="px-3 py-3 border rounded-lg">{projectFiles}</div>
 
               <CollapsiblePanel
                 title={`Members (${members.length})`}

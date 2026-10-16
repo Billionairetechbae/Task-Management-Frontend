@@ -13,9 +13,12 @@ const INTERNAL_ROLES = ["owner", "admin", "manager", "member"];
 export interface ConnectedStoragePickerButtonProps extends ConnectedStorageTarget {
   onSelect: (item: ConnectedStorageItem, connectionId: string) => void;
   label?: string;
+  /** Icon-only button (e.g. inside the comment composer). The label stays as the accessible name. */
+  iconOnly?: boolean;
+  disabled?: boolean;
 }
 
-export function ConnectedStoragePickerButton({ onSelect, label = "Add from Dropbox", ...target }: ConnectedStoragePickerButtonProps) {
+export function ConnectedStoragePickerButton({ onSelect, label = "Add from Dropbox", iconOnly = false, disabled = false, ...target }: ConnectedStoragePickerButtonProps) {
   const { workspaceRole } = useAuth();
   const isInternal = INTERNAL_ROLES.includes(String(workspaceRole));
   const [connectionId, setConnectionId] = useState<string | null>(null);
@@ -36,7 +39,9 @@ export function ConnectedStoragePickerButton({ onSelect, label = "Add from Dropb
   if (!isInternal || !connectionId) return null;
   return (
     <>
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}><Cloud className="w-4 h-4 mr-2" />{label}</Button>
+      {iconOnly
+        ? <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => setOpen(true)} disabled={disabled} aria-label={label} title={label}><Cloud className="w-3.5 h-3.5" /></Button>
+        : <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} disabled={disabled}><Cloud className="w-4 h-4 mr-2" />{label}</Button>}
       <ConnectedStoragePickerDialog
         open={open}
         onOpenChange={setOpen}

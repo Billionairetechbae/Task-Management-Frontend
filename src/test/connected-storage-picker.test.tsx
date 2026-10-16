@@ -251,11 +251,17 @@ describe("ConnectedStoragePickerButton entry point", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("the real API client exposes browse/search/get-item but no Connected Storage attach method yet (Phase 3C)", async () => {
+  it("the real API client exposes browse / search / get-item, and its attach call carries only identifiers (Phase 3C)", async () => {
     const real = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
     const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(real.api));
-    expect(methods).toEqual(expect.arrayContaining(["listConnectedStorageItems", "searchConnectedStorage", "getConnectedStorageItem"]));
-    expect(methods.filter((m) => /attach/i.test(m) && /storage|dropbox/i.test(m))).toEqual([]);
+    expect(methods).toEqual(expect.arrayContaining(["listConnectedStorageItems", "searchConnectedStorage", "getConnectedStorageItem", "attachConnectedStorageItem"]));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ status: "success", data: {} }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    try {
+      await real.api.attachConnectedStorageItem({ connectionId: "c1", providerItemId: "id:x", target: { type: "task", id: "t1" }, name: "evil.exe", size: 1, url: "https://evil.example.com" } as any);
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain("/connected-storage/attachments");
+      expect(JSON.parse(String(init.body))).toEqual({ connectionId: "c1", providerItemId: "id:x", target: { type: "task", id: "t1" } });
+    } finally { fetchMock.mockRestore(); }
   });
 });
 

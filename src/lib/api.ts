@@ -964,6 +964,8 @@ export interface TaskComment {
   updatedAt: string;
   parentCommentId?: string | null;
   attachments?: TaskAttachment[];
+  /** Dropbox files attached to this comment. Absent for clients / external users (the server never sends it to them). */
+  connectedStorageAttachments?: ConnectedStorageAttachment[];
   user?: {
     id: string;
     firstName: string;
@@ -2053,6 +2055,25 @@ class ApiClient {
     return this.request(`/connected-storage/connections/${encodeURIComponent(connectionId)}/items/${encodeURIComponent(providerItemId)}?${this.connectedStorageTargetQuery(target)}`, { method: "GET", headers: this.getAuthHeaders() });
   }
 
+  /* Connected Storage attachments (Phase 3C). The browser sends only ids; names/MIME/size are always re-read from the provider server-side. */
+  async attachConnectedStorageItem(input: { connectionId: string; providerItemId: string; target: { type: ConnectedStorageTargetType; id: string } }): Promise<{ status: string; data: { attachment: ConnectedStorageAttachment; created: boolean } }> {
+    const { connectionId, providerItemId, target } = input;
+    return this.request("/connected-storage/attachments", { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify({ connectionId, providerItemId, target: { type: target.type, id: target.id } }) });
+  }
+  async unlinkConnectedStorageAttachment(attachmentId: string): Promise<{ status: string; message?: string; data: { removed: boolean } }> {
+    return this.request(`/connected-storage/attachments/${encodeURIComponent(attachmentId)}`, { method: "DELETE", headers: this.getAuthHeaders() });
+  }
+  /** Asks Admiino for a fresh, short-lived provider link. The link is never stored by the app. */
+  async openConnectedStorageAttachment(attachmentId: string): Promise<{ status: string; data: { url: string; expiresAt: string | null } }> {
+    return this.request(`/connected-storage/attachments/${encodeURIComponent(attachmentId)}/open?format=json`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+  async listProjectConnectedStorageAttachments(projectId: string): Promise<{ status: string; data: { attachments: ConnectedStorageAttachment[] } }> {
+    return this.request(`/projects/${encodeURIComponent(projectId)}/connected-storage-attachments`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+  async listTaskConnectedStorageAttachments(taskId: string): Promise<{ status: string; data: { attachments: ConnectedStorageAttachment[] } }> {
+    return this.request(`/tasks/${encodeURIComponent(taskId)}/connected-storage-attachments`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive", {
       method: "POST",
@@ -2395,7 +2416,7 @@ class ApiClient {
 
   async getTaskById(
     taskId: string
-  ): Promise<{ status: string; data: { task: Task; access?: TaskAccess | null } }> {
+  ): Promise<{ status: string; data: { task: Task; access?: TaskAccess | null; connectedStorageAttachments?: ConnectedStorageAttachment[] } }> {
     return this.request(`/tasks/${taskId}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
@@ -3488,7 +3509,7 @@ class ApiClient {
   async addTaskComment(
     taskId: string,
     content: string,
-    options?: { parentCommentId?: string | null; mentionedUserIds?: string[]; files?: File[] }
+    options?: { parentCommentId?: string | null; mentionedUserIds?: string[]; files?: File[]; connectedStorageAttachments?: Array<{ connectionId: string; providerItemId: string }> }
   ): Promise<{
     success: boolean;
     comment: TaskComment;
@@ -3497,6 +3518,8 @@ class ApiClient {
     const files = options?.files || [];
     const body = new FormData();
     body.append("content", content);
+    // Dropbox files chosen in the composer: only ids are sent; the server re-reads every detail from Dropbox.
+    if (options?.connectedStorageAttachments?.length) body.append("connectedStorageAttachments", JSON.stringify(options.connectedStorageAttachments.map(({ connectionId, providerItemId }) => ({ connectionId, providerItemId }))));
     if (options?.parentCommentId) body.append("parentCommentId", options.parentCommentId);
     if (options?.mentionedUserIds?.length) body.append("mentionedUserIds", JSON.stringify(options.mentionedUserIds));
     files.forEach((file) => body.append("files", file));
@@ -4775,5 +4798,23 @@ export interface ConnectedStorageItem {
 }
 export interface ConnectedStorageListing { provider: string; parentId: string | null; folders: ConnectedStorageItem[]; files: ConnectedStorageItem[]; hasMore: boolean; cursor: string | null }
 export interface ConnectedStorageSearchResult { provider: string; query: string; items: ConnectedStorageItem[]; hasMore: boolean; cursor: string | null }
+
+export interface ConnectedStorageAttachment {
+  id: string;
+  targetType: ConnectedStorageTargetType;
+  provider: "dropbox" | "google_drive" | "onedrive" | "box";
+  itemId: string;
+  name: string;
+  mimeType: string | null;
+  size: number | null;
+  revision: string | null;
+  modifiedAt: string | null;
+  availability: "available" | "unavailable" | "deleted" | "unknown";
+  connectionStatus: ConnectedStorageStatus;
+  attachedBy: string | null;
+  createdAt: string;
+  canOpen: boolean;
+  canUnlink: boolean;
+}
 
 export const api = new ApiClient();
