@@ -2018,6 +2018,20 @@ class ApiClient {
   async getWhatsAppQuietHours(){return this.get("/integrations/whatsapp/quiet-hours",{includeWorkspace:false});}
   async updateWhatsAppQuietHours(data:{enabled:boolean;startTime:string|null;endTime:string|null;timeZone:string|null}){return this.request("/integrations/whatsapp/quiet-hours",{method:"PUT",headers:this.getAuthHeaders(false),body:JSON.stringify(data)});}
 
+  /* Workspace Connected Storage (Phase 3A). The backend never returns provider tokens; only safe connection metadata. */
+  async listConnectedStorageConnections(): Promise<{ status: string; data: ConnectedStorageListResponse }> {
+    return this.request("/connected-storage/connections", { method: "GET", headers: this.getAuthHeaders() });
+  }
+  async startDropboxConnection(): Promise<{ status: string; data: { authorizationUrl: string } }> {
+    return this.request("/connected-storage/dropbox/connect", { method: "POST", headers: this.getAuthHeaders() });
+  }
+  async reconnectConnectedStorage(connectionId: string): Promise<{ status: string; data: { authorizationUrl: string } }> {
+    return this.request(`/connected-storage/connections/${encodeURIComponent(connectionId)}/reconnect`, { method: "POST", headers: this.getAuthHeaders() });
+  }
+  async disconnectConnectedStorage(connectionId: string): Promise<{ status: string; message?: string; data: { providerRevoked: boolean } }> {
+    return this.request(`/connected-storage/connections/${encodeURIComponent(connectionId)}`, { method: "DELETE", headers: this.getAuthHeaders() });
+  }
+
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive", {
       method: "POST",
@@ -4705,5 +4719,21 @@ export function triggerBlobDownload(blob: Blob, filename: string) {
     setTimeout(() => window.URL.revokeObjectURL(url), 1000);
   }
 }
+
+export type ConnectedStorageStatus = "active" | "reauth_required" | "disconnected" | "error";
+export interface ConnectedStorageConnectionSummary {
+  id: string;
+  provider: "dropbox" | "google_drive" | "onedrive" | "box";
+  status: ConnectedStorageStatus;
+  lastVerifiedAt: string | null;
+  connectedAt: string | null;
+  disconnectedAt: string | null;
+  /** Present for workspace owners/admins only. */
+  account?: { name: string | null; email: string | null };
+  scopes?: string[];
+  lastErrorCode?: string | null;
+  canManage?: boolean;
+}
+export interface ConnectedStorageListResponse { canManage: boolean; connections: ConnectedStorageConnectionSummary[] }
 
 export const api = new ApiClient();

@@ -27,6 +27,7 @@ import {
 } from "@/lib/integrations";
 import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
 import { WhatsAppSettings } from "@/components/integrations/WhatsAppSettings";
+import { ConnectedStorageSettings } from "@/components/integrations/ConnectedStorageSettings";
 
 const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
   const Shell = embedded
@@ -192,7 +193,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
             <p className="text-muted-foreground mt-1.5 max-w-2xl">
-              Connect your favorite tools to automate your work across Admiino.
+              Personal integrations: connect your own tools to automate your work across Admiino.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -337,6 +338,8 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
             )}
           </Card>
         </section>
+
+        <ConnectedStorageSettings />
       </div>
 
       {/* Manage drawer */}
