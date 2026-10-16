@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Cloud, ExternalLink, Loader2, Trash2 } from "lucide-react";
+import { Cloud, Eye, ExternalLink, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { api, type ConnectedStorageAttachment } from "@/lib/api";
+import { ConnectedStoragePreviewDialog } from "./ConnectedStoragePreviewDialog";
 
 // Renders normalized Connected Storage attachments (source: Dropbox). It never sees or shows a provider URL: "Open" asks the Admiino
 // backend for a fresh short-lived link at click time and sends the browser there. Unlinking removes the Admiino reference only.
@@ -72,6 +73,7 @@ export interface ConnectedStorageAttachmentListProps {
 export function ConnectedStorageAttachmentList({ attachments, onChanged, compact = false }: ConnectedStorageAttachmentListProps) {
   const { open, openingId } = useOpenConnectedStorageAttachment(onChanged);
   const [unlinkTarget, setUnlinkTarget] = useState<ConnectedStorageAttachment | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<ConnectedStorageAttachment | null>(null);
   const [unlinking, setUnlinking] = useState(false);
   if (!attachments?.length) return null;
 
@@ -108,6 +110,11 @@ export function ConnectedStorageAttachmentList({ attachments, onChanged, compact
                   {stateLabel && <span className="text-destructive" role="status">{stateLabel}</span>}
                 </div>
               </div>
+              {attachment.canPreview && (
+                <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setPreviewTarget(attachment)} aria-label={`Preview ${attachment.name}`}>
+                  <Eye className="w-3 h-3" />Preview
+                </Button>
+              )}
               <Button
                 size="sm" variant="outline" className="h-7 gap-1 text-xs"
                 disabled={!attachment.canOpen || openingId === attachment.id}
@@ -125,6 +132,14 @@ export function ConnectedStorageAttachmentList({ attachments, onChanged, compact
           );
         })}
       </ul>
+
+      {previewTarget && (
+        <ConnectedStoragePreviewDialog
+          attachment={previewTarget}
+          onClose={() => { setPreviewTarget(null); onChanged?.(); /* availability may have changed (e.g. deleted in Dropbox) */ }}
+          onOpen={(target) => void open(target)}
+        />
+      )}
 
       <AlertDialog open={!!unlinkTarget} onOpenChange={(openState) => { if (!openState && !unlinking) setUnlinkTarget(null); }}>
         <AlertDialogContent>

@@ -2067,6 +2067,10 @@ class ApiClient {
   async openConnectedStorageAttachment(attachmentId: string): Promise<{ status: string; data: { url: string; expiresAt: string | null } }> {
     return this.request(`/connected-storage/attachments/${encodeURIComponent(attachmentId)}/open?format=json`, { method: "GET", headers: this.getAuthHeaders() });
   }
+  /** Authenticated in-app preview bytes (image / PDF / text only). Errors carry `body.code` (preview_not_supported, file_unavailable, reauth_required, ...). */
+  async previewConnectedStorageAttachment(attachmentId: string): Promise<{ blob: Blob; fileName: string; contentType: string }> {
+    return this._fetchBlob(`/connected-storage/attachments/${encodeURIComponent(attachmentId)}/preview`, this.getAuthHeaders());
+  }
   async listProjectConnectedStorageAttachments(projectId: string): Promise<{ status: string; data: { attachments: ConnectedStorageAttachment[] } }> {
     return this.request(`/projects/${encodeURIComponent(projectId)}/connected-storage-attachments`, { method: "GET", headers: this.getAuthHeaders() });
   }
@@ -2783,8 +2787,10 @@ class ApiClient {
     if (!response.ok) {
       // Try to parse JSON error body for a clean message
       let message = `Request failed (${response.status})`;
+      let errorBody: any;
       try {
         const errJson = await response.json();
+        errorBody = errJson;
         if (typeof errJson?.message === "string" && errJson.message.trim()) {
           message = errJson.message;
         }
@@ -2799,7 +2805,7 @@ class ApiClient {
           : "Too many attempts. Please try again shortly.";
       }
 
-      throw new ApiError(message, response.status);
+      throw new ApiError(message, response.status, errorBody);
     }
 
     const blob = await response.blob();
@@ -4814,6 +4820,9 @@ export interface ConnectedStorageAttachment {
   attachedBy: string | null;
   createdAt: string;
   canOpen: boolean;
+  /** Advisory: the server decides again (from the provider's current metadata and the file's bytes) when previewing. */
+  previewType?: "image" | "pdf" | "text" | null;
+  canPreview?: boolean;
   canUnlink: boolean;
 }
 
