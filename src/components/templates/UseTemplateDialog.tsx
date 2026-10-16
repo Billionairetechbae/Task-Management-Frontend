@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, Lock, Repeat } from "lucide-react";
-import { api, ApiError, type TemplateIssue, type TemplatePreview, type TemplateUseInput, type TemplateUseResult, type TaskTemplateBody, type ProjectTemplateBody } from "@/lib/api";
+import { api, ApiError, type CustomFieldDefinition, type TemplateIssue, type TemplatePreview, type TemplateUseInput, type TemplateUseResult, type TaskTemplateBody, type ProjectTemplateBody } from "@/lib/api";
 import { getBrowserTimeZone } from "@/lib/recurrenceForm";
 import { bodyNodes, formatInstant, hasAnyOffset, needsDefaultDueTime, newIdempotencyKey, todayLocalDate } from "@/lib/templateForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspaceLookups } from "./useWorkspaceLookups";
+import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
 
 const field = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 
@@ -48,12 +49,19 @@ export default function UseTemplateDialog({ open, onOpenChange, template, onDone
   const [accept, setAccept] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<{ message: string; errors: TemplateIssue[] } | null>(null);
+  const [taskFieldDefinitions, setTaskFieldDefinitions] = useState<CustomFieldDefinition[]>([]);
+  const [projectFieldDefinitions, setProjectFieldDefinitions] = useState<CustomFieldDefinition[]>([]);
+  const [customFieldInputs, setCustomFieldInputs] = useState<{ project: Record<string, unknown>; tasks: Record<string, Record<string, unknown>> }>({ project: {}, tasks: {} });
 
   // A fresh idempotency key for every use-template flow; retries of the SAME submission keep it.
   useEffect(() => {
     if (!open) return;
     keyRef.current = newIdempotencyKey();
-    setOverrides({}); setAccept(false); setFailure(null); setDefaultDueTime(""); setStartDate(todayLocalDate()); setDueAt(""); setLeadUserId(undefined); setVisibility("");
+    setOverrides({}); setAccept(false); setFailure(null); setDefaultDueTime(""); setStartDate(todayLocalDate()); setDueAt(""); setLeadUserId(undefined); setVisibility(""); setCustomFieldInputs({ project: {}, tasks: {} });
+    Promise.all([api.listCustomFields("task"), api.listCustomFields("project")]).then(([tasks, projects]) => {
+      setTaskFieldDefinitions(tasks.data.definitions.filter((f) => f.status === "active" && !["datetime", "user"].includes(f.fieldType)));
+      setProjectFieldDefinitions(projects.data.definitions.filter((f) => f.status === "active" && !["datetime", "user"].includes(f.fieldType)));
+    }).catch(() => { setTaskFieldDefinitions([]); setProjectFieldDefinitions([]); });
   }, [open, template?.id]);
   useEffect(() => {
     if (!detail.data) return;
@@ -67,6 +75,8 @@ export default function UseTemplateDialog({ open, onOpenChange, template, onDone
     if (needTime && defaultDueTime) base.defaultDueTime = defaultDueTime;
     const keyed = Object.entries(overrides);
     if (keyed.length) base.overrides = { assignees: Object.fromEntries(keyed) };
+    const hasCustomInputs = Object.keys(customFieldInputs.project).length > 0 || Object.values(customFieldInputs.tasks).some((values) => Object.keys(values).length > 0);
+    if (hasCustomInputs) base.customFields = customFieldInputs;
     if (isProject) {
       base.name = name;
       if (visibility) base.visibility = visibility;
@@ -76,7 +86,7 @@ export default function UseTemplateDialog({ open, onOpenChange, template, onDone
       if (dueAt) base.dueAt = new Date(dueAt).toISOString();
     }
     return base;
-  }, [timezone, needStart, needTime, startDate, defaultDueTime, overrides, isProject, name, visibility, leadUserId, title, dueAt]);
+  }, [timezone, needStart, needTime, startDate, defaultDueTime, overrides, customFieldInputs, isProject, name, visibility, leadUserId, title, dueAt]);
 
   const [debounced, setDebounced] = useState(input);
   useEffect(() => { const t = setTimeout(() => setDebounced(input), 300); return () => clearTimeout(t); }, [input]);
@@ -179,6 +189,17 @@ export default function UseTemplateDialog({ open, onOpenChange, template, onDone
                   <ul className="mt-1 list-disc pl-5">{errors.map((e, i) => <li key={i}>{e.message}</li>)}</ul>
                 </div>
               )}
+
+              {errors.filter((issue) => issue.code === "REQUIRED_CUSTOM_FIELD_MISSING" && issue.fieldId).map((issue) => {
+                const targetKey = issue.key || (isProject ? "project" : "root");
+                const projectField = targetKey === "project";
+                const definitions = (projectField ? projectFieldDefinitions : taskFieldDefinitions).filter((definition) => definition.id === issue.fieldId);
+                if (!definitions.length) return null;
+                const current = projectField ? customFieldInputs.project : customFieldInputs.tasks[targetKey] || {};
+                return <CustomFieldsForm key={`${targetKey}:${issue.fieldId}`} entityType={projectField ? "project" : "task"} templateSafeOnly definitionsOverride={definitions} value={current} onChange={(next) => setCustomFieldInputs((previous) => projectField
+                  ? { ...previous, project: { ...previous.project, ...next } }
+                  : { ...previous, tasks: { ...previous.tasks, [targetKey]: { ...(previous.tasks[targetKey] || {}), ...next } } })} />;
+              })}
 
               {warnings.length > 0 && (
                 <div role="status" data-testid="plan-warnings" className="space-y-2 rounded-md bg-amber-50 p-3 text-amber-900 ring-1 ring-amber-200">

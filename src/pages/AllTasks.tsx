@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, AllTasksFilters, Task, Team } from "@/lib/api";
+import { api, AllTasksFilters, Task, Team, CustomFieldDefinition } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -78,6 +78,30 @@ const AllTasks = () => {
   const [hasSubtasksOnly, setHasSubtasksOnly] = useState(false);
   const [teamId, setTeamId] = useState("all");
   const [teams, setTeams] = useState<Team[]>([]);
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState<CustomFieldDefinition[]>([]);
+  const [customFieldColumnIds, setCustomFieldColumnIds] = useState<string[]>([]);
+  const [customFieldFilters, setCustomFieldFilters] = useState<{ fieldId: string; op: string; value: string }[]>([]);
+  const [customFilterUsers, setCustomFilterUsers] = useState<{ id: string; name: string }[]>([]);
+  const singleWorkspaceContext = Boolean(activeCompanyId && companyId === activeCompanyId && companyId !== "all");
+
+  useEffect(() => {
+    let alive = true;
+    setCustomFieldDefinitions([]);
+    if (!singleWorkspaceContext) { setCustomFieldColumnIds([]); return; }
+    const storageKey = `custom-field-columns:tasks:${companyId}`;
+    const saved = (() => { try { return JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch { return []; } })();
+    if (typeof api.listCustomFields !== "function") return () => { alive = false; };
+    api.listCustomFields("task").then((res) => {
+      if (!alive) return;
+      const defs = res.data.definitions.filter(f => f.status === "active"); setCustomFieldDefinitions(defs);
+      setCustomFieldColumnIds(Array.isArray(saved) ? saved.filter((id: string) => defs.some(f => f.id === id)).slice(0, 5) : []);
+      if (defs.some(f => f.fieldType === "user")) api.getCompanyTeam().then((team: any) => { if (!alive) return; const rows = team?.data?.members || team?.data?.team_members || []; setCustomFilterUsers(rows.filter((m: any) => m.status !== "removed" && m.user?.id).map((m: any) => ({ id: m.user.id, name: `${m.user.firstName || ""} ${m.user.lastName || ""}`.trim() || m.user.email || m.user.id }))); }).catch(() => undefined);
+    }).catch(() => alive && setCustomFieldDefinitions([]));
+    return () => { alive = false; };
+  }, [companyId, singleWorkspaceContext]);
+  useEffect(() => {
+    if (singleWorkspaceContext) localStorage.setItem(`custom-field-columns:tasks:${companyId}`, JSON.stringify(customFieldColumnIds.slice(0, 5)));
+  }, [customFieldColumnIds, companyId, singleWorkspaceContext]);
 
   // My Tasks | All Tasks segmented control. Defaults to the route intent,
   // then remembers the user's pick for the rest of the session.
@@ -133,6 +157,19 @@ const AllTasks = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const requestCustomFieldFilters = singleWorkspaceContext
+    ? customFieldFilters
+        .filter((filter) => filter.fieldId && (["empty", "notEmpty"].includes(filter.op) || filter.value !== ""))
+        .map((filter) => {
+          const operatorNeedsNoValue = ["empty", "notEmpty"].includes(filter.op);
+          const fieldType = customFieldDefinitions.find((definition) => definition.id === filter.fieldId)?.fieldType;
+          let value: unknown = filter.value;
+          if (filter.op === "in") value = filter.value.split(",").map((item) => item.trim()).filter(Boolean);
+          else if (fieldType === "boolean") value = filter.value === "true";
+          return { fieldId: filter.fieldId, op: filter.op, ...(operatorNeedsNoValue ? {} : { value }) };
+        })
+    : undefined;
+
   const filters: AllTasksFilters = {
     page,
     limit,
@@ -149,6 +186,8 @@ const AllTasks = () => {
         : companyId === "all"
           ? "all_workspaces"
           : "workspace",
+    customFieldColumns: singleWorkspaceContext ? customFieldColumnIds : undefined,
+    customFieldFilters: requestCustomFieldFilters,
   };
 
   const { data, isLoading, isError, error } = useQuery({
@@ -388,6 +427,14 @@ const AllTasks = () => {
                   </Select>
                 )}
 
+                {singleWorkspaceContext && customFieldDefinitions.length > 0 && <fieldset className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-xs"><legend className="px-1 font-medium">Custom columns (up to 5)</legend>{customFieldDefinitions.map(field => <label key={field.id} className="inline-flex items-center gap-1"><input type="checkbox" checked={customFieldColumnIds.includes(field.id)} disabled={!customFieldColumnIds.includes(field.id) && customFieldColumnIds.length >= 5} onChange={e => setCustomFieldColumnIds(current => e.target.checked ? [...current, field.id].slice(0, 5) : current.filter(id => id !== field.id))} />{field.name}</label>)}</fieldset>}
+                {singleWorkspaceContext && customFieldDefinitions.length > 0 && <fieldset className="space-y-2 rounded-md border p-2 text-xs"><legend className="px-1 font-medium">Custom filters (up to 5)</legend>{customFieldFilters.map((filter, index) => {
+                  const field = customFieldDefinitions.find(d => d.id === filter.fieldId);
+                  const ops = field?.fieldType === "text" || field?.fieldType === "long_text" || field?.fieldType === "url" ? ["contains", "eq", "empty", "notEmpty"] : field?.fieldType === "number" || field?.fieldType === "date" || field?.fieldType === "datetime" ? ["eq", "gte", "lte", "empty", "notEmpty"] : field?.fieldType === "multi_select" ? ["contains", "in", "empty", "notEmpty"] : ["eq", "in", "empty", "notEmpty"];
+                  const setFilter = (value: string) => setCustomFieldFilters(current => current.map((f, i) => i === index ? { ...f, value } : f));
+                  return <div key={index} className="flex flex-wrap gap-2"><select aria-label={`Custom filter field ${index + 1}`} className="rounded border bg-background p-1" value={filter.fieldId} onChange={e => setCustomFieldFilters(current => current.map((f, i) => i === index ? { fieldId: e.target.value, op: "eq", value: "" } : f))}><option value="">Choose field</option>{customFieldDefinitions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select><select aria-label={`Custom filter operator ${index + 1}`} className="rounded border bg-background p-1" value={filter.op} onChange={e => setCustomFieldFilters(current => current.map((f, i) => i === index ? { ...f, op: e.target.value, value: "" } : f))}>{ops.map(op => <option key={op}>{op}</option>)}</select>{!['empty', 'notEmpty'].includes(filter.op) && (field?.fieldType === "user" ? <select aria-label={`Custom filter value ${index + 1}`} className="rounded border bg-background p-1" value={filter.value} onChange={e => setFilter(e.target.value)}><option value="">Choose member</option>{customFilterUsers.map(member => <option key={member.id} value={member.id}>{member.name}</option>)}</select> : field?.options?.length ? <select aria-label={`Custom filter value ${index + 1}`} className="rounded border bg-background p-1" value={filter.value} onChange={e => setFilter(e.target.value)}><option value="">Choose value</option>{field.options.filter(o => o.isActive).map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select> : field?.fieldType === "boolean" ? <select aria-label={`Custom filter value ${index + 1}`} className="rounded border bg-background p-1" value={filter.value} onChange={e => setFilter(e.target.value)}><option value="">Choose value</option><option value="true">True</option><option value="false">False</option></select> : <Input aria-label={`Custom filter value ${index + 1}`} type={field?.fieldType === "date" ? "date" : field?.fieldType === "number" ? "number" : "text"} placeholder={filter.op === "in" ? "Comma separated values" : "Value"} value={filter.value} onChange={e => setFilter(e.target.value)} />)}<Button size="sm" variant="ghost" onClick={() => setCustomFieldFilters(current => current.filter((_, i) => i !== index))}>Remove</Button></div>;
+                })}{customFieldFilters.length < 5 && <Button size="sm" variant="outline" onClick={() => setCustomFieldFilters(current => [...current, { fieldId: "", op: "eq", value: "" }])}>Add filter</Button>}</fieldset>}
+
                 {hasActiveFilters && (
                   <Button
                     variant="ghost"
@@ -461,6 +508,7 @@ const AllTasks = () => {
           <div className="space-y-4">
             <TaskTable
               tasks={filteredTasks}
+              customFieldColumns={singleWorkspaceContext ? customFieldDefinitions.filter(f => customFieldColumnIds.includes(f.id)).sort((a, b) => a.position - b.position).map(f => ({ id: f.id, name: f.name })) : []}
               showAssignee={true}
               showExecutive={true}
               showActions={true}

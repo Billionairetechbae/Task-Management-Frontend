@@ -226,6 +226,25 @@ describe("Board page", () => {
     expect(screen.getAllByTestId(/^board-panel-/)).toHaveLength(6);
   });
 
+  it("renders ordered eligible custom-field chips, caps them at three, and omits archived/unsupported fields", async () => {
+    h.getAll.mockResolvedValue(resolved([task("fields", "pending", { customFieldChips: [
+      { fieldId: "a", name: "First", display: "North", position: 1 },
+      { fieldId: "b", name: "Second", display: ["One", "Two"], position: 2 },
+      { fieldId: "c", name: "Third", display: true, position: 3 },
+      { fieldId: "d", name: "Fourth", display: 8, position: 4 },
+    ] })]));
+    renderBoard();
+    const card = (await screen.findByText("Task fields")).closest("article")!;
+    const chips = within(card).getByLabelText("Custom fields").querySelectorAll("span");
+    expect(chips).toHaveLength(3);
+    expect(Array.from(chips).map((chip) => chip.textContent)).toEqual([
+      "First: North", "Second: One, Two", "Third: true",
+    ]);
+    expect(within(card).queryByText(/Fourth/)).toBeNull();
+    expect(within(card).queryByText(/Archived/)).toBeNull();
+    expect(screen.queryByLabelText(/custom field filter/i)).toBeNull();
+  });
+
   it("a recurring occurrence moves like any other task (existing PATCH, no special handling)", async () => {
     h.auth.workspaceRole = "manager";
     h.getAll.mockResolvedValue(resolved([task("r1", "pending", { isRecurring: true, recurrenceSummary: "Daily at 09:00", recurrenceSequence: 2 })]));

@@ -41,6 +41,7 @@ import { dependencyWarningMessage } from "@/lib/taskDependencies";
 
 interface TaskTableProps {
   tasks: Task[];
+  customFieldColumns?: { id: string; name: string }[];
   showAssignee?: boolean;
   showExecutive?: boolean;
   showActions?: boolean;
@@ -237,6 +238,7 @@ export const InlineStatusSelect = ({
 
 export const TaskTable = ({
   tasks,
+  customFieldColumns = [],
   showAssignee = true,
   showExecutive = false,
   showActions = false,
@@ -272,6 +274,7 @@ export const TaskTable = ({
                   Executive
                 </th>
               )}
+              {customFieldColumns.map((field) => <th key={field.id} className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{field.name}</th>)}
               <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[9%]">
                 Priority
               </th>
@@ -362,6 +365,7 @@ export const TaskTable = ({
                     </div>
                   </td>
                 )}
+                {customFieldColumns.map((field) => <td key={field.id} className="px-3 py-3 text-xs text-muted-foreground"><span className="block truncate">{(task as any).customFieldColumns?.[field.id] ?? "—"}</span></td>)}
 
                 <td className="px-4 py-3">
                   <Badge className={cn("text-[10px]", getPriorityBadgeClass(task.priority))}>
@@ -526,6 +530,7 @@ export const TaskTable = ({
                   </p>
                 </div>
               )}
+              {customFieldColumns.map((field) => <div key={field.id}><p className="text-[10px] uppercase tracking-wide">{field.name}</p><p className="truncate">{(task as any).customFieldColumns?.[field.id] ?? "—"}</p></div>)}
 
               <div>
                 <p className="text-[10px] uppercase tracking-wide">Priority</p>

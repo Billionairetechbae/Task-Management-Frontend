@@ -46,6 +46,7 @@ import { api } from "@/lib/api";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import type { RoleOperationPermissions } from "@/lib/api";
 import WorkspaceLifecycleSettings from "@/components/workspaces/WorkspaceLifecycleSettings";
+import CustomFieldsManager from "@/components/customFields/CustomFieldsManager";
 
 const CompanyProfile = () => {
   const { user, refreshUser, activeCompanyId, activeWorkspace, workspaceRole } = useAuth();
@@ -712,7 +713,7 @@ const CompanyProfile = () => {
             </Card>
           </div>
         </div>
-        <div className="mt-6"><WorkspaceLifecycleSettings /></div>
+        <div className="mt-6 space-y-6"><WorkspaceLifecycleSettings /><CustomFieldsManager /></div>
       </TooltipProvider>
     </DashboardLayout>
   );

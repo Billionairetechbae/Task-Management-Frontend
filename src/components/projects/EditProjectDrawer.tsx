@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
 import TeamSelector from "@/components/TeamSelector";
+import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
 
 interface EditProjectDrawerProps {
   project: Project | null;
@@ -32,6 +33,7 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
     teamId: null as string | null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (project && mode === "edit") {
@@ -45,6 +47,7 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
       });
     } else if (mode === "create") {
       setForm({ name: "", description: "", status: "planning", startDate: "", endDate: "", teamId: null });
+      setCustomFields({});
     }
     setErrors({});
   }, [project, mode, open]);
@@ -71,6 +74,7 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
       if (form.startDate) payload.startDate = form.startDate;
       if (form.endDate) payload.endDate = form.endDate;
       payload.teamId = form.teamId;
+      payload.customFields = customFields;
 
       if (mode === "create") {
         const response = await api.createProject(payload);
@@ -157,6 +161,8 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
               {errors.endDate && <p className="text-xs text-destructive">{errors.endDate}</p>}
             </div>
           </div>
+
+          <CustomFieldsForm entityType="project" entityId={mode === "edit" ? project?.id : undefined} value={customFields} onChange={setCustomFields} />
 
           <div className="pt-4 flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

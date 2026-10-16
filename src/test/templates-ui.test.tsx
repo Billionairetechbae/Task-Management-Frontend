@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   list: vi.fn(), get: vi.fn(), create: vi.fn(), update: vi.fn(), archive: vi.fn(), restore: vi.fn(), preview: vi.fn(), inst: vi.fn(), saveAs: vi.fn(),
-  team: vi.fn(), teams: vi.fn(), toast: vi.fn(), navigate: vi.fn(),
+  team: vi.fn(), teams: vi.fn(), customFields: vi.fn(), toast: vi.fn(), navigate: vi.fn(),
 }));
 
 vi.mock("@/lib/api", () => {
@@ -18,7 +18,7 @@ vi.mock("@/lib/api", () => {
     ApiError,
     api: {
       listTemplates: h.list, getTemplate: h.get, createTemplate: h.create, updateTemplate: h.update, archiveTemplate: h.archive, restoreTemplate: h.restore,
-      previewTemplate: h.preview, instantiateTemplate: h.inst, saveTaskAsTemplate: h.saveAs, getCompanyTeam: h.team, listTeams: h.teams,
+      previewTemplate: h.preview, instantiateTemplate: h.inst, saveTaskAsTemplate: h.saveAs, getCompanyTeam: h.team, listTeams: h.teams, listCustomFields: h.customFields,
     },
   };
 });
@@ -47,6 +47,7 @@ beforeEach(() => {
   for (const m of Object.values(h)) (m as any).mockReset();
   h.team.mockResolvedValue({ data: { members: [] } });
   h.teams.mockResolvedValue({ data: { teams: [] } });
+  h.customFields.mockResolvedValue({ data: { definitions: [] } });
 });
 
 describe("Templates page", () => {
@@ -157,6 +158,27 @@ describe("UseTemplateDialog", () => {
     expect(h.inst.mock.calls[0][1].idempotencyKey).toBe(h.inst.mock.calls[1][1].idempotencyKey);
     expect(h.inst.mock.calls[1][1].acceptWarnings).toBe(true);
   });
+
+  it("required custom-field planner input clears the blocker and is sent to instantiate", async () => {
+    const fieldId = "b1000000-0000-4000-8000-000000000001";
+    h.customFields.mockImplementation(async (type: string) => ({ data: { definitions: type === "task" ? [
+      { id: fieldId, companyId: "ws", entityType: "task", fieldType: "text", name: "Region", status: "active", isRequired: true, position: 0, options: [] },
+    ] : [] } }));
+    h.get.mockResolvedValue({ data: { template: detail() } });
+    h.preview.mockImplementation(async (_id: string, input: any) => input.customFields?.tasks?.root?.[fieldId]
+      ? okPreview({ plan: { type: "task", nodes: [{ key: "root", title: "Weekly report", assignees: [], dependsOn: [], customFields: { [fieldId]: input.customFields.tasks.root[fieldId] } }], summary: { taskCount: 1, subtaskCount: 0, dependencyCount: 0 }, projectMembers: [], recurrence: null } })
+      : okPreview({ ok: false, errors: [{ code: "REQUIRED_CUSTOM_FIELD_MISSING", fieldId, fieldName: "Region", key: "root", message: "Region is required" }] }));
+    h.inst.mockResolvedValue({ data: { replayed: false, taskIds: { root: "created" } } });
+    wrap(<UseTemplateDialog open onOpenChange={() => {}} template={{ id: "t1", type: "task", name: "Weekly report" }} onDone={() => {}} />);
+    expect(await screen.findByTestId("plan-errors")).toHaveTextContent("Region is required");
+    expect(await screen.findByLabelText("Region")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create task" })).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Region"), "North");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Create task" })).toBeEnabled(), { timeout: 3000 });
+    await userEvent.click(screen.getByRole("button", { name: "Create task" }));
+    await waitFor(() => expect(h.inst).toHaveBeenCalled());
+    expect(h.inst.mock.calls[0][1].customFields.tasks.root[fieldId]).toBe("North");
+  });
 });
 
 describe("SaveAsTemplateDialog", () => {
@@ -168,7 +190,11 @@ describe("SaveAsTemplateDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save template" }));
     await waitFor(() => expect(h.saveAs).toHaveBeenCalled());
     expect(h.saveAs.mock.calls[0][0]).toBe("task1");
-    expect(h.saveAs.mock.calls[0][1].options).toEqual({ keepAssignees: true, deriveDueOffsets: false, includeRecurrence: false });
+    expect(h.saveAs.mock.calls[0][1].options).toEqual({ keepAssignees: true, deriveDueOffsets: false, includeRecurrence: false, includeCustomFieldValues: false });
+    await userEvent.click(screen.getByLabelText("Include custom field values"));
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }));
+    await waitFor(() => expect(h.saveAs).toHaveBeenCalledTimes(2));
+    expect(h.saveAs.mock.calls[1][1].options.includeCustomFieldValues).toBe(true);
   });
 });
 
@@ -191,6 +217,27 @@ describe("TemplateEditorDialog", () => {
     await waitFor(() => expect(h.update).toHaveBeenCalled());
     expect(h.update.mock.calls[0][1].expectedVersion).toBe(2);
     expect(await screen.findByTestId("template-errors")).toHaveTextContent(/version/i);
+  });
+
+  it("task Template Editor saves active template-safe custom values in schema v2 and excludes user/datetime", async () => {
+    h.customFields.mockImplementation(async (entityType: string) => ({ data: { definitions: entityType === "task" ? [
+      { id: "field-region", companyId: "ws", entityType: "task", fieldType: "text", name: "Region", status: "active", isRequired: false, position: 0, options: [] },
+      { id: "field-user", companyId: "ws", entityType: "task", fieldType: "user", name: "Reviewer", status: "active", isRequired: false, position: 1, options: [] },
+      { id: "field-datetime", companyId: "ws", entityType: "task", fieldType: "datetime", name: "Start", status: "active", isRequired: false, position: 2, options: [] },
+    ] : [] } }));
+    h.create.mockResolvedValue({ data: { template: { id: "new", name: "Weekly", currentVersion: 1 } } });
+    wrap(<TemplateEditorDialog open onOpenChange={() => {}} type="task" onSaved={() => {}} />);
+    await userEvent.type(await screen.findByLabelText("Template name"), "Weekly");
+    await userEvent.type(await screen.findByLabelText("Region"), "North");
+    expect(screen.queryByLabelText("Reviewer")).toBeNull();
+    expect(screen.queryByLabelText("Start")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Create template" }));
+    await waitFor(() => expect(h.create).toHaveBeenCalled());
+    const body = h.create.mock.calls[0][0].body;
+    expect(body.schemaVersion).toBe(2);
+    expect(body.task.customFields).toEqual({ "field-region": "North" });
+    expect(body.task.customFields).not.toHaveProperty("field-user");
+    expect(body.task.customFields).not.toHaveProperty("field-datetime");
   });
 });
 

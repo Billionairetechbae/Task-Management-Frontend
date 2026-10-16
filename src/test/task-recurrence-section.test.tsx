@@ -248,6 +248,7 @@ describe("shared pieces", () => {
     expect(getTaskActivityPresentation("recurrence_paused", { automatic: true }).detail).toBe("Paused automatically");
     expect(getTaskActivityPresentation("recurrence_resumed").label).toBe("Recurrence resumed");
     expect(getTaskActivityPresentation("recurrence_stopped").label).toBe("Recurrence stopped");
+    expect(getTaskActivityPresentation("custom_fields_updated", { changedFields: [{ name: "Private note" }] })).toMatchObject({ label: "Custom fields updated" });
     expect(getTaskActivityPresentation("task_created", { source: "recurrence", recurrenceId: "r1", sequence: 4 }).detail).toBe("Created automatically from recurring series");
     expect(getTaskActivityPresentation("task_created", {}).detail).toBeUndefined();
   });

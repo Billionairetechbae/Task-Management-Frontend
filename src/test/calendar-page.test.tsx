@@ -8,14 +8,15 @@ const h = vi.hoisted(() => ({
   getEvents: vi.fn(),
   getProjects: vi.fn(),
   listTeams: vi.fn(),
+  getTaskCustomFields: vi.fn(),
   auth: { activeCompanyId: "ws-1" as string | null },
   listeners: new Set<() => void>(),
   setActive: vi.fn(),
   toast: vi.fn(),
 }));
 
-vi.mock("@/lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams } }));
-vi.mock("../lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams } }));
+vi.mock("@/lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams, getTaskCustomFields: h.getTaskCustomFields } }));
+vi.mock("../lib/api", () => ({ api: { getProjects: h.getProjects, listTeams: h.listTeams, getTaskCustomFields: h.getTaskCustomFields } }));
 vi.mock("../services/calendarService", () => ({ default: { getEvents: h.getEvents } }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: h.toast }), toast: h.toast }));
 vi.mock("../contexts/AuthContext", async () => {
@@ -77,6 +78,7 @@ beforeEach(() => {
   h.getEvents.mockReset();
   h.getProjects.mockReset();
   h.listTeams.mockReset();
+  h.getTaskCustomFields.mockReset();
   h.getProjects.mockResolvedValue({ data: { projects: [{ id: "p1", name: "Finance" }] } });
   h.listTeams.mockResolvedValue({ data: { teams: [{ id: "team-1", name: "Operations" }] } });
   h.auth.activeCompanyId = "ws-1";
@@ -155,6 +157,25 @@ describe("Calendar page", () => {
     for (const text of ["Standalone", "Pending", "medium priority", "Finance", "Ops", "Ada Lovelace"]) expect(pop).toHaveTextContent(text);
     await userEvent.click(screen.getByRole("button", { name: "Open task" }));
     expect(await screen.findByTestId("where")).toHaveTextContent("/task-details/t1");
+  });
+
+  it("keeps custom values out of Calendar events and fetches at most five populated active values only when the popover opens", async () => {
+    h.getEvents.mockResolvedValue({ success: true, events: [ev("lazy", "pending")] });
+    h.getTaskCustomFields.mockResolvedValue({ data: { values: [
+      ...Array.from({ length: 7 }, (_, index) => ({ id: `v${index}`, value: `Value ${index}`, field: { id: `f${index}`, name: `Field ${index}`, fieldType: "text", status: "active", options: [] } })),
+      { id: "empty", value: "", field: { id: "empty-field", name: "Empty", fieldType: "text", status: "active", options: [] } },
+      { id: "archived", value: "Hidden", field: { id: "archived-field", name: "Archived", fieldType: "text", status: "archived", options: [] } },
+    ] } });
+    renderPage();
+    const events = await screen.findAllByTestId("calendar-event");
+    expect(JSON.stringify(events.map((node) => node.textContent))).not.toContain("Value 0");
+    expect(h.getTaskCustomFields).not.toHaveBeenCalled();
+    await userEvent.click(events[0]);
+    expect(await screen.findByText("Value 4")).toBeInTheDocument();
+    expect(screen.queryByText("Value 5")).toBeNull();
+    expect(screen.queryByText("Empty")).toBeNull();
+    expect(screen.queryByText("Archived")).toBeNull();
+    expect(h.getTaskCustomFields).toHaveBeenCalledTimes(1);
   });
 
   it("the task popover closes on Escape and on outside click without navigating", async () => {

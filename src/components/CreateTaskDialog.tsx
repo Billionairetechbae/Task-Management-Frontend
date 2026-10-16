@@ -19,6 +19,7 @@ import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import TeamSelector from "@/components/TeamSelector";
 import { useTemplateNavigation } from "@/components/templates/useTemplateNavigation";
 import UseTemplateFlow from "@/components/templates/UseTemplateFlow";
+import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -44,6 +45,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   const [members, setMembers] = useState<CompanyMember[]>([]);
 
   const [files, setFiles] = useState<File[]>([]);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
   const [formData, setFormData] = useState({
@@ -63,6 +65,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   const { user } = useAuth();
 
   useEffect(() => {
+    if (open) setCustomFields({});
     if (open && initialDeadline) setFormData((prev) => ({ ...prev, deadline: initialDeadline }));
   }, [open, initialDeadline]);
 
@@ -161,6 +164,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
           category: formData.category,
           assigneeId: formData.assigneeId || undefined,
           teamId: formData.teamId,
+          customFields,
         };
         await api.createProjectTask(projectId, payload);
       } else {
@@ -171,6 +175,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
         form.append("priority", formData.priority);
         form.append("deadline", new Date(formData.deadline).toISOString());
         form.append("category", formData.category);
+        form.append("customFields", JSON.stringify(customFields));
 
         if (formData.assigneeId) form.append("assigneeId", formData.assigneeId);
         if (formData.teamId) form.append("teamId", formData.teamId);
@@ -192,6 +197,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
       });
 
       setFiles([]);
+      setCustomFields({});
       setFileInputKey(Date.now());
 
       onSuccess();
@@ -250,6 +256,8 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
               required
             />
           </div>
+
+          <CustomFieldsForm entityType="task" value={customFields} onChange={setCustomFields} />
 
           {!projectId && (
             <div>

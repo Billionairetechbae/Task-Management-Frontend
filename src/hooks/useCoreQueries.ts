@@ -117,19 +117,19 @@ export const useDashboardData = () => {
   });
 };
 
-export const fetchProjects = async (): Promise<Project[]> => {
-  const res = await api.getProjects();
+export const fetchProjects = async (customFieldColumns: string[] = []): Promise<Project[]> => {
+  const res = await api.getProjects({ customFieldColumns });
   const arr =
     (res as any)?.data?.projects || (res as any)?.projects || (res as any)?.data || [];
   return Array.isArray(arr) ? arr : [];
 };
 
-export const useProjectsQuery = () => {
+export const useProjectsQuery = (customFieldColumns: string[] = []) => {
   const { activeCompanyId, user } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.projects(activeCompanyId),
-    queryFn: fetchProjects,
+    queryKey: [...queryKeys.projects(activeCompanyId), { customFieldColumns }],
+    queryFn: () => fetchProjects(customFieldColumns),
     enabled: Boolean(user),
     placeholderData: (previous) => previous,
   });

@@ -51,7 +51,7 @@ export const useRealtimeCacheSync = (isConnected: boolean) => {
     const onTaskUpdated = (message: any) => {
       const task = message?.task || message?.data?.task;
       patchTask(task?.id || message?.taskId, task || {});
-      invalidate(["tasks", "dashboard", "calendar-events"]);
+      invalidate(["tasks", "dashboard", "calendar-events", "board-tasks", "task-custom-fields"]);
     };
 
     const onTaskCreatedOrDeleted = () => invalidate(["tasks", "dashboard", "projects", "calendar-events"]);

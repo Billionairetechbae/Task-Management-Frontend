@@ -77,6 +77,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { teamTaskPath } from "@/lib/taskExecutionRoutes";
+import CustomFieldValueDisplay from "@/components/customFields/CustomFieldValueDisplay";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -1647,6 +1648,7 @@ const TaskDetails = () => {
                 <p className="text-sm text-muted-foreground italic">No description provided.</p>
               )}
             </section>
+            {task.id && taskAccess?.canView && <CustomFieldValueDisplay entityType="task" entityId={task.id} />}
 
             {/* Stats Cards - MOVED OUTSIDE Overview */}
             <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -7,6 +7,7 @@ import AllTasks from "@/pages/AllTasks";
 const apiMock = vi.hoisted(() => ({
   getAllTasksCrossWorkspace: vi.fn(),
   listTeams: vi.fn(),
+  listCustomFields: vi.fn(),
 }));
 const authMock = vi.hoisted(() => ({
   workspaces: [
@@ -51,6 +52,10 @@ describe("All Tasks Team filter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     apiMock.listTeams.mockResolvedValue({ data: { teams: [{ id: "team-a", name: "Marketing" }] } });
+    apiMock.listCustomFields.mockResolvedValue({ data: { definitions: [
+      { id: "region", name: "Region", entityType: "task", fieldType: "text", status: "active", position: 0, options: [] },
+      ...Array.from({ length: 6 }, (_, i) => ({ id: `f${i}`, name: `Field ${i}`, entityType: "task", fieldType: "text", status: "active", position: i + 1, options: [] })),
+    ] } });
     apiMock.getAllTasksCrossWorkspace.mockResolvedValue({ data: { tasks: [] }, pagination: {} });
   });
 
@@ -68,5 +73,30 @@ describe("All Tasks Team filter", () => {
     fireEvent.change(filters[2], { target: { value: "workspace-b" } });
     await waitFor(() => expect(teamFilter).toHaveValue("all"));
     await waitFor(() => expect(apiMock.getAllTasksCrossWorkspace).toHaveBeenLastCalledWith(expect.objectContaining({ companyId: "workspace-b", teamId: undefined })));
+  });
+
+  it("keeps custom columns/filter workspace-scoped, persists at most five columns, and forwards a filter to the API", async () => {
+    localStorage.clear();
+    renderPage();
+    // The workspace selector is the third combobox on the All Tasks page.
+    fireEvent.change(screen.getAllByRole("combobox")[2], { target: { value: "workspace-a" } });
+    expect(await screen.findByText("Custom columns (up to 5)")).toBeInTheDocument();
+    for (let i = 0; i < 6; i++) fireEvent.click(screen.getByText(`Field ${i}`).closest("label")!.querySelector("input")!);
+    await waitFor(() => expect(JSON.parse(localStorage.getItem("custom-field-columns:tasks:workspace-a") || "[]")).toHaveLength(5));
+    expect(screen.getByText("Field 5").closest("label")!.querySelector("input")).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
+    fireEvent.change(screen.getByLabelText("Custom filter field 1"), { target: { value: "region" } });
+    fireEvent.change(screen.getByLabelText("Custom filter operator 1"), { target: { value: "contains" } });
+    fireEvent.change(screen.getByLabelText("Custom filter value 1"), { target: { value: "West" } });
+    await waitFor(() => expect(apiMock.getAllTasksCrossWorkspace).toHaveBeenLastCalledWith(expect.objectContaining({
+      companyId: "workspace-a", customFieldColumns: expect.arrayContaining(["f0"]), customFieldFilters: [{ fieldId: "region", op: "contains", value: "West" }], page: 1,
+    })));
+    expect(screen.queryByText("Custom columns (up to 5)")).toBeInTheDocument();
+
+    // Aggregated All-workspaces view deliberately has no workspace-specific field controls.
+    fireEvent.change(screen.getAllByRole("combobox")[2], { target: { value: "all" } });
+    await waitFor(() => expect(screen.queryByText("Custom columns (up to 5)")).toBeNull());
+    expect(screen.queryByText("Custom filters (up to 5)")).toBeNull();
+    await waitFor(() => expect(apiMock.getAllTasksCrossWorkspace).toHaveBeenLastCalledWith(expect.objectContaining({ customFieldColumns: undefined, customFieldFilters: undefined })));
   });
 });

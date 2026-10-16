@@ -17,14 +17,15 @@ export default function SaveAsTemplateDialog({ open, onOpenChange, taskId, taskT
   const [keepAssignees, setKeepAssignees] = useState(false);
   const [deriveDueOffsets, setDeriveDueOffsets] = useState(false);
   const [includeRecurrence, setIncludeRecurrence] = useState(false);
+  const [includeCustomFieldValues, setIncludeCustomFieldValues] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { if (open) { setName(taskTitle); setDescription(""); setKeepAssignees(false); setDeriveDueOffsets(false); setIncludeRecurrence(false); setError(null); } }, [open, taskTitle]);
+  useEffect(() => { if (open) { setName(taskTitle); setDescription(""); setKeepAssignees(false); setDeriveDueOffsets(false); setIncludeRecurrence(false); setIncludeCustomFieldValues(false); setError(null); } }, [open, taskTitle]);
 
   const save = async () => {
     setSaving(true); setError(null);
     try {
-      const res = await api.saveTaskAsTemplate(taskId, { name: name.trim(), description: description.trim() || null, options: { keepAssignees, deriveDueOffsets, includeRecurrence } });
+      const res = await api.saveTaskAsTemplate(taskId, { name: name.trim(), description: description.trim() || null, options: { keepAssignees, deriveDueOffsets, includeRecurrence, includeCustomFieldValues } });
       toast({ title: "Template saved", description: `"${res.data.template.name}" is now available in Templates.` });
       onSaved?.(res.data.template.id); onOpenChange(false);
     } catch (e) { setError((e as ApiError).message || "Couldn't save the template."); }
@@ -54,6 +55,7 @@ export default function SaveAsTemplateDialog({ open, onOpenChange, taskId, taskT
             <label className="flex items-center gap-2 text-xs"><input aria-label="Keep assignees" type="checkbox" checked={keepAssignees} onChange={(e) => setKeepAssignees(e.target.checked)} /> Keep current assignees as specific members</label>
             <label className="flex items-center gap-2 text-xs"><input aria-label="Use due dates as offsets" type="checkbox" checked={deriveDueOffsets} disabled={!hasDueDate} onChange={(e) => setDeriveDueOffsets(e.target.checked)} /> Turn due dates into "days after the start" (no time is copied){!hasDueDate && " — this task has no due date"}</label>
             <label className="flex items-center gap-2 text-xs"><input aria-label="Include repeat schedule" type="checkbox" checked={includeRecurrence} disabled={!isRecurring} onChange={(e) => { setIncludeRecurrence(e.target.checked); if (e.target.checked && hasDueDate) setDeriveDueOffsets(true); }} /> Include its repeat schedule{!isRecurring && " — this task doesn't repeat"}</label>
+            <label className="flex items-center gap-2 text-xs"><input aria-label="Include custom field values" type="checkbox" checked={includeCustomFieldValues} onChange={(e) => setIncludeCustomFieldValues(e.target.checked)} /> Include custom field values</label>
           </fieldset>
           {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         </div>

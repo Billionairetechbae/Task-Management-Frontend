@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 
 import { useWorkspaceLookups, type Member } from "./useWorkspaceLookups";
+import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
 
 const field = "mt-1 w-full rounded-md border px-3 py-2 text-sm";
 const ASSIGNEE_LABELS: Record<TemplateAssigneeMode, string> = {
@@ -157,6 +158,19 @@ export default function TemplateEditorDialog({ open, onOpenChange, type, templat
   const [issues, setIssues] = useState<TemplateIssue[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [taskCustomDefinitions, setTaskCustomDefinitions] = useState<any[]>([]);
+  const [projectCustomDefinitions, setProjectCustomDefinitions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    Promise.all([api.listCustomFields("task"), api.listCustomFields("project")]).then(([tasks, projects]) => {
+      if (!alive) return;
+      setTaskCustomDefinitions(tasks.data.definitions.filter(f => f.status === "active" && !["datetime", "user"].includes(f.fieldType)));
+      setProjectCustomDefinitions(projects.data.definitions.filter(f => f.status === "active" && !["datetime", "user"].includes(f.fieldType)));
+    }).catch(() => { if (alive) { setTaskCustomDefinitions([]); setProjectCustomDefinitions([]); } });
+    return () => { alive = false; };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -171,8 +185,8 @@ export default function TemplateEditorDialog({ open, onOpenChange, type, templat
   const recurrenceConfig = useMemo(() => configFromRepeat(repeat), [repeat]);
 
   const buildBody = (): TaskTemplateBody | ProjectTemplateBody => {
-    if (type === "task") return { ...taskBody, task: { ...taskBody.task, recurrence: recurrenceConfig } };
-    return { ...projectBody, tasks: projectBody.tasks.map((t, i) => ({ ...t, position: i })) };
+    if (type === "task") return { ...taskBody, schemaVersion: 2, task: { ...taskBody.task, recurrence: recurrenceConfig } };
+    return { ...projectBody, schemaVersion: 2, tasks: projectBody.tasks.map((t, i) => ({ ...t, position: i })) };
   };
 
   const save = async () => {
@@ -240,6 +254,7 @@ export default function TemplateEditorDialog({ open, onOpenChange, type, templat
           {type === "task" ? (
             <section aria-label="Task definition" className="space-y-3 rounded-md border p-3">
               <TaskFieldsForm label="Task" value={taskBody.task} members={members} modes={taskModes} onChange={(patch) => setTaskBody((b) => ({ ...b, task: { ...b.task, ...patch } }))} />
+              <CustomFieldsForm entityType="task" templateSafeOnly definitionsOverride={taskCustomDefinitions} value={taskBody.task.customFields || {}} onChange={(customFields) => setTaskBody((b) => ({ ...b, task: { ...b.task, customFields } }))} />
               <label className="block text-xs font-medium">Team
                 <select aria-label="Task team" className={field} value={taskBody.task.team.mode === "team" ? taskBody.task.team.teamId ?? "" : ""}
                   onChange={(e) => setTaskBody((b) => ({ ...b, task: { ...b.task, team: e.target.value ? { mode: "team", teamId: e.target.value } : { mode: "none" } } }))}>
@@ -264,6 +279,7 @@ export default function TemplateEditorDialog({ open, onOpenChange, type, templat
                       </span>
                     </div>
                     <TaskFieldsForm label={`Subtask ${i + 1}`} value={sub} members={members} modes={taskModes} onChange={(patch) => setTaskBody((b) => ({ ...b, task: { ...b.task, subtasks: b.task.subtasks.map((s, j) => (j === i ? { ...s, ...patch } : s)) } }))} />
+                    <CustomFieldsForm entityType="task" templateSafeOnly definitionsOverride={taskCustomDefinitions} value={sub.customFields || {}} onChange={(customFields) => setTaskBody((b) => ({ ...b, task: { ...b.task, subtasks: b.task.subtasks.map((s, j) => j === i ? { ...s, customFields } : s) } }))} />
                   </div>
                 ))}
               </div>
@@ -278,6 +294,7 @@ export default function TemplateEditorDialog({ open, onOpenChange, type, templat
                 <label className="block text-xs font-medium">Project description
                   <textarea aria-label="Project description" rows={2} className={field} value={projectBody.project.description ?? ""} onChange={(e) => setProjectBody((b) => ({ ...b, project: { ...b.project, description: e.target.value || null } }))} />
                 </label>
+                <CustomFieldsForm entityType="project" templateSafeOnly definitionsOverride={projectCustomDefinitions} value={projectBody.project.customFields || {}} onChange={(customFields) => setProjectBody((b) => ({ ...b, project: { ...b.project, customFields } }))} />
                 <div className="grid gap-3 sm:grid-cols-3">
                   <label className="text-xs font-medium">Visibility
                     <select aria-label="Project visibility" className={field} value={projectBody.project.visibility} onChange={(e) => setProjectBody((b) => ({ ...b, project: { ...b.project, visibility: e.target.value as "private" | "workspace" } }))}>
@@ -323,6 +340,7 @@ export default function TemplateEditorDialog({ open, onOpenChange, type, templat
                         </span>
                       </div>
                       <TaskFieldsForm label={`Task ${index + 1}`} value={task} members={members} modes={projectModes} onChange={(patch) => patchTask(task.key, patch)} />
+                      <CustomFieldsForm entityType="task" templateSafeOnly definitionsOverride={taskCustomDefinitions} value={task.customFields || {}} onChange={(customFields) => patchTask(task.key, { customFields } as any)} />
                       <label className="block text-xs font-medium">Team
                         <select aria-label={`Task ${index + 1} team`} className={field} value={task.team.mode === "team" ? task.team.teamId ?? "" : task.team.mode}
                           onChange={(e) => patchTask(task.key, { team: e.target.value === "none" || e.target.value === "inherit" ? { mode: e.target.value as "none" | "inherit" } : { mode: "team", teamId: e.target.value } })}>
@@ -347,6 +365,7 @@ export default function TemplateEditorDialog({ open, onOpenChange, type, templat
                             <Button type="button" size="icon" variant="ghost" className="h-7 w-7" aria-label={`Remove subtask ${i + 1} of task ${index + 1}`} onClick={() => setProjectTasks(removeProjectTask(projectBody.tasks, sub.key))}><Trash2 size={14} /></Button>
                           </div>
                           <TaskFieldsForm label={`Task ${index + 1} subtask ${i + 1}`} value={sub} members={members} modes={projectModes} onChange={(patch) => patchTask(sub.key, patch)} />
+                          <CustomFieldsForm entityType="task" templateSafeOnly definitionsOverride={taskCustomDefinitions} value={sub.customFields || {}} onChange={(customFields) => patchTask(sub.key, { customFields } as any)} />
                           <fieldset>
                             <legend className="text-xs font-medium">Depends on</legend>
                             <div className="mt-1 flex flex-wrap gap-2">

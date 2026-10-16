@@ -50,6 +50,7 @@ import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TeamSelector from "@/components/TeamSelector";
 import { useQueryClient } from "@tanstack/react-query";
+import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
 
 interface TaskEditDrawerProps {
   open?: boolean;
@@ -122,6 +123,7 @@ export default function TaskEditDrawer({
   const [teamId, setTeamId] = useState<string | null>(null);
   const [estimatedHours, setEstimatedHours] = useState<number>(0);
   const [actualHours, setActualHours] = useState<number>(0);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
 
   // Workspace members
   const [members, setMembers] = useState<CompanyMember[]>([]);
@@ -161,6 +163,7 @@ export default function TaskEditDrawer({
     if (!taskId) return;
     try {
       setLoading(true);
+      setCustomFields({});
 
       const res = await api.getTaskById(taskId);
       const t = res.data.task;
@@ -249,6 +252,7 @@ export default function TaskEditDrawer({
         if (deadline) fd.append("deadline", deadline.toISOString());
         fd.append("category", category);
         fd.append("teamId", teamId || "");
+        if (Object.keys(customFields).length) fd.append("customFields", JSON.stringify(customFields));
 
         pendingFiles.forEach((f) => fd.append("files", f));
 
@@ -268,6 +272,7 @@ export default function TaskEditDrawer({
           deadline: deadline?.toISOString(),
           category,
           teamId,
+          customFields,
         };
 
         const res = await api.updateTask(task.id, data);
@@ -565,6 +570,7 @@ export default function TaskEditDrawer({
                       <Label>Description</Label>
                       <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
                     </div>
+                    {task && <CustomFieldsForm entityType="task" entityId={task.id} value={customFields} onChange={setCustomFields} />}
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">

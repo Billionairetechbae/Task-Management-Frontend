@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { api, Project } from "@/lib/api";
+import { api, Project, CustomFieldDefinition } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,9 +36,20 @@ export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [projectFieldDefinitions, setProjectFieldDefinitions] = useState<CustomFieldDefinition[]>([]);
+  const [projectColumnIds, setProjectColumnIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!activeCompanyId || ["guest", "external_viewer"].includes(workspaceRole || "")) { setProjectFieldDefinitions([]); setProjectColumnIds([]); return; }
+    let alive = true;
+    const key = `custom-field-columns:projects:${activeCompanyId}`;
+    let saved: string[] = []; try { saved = JSON.parse(localStorage.getItem(key) || "[]"); } catch { saved = []; }
+    api.listCustomFields("project").then(res => { if (!alive) return; const defs = res.data.definitions.filter(f => f.status === "active"); setProjectFieldDefinitions(defs); setProjectColumnIds(Array.isArray(saved) ? saved.filter(id => defs.some(f => f.id === id)).slice(0, 3) : []); }).catch(() => alive && setProjectFieldDefinitions([]));
+    return () => { alive = false; };
+  }, [activeCompanyId, workspaceRole]);
+  useEffect(() => { if (activeCompanyId) localStorage.setItem(`custom-field-columns:projects:${activeCompanyId}`, JSON.stringify(projectColumnIds.slice(0, 3))); }, [activeCompanyId, projectColumnIds]);
   const canDeleteProjects = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
 
-  const { data, isPending, isFetching, isError, error } = useProjectsQuery();
+  const { data, isPending, isFetching, isError, error } = useProjectsQuery(projectColumnIds);
   const projects: Project[] = data ?? [];
   const showSkeleton = isPending && projects.length === 0;
 
@@ -120,6 +131,8 @@ export default function Projects() {
             </p>
           )}
 
+          {projectFieldDefinitions.length > 0 && <fieldset className="mb-4 flex flex-wrap items-center gap-2 rounded-md border p-2 text-xs"><legend className="px-1 font-medium">Custom columns (up to 3)</legend>{projectFieldDefinitions.map(field => <label key={field.id} className="inline-flex items-center gap-1"><input type="checkbox" checked={projectColumnIds.includes(field.id)} disabled={!projectColumnIds.includes(field.id) && projectColumnIds.length >= 3} onChange={e => setProjectColumnIds(current => e.target.checked ? [...current, field.id].slice(0, 3) : current.filter(id => id !== field.id))} />{field.name}</label>)}</fieldset>}
+
           {showSkeleton ? (
             <SkeletonProjectGrid />
           ) : projects.length === 0 ? (
@@ -183,6 +196,7 @@ export default function Projects() {
                     <span>{p._count?.tasks || 0} tasks</span>
                     <span>{p._count?.checklists || 0} checklists</span>
                   </div>
+                  {projectColumnIds.length > 0 && <dl className="mt-3 grid grid-cols-1 gap-1 border-t pt-2 text-xs sm:grid-cols-2">{projectFieldDefinitions.filter(f => projectColumnIds.includes(f.id)).sort((a, b) => a.position - b.position).map(field => <div key={field.id} className="flex min-w-0 justify-between gap-2"><dt className="truncate text-muted-foreground">{field.name}</dt><dd className="truncate">{(p as any).customFieldColumns?.[field.id] ?? "—"}</dd></div>)}</dl>}
                 </Card>
               ))}
 

@@ -1,9 +1,17 @@
 import { AlertTriangle, Building2, Lock, Repeat, CalendarDays, Flag, FolderKanban, ListChecks, Users } from "lucide-react";
 import type { CalendarEvent } from "@/types/calendar";
 import { getStatusStyle, isTaskOverdue } from "@/lib/calendarStatus";
+import { useQuery } from "@tanstack/react-query";
+import { api, CustomFieldValue } from "@/lib/api";
 
 /** Body of the anchored task popover.  Read-only: status changes stay on the Board / task page. */
 export function CalendarEventPopoverBody({ event, onOpen }: { event: CalendarEvent; onOpen: () => void }) {
+    const customFieldsQuery = useQuery({ queryKey: ["task-custom-fields", "task", event.taskId], queryFn: async () => (await api.getTaskCustomFields(event.taskId)).data.values, enabled: Boolean(event.taskId), retry: false });
+    const customFields: CustomFieldValue[] = (customFieldsQuery.data || []).filter((row) => {
+      if (row.field.status && row.field.status !== "active") return false;
+      const value = row.value;
+      return value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0);
+    }).slice(0, 5);
     const overdue = isTaskOverdue({ status: event.status, deadline: event.task?.deadline ?? event.start });
     const style = getStatusStyle(event.status);
     const due = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.task?.deadline ?? event.start));
@@ -25,6 +33,7 @@ export function CalendarEventPopoverBody({ event, onOpen }: { event: CalendarEve
                 {(event.task?.parentTaskId || subtaskCount > 0) && <div className="flex gap-2"><ListChecks size={16} className="mt-0.5 shrink-0 text-muted-foreground" /><div><dt className="sr-only">Subtasks</dt><dd>{event.task?.parentTaskId ? "Subtask of another task" : `${subtaskCount} subtask${subtaskCount === 1 ? "" : "s"}`}</dd></div></div>}
                 <div><dt className="text-xs text-muted-foreground">Assignees</dt><dd>{assignees.length ? assignees.map((u) => `${u.firstName} ${u.lastName}`).join(", ") : "Unassigned"}</dd></div>
             </dl>
+            {customFields.length > 0 && <dl className="mt-3 space-y-1 border-t pt-2" aria-label="Custom fields">{customFields.map((row) => { const ids = Array.isArray(row.value) ? row.value : [row.value]; const display = ["single_select", "multi_select"].includes(row.field.fieldType) ? ids.map(id => { const option = row.field.options?.find(o => o.id === id); return option ? `${option.isActive ? "" : "(Archived) "}${option.label}` : "(Archived) option"; }).join(", ") : row.field.fieldType === "boolean" ? (row.value ? "Yes" : "No") : String(row.value); return <div key={row.id} className="flex justify-between gap-3 text-xs"><dt className="text-muted-foreground">{row.field.name}</dt><dd className="max-w-40 truncate text-right">{display}</dd></div>; })}</dl>}
             <button onClick={onOpen} className="mt-4 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Open task</button>
         </div>
     );

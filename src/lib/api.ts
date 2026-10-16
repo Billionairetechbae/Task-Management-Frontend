@@ -613,17 +613,18 @@ export interface TemplateTaskFields {
   localTime: string | null;
   assignee: TemplateAssigneeConfig;
 }
-export interface TemplateSubtaskNode extends TemplateTaskFields { key: string }
+export interface TemplateSubtaskNode extends TemplateTaskFields { key: string; customFields?: Record<string, unknown> }
 export interface TaskTemplateBody {
-  schemaVersion: 1;
-  task: TemplateTaskFields & { team: TemplateTeamConfig; recurrence?: TemplateRecurrenceConfig | null; subtasks: TemplateSubtaskNode[] };
+  schemaVersion: 1 | 2;
+  task: TemplateTaskFields & { team: TemplateTeamConfig; recurrence?: TemplateRecurrenceConfig | null; subtasks: TemplateSubtaskNode[]; customFields?: Record<string, unknown> };
 }
 export interface ProjectTemplateTaskNode extends TemplateTaskFields {
   key: string; parentKey: string | null; position: number; team: TemplateTeamConfig; dependsOn: string[];
+  customFields?: Record<string, unknown>;
 }
 export interface ProjectTemplateBody {
-  schemaVersion: 1;
-  project: { name: string; description: string | null; color: string | null; visibility: "private" | "workspace"; team: TemplateTeamConfig; lead: TemplateAssigneeConfig; members: { userId: string }[] };
+  schemaVersion: 1 | 2;
+  project: { name: string; description: string | null; color: string | null; visibility: "private" | "workspace"; team: TemplateTeamConfig; lead: TemplateAssigneeConfig; members: { userId: string }[]; customFields?: Record<string, unknown> };
   tasks: ProjectTemplateTaskNode[];
 }
 export interface TemplateSummary {
@@ -636,10 +637,10 @@ export interface TemplateDetail extends Omit<TemplateSummary, "summary"> {
   summary: { taskCount: number; subtaskCount: number; dependencyCount: number; hasRecurrence: boolean };
   versions: { version: number; schemaVersion: number; createdBy: string | null; createdAt: string }[] | null;
 }
-export interface TemplateIssue { code: string; message: string; key?: string; userId?: string }
+export interface TemplateIssue { code: string; message: string; key?: string; userId?: string; fieldId?: string; fieldName?: string }
 export interface TemplatePlanNode {
   key: string; parentKey: string | null; position: number; title: string; description: string | null; priority: string; category: string | null;
-  estimatedHours: number | null; deadline: string | null; teamId: string | null; assignees: { userId: string; name: string }[]; dependsOn: string[];
+  estimatedHours: number | null; deadline: string | null; teamId: string | null; assignees: { userId: string; name: string }[]; dependsOn: string[]; customFields?: Record<string, unknown>;
 }
 export interface TemplatePreview {
   ok: boolean; errors: TemplateIssue[]; warnings: TemplateIssue[]; requiresDefaultDueTime: boolean;
@@ -653,12 +654,23 @@ export interface TemplatePreview {
 /** What the "use template" request sends. `idempotencyKey` is generated once per use-template flow and reused for retries. */
 export interface TemplateUseInput {
   idempotencyKey: string; timezone: string; startDate?: string; defaultDueTime?: string; dueAt?: string; title?: string; acceptWarnings?: boolean;
+  customFields?: { project?: Record<string, unknown>; tasks?: Record<string, Record<string, unknown>> };
   overrides?: { assignees?: Record<string, string | null> };
   name?: string; description?: string | null; visibility?: "private" | "workspace"; teamId?: string | null; leadUserId?: string | null; memberUserIds?: string[];
 }
 export interface TemplateUseResult {
   replayed: boolean; instantiationId: string; templateId: string; templateVersion: number; projectId: string | null; taskIds: Record<string, string>; summary: Record<string, any>;
 }
+
+export type CustomFieldEntityType = "task" | "project";
+export type CustomFieldType = "text" | "long_text" | "number" | "boolean" | "date" | "datetime" | "single_select" | "multi_select" | "user" | "url";
+export interface CustomFieldOption { id: string; fieldId: string; companyId: string; label: string; color: string | null; position: number; isActive: boolean }
+export interface CustomFieldDefinition {
+  id: string; companyId: string; entityType: CustomFieldEntityType; fieldType: CustomFieldType; name: string; description: string | null;
+  isRequired: boolean; position: number; defaultValue: unknown; config: Record<string, any>; showOnBoard: boolean; status: "active" | "archived";
+  archivedAt: string | null; options?: CustomFieldOption[];
+}
+export interface CustomFieldValue { id: string; companyId: string; fieldId: string; taskId?: string; projectId?: string; value: unknown; updatedBy: string | null; updatedAt: string; field: CustomFieldDefinition }
 
 /** Advisory notice returned with a successful status change. */
 export interface TaskMutationWarning {
@@ -724,6 +736,7 @@ export interface CreateTaskData {
   estimatedHours?: number;
   assigneeId?: string;
   teamId?: string | null;
+  customFields?: Record<string, unknown>;
 }
 
 export interface UpdateTaskData {
@@ -737,6 +750,7 @@ export interface UpdateTaskData {
   actualHours?: number;
   assigneeId?: string | null;
   teamId?: string | null;
+  customFields?: Record<string, unknown>;
   googleDriveAttachments?: Array<{
     fileId: string;
     name: string;
@@ -772,6 +786,8 @@ export interface AllTasksFilters {
   companyId?: string;
   teamId?: string;
   projectId?: string;
+  customFieldColumns?: string[];
+  customFieldFilters?: { fieldId: string; op: string; value?: unknown }[];
   scope?: "workspace" | "all_workspaces" | "assigned_all" | "assigned_workspace";
 }
 
@@ -1184,6 +1200,7 @@ export interface Project {
   tasks?: Task[];
   checklists?: ProjectChecklist[];
   _count?: { tasks?: number; checklists?: number };
+  customFieldColumns?: Record<string, unknown>;
 }
 
 export interface WorkspaceInsights {
@@ -2308,6 +2325,8 @@ class ApiClient {
     if (filters?.category) queryParams.append("category", filters.category);
     if (filters?.teamId) queryParams.append("teamId", filters.teamId);
     if (filters?.projectId) queryParams.append("projectId", filters.projectId);
+    if (filters?.customFieldColumns?.length) queryParams.append("customFieldColumns", JSON.stringify(filters.customFieldColumns.slice(0, 5)));
+    if (filters?.customFieldFilters?.length) queryParams.append("customFieldFilters", JSON.stringify(filters.customFieldFilters.slice(0, 5)));
 
     return this.request(`/tasks?${queryParams.toString()}`, {
       method: "GET",
@@ -2537,7 +2556,45 @@ class ApiClient {
     return this.request(`/templates/${id}/instantiate`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(input) });
   }
 
-  async saveTaskAsTemplate(taskId: string, data: { name?: string; description?: string | null; category?: string | null; options?: { keepAssignees?: boolean; deriveDueOffsets?: boolean; includeRecurrence?: boolean } }): Promise<{ status: string; data: { template: TemplateDetail } }> {
+  /* ---- Custom Fields (Phase 4D) ---- */
+  async listCustomFields(entityType: CustomFieldEntityType, status: "active" | "all" = "active"): Promise<{ status: string; data: { definitions: CustomFieldDefinition[] } }> {
+    return this.request(`/custom-fields?${new URLSearchParams({ entityType, status })}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+  async createCustomField(data: Partial<CustomFieldDefinition> & Pick<CustomFieldDefinition, "entityType" | "fieldType" | "name">): Promise<{ status: string; data: { definition: CustomFieldDefinition } }> {
+    return this.request("/custom-fields", { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  }
+  async updateCustomField(id: string, data: Partial<CustomFieldDefinition> & { confirmTightening?: boolean }): Promise<{ status: string; data: { field: CustomFieldDefinition; existingViolationCount: number } }> {
+    return this.request(`/custom-fields/${id}`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  }
+  async previewCustomFieldConfig(id: string, config: Record<string, any>): Promise<{ status: string; data: { config: Record<string, any>; existingViolationCount: number } }> {
+    return this.request(`/custom-fields/${id}/config-preview`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ config }) });
+  }
+  async reorderCustomFields(entityType: CustomFieldEntityType, fieldIds: string[]): Promise<{ status: string }> {
+    return this.request("/custom-fields/reorder", { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ entityType, fieldIds }) });
+  }
+  async archiveCustomField(id: string): Promise<{ status: string }> { return this.request(`/custom-fields/${id}/archive`, { method: "POST", headers: this.getAuthHeaders() }); }
+  async restoreCustomField(id: string): Promise<{ status: string }> { return this.request(`/custom-fields/${id}/restore`, { method: "POST", headers: this.getAuthHeaders() }); }
+  async addCustomFieldOption(id: string, data: { label: string; color?: string | null; position?: number }): Promise<{ status: string; data: { option: CustomFieldOption } }> {
+    return this.request(`/custom-fields/${id}/options`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  }
+  async updateCustomFieldOption(id: string, optionId: string, data: Partial<Pick<CustomFieldOption, "label" | "color" | "position">>): Promise<{ status: string; data: { option: CustomFieldOption } }> {
+    return this.request(`/custom-fields/${id}/options/${optionId}`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  }
+  async archiveCustomFieldOption(id: string, optionId: string): Promise<{ status: string }> { return this.request(`/custom-fields/${id}/options/${optionId}/archive`, { method: "POST", headers: this.getAuthHeaders() }); }
+  async restoreCustomFieldOption(id: string, optionId: string): Promise<{ status: string }> { return this.request(`/custom-fields/${id}/options/${optionId}/restore`, { method: "POST", headers: this.getAuthHeaders() }); }
+  async reorderCustomFieldOptions(id: string, optionIds: string[]): Promise<{ status: string }> {
+    return this.request(`/custom-fields/${id}/options/reorder`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ optionIds }) });
+  }
+  async getTaskCustomFields(taskId: string): Promise<{ status: string; data: { values: CustomFieldValue[]; archivedValues?: CustomFieldValue[]; missingRequired?: { fieldId: string; name: string }[] } }> { return this.request(`/tasks/${taskId}/custom-fields`, { method: "GET", headers: this.getAuthHeaders() }); }
+  async patchTaskCustomFields(taskId: string, customFields: Record<string, unknown>): Promise<{ status: string; data: { changed: number } }> {
+    return this.request(`/tasks/${taskId}/custom-fields`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ customFields }) });
+  }
+  async getProjectCustomFields(projectId: string): Promise<{ status: string; data: { values: CustomFieldValue[]; archivedValues?: CustomFieldValue[]; missingRequired?: { fieldId: string; name: string }[] } }> { return this.request(`/projects/${projectId}/custom-fields`, { method: "GET", headers: this.getAuthHeaders() }); }
+  async patchProjectCustomFields(projectId: string, customFields: Record<string, unknown>): Promise<{ status: string; data: { changed: number } }> {
+    return this.request(`/projects/${projectId}/custom-fields`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ customFields }) });
+  }
+
+  async saveTaskAsTemplate(taskId: string, data: { name?: string; description?: string | null; category?: string | null; options?: { keepAssignees?: boolean; deriveDueOffsets?: boolean; includeRecurrence?: boolean; includeCustomFieldValues?: boolean } }): Promise<{ status: string; data: { template: TemplateDetail } }> {
     return this.request(`/templates/from-task/${taskId}`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(data) });
   }
 
@@ -3926,12 +3983,15 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async getProjects(filters?: { teamId?: string; workspaceId?: string }): Promise<{
+  async getProjects(filters?: { teamId?: string; workspaceId?: string; customFieldColumns?: string[] }): Promise<{
     status: string;
     results?: number;
     data: { projects: Project[] } | { items?: Project[] } | any;
   }> {
-    const query = filters?.teamId ? `?teamId=${encodeURIComponent(filters.teamId)}` : "";
+    const params = new URLSearchParams();
+    if (filters?.teamId) params.set("teamId", filters.teamId);
+    if (filters?.customFieldColumns?.length) params.set("customFieldColumns", JSON.stringify(filters.customFieldColumns.slice(0, 3)));
+    const query = params.toString() ? `?${params.toString()}` : "";
     return this.request(`/projects${query}`, {
       method: "GET",
       headers: filters?.workspaceId

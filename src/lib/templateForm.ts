@@ -19,12 +19,12 @@ export function blankTaskFields(title = ""): TemplateTaskFields {
 }
 
 export const blankTaskBody = (): TaskTemplateBody => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   task: { ...blankTaskFields(), team: { mode: "none" }, recurrence: null, subtasks: [] },
 });
 
 export const blankProjectBody = (): ProjectTemplateBody => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   project: { name: "", description: null, color: null, visibility: "private", team: { mode: "none" }, lead: { mode: "none" }, members: [] },
   tasks: [],
 });

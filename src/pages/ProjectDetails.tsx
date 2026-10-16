@@ -47,6 +47,7 @@ import ProjectMiniSidebar from "@/components/projects/ProjectMiniSidebar";
 import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
 import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDialog";
+import CustomFieldValueDisplay from "@/components/customFields/CustomFieldValueDisplay";
 import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
 import KanbanBoard from "@/components/projects/KanbanBoard";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
@@ -962,6 +963,7 @@ export default function ProjectDetails() {
                     onToggle={() => togglePanel("overview")}
                   >
                     <div className="px-3 pb-3 space-y-3">
+                      {project?.id && <CustomFieldValueDisplay entityType="project" entityId={project.id} />}
                       <div className="grid grid-cols-2 gap-2">
                         <MiniStat
                           label="Tasks"
@@ -1709,6 +1711,7 @@ export default function ProjectDetails() {
                 onToggle={() => togglePanel("overview")}
               >
                 <div className="px-3 pb-3 space-y-3">
+                  {project?.id && <CustomFieldValueDisplay entityType="project" entityId={project.id} />}
                   <div className="grid grid-cols-4 gap-2">
                     <MiniStat label="Tasks" value={taskStats.total} color="text-primary" />
                     <MiniStat label="Done" value={taskStats.completed} color="text-success" />

@@ -11,6 +11,7 @@ import { Loader2, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import TeamSelector from "@/components/TeamSelector";
+import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
 
 interface CreateProjectTaskDialogProps {
   projectId: string;
@@ -25,6 +26,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CompanyMember[]>([]);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -40,6 +42,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
   useEffect(() => {
     if (open) {
       setForm({ title: "", description: "", priority: "medium", deadline: "", assigneeId: "", category: "", teamId: null });
+      setCustomFields({});
       if (canAssignOthers) {
         api.getCompanyTeam().then(r => setMembers(r.data.members || [])).catch(() => {});
       } else {
@@ -64,6 +67,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
       if (form.assigneeId) payload.assigneeId = form.assigneeId;
       if (form.category) payload.category = form.category;
       payload.teamId = form.teamId;
+      payload.customFields = customFields;
 
       await api.createProjectTask(projectId, payload);
       toast({ title: "Task created" });
@@ -94,6 +98,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
             <Label className="text-xs">Description</Label>
             <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} placeholder="Optional description" />
           </div>
+          <CustomFieldsForm entityType="task" value={customFields} onChange={setCustomFields} />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

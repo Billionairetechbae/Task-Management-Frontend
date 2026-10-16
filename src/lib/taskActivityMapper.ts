@@ -27,6 +27,7 @@ const activityMap: Record<string, TaskActivityPresentation> = {
   priority_changed: { label: "Priority changed", icon: Activity, toneClass: "text-orange-600" },
   deadline_changed: { label: "Deadline changed", icon: CalendarClock, toneClass: "text-amber-600" },
   task_updated: { label: "Task updated", icon: Pencil, toneClass: "text-slate-600" },
+  custom_fields_updated: { label: "Custom fields updated", icon: Pencil, toneClass: "text-slate-600" },
   assignee_added: { label: "Assignee added", icon: UserPlus, toneClass: "text-indigo-600" },
   assignee_removed: { label: "Assignee removed", icon: UserMinus, toneClass: "text-rose-600" },
   comment_added: { label: "Comment added", icon: MessageSquarePlus, toneClass: "text-cyan-600" },
