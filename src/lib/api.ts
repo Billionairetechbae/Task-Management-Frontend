@@ -1768,6 +1768,10 @@ export interface ProjectHealthProject {
     startDate?: string | null;
     endDate?: string | null;
     dueDate?: string | null;
+    leadId?: string | null;
+    teamId?: string | null;
+    team?: { id: string; name: string } | null;
+    owner?: { id: string; firstName: string; lastName: string; profilePictureUrl?: string | null } | null;
     logoUrl?: string | null;
     createdAt?: string;
     updatedAt?: string;
@@ -1776,6 +1780,9 @@ export interface ProjectHealthProject {
   healthStatus: ProjectHealthStatus;
   healthLabel: string;
   healthDescription: string;
+  deadline?: string | null;
+  lastActivity?: string | null;
+  attentionReasons?: string[];
   metrics: ProjectHealthMetrics;
   workload: ProjectHealthWorkload;
   riskReasons: string[];
@@ -1786,6 +1793,11 @@ export interface ProjectHealthProject {
 
 export interface ProjectHealthSummary {
   totalProjects: number;
+  activeProjects?: number;
+  archivedProjects?: number;
+  completedProjects?: number;
+  overdueProjects?: number;
+  needsAttentionProjects?: number;
   averageHealthScore: number;
   counts: {
     healthy: number;

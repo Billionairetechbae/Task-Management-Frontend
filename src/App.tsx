@@ -52,6 +52,7 @@ import ProjectInvite from "./pages/ProjectInvite";
 import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
 
 import ProjectHealth from "@/pages/ProjectHealth";
+import ProjectPortfolio from "@/pages/ProjectPortfolio";
 import ClientView from "@/pages/ClientView";
 import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 import SharedWithMe from "@/pages/SharedWithMe";
@@ -329,6 +330,14 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
               <Projects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/portfolio"
+          element={
+            <ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}>
+              <ProjectPortfolio />
             </ProtectedRoute>
           }
         />

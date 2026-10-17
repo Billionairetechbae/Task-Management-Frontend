@@ -143,6 +143,11 @@ const DashboardLayout = ({
               icon: <FolderKanban className="w-[18px] h-[18px]" />,
             },
             {
+              label: "Portfolio",
+              href: "/projects/portfolio",
+              icon: <Activity className="w-[18px] h-[18px]" />,
+            },
+            {
               label: "Templates",
               href: "/templates",
               icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
@@ -286,6 +291,11 @@ const DashboardLayout = ({
               icon: <FolderKanban className="w-[18px] h-[18px]" />,
             },
             {
+              label: "Portfolio",
+              href: "/projects/portfolio",
+              icon: <Activity className="w-[18px] h-[18px]" />,
+            },
+            {
               label: "Templates",
               href: "/templates",
               icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
@@ -391,6 +401,11 @@ const DashboardLayout = ({
             label: "All Projects",
             href: "/projects",
             icon: <FolderKanban className="w-[18px] h-[18px]" />,
+          },
+          {
+            label: "Portfolio",
+            href: "/projects/portfolio",
+            icon: <Activity className="w-[18px] h-[18px]" />,
           },
           {
             label: "Templates",
