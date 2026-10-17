@@ -3,6 +3,27 @@ import { api } from "@/lib/api";
 
 type AgentResponse = { answer: string; uncertain: boolean; recommendHuman: boolean; guide?: { title: string; href: string } | null };
 type ToolHandoff = (name: string, args: Record<string, unknown>, complete: (result: unknown) => void) => void;
+type SupportClientToolApi = Pick<typeof api, "searchSupportHelp" | "getSupportTicket" | "listSupportTickets">;
+
+export function handleSupportClientTool(
+  toolName: string,
+  parameters: Record<string, unknown>,
+  complete: (result: unknown) => void,
+  onToolHandoff: ToolHandoff,
+  supportApi: SupportClientToolApi = api,
+) {
+  if (toolName === "search_admiino_help") {
+    void supportApi.searchSupportHelp(String(parameters.query || "")).then((result) => complete(result.data.results)).catch(() => complete({ error: "Help search is unavailable." }));
+  } else if (toolName === "get_support_ticket_status") {
+    void supportApi.getSupportTicket(String(parameters.ticketId || "")).then((result) => complete({ ticketNumber: result.data.ticket.ticketNumber, status: result.data.ticket.status, subject: result.data.ticket.subject })).catch(() => complete({ error: "Support request not found." }));
+  } else if (toolName === "list_my_support_tickets") {
+    void supportApi.listSupportTickets().then((result) => complete(result.data.tickets.map(({ id, ticketNumber, subject, status }) => ({ id, ticketNumber, subject, status })))).catch(() => complete({ error: "Could not load support requests." }));
+  } else if (toolName === "create_support_ticket" || toolName === "add_support_ticket_message") {
+    onToolHandoff(toolName, parameters, complete);
+  } else {
+    complete({ error: "This support action is unavailable." });
+  }
+}
 
 export function connectSupportSocket(
   signedUrl: string,
@@ -51,11 +72,7 @@ export function useSupportAgent() {
               if (message.type === "client_tool_call") {
                 const toolName = String(message.tool_name || "");
                 const complete = (result: unknown) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: "client_tool_result", tool_call_id: message.tool_call_id, result: JSON.stringify(result) }));
-                if (toolName === "search_admiino_help") void api.searchSupportHelp(String(message.parameters?.query || "")).then((result) => complete(result.data.results)).catch(() => complete({ error: "Help search is unavailable." }));
-                else if (toolName === "get_support_ticket_status") void api.getSupportTicket(String(message.parameters?.ticketId || "")).then((result) => complete({ ticketNumber: result.data.ticket.ticketNumber, status: result.data.ticket.status, subject: result.data.ticket.subject })).catch(() => complete({ error: "Support request not found." }));
-                else if (toolName === "list_my_support_tickets") void api.listSupportTickets().then((result) => complete(result.data.tickets.map(({ ticketNumber, subject, status }) => ({ ticketNumber, subject, status })))).catch(() => complete({ error: "Could not load support requests." }));
-                else if (toolName === "create_support_ticket" || toolName === "add_support_ticket_message") onToolHandoff(toolName, message.parameters || {}, complete);
-                else complete({ error: "This support action is unavailable." });
+                handleSupportClientTool(toolName, message.parameters || {}, complete, onToolHandoff);
               }
             } catch { /* Ignore malformed provider events; the chat can continue. */ }
           };
