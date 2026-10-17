@@ -193,8 +193,10 @@ describe("wiring contract", () => {
     const task = readFileSync(join(process.cwd(), "src/pages/TaskDetails.tsx"), "utf8");
     const project = readFileSync(join(process.cwd(), "src/pages/ProjectDetails.tsx"), "utf8");
     expect(task).toContain('<ConnectedStorageAttachmentsSection targetType="task"');
-    expect(task).toContain("Choose from Google Drive"); // legacy Google Drive attachment control untouched
-    expect(task).toContain("Upload from Device");       // legacy upload control untouched
+    expect(task).toContain('import AttachmentSourcePicker from "@/components/attachments/AttachmentSourcePicker"');
+    const attachmentPicker = readFileSync(join(process.cwd(), "src/components/attachments/AttachmentSourcePicker.tsx"), "utf8");
+    expect(attachmentPicker).toContain("Upload from computer");
+    expect(attachmentPicker).toContain("Google Drive");
     expect(project).toContain('<ConnectedStorageAttachmentsSection targetType="project"');
   });
 });

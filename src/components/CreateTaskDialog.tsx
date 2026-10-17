@@ -74,7 +74,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   useEffect(() => {
     if (!open) return;
     let current = true;
-    api.getTasks().then((response) => {
+    Promise.resolve().then(() => api.getTasks()).then((response) => {
       if (!current) return;
       setCategorySuggestions(canonicalTaskCategories((response.data?.tasks || []).map((task) => task.category)));
     }).catch(() => setCategorySuggestions([]));

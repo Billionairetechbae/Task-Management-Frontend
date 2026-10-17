@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import type { GoogleDriveFile } from "@/types/googleDrive";
 import { useGoogleIntegration } from "@/hooks/useGoogleIntegration";
+import { hasGoogleDriveScope } from "@/services/googleIntegrationService";
 import { useGoogleDriveFiles } from "@/hooks/useGoogleDriveFiles";
 import { useGooglePicker } from "@/hooks/useGooglePicker";
 import { getFileIcon } from "@/utils/fileIcons";
@@ -37,11 +38,7 @@ const isFolder = (f: GoogleDriveFile) =>
 
 const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePickerDialogProps) => {
   const { status, isConnected, statusLoading, connect, connectLoading } = useGoogleIntegration();
-  const hasDriveScope = Boolean(status.services?.drive || status.scopes?.some((scope) =>
-    scope === "https://www.googleapis.com/auth/drive.file" ||
-    scope === "https://www.googleapis.com/auth/drive.readonly" ||
-    scope === "https://www.googleapis.com/auth/drive"
-  ));
+  const hasDriveScope = hasGoogleDriveScope(status);
   const canBrowseDrive = isConnected && hasDriveScope;
 
   const [selectedFile, setSelectedFile] = useState<GoogleDriveFile | null>(null);

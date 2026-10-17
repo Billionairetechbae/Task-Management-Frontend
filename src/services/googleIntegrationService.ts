@@ -12,6 +12,14 @@ export interface GoogleIntegrationStatus {
   error?: string;
 }
 
+export function hasGoogleDriveScope(status: GoogleIntegrationStatus | null | undefined): boolean {
+  return Boolean(status?.services?.drive || status?.scopes?.some((scope) => [
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/drive",
+  ].includes(scope)));
+}
+
 export interface GoogleConnectResponse {
   authUrl?: string;
   url?: string;

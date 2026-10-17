@@ -1,9 +1,9 @@
 import { triggerBlobDownload } from "@/lib/api";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import useGoogleDrive from "@/hooks/useGoogleDrive";
-import useGoogleIntegrationStatus from "@/hooks/use-google-integration";
+import { useGoogleIntegration } from "@/hooks/useGoogleIntegration";
+import { hasGoogleDriveScope } from "@/services/googleIntegrationService";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import FileViewer from "@/components/FileViewer";
 import { getFileIcon } from "@/utils/fileIcons";
@@ -22,6 +22,7 @@ import {
   Loader2,
   Download,
 } from "lucide-react";
+import { Fragment } from "react";
 
 const formatBytes = (bytes?: number) => {
   if (!bytes) return "0 B";
@@ -41,10 +42,13 @@ const getFileUrl = (file: any) => {
 
 const isFolder = (file: { mimeType?: string }) => file.mimeType === "application/vnd.google-apps.folder";
 
-export default function GoogleDrivePage() {
-  const navigate = useNavigate();
+export default function GoogleDrivePage({ embedded = false }: { embedded?: boolean }) {
   const { toast } = useToast();
-  const { data: integrationStatus, isLoading: integrationLoading } = useGoogleIntegrationStatus();
+  const google = useGoogleIntegration();
+  const connected = Boolean(google.isConnected);
+  const hasDriveScope = hasGoogleDriveScope(google.status);
+  const canBrowseDrive = connected && hasDriveScope;
+  const Shell = embedded ? Fragment : DashboardLayout;
   const {
     view,
     setView,
@@ -66,12 +70,10 @@ export default function GoogleDrivePage() {
     openBreadcrumb,
     refresh,
     downloadFile,
-  } = useGoogleDrive();
+  } = useGoogleDrive("my-drive", canBrowseDrive);
   const [newFolderName, setNewFolderName] = useState("");
   const [selectedFile, setSelectedFile] = useState<any | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-
-  const connected = Boolean(integrationStatus?.connected);
 
   const folderItems = useMemo(
     () => displayedFiles.filter(isFolder),
@@ -127,25 +129,25 @@ export default function GoogleDrivePage() {
     }
   };
 
-  if (!connected && !integrationLoading) {
+  if (!canBrowseDrive && !google.statusLoading) {
     return (
-      <DashboardLayout>
+      <Shell>
         <div className="max-w-3xl mx-auto py-12">
           <Card className="border border-border p-8 text-center">
             <HardDrive className="mx-auto h-12 w-12 text-primary mb-4" />
-            <h1 className="text-2xl font-semibold mb-2">Google Drive</h1>
+            <h1 className="text-2xl font-semibold mb-2">Connect Google Drive</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              Connect your Google account to browse Drive files, upload documents, and attach content across the workspace.
+              {connected ? "Your Google account is signed in to Admiino, but Drive access has not been granted yet. Connect Google Drive once to browse and attach files." : "Connect Google Drive to browse your files and attach them to Admiino work."} Google remains the source of truth for these files.
             </p>
-            <Button onClick={() => navigate("/settings/integrations")}>Connect Google</Button>
+            <Button onClick={() => google.connect()} disabled={google.connectLoading}>{google.connectLoading ? "Connecting…" : connected ? "Grant Drive access" : "Connect Google Drive"}</Button>
           </Card>
         </div>
-      </DashboardLayout>
+      </Shell>
     );
   }
 
   return (
-    <DashboardLayout>
+    <Shell>
       <div className="w-full space-y-6 animate-fade-in">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-fuchsia-500/5 to-transparent p-5 sm:p-7">
           <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
@@ -361,6 +363,6 @@ export default function GoogleDrivePage() {
       </div>
 
       <FileViewer file={selectedFile} onClose={() => setSelectedFile(null)} />
-    </DashboardLayout>
+    </Shell>
   );
 }

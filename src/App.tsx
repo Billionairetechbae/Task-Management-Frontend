@@ -24,6 +24,7 @@ import TaskDetails from "./pages/TaskDetails";
 import TaskWorkbench from "./pages/TaskWorkbench";
 import TeamManagement from "./pages/TeamManagement";
 import CompanyProfile from "./pages/CompanyProfile";
+import WorkspaceCustomization from "./pages/WorkspaceCustomization";
 import TeamDirectory from "./pages/TeamDirectory";
 import TeamMemberProfile from "./pages/TeamMemberProfile";
 import Teams from "./pages/Teams";
@@ -392,6 +393,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="/settings/workspace/customization" element={<ProtectedRoute><WorkspaceCustomization /></ProtectedRoute>} />
         <Route
           path="/integrations"
           element={

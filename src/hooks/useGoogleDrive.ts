@@ -4,7 +4,7 @@ import type { DriveFolder, GoogleDriveFile } from "@/types/googleDrive";
 
 export type GoogleDriveView = "my-drive" | "shared";
 
-export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive") => {
+export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enabled = true) => {
   const [view, setView] = useState<GoogleDriveView>(initialView);
   const [rootFolder, setRootFolder] = useState<DriveFolder | null>(null);
   const [currentFolder, setCurrentFolder] = useState<DriveFolder | null>(null);
@@ -288,20 +288,22 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive") => {
   }, [searchQuery]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (debouncedQuery.trim()) {
       void search(debouncedQuery);
       return;
     }
     void refresh();
-  }, [debouncedQuery, refresh, search]);
+  }, [debouncedQuery, refresh, search, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (view === "shared") {
       void listSharedFiles();
       return;
     }
     void loadRootFolder();
-  }, [listSharedFiles, loadRootFolder, view]);
+  }, [listSharedFiles, loadRootFolder, view, enabled]);
 
   const displayedFiles = useMemo(
     () => (searchQuery.trim() ? searchResults : items),

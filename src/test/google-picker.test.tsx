@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@t
 import { readFileSync } from "node:fs";
 import GoogleDrivePickerDialog from "@/components/tasks/GoogleDrivePickerDialog";
 import { useGooglePicker } from "@/hooks/useGooglePicker";
-import { googleIntegrationService } from "@/services/googleIntegrationService";
+import { googleIntegrationService, hasGoogleDriveScope } from "@/services/googleIntegrationService";
 
 const recentFile = vi.hoisted(() => ({ fileId: "recent-1", name: "Recent budget.xlsx", mimeType: "application/octet-stream", webViewLink: "https://drive.google.com/file/d/recent-1/view" }));
 const googleStatus = vi.hoisted(() => ({ connected: true, services: { drive: true }, scopes: [] as string[] }));
@@ -59,6 +59,14 @@ beforeEach(() => {
   vi.spyOn(googleIntegrationService, "getPickerToken").mockResolvedValue({ accessToken: "test-token" });
 });
 afterEach(() => { cleanup(); instances.forEach(p => p.dispose()); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); delete window._gapiScriptInjected; delete window._gapiPickerReady; });
+
+it.each([
+  [{ connected: true, scopes: [], services: { drive: false } }, false],
+  [{ connected: true, scopes: ["https://www.googleapis.com/auth/drive.file"] }, true],
+  [{ connected: false, scopes: ["https://www.googleapis.com/auth/drive"] }, true],
+])("detects required Drive authorization from granted scopes", (status, expected) => {
+  expect(hasGoogleDriveScope(status as any)).toBe(expected);
+});
 
 async function browse() {
   fireEvent.click(screen.getByRole("button", { name: "Browse Google Drive" }));

@@ -23,6 +23,7 @@ vi.mock("@/lib/api", () => {
   };
 });
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: h.toast }) }));
+vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ workspaceRole: "manager" }) }));
 vi.mock("react-router-dom", async (orig) => ({ ...(await orig<any>()), useNavigate: () => h.navigate }));
 vi.mock("@/components/dashboard/DashboardLayout", () => ({ default: ({ children }: any) => <div>{children}</div> }));
 

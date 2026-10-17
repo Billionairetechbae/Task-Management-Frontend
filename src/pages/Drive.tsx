@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { useQueryClient } from "@tanstack/react-query";
 import FileViewer from "@/components/FileViewer";
+import GoogleDrivePage from "@/pages/GoogleDrivePage";
+import DropboxDriveHub from "@/components/connectedStorage/DropboxDriveHub";
 import { getFileIcon } from "@/utils/fileIcons";
 import {
   FolderIcon,
@@ -34,6 +36,7 @@ import {
   FileAudio,
   FileCode,
   X,
+  Cloud,
 } from "lucide-react";
 
 type FileTypeFilter =
@@ -88,6 +91,7 @@ const matchesType = (file: { fileName: string; fileType: string }, filter: FileT
 };
 
 type Tab = "workspace" | "personal";
+type DriveSource = "admiino" | "google" | "dropbox";
 
 const formatBytes = (b: number) => {
   if (!b) return "0 B";
@@ -103,6 +107,7 @@ export default function Drive() {
   const { workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const [tab, setTab] = useState<Tab>("workspace");
+  const [source, setSource] = useState<DriveSource>(() => new URLSearchParams(window.location.search).get("source") === "google" ? "google" : "admiino");
   const [workspaceFolders, setWorkspaceFolders] = useState<Folder[]>([]);
   const [personalFolders, setPersonalFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
@@ -279,10 +284,26 @@ export default function Drive() {
   }, [files]);
 
   const totalSize = useMemo(() => files.reduce((sum, f) => sum + (f.fileSize || 0), 0), [files]);
+  const changeSource = (next: DriveSource) => {
+    setSource(next);
+    const url = new URL(window.location.href);
+    if (next === "admiino") url.searchParams.delete("source"); else url.searchParams.set("source", next);
+    window.history.replaceState({}, "", url.toString());
+  };
+
+  const sourceNavigation = <div role="tablist" aria-label="File sources" className="flex flex-wrap gap-2 border-b pb-3">
+    <Button role="tab" aria-selected={source === "admiino"} variant={source === "admiino" ? "default" : "outline"} onClick={() => changeSource("admiino")}><HardDrive className="mr-2 h-4 w-4" />Admiino</Button>
+    <Button role="tab" aria-selected={source === "google"} variant={source === "google" ? "default" : "outline"} onClick={() => changeSource("google")}><Cloud className="mr-2 h-4 w-4" />Google Drive</Button>
+    {["owner", "admin", "manager", "member"].includes(String(workspaceRole)) && <Button role="tab" aria-selected={source === "dropbox"} variant={source === "dropbox" ? "default" : "outline"} onClick={() => changeSource("dropbox")}><Cloud className="mr-2 h-4 w-4" />Dropbox</Button>}
+  </div>;
+
+  if (source === "google") return <DashboardLayout><div className="space-y-5">{sourceNavigation}<GoogleDrivePage embedded /></div></DashboardLayout>;
+  if (source === "dropbox") return <DashboardLayout><div className="space-y-5">{sourceNavigation}<DropboxDriveHub /></div></DashboardLayout>;
 
   return (
     <DashboardLayout>
       <div className="w-full space-y-6 animate-fade-in">
+        {sourceNavigation}
         {/* Hero header */}
         <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-fuchsia-500/5 to-transparent p-5 sm:p-7">
           <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
@@ -293,9 +314,9 @@ export default function Drive() {
                 <HardDrive className="h-3.5 w-3.5" />
                 Drive
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Your Files</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">Files / Drive</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Upload, organize and preview files without leaving the app.
+                Browse Admiino files and your connected storage sources in one place.
               </p>
             </div>
             <div className="flex gap-2">

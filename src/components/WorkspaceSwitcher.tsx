@@ -31,7 +31,7 @@ const WorkspaceSwitcher = () => {
   useSwitcherRegistration(`workspace-switcher:${instanceId}`, available);
   const [search, setSearch] = useState("");
   const [visibleCount, setVisibleCount] = useState(5);
-  const [failedLogoIds, setFailedLogoIds] = useState<Set<string>>(() => new Set());
+  const [failedLogoUrls, setFailedLogoUrls] = useState<Record<string, string>>({});
   const searchRef = useRef<HTMLInputElement>(null);
 
   const { matches, visible } = useMemo(
@@ -116,6 +116,7 @@ const WorkspaceSwitcher = () => {
           )}
           {visible.map((workspace) => {
             const isSelected = workspace.id === activeCompanyId;
+            const logoUrl = workspace.logoUrl || workspace.company?.logoUrl || null;
             return (
               <DropdownMenuItem
                 key={workspace.id}
@@ -134,8 +135,8 @@ const WorkspaceSwitcher = () => {
                   "w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0",
                   isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  {(workspace.logoUrl || workspace.company?.logoUrl) && !failedLogoIds.has(workspace.id)
-                    ? <img src={workspace.logoUrl || workspace.company?.logoUrl || ""} alt="" className="h-full w-full rounded-md object-cover" onError={() => setFailedLogoIds((previous) => new Set(previous).add(workspace.id))} />
+                  {logoUrl && failedLogoUrls[workspace.id] !== logoUrl
+                    ? <img src={logoUrl} alt="" className="h-full w-full rounded-md object-cover" onError={() => setFailedLogoUrls((previous) => ({ ...previous, [workspace.id]: logoUrl }))} />
                     : <span aria-hidden="true" className="text-[9px] font-semibold">{(workspace.name || "WS").trim().slice(0, 2).toUpperCase()}</span>}
                 </div>
                 <div className="flex-1 min-w-0">

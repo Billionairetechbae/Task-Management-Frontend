@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArchiveRestore, Loader2, Pencil, Play, Plus, Repeat } from "lucide-react";
+import { Archive, ArchiveRestore, Loader2, Pencil, Play, Plus, Repeat, Search } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { api, ApiError, type TemplateDetail, type TemplateSummary, type TemplateType, type TemplateUseResult } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,12 @@ import TemplateEditorDialog from "@/components/templates/TemplateEditorDialog";
 import TemplateOutline from "@/components/templates/TemplateOutline";
 import UseTemplateDialog from "@/components/templates/UseTemplateDialog";
 import { useTemplateNavigation } from "@/components/templates/useTemplateNavigation";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Templates() {
   const { toast } = useToast();
+  const { workspaceRole } = useAuth();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TemplateType>("task");
   const [showArchived, setShowArchived] = useState(false);
@@ -20,6 +23,7 @@ export default function Templates() {
   const [preview, setPreview] = useState<TemplateDetail | null>(null);
   const [using, setUsing] = useState<TemplateSummary | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const goTask = useTemplateNavigation("task");
   const goProject = useTemplateNavigation("project");
   const onCreated = (r: TemplateUseResult) => { const type = using?.type ?? "task"; setUsing(null); (type === "project" ? goProject : goTask)(r); };
@@ -30,7 +34,9 @@ export default function Templates() {
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["templates"] });
   const rows = list.data ?? [];
+  const visibleRows = rows.filter((template) => `${template.name} ${template.description ?? ""} ${template.category ?? ""}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   const canManageAny = rows.some((t) => t.canManage);
+  const canCreateTemplate = ["owner", "admin", "manager"].includes(String(workspaceRole));
 
   const open = async (t: TemplateSummary, then: (d: TemplateDetail) => void) => {
     try { then((await api.getTemplate(t.id)).data.template); }
@@ -54,9 +60,9 @@ export default function Templates() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Templates</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Reusable task and project blueprints for this workspace.</p>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Templates save reusable work structures. Task templates prefill task details; project templates create a project structure with its task hierarchy. Use them when the same work comes around again.</p>
           </div>
-          {canManageAny || rows.length === 0 ? (
+          {canManageAny || canCreateTemplate ? (
             <Button onClick={() => setEditor({ open: true })} className="gap-2"><Plus className="h-4 w-4" /> New {tab} template</Button>
           ) : null}
         </div>
@@ -70,19 +76,21 @@ export default function Templates() {
           ))}
         </div>
 
-        <label className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <input aria-label="Show archived" type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Show archived
-        </label>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground"><input aria-label="Show archived" type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Show archived</label>
+          <div className="relative w-full sm:max-w-xs"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${tab} templates`} aria-label="Search templates" className="pl-9" /></div>
+        </div>
 
         {list.isLoading ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</p>
           : list.isError ? <p role="alert" className="text-sm text-muted-foreground">{(list.error as ApiError)?.statusCode === 503 ? "Templates aren't available yet for this environment." : (list.error as Error).message}</p>
-          : rows.length === 0 ? <p className="text-sm text-muted-foreground">No {tab} templates yet.</p>
+          : rows.length === 0 ? <div className="rounded-xl border border-dashed p-8 text-center"><h2 className="font-semibold">No {tab} templates yet</h2><p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">Templates save reusable task or project structures so recurring work does not have to be recreated manually.</p><div className="mt-4 flex flex-wrap justify-center gap-2">{canCreateTemplate && <Button onClick={() => setEditor({ open: true })}><Plus className="mr-2 h-4 w-4" />Create {tab} template</Button>}<a href="https://www.admiino.com/guide#templates" className="inline-flex h-10 items-center rounded-md border px-4 text-sm font-medium">Learn more</a></div></div>
+          : visibleRows.length === 0 ? <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">No templates match “{search}”. Try another title or clear the search.</p>
           : (
             <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {rows.map((t) => (
-                <li key={t.id} data-testid="template-card" className="rounded-lg border p-4">
+              {visibleRows.map((t) => (
+                <li key={t.id} data-testid="template-card" className="rounded-xl border bg-card p-4 transition-colors hover:border-primary/30">
                   <div className="flex items-start justify-between gap-2">
-                    <button type="button" className="text-left font-semibold hover:underline" onClick={() => open(t, setPreview)}>{t.name}</button>
+                    <div><span className="mb-1 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">{t.type} template</span><button type="button" className="block text-left font-semibold hover:underline" onClick={() => open(t, setPreview)}>{t.name}</button></div>
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       {t.summary?.hasRecurrence && <Repeat size={12} className="text-indigo-600" aria-label="Repeats" />}
                       v{t.currentVersion}
@@ -90,6 +98,7 @@ export default function Templates() {
                     </span>
                   </div>
                   {t.description && <p className="mt-1 text-xs text-muted-foreground">{t.description}</p>}
+                  {t.category && <p className="mt-1 text-[11px] text-muted-foreground">Category: {t.category}</p>}
                   {t.summary && <p className="mt-2 text-xs text-muted-foreground">{t.summary.taskCount} task(s){t.summary.subtaskCount ? `, ${t.summary.subtaskCount} subtask(s)` : ""}{t.summary.dependencyCount ? `, ${t.summary.dependencyCount} dependency link(s)` : ""}</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {t.status === "active" && <Button size="sm" onClick={() => setUsing(t)} className="gap-1"><Play className="h-3 w-3" /> Use template</Button>}
