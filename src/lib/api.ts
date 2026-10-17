@@ -1843,6 +1843,10 @@ export class NetworkError extends Error {
   }
 }
 
+export type SupportStatus = "received" | "in_review" | "waiting_on_user" | "in_progress" | "resolved" | "closed";
+export interface SupportMessage { id: string; authorType: "user" | "admin" | "ai" | "system"; content: string; createdAt: string; attachments?: Array<{ fileName: string; fileType: string; fileSize?: number; downloadUrl: string }> }
+export interface SupportTicket { id: string; ticketNumber: string; subject: string; category: string; status: SupportStatus; priority: string; aiEscalated: boolean; createdAt: string; updatedAt: string; unread?: boolean; messages?: SupportMessage[] }
+
 class ApiClient {
   async get<T>(
       path: string,
@@ -2395,6 +2399,11 @@ class ApiClient {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
+  }
+
+  async globalSearch(query: string): Promise<{ status: string; data: { groups: Record<string, Array<{ id: string; title: string; subtitle: string; href: string }>> } }> {
+    const params = new URLSearchParams({ q: query.slice(0, 100) });
+    return this.request(`/global-search?${params.toString()}`, { method: "GET", headers: this.getAuthHeaders() });
   }
 
   async getAllTasksCrossWorkspace(
@@ -3570,6 +3579,29 @@ class ApiClient {
       method: "GET",
       headers: this.getAuthHeaders(false),
     });
+  }
+
+  async askSupportAI(question: string): Promise<{ status: string; data: { answer: string; uncertain: boolean; recommendHuman: boolean; reason?: string; guide?: { title: string; href: string } | null } }> {
+    return this.request("/support/ai/respond", { method: "POST", headers: { ...this.getAuthHeaders(false), "Content-Type": "application/json" }, body: JSON.stringify({ question: question.slice(0, 2000) }) });
+  }
+  async createSupportTicket(data: { subject: string; category: string; message: string; confirmed: true; context?: Record<string, unknown>; aiEscalated?: boolean; aiSummary?: string; transcript?: Array<{ role: string; content: string }>; attachments?: File[] }): Promise<{ status: string; data: { ticket: SupportTicket } }> {
+    const body = new FormData();
+    for (const [key, value] of Object.entries({ subject: data.subject, category: data.category, message: data.message, confirmed: "true", context: JSON.stringify(data.context || {}), aiEscalated: String(data.aiEscalated === true), aiSummary: data.aiSummary || "", transcript: JSON.stringify(data.transcript || []) })) body.append(key, value);
+    data.attachments?.forEach((file) => body.append("attachments", file));
+    return this.request("/support/tickets", { method: "POST", headers: this.getAuthHeaders(true), body });
+  }
+  async listSupportTickets(): Promise<{ status: string; data: { tickets: SupportTicket[] } }> { return this.request("/support/tickets", { method: "GET", headers: this.getAuthHeaders(false) }); }
+  async getSupportTicket(ticketId: string): Promise<{ status: string; data: { ticket: SupportTicket } }> { return this.request(`/support/tickets/${encodeURIComponent(ticketId)}`, { method: "GET", headers: this.getAuthHeaders(false) }); }
+  async replySupportTicket(ticketId: string, message: string, attachments: File[] = []): Promise<{ status: string; data: { message: SupportMessage; ticket: SupportTicket } }> {
+    const body = new FormData(); body.append("message", message); attachments.forEach((file) => body.append("attachments", file));
+    return this.request(`/support/tickets/${encodeURIComponent(ticketId)}/messages`, { method: "POST", headers: this.getAuthHeaders(false), body });
+  }
+  async downloadSupportAttachment(downloadUrl: string, fileName: string): Promise<void> {
+    if (!downloadUrl.startsWith("/api/v1/support/tickets/")) throw new Error("Invalid support attachment path.");
+    const path = downloadUrl.replace(/^\/api\/v1/, "");
+    const response = await fetch(`${API_BASE_URL}${path}`, { headers: this.getAuthHeaders(false) });
+    if (!response.ok) throw new Error("Attachment could not be downloaded.");
+    triggerBlobDownload(await response.blob(), fileName);
   }
 
   /* ============================

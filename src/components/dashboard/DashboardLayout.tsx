@@ -44,6 +44,8 @@ import {
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 import GlobalSearch from "@/components/dashboard/GlobalSearch";
+import AccountMenu from "@/components/dashboard/AccountMenu";
+import SupportLauncher from "@/components/support/SupportLauncher";
 
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
@@ -859,21 +861,7 @@ const DashboardLayout = ({
 
                 <NotificationsDropdown />
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      asChild
-                      className="hidden sm:flex h-8 w-8"
-                    >
-                      <Link to="/profile">
-                        <User className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Profile</TooltipContent>
-                </Tooltip>
+                <AccountMenu />
               </div>
             </div>
           </header>
@@ -890,6 +878,7 @@ const DashboardLayout = ({
           </main>
         </div>
       </div>
+      <SupportLauncher />
     </TooltipProvider>
   );
 };
