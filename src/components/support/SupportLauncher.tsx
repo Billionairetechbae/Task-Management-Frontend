@@ -10,6 +10,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import { useSupportAgent } from "@/components/support/useSupportAgent";
 
 type ChatLine = { role: "user" | "assistant"; content: string; guide?: { title: string; href: string }; recommendHuman?: boolean };
 type View = "home" | "chat" | "escalate" | "requests" | "ticket";
@@ -20,6 +22,8 @@ export default function SupportLauncher() {
   const { user } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
+  const socket = useWebSocket();
+  const supportAgent = useSupportAgent();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("home");
   const [question, setQuestion] = useState("");
@@ -36,11 +40,27 @@ export default function SupportLauncher() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [lastQuestion, setLastQuestion] = useState("");
+  const [pendingToolResult, setPendingToolResult] = useState<((result: unknown) => void) | null>(null);
 
   useEffect(() => {
     if (!user?.id) { setUnreadCount(0); return; }
     api.listSupportTickets().then((response) => setUnreadCount(response.data.tickets.filter((item) => item.unread).length)).catch(() => {});
   }, [user?.id]);
+
+  useEffect(() => {
+    const onSupportEvent = (event: { type?: string; ticketId?: string }) => {
+      if (!event.type?.startsWith("support:")) return;
+      void api.listSupportTickets().then((response) => {
+        setTickets(response.data.tickets);
+        setUnreadCount(response.data.tickets.filter((item) => item.unread).length);
+      }).catch(() => {});
+      if (ticket && event.ticketId === ticket.id && view === "ticket") {
+        void api.getSupportTicket(ticket.id).then((response) => setTicket(response.data.ticket)).catch(() => {});
+      }
+    };
+    for (const name of ["support:ticket_created", "support:message_created", "support:ticket_updated", "support:unread_changed"]) socket.on(name, onSupportEvent);
+    return () => { for (const name of ["support:ticket_created", "support:message_created", "support:ticket_updated", "support:unread_changed"]) socket.off(name, onSupportEvent); };
+  }, [socket, ticket?.id, view]);
 
   const transcript = useMemo(() => messages.slice(-8).map(({ role, content }) => ({ role, content })), [messages]);
   const startChat = (prompt = "") => { setView("chat"); setQuestion(prompt); };
@@ -49,8 +69,19 @@ export default function SupportLauncher() {
     if (!text || sending) return;
     setQuestion(""); setLastQuestion(text); setMessages((current) => [...current, { role: "user", content: text }]); setSending(true);
     try {
-      const result = await api.askSupportAI(text);
-      setMessages((current) => [...current, { role: "assistant", content: result.data.answer, guide: result.data.guide || undefined, recommendHuman: result.data.recommendHuman }]);
+      await supportAgent.ask(text, (answer) => setMessages((current) => [...current, { role: "assistant", content: answer.answer, guide: answer.guide || undefined, recommendHuman: answer.recommendHuman || answer.uncertain }]), async (name, args, complete) => {
+        if (name === "create_support_ticket") {
+          const title = String(args.subject || lastQuestion || "Support request").slice(0, 180);
+          const content = String(args.message || args.summary || lastQuestion || "Please review my support issue.").slice(0, 5000);
+          const allowed = ["general_help", "bug", "account_access", "integrations", "billing", "feature_request", "other"];
+          setSubject(title); setHandoffMessage(content); setCategory(allowed.includes(String(args.category)) ? String(args.category) : "general_help"); setConfirmed(false); setPendingToolResult(() => complete); setView("escalate");
+          setMessages((current) => [...current, { role: "assistant", content: "I prepared a support request from our conversation. Review it and confirm before I send it." }]);
+          return;
+        }
+        const ticketId = String(args.ticketId || "");
+        try { const result = await api.getSupportTicket(ticketId); setTicket(result.data.ticket); setReply(String(args.message || "")); setPendingToolResult(() => complete); setView("ticket"); }
+        catch { complete({ error: "Support request not found." }); }
+      });
     } catch {
       setMessages((current) => [...current, { role: "assistant", content: "I can’t reach the help service right now. You can still contact our support team and include your question.", recommendHuman: true }]);
     } finally { setSending(false); }
@@ -66,6 +97,7 @@ export default function SupportLauncher() {
     try {
       const result = await api.createSupportTicket({ subject: subject.trim(), category, message: handoffMessage.trim(), confirmed: true, context: { sourcePath: location.pathname }, aiEscalated: messages.length > 0, aiSummary: summary, transcript, attachments: files });
       const created = result.data.ticket;
+      pendingToolResult?.({ success: true, ticketNumber: created.ticketNumber }); setPendingToolResult(null);
       setTicket({ ...created, messages: [{ id: "first", authorType: "user", content: handoffMessage.trim(), createdAt: new Date().toISOString() }] });
       setView("ticket"); setFiles([]); setUnreadCount(0);
     } catch (error: any) { toast({ title: "Request not sent", description: error?.message || "Try again in a moment.", variant: "destructive" }); }
@@ -86,7 +118,7 @@ export default function SupportLauncher() {
   const sendReply = async () => {
     if (!ticket || !reply.trim() || sending) return;
     setSending(true);
-    try { const result = await api.replySupportTicket(ticket.id, reply.trim(), files); setTicket((current) => current ? { ...current, status: result.data.ticket.status, messages: [...(current.messages || []), result.data.message] } : current); setReply(""); setFiles([]); }
+    try { const result = await api.replySupportTicket(ticket.id, reply.trim(), files); setTicket((current) => current ? { ...current, status: result.data.ticket.status, messages: [...(current.messages || []), result.data.message] } : current); pendingToolResult?.({ success: true }); setPendingToolResult(null); setReply(""); setFiles([]); }
     catch (error: any) { toast({ title: "Reply not sent", description: error?.message, variant: "destructive" }); }
     finally { setSending(false); }
   };

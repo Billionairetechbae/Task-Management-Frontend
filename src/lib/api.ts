@@ -2401,9 +2401,11 @@ class ApiClient {
     });
   }
 
-  async globalSearch(query: string): Promise<{ status: string; data: { groups: Record<string, Array<{ id: string; title: string; subtitle: string; href: string }>> } }> {
+  async globalSearch(query: string, workspaceId?: string | null, signal?: AbortSignal): Promise<{ status: string; data: { groups: Record<string, Array<{ id: string; title: string; subtitle: string; href: string }>> } }> {
     const params = new URLSearchParams({ q: query.slice(0, 100) });
-    return this.request(`/global-search?${params.toString()}`, { method: "GET", headers: this.getAuthHeaders() });
+    const headers = new Headers(this.getAuthHeaders());
+    if (workspaceId) headers.set("x-company-id", workspaceId);
+    return this.request(`/global-search?${params.toString()}`, { method: "GET", headers, signal });
   }
 
   async getAllTasksCrossWorkspace(
@@ -3584,6 +3586,8 @@ class ApiClient {
   async askSupportAI(question: string): Promise<{ status: string; data: { answer: string; uncertain: boolean; recommendHuman: boolean; reason?: string; guide?: { title: string; href: string } | null } }> {
     return this.request("/support/ai/respond", { method: "POST", headers: { ...this.getAuthHeaders(false), "Content-Type": "application/json" }, body: JSON.stringify({ question: question.slice(0, 2000) }) });
   }
+  async getSupportAgentSession(): Promise<{ status: string; data: { signedUrl: string } }> { return this.request("/support/ai/elevenlabs-session", { method: "GET", headers: this.getAuthHeaders(false) }); }
+  async searchSupportHelp(query: string): Promise<{ status: string; data: { results: Array<{ title: string; href: string; excerpt: string }> } }> { return this.request(`/support/help/search?q=${encodeURIComponent(query.slice(0, 120))}`, { method: "GET", headers: this.getAuthHeaders(false) }); }
   async createSupportTicket(data: { subject: string; category: string; message: string; confirmed: true; context?: Record<string, unknown>; aiEscalated?: boolean; aiSummary?: string; transcript?: Array<{ role: string; content: string }>; attachments?: File[] }): Promise<{ status: string; data: { ticket: SupportTicket } }> {
     const body = new FormData();
     for (const [key, value] of Object.entries({ subject: data.subject, category: data.category, message: data.message, confirmed: "true", context: JSON.stringify(data.context || {}), aiEscalated: String(data.aiEscalated === true), aiSummary: data.aiSummary || "", transcript: JSON.stringify(data.transcript || []) })) body.append(key, value);

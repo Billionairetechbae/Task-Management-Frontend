@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/api", () => ({ api: mocks }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "user-1", firstName: "Maya" } }) }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: mocks.toast }) }));
+vi.mock("@/contexts/WebSocketContext", () => ({ useWebSocket: () => ({ on: vi.fn(), off: vi.fn() }) }));
 import SupportLauncher from "@/components/support/SupportLauncher";
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); mocks.listSupportTickets.mockResolvedValue({ data: { tickets: [] } }); });
