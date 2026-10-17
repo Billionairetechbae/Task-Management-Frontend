@@ -8,6 +8,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 vi.mock("@/hooks/useWorkspaceSettings", () => ({ useWorkspaceSettings: () => ({ canPerformRoleOperation: () => true }) }));
 vi.mock("@/components/integrations/IntegrationsDropdown", () => ({ default: () => null }));
 vi.mock("@/components/notifications/NotificationsDropdown", () => ({ default: () => null }));
+vi.mock("@/components/time/GlobalTimerIndicator", () => ({ default: () => null }));
 vi.mock("@/components/WebSocketStatus", () => ({ WebSocketStatus: () => null }));
 vi.mock("@/contexts/WebSocketContext", () => ({ useWebSocket: () => ({ on: vi.fn(), off: vi.fn() }) }));
 // Each mounted selector is an element we can count; real behaviour is covered in onboarding-overlays.test.tsx.

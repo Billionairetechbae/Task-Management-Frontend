@@ -42,11 +42,13 @@ import {
   Columns3,
   LayoutTemplate,
   Workflow,
+  Clock3,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 import GlobalSearch from "@/components/dashboard/GlobalSearch";
 import AccountMenu from "@/components/dashboard/AccountMenu";
 import SupportLauncher from "@/components/support/SupportLauncher";
+import GlobalTimerIndicator from "@/components/time/GlobalTimerIndicator";
 
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
@@ -140,6 +142,7 @@ const DashboardLayout = ({
           href: "/workload",
           icon: <Users className="w-[18px] h-[18px]" />,
         },
+        { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
         {
           label: "Projects",
           items: [
@@ -293,6 +296,7 @@ const DashboardLayout = ({
           href: "/workload",
           icon: <Users className="w-[18px] h-[18px]" />,
         },
+        { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
         {
           label: "Projects",
           items: [
@@ -412,6 +416,7 @@ const DashboardLayout = ({
         href: "/workload",
         icon: <Users className="w-[18px] h-[18px]" />,
       },
+      { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
       {
         label: "Projects",
         items: [
@@ -889,6 +894,8 @@ const DashboardLayout = ({
                 <div className="hidden sm:block">
                   <WebSocketStatus />
                 </div>
+
+                <GlobalTimerIndicator />
 
                 <IntegrationsDropdown />
 

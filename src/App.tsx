@@ -60,6 +60,7 @@ import SharedWithMe from "@/pages/SharedWithMe";
 import WorkspaceInsights from "@/pages/WorkspaceInsights";
 import WorkspaceActivity from "@/pages/WorkspaceActivity";
 import WorkspaceAutomations from "@/pages/WorkspaceAutomations";
+import TimeTracking from "@/pages/TimeTracking";
 
 import AuditExport from "@/pages/AuditExport";
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
@@ -396,6 +397,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="/time" element={<ProtectedRoute allowedRoles={["executive", "manager", "team_member"]}><TimeTracking /></ProtectedRoute>} />
 
         <Route
           path="/audit-exports"

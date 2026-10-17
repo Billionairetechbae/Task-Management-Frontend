@@ -50,6 +50,7 @@ import ProjectLogoUploader from "@/components/projects/ProjectLogoUploader";
 import EditProjectDrawer from "@/components/projects/EditProjectDrawer";
 import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDialog";
 import CustomFieldValueDisplay from "@/components/customFields/CustomFieldValueDisplay";
+import ProjectTimeSummary from "@/components/time/ProjectTimeSummary";
 import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
 import KanbanBoard from "@/components/projects/KanbanBoard";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
@@ -1016,6 +1017,7 @@ export default function ProjectDetails() {
                           />
                         </div>
                       )}
+                      {project?.id && <ProjectTimeSummary projectId={project.id} />}
                     </div>
                   </CollapsiblePanel>
 

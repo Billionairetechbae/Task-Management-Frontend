@@ -1,7 +1,7 @@
 import {
   Activity, Bell, CalendarDays, Columns3, FileText, FolderKanban, FolderOpen,
   LayoutDashboard, LayoutTemplate, Plug, Settings, ShieldCheck, Trash2, User,
-  Users, ClipboardList, Workflow, type LucideIcon,
+  Users, ClipboardList, Workflow, Clock3, type LucideIcon,
 } from "lucide-react";
 
 export type SearchNavigationResult = {
@@ -37,6 +37,7 @@ const entries: Entry[] = [
   { id: "project-health", title: "Project Health", subtitle: "Review project progress and risks", href: "/project-health", category: "Navigation", icon: Activity, aliases: ["project health", "health"], roles: ["owner", "admin", "manager"] },
   { id: "project-portfolio", title: "Project Portfolio", subtitle: "Review authorized projects, delivery health and deadlines", href: "/projects/portfolio", category: "Navigation", icon: Activity, aliases: ["portfolio", "project portfolio", "projects overview"], roles: ["owner", "admin", "manager", "member"] },
   { id: "workload", title: "Workload", subtitle: "Review work distribution across people and Teams", href: "/workload", category: "Navigation", icon: Activity, aliases: ["resource view", "team workload", "people workload"], roles: ["owner", "admin", "manager"] },
+  { id: "time-tracking", title: "Time Tracking", subtitle: "Review time recorded on Tasks, Projects and Teams", href: "/time", category: "Navigation", icon: Clock3, aliases: ["time", "timer", "timesheet", "tracked hours"] },
 ];
 
 const rank = (value: string, query: string) => {

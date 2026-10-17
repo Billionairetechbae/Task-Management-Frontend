@@ -24,7 +24,7 @@ import {
 import { 
   X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, Reply,
   MessageCircle, ChevronRight, Check, CheckCheck, Upload, 
-  Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, 
+  Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, Timer,
   Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, 
   Files as FilesIcon, Pencil, Plus, FolderPlus, ChevronDown, ChevronUp,
   ChevronLeft as ChevronLeftIcon, Eye, ExternalLink, Loader2, Lock
@@ -83,6 +83,7 @@ import {
 import { cn } from "@/lib/utils";
 import { teamTaskPath } from "@/lib/taskExecutionRoutes";
 import CustomFieldValueDisplay from "@/components/customFields/CustomFieldValueDisplay";
+import TaskTimePanel from "@/components/time/TaskTimePanel";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -105,6 +106,7 @@ const TaskDetails = () => {
   const { user, activeCompanyId, workspaceRole } = useAuth();
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const canSaveAsTemplate = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
+  const canTrackTime = ["owner", "admin", "manager", "member"].includes(String(workspaceRole));
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
   const { isConnected, joinTaskRoom, leaveTaskRoom, sendComment, sendTypingIndicator, on, off } = useWebSocket();
@@ -174,6 +176,14 @@ const TaskDetails = () => {
     ? taskAccess.readOnly === true || taskAccess.canEdit === false
     : false;
   const canCollaborate = taskAccess?.canCollaborate === true || !isReadOnly;
+  const mobileActionTabs = [
+    { key: "list" as const, label: "Tasks", Icon: ListChecks, count: 0 },
+    { key: "chat" as const, label: "Chat", Icon: MessageSquare, count: comments.length },
+    { key: "files" as const, label: "Files", Icon: FilesIcon, count: task?.attachments?.length || 0 },
+    { key: "activity" as const, label: "Activity", Icon: ActivityIcon, count: 0 },
+    ...(canTrackTime ? [{ key: "time" as const, label: "Time", Icon: Timer, count: 0 }] : []),
+    ...(!isReadOnly ? [{ key: "edit" as const, label: "Edit", Icon: Pencil, count: 0 }] : []),
+  ];
 
   useEffect(() => {
     if (commentsQuery.data) {
@@ -227,7 +237,7 @@ const TaskDetails = () => {
   // Responsive panel state
   const [listPanelOpen, setListPanelOpen] = useState(true);
   const [collabSheetOpen, setCollabSheetOpen] = useState(false);
-  const [mobilePanel, setMobilePanel] = useState<null | "list" | "chat" | "files" | "activity" | "edit">(null);
+  const [mobilePanel, setMobilePanel] = useState<null | "list" | "chat" | "files" | "activity" | "time" | "edit">(null);
 
   // Read-only tasks expose no edit surface — keep the panel on a viewable tab.
   useEffect(() => {
@@ -2345,6 +2355,14 @@ const TaskDetails = () => {
                 </TooltipTrigger>
                 <TooltipContent>Activity — press 3</TooltipContent>
               </Tooltip>
+              {canTrackTime && <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <Timer className="h-3.5 w-3.5" /> Time
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Track and review time on this Task</TooltipContent>
+              </Tooltip>}
               {!isReadOnly && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -2361,6 +2379,7 @@ const TaskDetails = () => {
         <TabsContent value="chat" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ChatContent}</TabsContent>
         <TabsContent value="files" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{FilesContent}</TabsContent>
         <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ActivityContent}</TabsContent>
+        {canTrackTime && <TabsContent value="time" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"><TaskTimePanel taskId={task.id} taskTitle={task.title} /></TabsContent>}
         <TabsContent value="edit" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{EditContent}</TabsContent>
       </Tabs>
     </div>
@@ -2453,6 +2472,7 @@ const TaskDetails = () => {
               {mobilePanel === "chat" && <><MessageSquare className="h-4 w-4" /> Chat</>}
               {mobilePanel === "files" && <><FilesIcon className="h-4 w-4" /> Files</>}
               {mobilePanel === "activity" && <><ActivityIcon className="h-4 w-4" /> Activity</>}
+              {mobilePanel === "time" && <><Timer className="h-4 w-4" /> Time</>}
               {mobilePanel === "edit" && <><Pencil className="h-4 w-4" /> Edit Task</>}
             </SheetTitle>
           </SheetHeader>
@@ -2461,6 +2481,7 @@ const TaskDetails = () => {
             {mobilePanel === "chat" && ChatContent}
             {mobilePanel === "files" && FilesContent}
             {mobilePanel === "activity" && ActivityContent}
+            {mobilePanel === "time" && task && canTrackTime && <TaskTimePanel taskId={task.id} taskTitle={task.title} />}
             {mobilePanel === "edit" && EditContent}
           </div>
         </SheetContent>
@@ -2483,16 +2504,8 @@ const TaskDetails = () => {
 
             {/* Bottom action bar — respects browser safe area */}
             <nav className="shrink-0 border-t bg-background/95 backdrop-blur px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))]">
-              <div className={cn("grid gap-0.5", isReadOnly ? "grid-cols-4" : "grid-cols-5")}>
-                {([
-                  { key: "list", label: "Tasks", Icon: ListChecks, count: 0 },
-                  { key: "chat", label: "Chat", Icon: MessageSquare, count: comments.length },
-                  { key: "files", label: "Files", Icon: FilesIcon, count: task?.attachments?.length || 0 },
-                  { key: "activity", label: "Activity", Icon: ActivityIcon, count: 0 },
-                  { key: "edit", label: "Edit", Icon: Pencil, count: 0 },
-                ] as const)
-                  .filter(({ key }) => !(isReadOnly && key === "edit"))
-                  .map(({ key, label, Icon, count }) => (
+              <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${mobileActionTabs.length}, minmax(0, 1fr))` }}>
+                {mobileActionTabs.map(({ key, label, Icon, count }) => (
                   <button
                     key={key}
                     onClick={() => setMobilePanel(key as any)}

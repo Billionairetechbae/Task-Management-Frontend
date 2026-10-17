@@ -1866,6 +1866,21 @@ export interface WorkloadResponse {
   generatedAt: string;
 }
 
+export interface TimeEntry {
+  id: string; companyId: string; userId: string | null; taskId: string | null; projectId: string | null; teamId: string | null;
+  userNameSnapshot: string; taskTitleSnapshot: string; projectNameSnapshot: string | null; entryDate: string;
+  startedAt: string; endedAt: string | null; durationSeconds: number; note: string | null; billable: boolean; source: "timer" | "manual" | "system";
+  user?: { id: string; firstName?: string; lastName?: string; profilePictureUrl?: string } | null;
+}
+export interface TimeTrackingFilters { from?: string; to?: string; userId?: string; projectId?: string; teamId?: string; taskId?: string; billable?: boolean; source?: "timer" | "manual" | "system"; page?: number; limit?: number }
+export interface TimeTrackingSummary {
+  totalSeconds: number; billableSeconds: number; nonBillableSeconds: number; activeTimers: number;
+  byUser: Array<{ userId: string | null; userNameSnapshot: string; durationSeconds: number }>;
+  byProject: Array<{ projectId: string | null; projectNameSnapshot: string | null; durationSeconds: number }>;
+  byTask: Array<{ taskId: string | null; taskTitleSnapshot: string; projectId: string | null; projectNameSnapshot: string | null; durationSeconds: number }>;
+  byTeam: Array<{ teamId: string | null; teamName: string; durationSeconds: number }>;
+}
+
 export interface ProjectHealthSummary {
   totalProjects: number;
   activeProjects?: number;
@@ -4829,6 +4844,40 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       method: "GET",
       headers: this.getAuthHeaders(true),
     });
+  }
+
+  private timeTrackingQuery(filters: TimeTrackingFilters = {}): string {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => { if (value !== undefined && value !== "") params.set(key, String(value)); });
+    const query = params.toString();
+    return query ? `?${query}` : "";
+  }
+  async getActiveTimeTimer(): Promise<{ status: string; data: { timer: TimeEntry | null } }> {
+    return this.request("/time-tracking/timer/active", { method: "GET", headers: this.getAuthHeaders(true) });
+  }
+  async startTimeTimer(input: { taskId: string; note?: string; billable?: boolean }): Promise<{ status: string; data: { entry: TimeEntry } }> {
+    return this.request("/time-tracking/timer/start", { method: "POST", headers: this.getAuthHeaders(true), body: JSON.stringify(input) });
+  }
+  async stopTimeTimer(id?: string): Promise<{ status: string; data: { entry: TimeEntry } }> {
+    return this.request(`/time-tracking/timer/stop${id ? `/${encodeURIComponent(id)}` : ""}`, { method: "POST", headers: this.getAuthHeaders(true) });
+  }
+  async cancelTimeTimer(): Promise<{ status: string; data: { cancelled: boolean } }> {
+    return this.request("/time-tracking/timer/cancel", { method: "POST", headers: this.getAuthHeaders(true) });
+  }
+  async getTimeEntries(filters: TimeTrackingFilters = {}): Promise<{ status: string; data: { entries: TimeEntry[]; pagination: { page: number; limit: number; total: number; totalPages: number }; visibility: string } }> {
+    return this.request(`/time-tracking/entries${this.timeTrackingQuery(filters)}`, { method: "GET", headers: this.getAuthHeaders(true) });
+  }
+  async createManualTimeEntry(input: { taskId: string; date: string; durationSeconds: number; note?: string; billable?: boolean }): Promise<{ status: string; data: { entry: TimeEntry } }> {
+    return this.request("/time-tracking/entries", { method: "POST", headers: this.getAuthHeaders(true), body: JSON.stringify(input) });
+  }
+  async updateTimeEntry(id: string, input: Partial<Pick<TimeEntry, "note" | "billable" | "durationSeconds">> & { date?: string }): Promise<{ status: string; data: { entry: TimeEntry } }> {
+    return this.request(`/time-tracking/entries/${encodeURIComponent(id)}`, { method: "PATCH", headers: this.getAuthHeaders(true), body: JSON.stringify(input) });
+  }
+  async deleteTimeEntry(id: string): Promise<{ status: string; data: { deleted: boolean } }> {
+    return this.request(`/time-tracking/entries/${encodeURIComponent(id)}`, { method: "DELETE", headers: this.getAuthHeaders(true) });
+  }
+  async getTimeTrackingSummary(filters: TimeTrackingFilters = {}): Promise<{ status: string; data: TimeTrackingSummary }> {
+    return this.request(`/time-tracking/summary${this.timeTrackingQuery(filters)}`, { method: "GET", headers: this.getAuthHeaders(true) });
   }
   
   async getProjectHealthDetail(projectId: string): Promise<{
