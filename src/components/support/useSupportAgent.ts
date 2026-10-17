@@ -1,9 +1,19 @@
 import { useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 
-type AgentResponse = { answer: string; uncertain: boolean; recommendHuman: boolean; guide?: { title: string; href: string } | null };
+type AgentResponse = { answer: string; uncertain: boolean; recommendHuman: boolean; guide?: { title: string; href: string } | null; guides?: Array<{ title: string; href: string }> };
 type ToolHandoff = (name: string, args: Record<string, unknown>, complete: (result: unknown) => void) => void;
-type SupportClientToolApi = Pick<typeof api, "searchSupportHelp" | "getSupportTicket" | "listSupportTickets">;
+type SupportClientToolApi = Pick<typeof api, "searchSupportHelp" | "askSupportAI" | "getSupportTicket" | "listSupportTickets">;
+
+async function searchHelpWithFallback(query: string, supportApi: SupportClientToolApi) {
+  try {
+    const { data } = await supportApi.searchSupportHelp(query);
+    if (data.results.length) return data.results;
+  } catch { /* A semantic answer fallback follows the same authenticated help API. */ }
+  const fallback = (await supportApi.askSupportAI(query)).data;
+  if (fallback.guide) return [{ title: fallback.guide.title, href: fallback.guide.href, excerpt: fallback.answer }];
+  return fallback.answer ? [{ title: "Admiino Guide", href: "https://www.admiino.com/guide", excerpt: fallback.answer }] : [];
+}
 
 export function handleSupportClientTool(
   toolName: string,
@@ -13,7 +23,8 @@ export function handleSupportClientTool(
   supportApi: SupportClientToolApi = api,
 ) {
   if (toolName === "search_admiino_help") {
-    void supportApi.searchSupportHelp(String(parameters.query || "")).then((result) => complete(result.data.results)).catch(() => complete({ error: "Help search is unavailable." }));
+    const query = String(parameters.query || "");
+    void searchHelpWithFallback(query, supportApi).then((results) => complete(results)).catch(() => complete({ error: "Help is temporarily unavailable. Do not treat this as an undocumented question; invite the user to try again or use the guide." }));
   } else if (toolName === "get_support_ticket_status") {
     void supportApi.getSupportTicket(String(parameters.ticketId || "")).then((result) => complete({ ticketNumber: result.data.ticket.ticketNumber, status: result.data.ticket.status, subject: result.data.ticket.subject })).catch(() => complete({ error: "Support request not found." }));
   } else if (toolName === "list_my_support_tickets") {
@@ -66,7 +77,9 @@ export function useSupportAgent() {
             try {
               const message = JSON.parse(String(event.data));
               if (message.type === "agent_response" && typeof message.agent_response === "string") {
-                onAnswer({ answer: message.agent_response, uncertain: false, recommendHuman: /contact (?:a|our) support|human support/i.test(message.agent_response) });
+                const humanAsk = /contact (?:a|our) support|human support/i.test(message.agent_response);
+                const guideLinks = [...message.agent_response.matchAll(/https:\/\/www\.admiino\.com\/guide(?:\/[a-z0-9-]+)*(?:#[a-z0-9-]+)?/gi)].map((match: RegExpMatchArray) => match[0]);
+                onAnswer({ answer: message.agent_response, uncertain: false, recommendHuman: humanAsk, guides: [...new Set(guideLinks)].slice(0, 3).map((href) => ({ title: href.split("/").filter(Boolean).pop()?.split("#")[0]?.replaceAll("-", " ") || "Admiino Guide", href })) });
                 pendingAnswerRef.current?.();
               }
               if (message.type === "client_tool_call") {

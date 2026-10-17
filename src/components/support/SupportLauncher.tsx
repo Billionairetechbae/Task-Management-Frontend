@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, LifeBuoy, Loader2, MessageSquareText, Paperclip, Send, Sparkles, TicketCheck } from "lucide-react";
 import { api, SupportMessage, SupportTicket } from "@/lib/api";
@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { useSupportAgent } from "@/components/support/useSupportAgent";
 
-type ChatLine = { role: "user" | "assistant"; content: string; guide?: { title: string; href: string }; recommendHuman?: boolean };
+type ChatLine = { role: "user" | "assistant"; content: string; guide?: { title: string; href: string }; guides?: Array<{ title: string; href: string }>; recommendHuman?: boolean; technicalFailure?: boolean; retryQuestion?: string };
 type View = "home" | "chat" | "escalate" | "requests" | "ticket";
 const STATUS_LABEL: Record<string, string> = { received: "Received", in_review: "In review", waiting_on_user: "Waiting on you", in_progress: "In progress", resolved: "Resolved", closed: "Closed" };
 const STATUS_STYLE: Record<string, string> = { received: "bg-blue-500/10 text-blue-700", in_review: "bg-violet-500/10 text-violet-700", waiting_on_user: "bg-amber-500/10 text-amber-700", in_progress: "bg-primary/10 text-primary", resolved: "bg-emerald-500/10 text-emerald-700", closed: "bg-muted text-muted-foreground" };
@@ -37,10 +37,12 @@ export default function SupportLauncher() {
   const [handoffMessage, setHandoffMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [confirmed, setConfirmed] = useState(false);
+  const [aiHandoff, setAiHandoff] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [lastQuestion, setLastQuestion] = useState("");
   const [pendingToolResult, setPendingToolResult] = useState<((result: unknown) => void) | null>(null);
+  const ticketCreationInFlight = useRef(false);
 
   useEffect(() => {
     if (!user?.id) { setUnreadCount(0); return; }
@@ -64,17 +66,17 @@ export default function SupportLauncher() {
 
   const transcript = useMemo(() => messages.slice(-8).map(({ role, content }) => ({ role, content })), [messages]);
   const startChat = (prompt = "") => { setView("chat"); setQuestion(prompt); };
-  const sendQuestion = async () => {
-    const text = question.trim();
+  const sendQuestion = async (retryText?: string) => {
+    const text = (retryText ?? question).trim();
     if (!text || sending) return;
     setQuestion(""); setLastQuestion(text); setMessages((current) => [...current, { role: "user", content: text }]); setSending(true);
     try {
-      await supportAgent.ask(text, (answer) => setMessages((current) => [...current, { role: "assistant", content: answer.answer, guide: answer.guide || undefined, recommendHuman: answer.recommendHuman || answer.uncertain }]), async (name, args, complete) => {
+      await supportAgent.ask(text, (answer) => setMessages((current) => [...current, { role: "assistant", content: answer.answer, guide: answer.guide || undefined, guides: answer.guides, recommendHuman: answer.recommendHuman }]), async (name, args, complete) => {
         if (name === "create_support_ticket") {
           const title = String(args.subject || lastQuestion || "Support request").slice(0, 180);
           const content = String(args.message || args.summary || lastQuestion || "Please review my support issue.").slice(0, 5000);
           const allowed = ["general_help", "bug", "account_access", "integrations", "billing", "feature_request", "other"];
-          setSubject(title); setHandoffMessage(content); setCategory(allowed.includes(String(args.category)) ? String(args.category) : "general_help"); setConfirmed(false); setPendingToolResult(() => complete); setView("escalate");
+          setSubject(title); setHandoffMessage(content); setCategory(allowed.includes(String(args.category)) ? String(args.category) : "general_help"); setConfirmed(false); setAiHandoff(true); setPendingToolResult(() => complete); setView("escalate");
           setMessages((current) => [...current, { role: "assistant", content: "I prepared a support request from our conversation. Review it and confirm before I send it." }]);
           return;
         }
@@ -83,25 +85,27 @@ export default function SupportLauncher() {
         catch { complete({ error: "Support request not found." }); }
       });
     } catch {
-      setMessages((current) => [...current, { role: "assistant", content: "I can’t reach the help service right now. You can still contact our support team and include your question.", recommendHuman: true }]);
+      setMessages((current) => [...current, { role: "assistant", content: "I'm having trouble accessing Admiino Help right now. You can try again, browse the Guide, or contact Customer Support.", technicalFailure: true, retryQuestion: text }]);
     } finally { setSending(false); }
   };
-  const beginEscalation = (initialCategory = "general_help") => {
+  const beginEscalation = (initialCategory = "general_help", fromAi = false) => {
     setCategory(initialCategory); setSubject((lastQuestion || messages.find((item) => item.role === "user")?.content || "").slice(0, 180));
-    setHandoffMessage(lastQuestion || messages.find((item) => item.role === "user")?.content || ""); setConfirmed(false); setView("escalate");
+    setHandoffMessage(lastQuestion || messages.find((item) => item.role === "user")?.content || ""); setConfirmed(false); setAiHandoff(fromAi); setView("escalate");
   };
   const createTicket = async () => {
-    if (!confirmed || sending || !subject.trim() || !handoffMessage.trim()) return;
+    if (!confirmed || sending || ticketCreationInFlight.current || !subject.trim() || !handoffMessage.trim()) return;
+    ticketCreationInFlight.current = true;
     setSending(true);
-    const summary = messages.length ? [`Issue: ${subject.trim()}`, `Reason for handoff: ${messages.findLast((item) => item.role === "assistant" && item.recommendHuman)?.content || "The user requested human support."}`, "Recent conversation:", ...transcript.map((line) => `${line.role === "user" ? "User" : "Admiino AI"}: ${line.content}`)].join("\n").slice(0, 4000) : "";
+    const submittedTranscript = aiHandoff ? transcript : [];
+    const summary = aiHandoff && submittedTranscript.length ? [`Issue: ${subject.trim()}`, `Reason for handoff: ${messages.findLast((item) => item.role === "assistant" && item.recommendHuman)?.content || "The user requested human support."}`, "Recent conversation:", ...submittedTranscript.map((line) => `${line.role === "user" ? "User" : "Admiino AI"}: ${line.content}`)].join("\n").slice(0, 4000) : "";
     try {
-      const result = await api.createSupportTicket({ subject: subject.trim(), category, message: handoffMessage.trim(), confirmed: true, context: { sourcePath: location.pathname }, aiEscalated: messages.length > 0, aiSummary: summary, transcript, attachments: files });
+      const result = await api.createSupportTicket({ subject: subject.trim(), category, message: handoffMessage.trim(), confirmed: true, context: { sourcePath: location.pathname }, aiEscalated: aiHandoff, aiSummary: summary, transcript: submittedTranscript, attachments: files });
       const created = result.data.ticket;
       pendingToolResult?.({ success: true, ticketNumber: created.ticketNumber }); setPendingToolResult(null);
       setTicket({ ...created, messages: [{ id: "first", authorType: "user", content: handoffMessage.trim(), createdAt: new Date().toISOString() }] });
-      setView("ticket"); setFiles([]); setUnreadCount(0);
+      setView("ticket"); setFiles([]); setUnreadCount(0); setConfirmed(false); setAiHandoff(false);
     } catch (error: any) { toast({ title: "Request not sent", description: error?.message || "Try again in a moment.", variant: "destructive" }); }
-    finally { setSending(false); }
+    finally { ticketCreationInFlight.current = false; setSending(false); }
   };
   const loadTickets = async () => {
     setLoadingTickets(true); setView("requests");
@@ -138,7 +142,7 @@ export default function SupportLauncher() {
           <a href="https://www.admiino.com/guide" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border p-4 text-sm transition-colors hover:border-primary/30 hover:bg-primary/[0.03]"><ArrowUpRight className="h-5 w-5 text-primary" />Browse Help Center</a>
         </div>}
         {view === "chat" && <div className="space-y-4"><div className="rounded-2xl rounded-tl-sm bg-muted/70 p-3 text-sm"><p className="font-medium">Hi {user?.firstName || "there"}. What can I help with?</p><p className="mt-1 text-muted-foreground">I’ll answer from Admiino help information. If I’m unsure, I’ll help you contact a person.</p></div>
-          {messages.map((message, index) => <div key={`${index}-${message.role}`} className={`max-w-[92%] rounded-2xl p-3 text-sm ${message.role === "user" ? "ml-auto rounded-tr-sm bg-primary text-primary-foreground" : "rounded-tl-sm bg-muted/70"}`}><p className="whitespace-pre-wrap">{message.content}</p>{message.guide && <a href={message.guide.href} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium underline">Learn more: {message.guide.title}<ArrowUpRight className="h-3 w-3" /></a>}{message.recommendHuman && <div className="mt-3 rounded-lg border border-primary/20 bg-background p-3"><p className="text-xs">I think our support team should take a closer look. I can send them a summary so you don’t have to explain everything again.</p><Button size="sm" className="mt-2" onClick={() => beginEscalation("general_help")}>Send to Customer Support</Button></div>}</div>)}
+          {messages.map((message, index) => <div key={`${index}-${message.role}`} className={`max-w-[92%] rounded-2xl p-3 text-sm ${message.role === "user" ? "ml-auto rounded-tr-sm bg-primary text-primary-foreground" : "rounded-tl-sm bg-muted/70"}`}><p className="whitespace-pre-wrap">{message.content}</p>{(message.guides?.length ? message.guides : message.guide ? [message.guide] : []).map((guide) => <a key={guide.href} href={guide.href} target="_blank" rel="noreferrer" className="mt-2 mr-3 inline-flex items-center gap-1 text-xs font-medium underline">Learn more: {guide.title}<ArrowUpRight className="h-3 w-3" /></a>)}{message.technicalFailure && <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => void sendQuestion(message.retryQuestion)} disabled={sending}>Try again</Button><a href="https://www.admiino.com/guide" target="_blank" rel="noreferrer" className="inline-flex items-center rounded-md border px-3 text-xs font-medium">Browse Guide</a><Button size="sm" onClick={() => beginEscalation("general_help", true)}>Contact Support</Button></div>}{message.recommendHuman && <div className="mt-3 rounded-lg border border-primary/20 bg-background p-3"><p className="text-xs">I think our support team should take a closer look. I can send them a summary so you don’t have to explain everything again.</p><Button size="sm" className="mt-2" onClick={() => beginEscalation("general_help", true)}>Send to Customer Support</Button></div>}</div>)}
           {sending && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Admiino AI is checking the help information…</div>}
         </div>}
         {view === "escalate" && <div className="space-y-4"><div className="rounded-xl border bg-muted/20 p-3"><p className="text-sm font-medium">Review your request</p><p className="mt-1 text-xs text-muted-foreground">We’ll include your message, recent AI conversation if any, current page, and safe integration connection states. Passwords, tokens, cookies, and form contents are not included.</p><p className="mt-2 text-xs"><span className="font-medium">Current page:</span> <code className="break-all text-muted-foreground">{location.pathname}</code></p></div>

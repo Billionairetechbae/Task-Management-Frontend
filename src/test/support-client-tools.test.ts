@@ -46,3 +46,23 @@ describe("Admiino support client-tool ticket identifiers", () => {
     expect(supportApi.getSupportTicket).toHaveBeenCalledWith(otherUsersTicketId);
   });
 });
+
+describe("grounded help tool fallback", () => {
+  it("uses the grounded answer API when help search returns no exact matches", async () => {
+    const complete = vi.fn();
+    const supportApi = {
+      searchSupportHelp: vi.fn().mockResolvedValue({ data: { results: [] } }),
+      askSupportAI: vi.fn().mockResolvedValue({ data: { answer: "To create a task, open Task Workbench.", guide: { title: "Tasks", href: "https://www.admiino.com/guide/tasks" } } }),
+    } as any;
+    handleSupportClientTool("search_admiino_help", { query: "make new task" }, complete, vi.fn(), supportApi);
+    await vi.waitFor(() => expect(complete).toHaveBeenCalledWith([{ title: "Tasks", href: "https://www.admiino.com/guide/tasks", excerpt: "To create a task, open Task Workbench." }]));
+    expect(supportApi.askSupportAI).toHaveBeenCalledWith("make new task");
+  });
+
+  it("reports a technical retrieval failure only when both approved help paths fail", async () => {
+    const complete = vi.fn();
+    const supportApi = { searchSupportHelp: vi.fn().mockRejectedValue(new Error("search unavailable")), askSupportAI: vi.fn().mockRejectedValue(new Error("answer unavailable")) } as any;
+    handleSupportClientTool("search_admiino_help", { query: "custom fields" }, complete, vi.fn(), supportApi);
+    await vi.waitFor(() => expect(complete).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringMatching(/Do not treat this as an undocumented question/) })));
+  });
+});
