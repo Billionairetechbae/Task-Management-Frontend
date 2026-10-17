@@ -35,6 +35,7 @@ const entries: Entry[] = [
   { id: "shared-with-me", title: "Shared with Me", subtitle: "Open resources shared with your account", href: "/shared-with-me", category: "Navigation", icon: FolderOpen, aliases: ["shared"] },
   { id: "project-health", title: "Project Health", subtitle: "Review project progress and risks", href: "/project-health", category: "Navigation", icon: Activity, aliases: ["project health", "health"], roles: ["owner", "admin", "manager"] },
   { id: "project-portfolio", title: "Project Portfolio", subtitle: "Review authorized projects, delivery health and deadlines", href: "/projects/portfolio", category: "Navigation", icon: Activity, aliases: ["portfolio", "project portfolio", "projects overview"], roles: ["owner", "admin", "manager", "member"] },
+  { id: "workload", title: "Workload", subtitle: "Review work distribution across people and Teams", href: "/workload", category: "Navigation", icon: Activity, aliases: ["resource view", "team workload", "people workload"], roles: ["owner", "admin", "manager"] },
 ];
 
 const rank = (value: string, query: string) => {

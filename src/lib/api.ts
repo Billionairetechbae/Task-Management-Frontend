@@ -1791,6 +1791,48 @@ export interface ProjectHealthProject {
   generatedAt: string;
 }
 
+export type WorkloadLevel = "light" | "balanced" | "heavy" | "overloaded";
+export interface WorkloadTaskReference {
+  id: string;
+  title: string;
+  teamId: string | null;
+  projectId: string | null;
+  assigneeId: string | null;
+  status: string;
+  priority: "low" | "medium" | "high" | "urgent" | null;
+  deadline: string | null;
+}
+export interface WorkloadMetrics {
+  activeTasks: number;
+  overdueTasks: number;
+  dueSoonTasks: number;
+  highPriorityTasks: number;
+  activeProjects: number;
+}
+export interface WorkloadEntry {
+  metrics: WorkloadMetrics;
+  workload: { level: WorkloadLevel; score: number; reasons: string[] };
+  tasks: WorkloadTaskReference[];
+}
+export interface WorkloadPerson extends WorkloadEntry {
+  user: { id: string; firstName: string; lastName: string; avatar: string | null; role: WorkspaceRole };
+  teams: Array<{ id: string; name: string }>;
+}
+export interface WorkloadTeam extends WorkloadEntry {
+  id: string;
+  name: string;
+  lead: { id: string; firstName: string; lastName: string } | null;
+  memberCount: number;
+}
+export interface WorkloadResponse {
+  scope: "workspace" | "teams";
+  summary: { activeMembers: number; light: number; balanced: number; heavy: number; overloaded: number; unassignedTasks: number; unassignedOverdueTasks: number; unassignedDueSoonTasks: number; overdueTasks: number; dueSoonTasks: number };
+  people: WorkloadPerson[];
+  teams: WorkloadTeam[];
+  unassigned: WorkloadTaskReference[];
+  generatedAt: string;
+}
+
 export interface ProjectHealthSummary {
   totalProjects: number;
   activeProjects?: number;
@@ -4719,6 +4761,13 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     };
   }> {
     return this.request("/project-health", {
+      method: "GET",
+      headers: this.getAuthHeaders(true),
+    });
+  }
+
+  async getWorkload(): Promise<{ status: string; data: WorkloadResponse }> {
+    return this.request("/workload", {
       method: "GET",
       headers: this.getAuthHeaders(true),
     });

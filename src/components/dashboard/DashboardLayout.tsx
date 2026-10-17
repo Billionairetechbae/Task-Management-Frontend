@@ -135,6 +135,11 @@ const DashboardLayout = ({
           icon: <Activity className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Workload",
+          href: "/workload",
+          icon: <Users className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Projects",
           items: [
             {
@@ -283,6 +288,11 @@ const DashboardLayout = ({
           icon: <Activity className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Workload",
+          href: "/workload",
+          icon: <Users className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Projects",
           items: [
             {
@@ -393,6 +403,11 @@ const DashboardLayout = ({
         label: "Workspace Insights",
         href: "/workspace-insights",
         icon: <Activity className="w-[18px] h-[18px]" />,
+      },
+      {
+        label: "Workload",
+        href: "/workload",
+        icon: <Users className="w-[18px] h-[18px]" />,
       },
       {
         label: "Projects",
