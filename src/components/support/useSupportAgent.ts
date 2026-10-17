@@ -4,6 +4,20 @@ import { api } from "@/lib/api";
 type AgentResponse = { answer: string; uncertain: boolean; recommendHuman: boolean; guide?: { title: string; href: string } | null };
 type ToolHandoff = (name: string, args: Record<string, unknown>, complete: (result: unknown) => void) => void;
 
+export function connectSupportSocket(
+  signedUrl: string,
+  configure: (socket: WebSocket) => void = () => {},
+  socketFactory: (url: string) => WebSocket = (url) => new WebSocket(url),
+): Promise<WebSocket> {
+  return new Promise((resolve, reject) => {
+    const socket = socketFactory(signedUrl);
+    configure(socket);
+    const timeout = window.setTimeout(() => { socket.close(); reject(new Error("Support agent connection timed out")); }, 12000);
+    socket.onopen = () => { window.clearTimeout(timeout); resolve(socket); };
+    socket.onerror = () => { window.clearTimeout(timeout); socket.close(); reject(new Error("Support agent unavailable")); };
+  });
+}
+
 /** Text-only ElevenLabs browser conversation. API keys never leave the backend. */
 export function useSupportAgent() {
   const socketRef = useRef<WebSocket | null>(null);
@@ -25,11 +39,7 @@ export function useSupportAgent() {
     if (!fallbackRef.current) {
       try {
         const { data } = await api.getSupportAgentSession();
-        await new Promise<void>((resolve, reject) => {
-          const ws = new WebSocket(data.signedUrl);
-          const timeout = window.setTimeout(() => { ws.close(); reject(new Error("Support agent connection timed out")); }, 12000);
-          ws.onopen = () => { window.clearTimeout(timeout); socketRef.current = ws; resolve(); };
-          ws.onerror = () => { window.clearTimeout(timeout); reject(new Error("Support agent unavailable")); };
+        const ws = await connectSupportSocket(data.signedUrl, (ws) => {
           ws.onclose = () => { socketRef.current = null; fallbackRef.current = true; };
           ws.onmessage = (event) => {
             try {
@@ -50,6 +60,7 @@ export function useSupportAgent() {
             } catch { /* Ignore malformed provider events; the chat can continue. */ }
           };
         });
+        socketRef.current = ws;
         const pending = waitForAnswer();
         socketRef.current?.send(JSON.stringify({ type: "user_message", text }));
         await pending;
