@@ -33,10 +33,10 @@ import {
   ChevronDown,
   Bot,
   Crown,
+  Activity,
   ListChecks,
   Folder,
   FolderKanban,
-  Activity,
   ShieldCheck,
   Plug,
   Columns3,
@@ -389,6 +389,7 @@ const DashboardLayout = ({
           icon: <Users className="w-[18px] h-[18px]" />,
         },
         { label: "Customization", href: "/settings/workspace/customization", icon: <Columns3 className="w-[18px] h-[18px]" /> },
+        { label: "Activity Log", href: "/settings/workspace/activity", icon: <Activity className="w-[18px] h-[18px]" /> },
         { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
       ];
     }

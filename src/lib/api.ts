@@ -1265,6 +1265,27 @@ export interface WorkspaceInsightsHistory {
   noTeamActivity: number;
 }
 
+export interface OrganizationAuditEvent {
+  id: string;
+  companyId: string;
+  actor: { id: string; name: string; avatar: string | null } | null;
+  actorType: "user" | "system" | "automation" | "integration";
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  entityNameSnapshot: string | null;
+  category: string;
+  summary: string;
+  changes: Record<string, { from: string | number | boolean | null; to: string | number | boolean | null }> | null;
+  metadata: Record<string, string | number | boolean> | null;
+  source: string;
+  projectId: string | null;
+  taskId: string | null;
+  teamId: string | null;
+  targetUserId: string | null;
+  occurredAt: string;
+}
+
 export interface WorkspaceDeliveryInsights {
   source: "lifecycle";
   period: { from: string; to: string; timezone: string; lifecycleDerived: boolean };
@@ -2984,6 +3005,12 @@ class ApiClient {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
+  }
+
+  async getOrganizationAuditEvents(filters?: { search?: string; category?: string; action?: string; actorId?: string; entityType?: string; projectId?: string; from?: string; to?: string; page?: number; limit?: number }): Promise<{ status: string; data: { events: OrganizationAuditEvent[]; pagination: { page: number; limit: number; total: number; totalPages: number } } }> {
+    const query = new URLSearchParams();
+    Object.entries(filters || {}).forEach(([key, value]) => { if (value !== undefined && value !== "") query.set(key, String(value)); });
+    return this.request(`/audit-events${query.toString() ? `?${query}` : ""}`, { method: "GET", headers: this.getAuthHeaders() });
   }
 
   async getWorkspaceDeliveryInsights(filters?: {

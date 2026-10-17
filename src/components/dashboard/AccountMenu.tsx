@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Bell, Plug, Settings, ShieldCheck, UserRound, LogOut, SlidersHorizontal } from "lucide-react";
+import { Building2, Bell, Plug, Settings, ShieldCheck, UserRound, LogOut, SlidersHorizontal, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -40,6 +40,7 @@ export default function AccountMenu() {
         <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Workspace</DropdownMenuLabel>
         <DropdownMenuItem asChild><Link to="/company-profile"><Building2 className="mr-2 h-4 w-4" />Workspace Settings</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/settings/workspace/customization"><SlidersHorizontal className="mr-2 h-4 w-4" />Workspace Customization</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link to="/settings/workspace/activity"><Activity className="mr-2 h-4 w-4" />Activity Log</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/team-management"><UserRound className="mr-2 h-4 w-4" />Workspace Members</Link></DropdownMenuItem>
       </>}
       {staff && <>
