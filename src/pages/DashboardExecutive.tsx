@@ -634,7 +634,7 @@ const DashboardExecutive = () => {
 
             {/* Desktop resizable with collapsible side column */}
             <div className="hidden lg:block">
-              <div className="flex h-[calc(100vh-120px)] gap-1">
+              <div className="flex h-[calc(100dvh-16rem)] min-h-[22rem] gap-1">
                 {!sideColumnOpen && (
                   <div className="w-11 shrink-0 flex flex-col items-center gap-2 pt-2">
                     <Button
@@ -657,8 +657,8 @@ const DashboardExecutive = () => {
                 >
                   {sideColumnOpen && (
                     <>
-                      <ResizablePanel id="side" order={1} defaultSize={35} minSize={22} maxSize={55}>
-                        <div className="pr-3 space-y-4 h-full overflow-y-auto">
+                      <ResizablePanel id="side" order={1} defaultSize={29} minSize={26} maxSize={34}>
+                        <div className="pr-2 space-y-3 h-full overflow-y-auto">
                           <div className="flex justify-end">
                             <Button
                               variant="ghost"
@@ -676,7 +676,7 @@ const DashboardExecutive = () => {
                       <ResizableHandle withHandle className="bg-transparent mx-1" />
                     </>
                   )}
-                  <ResizablePanel id="main" order={2} defaultSize={sideColumnOpen ? 65 : 100} minSize={45}>
+                  <ResizablePanel id="main" order={2} defaultSize={sideColumnOpen ? 71 : 100} minSize={62}>
                     <div className={cn("h-full overflow-y-auto", sideColumnOpen && "pl-3")}>
                       {tasksSection}
                     </div>

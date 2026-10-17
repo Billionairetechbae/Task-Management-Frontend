@@ -2377,7 +2377,7 @@ class ApiClient {
   }
 
   async getTasks(
-    filters?: TaskFilters & { teamId?: string; projectId?: string }
+    filters?: TaskFilters & { teamId?: string; projectId?: string; q?: string; limit?: number; page?: number }
   ): Promise<{ status: string; results: number; data: { tasks: Task[] } }> {
     const queryParams = new URLSearchParams();
     if (filters?.status) queryParams.append("status", filters.status);
@@ -2385,6 +2385,9 @@ class ApiClient {
     if (filters?.category) queryParams.append("category", filters.category);
     if (filters?.teamId) queryParams.append("teamId", filters.teamId);
     if (filters?.projectId) queryParams.append("projectId", filters.projectId);
+    if (filters?.q) queryParams.append("q", filters.q.slice(0, 100));
+    if (filters?.limit) queryParams.append("limit", String(Math.min(Math.max(filters.limit, 1), 50)));
+    if (filters?.page) queryParams.append("page", String(Math.max(filters.page, 1)));
     if (filters?.customFieldColumns?.length) queryParams.append("customFieldColumns", JSON.stringify(filters.customFieldColumns.slice(0, 5)));
     if (filters?.customFieldFilters?.length) queryParams.append("customFieldFilters", JSON.stringify(filters.customFieldFilters.slice(0, 5)));
 
@@ -4047,13 +4050,14 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async getProjects(filters?: { teamId?: string; workspaceId?: string; customFieldColumns?: string[] }): Promise<{
+  async getProjects(filters?: { teamId?: string; workspaceId?: string; customFieldColumns?: string[]; search?: string }): Promise<{
     status: string;
     results?: number;
     data: { projects: Project[] } | { items?: Project[] } | any;
   }> {
     const params = new URLSearchParams();
     if (filters?.teamId) params.set("teamId", filters.teamId);
+    if (filters?.search) params.set("search", filters.search.slice(0, 100));
     if (filters?.customFieldColumns?.length) params.set("customFieldColumns", JSON.stringify(filters.customFieldColumns.slice(0, 3)));
     const query = params.toString() ? `?${params.toString()}` : "";
     return this.request(`/projects${query}`, {

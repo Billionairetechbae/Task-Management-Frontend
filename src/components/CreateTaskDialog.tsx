@@ -1,7 +1,7 @@
 // src/components/dashboard/CreateTaskDialog.tsx
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -227,24 +227,26 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[95%] sm:w-[90%] max-h-[90vh] overflow-y-auto rounded-xl p-6">
+      <DialogContent className="max-w-4xl w-[96vw] sm:w-[92vw] max-h-[92dvh] overflow-y-auto rounded-xl p-5 sm:p-7">
         <DialogHeader>
           <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <Paperclip className="w-5 h-5" />
             Create New Task
           </DialogTitle>
+          <DialogDescription>Set a clear outcome, owner and deadline. You can add details and files as needed.</DialogDescription>
         </DialogHeader>
 
         {!projectId && (
-          <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => setTemplateOpen(true)}>
-            Use template
+          <Button type="button" variant="outline" className="h-auto w-full justify-start border-primary/20 bg-primary/[0.03] p-3 text-left hover:bg-primary/[0.06]" onClick={() => setTemplateOpen(true)}>
+            <span className="flex flex-col items-start gap-0.5"><span className="font-medium">Start from a template</span><span className="text-xs font-normal text-muted-foreground">Pre-fill this task using a reusable workspace template.</span></span>
           </Button>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <Label>Task Title *</Label>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-2">
+          <div className="lg:col-span-2">
+            <Label htmlFor="create-task-title">Task title *</Label>
             <Input
+              id="create-task-title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Enter task title"
@@ -252,11 +254,11 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
             />
           </div>
 
-          <TeamSelector
-            value={formData.teamId}
-            onChange={(teamId) => setFormData({ ...formData, teamId })}
-            disabled={!canAssignOthers}
-          />
+          <div><TeamSelector
+              value={formData.teamId}
+              onChange={(teamId) => setFormData({ ...formData, teamId })}
+              disabled={!canAssignOthers}
+            /></div>
 
           <div>
             <Label>Description *</Label>
@@ -269,7 +271,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
             />
           </div>
 
-          <CustomFieldsForm entityType="task" value={customFields} onChange={setCustomFields} />
+          <div><CustomFieldsForm entityType="task" value={customFields} onChange={setCustomFields} /></div>
 
           {!projectId && (
             <div>
@@ -452,7 +454,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
             )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="lg:col-span-2 flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>

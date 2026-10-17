@@ -43,6 +43,7 @@ import {
   LayoutTemplate,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
+import GlobalSearch from "@/components/dashboard/GlobalSearch";
 
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import NotificationsDropdown from "@/components/notifications/NotificationsDropdown";
@@ -245,6 +246,11 @@ const DashboardLayout = ({
           icon: <Users className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Customization",
+          href: "/settings/workspace/customization",
+          icon: <Columns3 className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Company Profile",
           href: "/company-profile",
           icon: <Building2 className="w-[18px] h-[18px]" />,
@@ -360,6 +366,7 @@ const DashboardLayout = ({
           href: "/harmony",
           icon: <Users className="w-[18px] h-[18px]" />,
         },
+        { label: "Customization", href: "/settings/workspace/customization", icon: <Columns3 className="w-[18px] h-[18px]" /> },
         { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
       ];
     }
@@ -764,7 +771,7 @@ const DashboardLayout = ({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="min-h-screen bg-background flex w-full">
+      <div className={cn("min-h-screen bg-background flex w-full", location.pathname === "/dashboard" && "lg:h-screen lg:min-h-0 lg:overflow-hidden")}>
         <aside
           className={cn(
             "hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out fixed inset-y-0 left-0 z-30",
@@ -835,6 +842,8 @@ const DashboardLayout = ({
                 </div>
               </div>
 
+              <GlobalSearch />
+
               <div className="flex items-center gap-1.5">
                 {showHeaderSwitcher && (
                   <div className="hidden sm:block">
@@ -872,6 +881,7 @@ const DashboardLayout = ({
           <main
             className={cn(
               "flex-1 min-w-0",
+              location.pathname === "/dashboard" && "lg:min-h-0 lg:overflow-hidden",
               !hidePadding && "p-4 sm:p-6",
               !fullWidth && "max-w-[1400px] mx-auto w-full"
             )}
