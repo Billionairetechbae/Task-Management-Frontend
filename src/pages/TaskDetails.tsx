@@ -23,7 +23,7 @@ import {
 
 import { 
   X, Send, Clock, User2, MessageSquare, User, Clock4, AlertCircle, Reply,
-  MessageCircle, ChevronRight, Check, CheckCheck, Paperclip, Upload, 
+  MessageCircle, ChevronRight, Check, CheckCheck, Upload, 
   Trash2, FileText, Download, Search, Star, RefreshCw, Calendar, 
   Building2, MoreHorizontal, ListChecks, Activity as ActivityIcon, 
   Files as FilesIcon, Pencil, Plus, FolderPlus, ChevronDown, ChevronUp,
@@ -32,7 +32,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, Task, TaskComment, TaskAccess } from "@/lib/api";
@@ -57,6 +57,7 @@ import GoogleDrivePickerDialog from "@/components/tasks/GoogleDrivePickerDialog"
 import { ConnectedStorageAttachmentsSection } from "@/components/connectedStorage/ConnectedStorageAttachmentsSection";
 import { ConnectedStorageAttachmentList } from "@/components/connectedStorage/ConnectedStorageAttachmentList";
 import { ConnectedStoragePickerButton } from "@/components/connectedStorage/ConnectedStoragePickerButton";
+import AttachmentSourcePicker from "@/components/attachments/AttachmentSourcePicker";
 import type { ConnectedStorageItem } from "@/lib/api";
 import { getTaskSubtaskCount, getTaskWatcherCount } from "@/lib/taskListUtils";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
@@ -99,6 +100,7 @@ interface CorrectedTaskComment extends Omit<TaskComment, 'user'> {
 
 const TaskDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, activeCompanyId, workspaceRole } = useAuth();
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
@@ -198,6 +200,16 @@ const TaskDetails = () => {
   const [pendingComments, setPendingComments] = useState<Map<string, {content: string, timestamp: number}>>(new Map());
   const [showChatSheet, setShowChatSheet] = useState(false);
   const [showDrivePicker, setShowDrivePicker] = useState(false);
+  useEffect(() => {
+    const pending = sessionStorage.getItem("google_picker_pending");
+    const result = new URLSearchParams(location.search).get("google");
+    if (pending && result === "connected") {
+      sessionStorage.removeItem("google_picker_pending");
+      setShowDrivePicker(true);
+    } else if (pending && result === "error") {
+      sessionStorage.removeItem("google_picker_pending");
+    }
+  }, [location.search]);
   const [savingToDrive, setSavingToDrive] = useState<string | null>(null);
 
   // Workbench state
@@ -1980,19 +1992,20 @@ const TaskDetails = () => {
           />
           <div className="flex flex-col gap-1.5">
             <input type="file" multiple ref={chatFileInputRef} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif" onChange={handleCommentFileSelect} />
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => chatFileInputRef.current?.click()} disabled={sendingComment || !canCollaborate}>
-              <Paperclip className="w-3.5 h-3.5" />
-            </Button>
-            {canCollaborate && id && (
-              <ConnectedStoragePickerButton
+            <AttachmentSourcePicker
+              compact
+              showGoogleDrive={false}
+              onUpload={() => chatFileInputRef.current?.click()}
+              disabled={sendingComment || !canCollaborate}
+              dropboxControl={canCollaborate && id ? <ConnectedStoragePickerButton
                 iconOnly
                 label="Attach from Dropbox"
                 targetType="comment"
                 taskId={id}
                 disabled={sendingComment}
                 onSelect={(item, connectionId) => setPendingConnectedStorage((current) => (current.some((entry) => entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId) ? current : [...current, { connectionId, item }]))}
-              />
-            )}
+              /> : undefined}
+            />
             <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || !canCollaborate}>
               {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
@@ -2050,30 +2063,11 @@ const TaskDetails = () => {
             <Badge variant="outline" className="text-[10px]">{task.attachments?.length || 0}</Badge>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 text-xs justify-center"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingFiles}
-          >
-            {uploadingFiles ? <Clock className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-            Upload from Device
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 text-xs justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
-            onClick={() => setShowDrivePicker(true)}
-            disabled={uploadingFiles}
-          >
-            <svg viewBox="0 0 24 24" className="w-3 h-3 text-[#4285F4] fill-current" aria-hidden>
-              <path d="M7.71 3.5h8.58l3.71 6.43H4L7.71 3.5zM3.5 10l3.71 6.43L7.43 20.5h-.72L2.79 11.5l.71-1.5zM20.5 10l.71.5-3.92 9h-.72l-.21-4.07L20.5 10zM3.71 10.5h13.29l-3.29 7.62h-6.72L3.71 10.5z" />
-            </svg>
-            Choose from Google Drive
-          </Button>
-        </div>
+        <AttachmentSourcePicker
+          disabled={uploadingFiles || isReadOnly}
+          onUpload={() => fileInputRef.current?.click()}
+          onGoogleDrive={() => setShowDrivePicker(true)}
+        />
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         {id && (

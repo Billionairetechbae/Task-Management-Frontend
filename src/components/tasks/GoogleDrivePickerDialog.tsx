@@ -36,7 +36,13 @@ const isFolder = (f: GoogleDriveFile) =>
   f.mimeType === "application/vnd.google-apps.folder";
 
 const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePickerDialogProps) => {
-  const { isConnected, statusLoading, connect, connectLoading } = useGoogleIntegration();
+  const { status, isConnected, statusLoading, connect, connectLoading } = useGoogleIntegration();
+  const hasDriveScope = Boolean(status.services?.drive || status.scopes?.some((scope) =>
+    scope === "https://www.googleapis.com/auth/drive.file" ||
+    scope === "https://www.googleapis.com/auth/drive.readonly" ||
+    scope === "https://www.googleapis.com/auth/drive"
+  ));
+  const canBrowseDrive = isConnected && hasDriveScope;
 
   const [selectedFile, setSelectedFile] = useState<GoogleDriveFile | null>(null);
   const [folderStack, setFolderStack] = useState<Array<{ fileId: string; name: string }>>([]);
@@ -46,7 +52,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
   const [pickerError, setPickerError] = useState<string | null>(null);
 
   const drive = useGoogleDriveFiles({
-    enabled: open && isConnected,
+    enabled: open && canBrowseDrive,
   });
 
   const { openGooglePicker, dispose } = useGooglePicker({
@@ -123,7 +129,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
 
   // Open official Google Picker and feed the result through the same onSelect flow
   const handleBrowseWithPicker = async () => {
-    if (pickerLoading || !isConnected) return;
+    if (pickerLoading || !canBrowseDrive) return;
     setPickerLoading(true);
     setPickerError(null);
 
@@ -205,8 +211,10 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
               <div>
                 <DialogTitle className="text-lg">Choose from Google Drive</DialogTitle>
                 <DialogDescription className="text-xs mt-0.5">
-                  {isConnected
+                  {canBrowseDrive
                     ? "Browse your Drive or pick from recent Admiino files below."
+                    : isConnected
+                    ? "Your Google account is connected, but Drive permission has not been granted yet. Connect Google Drive to browse and attach files."
                     : "Connect Google Drive to browse and attach files."}
                 </DialogDescription>
               </div>
@@ -220,15 +228,17 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-sm text-muted-foreground">Checking Google Drive status…</p>
           </div>
-        ) : !isConnected ? (
+        ) : !canBrowseDrive ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-10 gap-4">
             <div className="w-16 h-16 rounded-2xl bg-[#4285F4]/10 flex items-center justify-center">
               <AlertTriangle className="w-8 h-8 text-[#4285F4]" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">Google Drive is not connected</h3>
+              <h3 className="text-base font-semibold">Connect Google Drive</h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                Connect your Google account to attach files directly from Google Drive to your tasks.
+                {isConnected
+                  ? "Your Google account is signed in to Admiino, but Drive access has not been granted yet. Connect Google Drive once to browse and attach files."
+                  : "Connect Google Drive once to browse and attach files from your Google account."}
               </p>
             </div>
             <Button
@@ -237,7 +247,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
               className="bg-[#4285F4] hover:bg-[#3b78e0] text-white shadow-sm h-10 px-6 gap-2"
             >
               {connectLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Connect Google Drive
+              {isConnected ? "Grant Drive access" : "Connect Google Drive"}
             </Button>
           </div>
         ) : (
@@ -517,7 +527,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={!selectedFile || attachPending || selecting || !isConnected}
+            disabled={!selectedFile || attachPending || selecting || !canBrowseDrive}
             className="gap-2"
           >
             {(selecting || attachPending) && <Loader2 className="w-4 h-4 animate-spin" />}

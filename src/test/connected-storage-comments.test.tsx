@@ -75,6 +75,7 @@ beforeEach(() => {
 });
 
 async function pickInComposer() {
+  await userEvent.click(await screen.findByRole("button", { name: "Add attachment" }));
   await userEvent.click(await screen.findByRole("button", { name: "Attach from Dropbox" }));
   await userEvent.click(await screen.findByRole("listitem", { name: "Select file picked.pdf" }));
   await userEvent.click(screen.getByRole("button", { name: "Select" }));
@@ -113,6 +114,7 @@ describe("Task comments with Dropbox files", () => {
   it("the comment picker is opened with the new-comment target (task id), not a persisted attachment", async () => {
     renderTask();
     await screen.findByText("Here is the spec");
+    await userEvent.click(await screen.findByRole("button", { name: "Add attachment" }));
     await userEvent.click(await screen.findByRole("button", { name: "Attach from Dropbox" }));
     await waitFor(() => expect(mocks.api.listConnectedStorageItems).toHaveBeenCalled());
     expect(mocks.api.listConnectedStorageItems.mock.calls[0][1]).toEqual({ targetType: "comment", targetId: undefined, taskId: "task-1" });
@@ -145,6 +147,7 @@ describe("Task comments with Dropbox files", () => {
     mocks.api.getTaskComments.mockResolvedValue({ success: true, comments: [comment("c1", "Visible to client")] }); // server omits the key for clients
     renderTask();
     await screen.findByText("Visible to client");
+    await userEvent.click(await screen.findByRole("button", { name: "Add attachment" }));
     expect(screen.queryByRole("button", { name: "Attach from Dropbox" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("connected-storage-attachments")).not.toBeInTheDocument();
     expect(mocks.api.listConnectedStorageConnections).not.toHaveBeenCalled();

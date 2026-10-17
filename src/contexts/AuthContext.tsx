@@ -14,6 +14,31 @@ function loadCachedWorkspaces(): any[] {
   }
 }
 
+// Keep every authentication/hydration path aligned with the workspace list
+// response shape. In particular, the persisted workspace logo is nested under
+// `company` in /me/workspaces, while older cached payloads may expose it flat.
+export function mapWorkspaceSummary(w: any): Workspace {
+  return {
+    id: w.companyId || w.company?.id || w.id,
+    name: w.company?.name ?? w.name ?? "Workspace",
+    role: (w.role || "member") as WorkspaceRole,
+    status: w.status || "active",
+    isVerified: !!w.isVerified,
+    logoUrl: w.company?.logoUrl ?? w.logoUrl ?? null,
+    company: w.company
+      ? {
+          id: w.company.id,
+          name: w.company.name,
+          companyCode: w.company.companyCode,
+          industry: w.company.industry ?? null,
+          logoUrl: w.company.logoUrl ?? w.logoUrl ?? null,
+        }
+      : w.companyId || w.id
+      ? { id: w.companyId || w.id, name: w.name ?? "Workspace", logoUrl: w.logoUrl ?? null }
+      : null,
+  };
+}
+
 function saveCachedWorkspaces(ws: any[]) {
   try {
     localStorage.setItem(WS_STORAGE_KEY, JSON.stringify(ws || []));
@@ -64,21 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(loadCachedWorkspaces);
 
   const mapWorkspaces = (items: any[]): Workspace[] => (Array.isArray(items) ? items : [])
-    .map((w: any) => ({
-      id: w.companyId || w.company?.id || w.id,
-      name: w.company?.name ?? w.name ?? "Workspace",
-      role: (w.role || "member") as WorkspaceRole,
-      status: w.status || "active",
-      isVerified: !!w.isVerified,
-      logoUrl: w.company?.logoUrl ?? w.logoUrl ?? null,
-      company: w.company ? {
-        id: w.company.id,
-        name: w.company.name,
-        companyCode: w.company.companyCode,
-        industry: w.company.industry ?? null,
-        logoUrl: w.company.logoUrl ?? null,
-      } : w.id ? { id: w.id, name: w.name, logoUrl: w.logoUrl ?? null } : null,
-    }))
+    .map(mapWorkspaceSummary)
     .filter((w: Workspace) => !!w.id && w.status !== "removed");
 
   const activeWorkspace = useMemo(() => {
@@ -165,23 +176,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const ws: Workspace[] = (wsRaw || [])
-        .map((w: any) => ({
-          id: w.companyId || w.company?.id || w.id,
-          name: w.company?.name ?? w.name ?? "Workspace",
-          role: (w.role || "member") as WorkspaceRole,
-          status: w.status || "active",
-          isVerified: !!w.isVerified,
-          company: w.company
-            ? {
-                id: w.company.id,
-                name: w.company.name,
-                companyCode: w.company.companyCode,
-                industry: w.company.industry ?? null,
-              }
-            : w.id
-            ? { id: w.id, name: w.name }
-            : null,
-        }))
+        .map(mapWorkspaceSummary)
         .filter((w: Workspace) => !!w.id);
 
       saveCachedWorkspaces(ws);
@@ -230,23 +225,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const wsRes = await api.getMyWorkspaces();
         const payload = (wsRes as any)?.data ?? {};
         const wsRaw = (payload.workspaces ?? (wsRes as any)?.workspaces ?? []) as any[];
-        ws = (Array.isArray(wsRaw) ? wsRaw : []).map((w: any) => ({
-          id: w.companyId || w.company?.id || w.id,
-          name: w.company?.name ?? w.name ?? "Workspace",
-          role: (w.role || "member") as WorkspaceRole,
-          status: w.status || "active",
-          isVerified: !!w.isVerified,
-          company: w.company
-            ? {
-                id: w.company.id,
-                name: w.company.name,
-                companyCode: w.company.companyCode,
-                industry: w.company.industry ?? null,
-              }
-            : w.id
-            ? { id: w.id, name: w.name }
-            : null,
-        })).filter((w: Workspace) => !!w.id);
+        ws = (Array.isArray(wsRaw) ? wsRaw : []).map(mapWorkspaceSummary).filter((w) => !!w.id);
       } catch {}
 
       // Fallback: workspaces embedded in /auth/me or cached
@@ -260,23 +239,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             merged.push(c);
           }
         });
-        ws = merged.map((w: any) => ({
-          id: w.companyId || w.company?.id || w.id,
-          name: w.company?.name ?? w.name ?? "Workspace",
-          role: (w.role || "member") as WorkspaceRole,
-          status: w.status || "active",
-          isVerified: !!w.isVerified,
-          company: w.company
-            ? {
-                id: w.company.id,
-                name: w.company.name,
-                companyCode: w.company.companyCode,
-                industry: w.company.industry ?? null,
-              }
-            : w.id
-            ? { id: w.id, name: w.name }
-            : null,
-        })).filter((w: Workspace) => !!w.id);
+        ws = merged.map(mapWorkspaceSummary).filter((w) => !!w.id);
       }
 
       saveCachedWorkspaces(ws);
@@ -313,35 +276,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const wsRes = await api.getMyWorkspaces();
       const payload = (wsRes as any)?.data ?? {};
       const wsRaw = (payload.workspaces ?? (wsRes as any)?.workspaces ?? []) as any[];
-      ws = (Array.isArray(wsRaw) ? wsRaw : []).map((w: any) => ({
-        id: w.companyId || w.company?.id || w.id,
-        name: w.company?.name ?? w.name ?? "Workspace",
-        role: (w.role || "member") as WorkspaceRole,
-        status: w.status || "active",
-        isVerified: !!w.isVerified,
-        company: w.company
-          ? {
-              id: w.company.id,
-              name: w.company.name,
-              companyCode: w.company.companyCode,
-              industry: w.company.industry ?? null,
-            }
-          : w.id
-          ? { id: w.id, name: w.name }
-          : null,
-      })).filter((w: Workspace) => !!w.id);
+      ws = (Array.isArray(wsRaw) ? wsRaw : []).map(mapWorkspaceSummary).filter((w) => !!w.id);
     } catch {}
 
     if (ws.length === 0) {
       const wsRaw = (response?.data as any)?.workspaces || (response as any)?.workspaces || [];
-      ws = (Array.isArray(wsRaw) ? wsRaw : []).map((w: any) => ({
-        id: w.companyId || w.company?.id,
-        name: w.company?.name ?? "Workspace",
-        role: (w.role || "member") as WorkspaceRole,
-        status: w.status || "active",
-        isVerified: !!w.isVerified,
-        company: w.company ? { id: w.company.id, name: w.company.name } : null,
-      })).filter((w: Workspace) => !!w.id);
+      ws = (Array.isArray(wsRaw) ? wsRaw : []).map(mapWorkspaceSummary).filter((w) => !!w.id);
     }
 
     saveCachedWorkspaces(ws);

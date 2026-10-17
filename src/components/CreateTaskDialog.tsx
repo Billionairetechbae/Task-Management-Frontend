@@ -20,6 +20,7 @@ import TeamSelector from "@/components/TeamSelector";
 import { useTemplateNavigation } from "@/components/templates/useTemplateNavigation";
 import UseTemplateFlow from "@/components/templates/UseTemplateFlow";
 import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
+import { canonicalTaskCategories, matchTaskCategory } from "@/lib/taskCategories";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   const [members, setMembers] = useState<CompanyMember[]>([]);
 
   const [files, setFiles] = useState<File[]>([]);
+  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
@@ -68,6 +70,16 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
     if (open) setCustomFields({});
     if (open && initialDeadline) setFormData((prev) => ({ ...prev, deadline: initialDeadline }));
   }, [open, initialDeadline]);
+
+  useEffect(() => {
+    if (!open) return;
+    let current = true;
+    api.getTasks().then((response) => {
+      if (!current) return;
+      setCategorySuggestions(canonicalTaskCategories((response.data?.tasks || []).map((task) => task.category)));
+    }).catch(() => setCategorySuggestions([]));
+    return () => { current = false; };
+  }, [open]);
 
   useEffect(() => {
     if (open && canAssignOthers) fetchMembers();
@@ -349,13 +361,19 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label>Category *</Label>
+              <Label htmlFor="task-category">Category <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Input
+                id="task-category"
+                list="task-category-suggestions"
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                onChange={(e) => {
+                  const typed = e.target.value;
+                  const matching = matchTaskCategory(typed, categorySuggestions);
+                  setFormData({ ...formData, category: matching ?? typed });
+                }}
                 placeholder="e.g., Documentation"
-                required
               />
+              <datalist id="task-category-suggestions">{categorySuggestions.map((category) => <option key={category} value={category} />)}</datalist>
             </div>
 
             <div>

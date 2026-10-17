@@ -6,7 +6,8 @@ import { useGooglePicker } from "@/hooks/useGooglePicker";
 import { googleIntegrationService } from "@/services/googleIntegrationService";
 
 const recentFile = vi.hoisted(() => ({ fileId: "recent-1", name: "Recent budget.xlsx", mimeType: "application/octet-stream", webViewLink: "https://drive.google.com/file/d/recent-1/view" }));
-vi.mock("@/hooks/useGoogleIntegration", () => ({ useGoogleIntegration: () => ({ isConnected: true, statusLoading: false }) }));
+const googleStatus = vi.hoisted(() => ({ connected: true, services: { drive: true }, scopes: [] as string[] }));
+vi.mock("@/hooks/useGoogleIntegration", () => ({ useGoogleIntegration: () => ({ isConnected: googleStatus.connected, status: googleStatus, statusLoading: false, connect: vi.fn(), connectLoading: false }) }));
 vi.mock("@/hooks/useGoogleDriveFiles", () => ({ useGoogleDriveFiles: () => ({ files: [recentFile], query: "", loading: false, refresh: vi.fn(), setQuery: vi.fn(), setFolderId: vi.fn() }) }));
 
 // Simulate the SDK's body-mounted DOM and terminal callbacks. Geometry is also
@@ -49,6 +50,7 @@ class FakeBuilder {
 }
 
 beforeEach(() => {
+  googleStatus.connected = true; googleStatus.services = { drive: true }; googleStatus.scopes = [];
   instances = []; builders = [];
   window._gapiScriptInjected = true;
   window._gapiPickerReady = true;
@@ -77,6 +79,14 @@ it("Browse creates the body-mounted iframe using the existing token, key and Dri
   expect(builders[0].views[0].includeFolders).toBe(true);
   expect(builders[0].views[0].selectFolder).toBe(false);
   expect(error).not.toHaveBeenCalled();
+});
+
+it("explains that Drive access is missing when basic Google integration has no Drive scope", () => {
+  googleStatus.connected = true; googleStatus.services = { drive: false }; googleStatus.scopes = [];
+  render(<GoogleDrivePickerDialog open onOpenChange={vi.fn()} onSelect={vi.fn()} />);
+  expect(screen.getByText(/signed in to Admiino, but Drive access has not been granted yet/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Grant Drive access" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Browse Google Drive" })).not.toBeInTheDocument();
 });
 it("positions the dialog above its backdrop, independently of page scroll", async () => {
   const style = document.createElement("style");

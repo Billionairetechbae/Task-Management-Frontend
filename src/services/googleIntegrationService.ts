@@ -7,6 +7,7 @@ export interface GoogleIntegrationStatus {
   connected: boolean;
   email?: string;
   scopes?: string[];
+  services?: { drive?: boolean; calendar?: boolean; [key: string]: boolean | undefined };
   connectedAt?: string;
   error?: string;
 }
@@ -59,15 +60,16 @@ export const googleIntegrationService = {
     return {
       connected: Boolean(data.connected),
       email: data.email ?? data.accountEmail,
-      scopes: data.scopes ?? data.capabilities ?? [],
+      scopes: data.grantedScopes ?? data.scopes ?? [],
+      services: data.services ?? undefined,
       connectedAt: data.connectedAt,
       error: data.error,
     };
   },
 
-  async getConnectUrl(): Promise<string> {
+  async getConnectUrl(returnTo = window.location.pathname): Promise<string> {
     try {
-      const res = await api.get<any>(`${API_PREFIX}/connect`);
+      const res = await api.get<any>(`${API_PREFIX}/connect?returnTo=${encodeURIComponent(returnTo)}`);
       const data = (res as any)?.data ?? res ?? {};
       return data.authUrl || data.url || data.redirectUrl || "";
     } catch {
@@ -76,14 +78,17 @@ export const googleIntegrationService = {
       const q = new URLSearchParams();
       if (token) q.set("token", token);
       if (companyId) q.set("companyId", companyId);
+      q.set("returnTo", returnTo);
       return `${API_BASE_URL}${API_PREFIX}/connect${q.toString() ? `?${q.toString()}` : ""}`;
     }
   },
 
   async redirectToConnect(): Promise<void> {
-    const url = await this.getConnectUrl();
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+    const url = await this.getConnectUrl(returnTo);
     if (url) {
       sessionStorage.setItem("google_integration_return", window.location.pathname);
+      if (window.location.pathname.startsWith("/tasks/")) sessionStorage.setItem("google_picker_pending", "1");
       window.location.href = url;
     } else {
       throw new Error("Could not generate Google Drive connect URL.");

@@ -31,6 +31,7 @@ const WorkspaceSwitcher = () => {
   useSwitcherRegistration(`workspace-switcher:${instanceId}`, available);
   const [search, setSearch] = useState("");
   const [visibleCount, setVisibleCount] = useState(5);
+  const [failedLogoIds, setFailedLogoIds] = useState<Set<string>>(() => new Set());
   const searchRef = useRef<HTMLInputElement>(null);
 
   const { matches, visible } = useMemo(
@@ -133,7 +134,9 @@ const WorkspaceSwitcher = () => {
                   "w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0",
                   isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  {workspace.logoUrl || workspace.company?.logoUrl ? <img src={workspace.logoUrl || workspace.company?.logoUrl || ""} alt="" className="h-full w-full rounded-md object-cover" /> : <Building2 className="h-3.5 w-3.5" />}
+                  {(workspace.logoUrl || workspace.company?.logoUrl) && !failedLogoIds.has(workspace.id)
+                    ? <img src={workspace.logoUrl || workspace.company?.logoUrl || ""} alt="" className="h-full w-full rounded-md object-cover" onError={() => setFailedLogoIds((previous) => new Set(previous).add(workspace.id))} />
+                    : <span aria-hidden="true" className="text-[9px] font-semibold">{(workspace.name || "WS").trim().slice(0, 2).toUpperCase()}</span>}
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className={cn("text-sm block truncate", isSelected && "font-semibold")}>
