@@ -22,3 +22,14 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+
+
+
+
+
+/Library/PostgreSQL/16/bin/pg_ctl \
+  -D "$HOME/.admiino-postgres" \
+  -o "-h 127.0.0.1 -p 55434" \
+  -l "$HOME/.admiino-postgres/server.log" \
+  start
