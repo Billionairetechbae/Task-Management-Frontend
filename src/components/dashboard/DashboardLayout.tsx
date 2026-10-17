@@ -41,6 +41,7 @@ import {
   Plug,
   Columns3,
   LayoutTemplate,
+  Workflow,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 import GlobalSearch from "@/components/dashboard/GlobalSearch";
@@ -389,6 +390,7 @@ const DashboardLayout = ({
           icon: <Users className="w-[18px] h-[18px]" />,
         },
         { label: "Customization", href: "/settings/workspace/customization", icon: <Columns3 className="w-[18px] h-[18px]" /> },
+        { label: "Automations", href: "/settings/workspace/automations", icon: <Workflow className="w-[18px] h-[18px]" /> },
         { label: "Activity Log", href: "/settings/workspace/activity", icon: <Activity className="w-[18px] h-[18px]" /> },
         { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
       ];

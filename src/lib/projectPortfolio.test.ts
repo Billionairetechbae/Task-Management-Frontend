@@ -62,4 +62,10 @@ describe("Project Portfolio filtering and sorting", () => {
     expect(getSearchNavigation("portfolio", "member", () => true).Navigation?.[0]?.href).toBe("/projects/portfolio");
     expect(getSearchNavigation("portfolio", "guest", () => true).Navigation).toBeUndefined();
   });
+
+  it("adds Automations navigation only for workspace owners and admins", () => {
+    expect(getSearchNavigation("workflow", "owner", () => true).Settings?.[0]?.href).toBe("/settings/workspace/automations");
+    expect(getSearchNavigation("automation", "admin", () => true).Settings?.[0]?.title).toBe("Automations");
+    expect(getSearchNavigation("rules", "member", () => true).Settings).toBeUndefined();
+  });
 });

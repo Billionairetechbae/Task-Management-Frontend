@@ -1,7 +1,7 @@
 import {
   Activity, Bell, CalendarDays, Columns3, FileText, FolderKanban, FolderOpen,
   LayoutDashboard, LayoutTemplate, Plug, Settings, ShieldCheck, Trash2, User,
-  Users, ClipboardList, type LucideIcon,
+  Users, ClipboardList, Workflow, type LucideIcon,
 } from "lucide-react";
 
 export type SearchNavigationResult = {
@@ -31,6 +31,7 @@ const entries: Entry[] = [
   { id: "client-access", title: "Client Access", subtitle: "Review shared resources and client access", href: "/resource-access", category: "Settings", icon: ShieldCheck, aliases: ["client access", "resource access"], roles: ["owner", "admin"] },
   { id: "workspace-access", title: "Workspace Access", subtitle: "Manage workspace membership and access", href: "/workspace-access", category: "Settings", icon: ShieldCheck, aliases: ["workspace access", "members", "member"], roles: ["owner", "admin"] },
   { id: "customization", title: "Workspace Customization", subtitle: "Manage custom fields and workspace configuration", href: "/settings/workspace/customization", category: "Settings", icon: Settings, aliases: ["custom field", "custom fields", "customization"], roles: ["owner", "admin", "manager"] },
+  { id: "automations", title: "Automations", subtitle: "Create simple rules for Task and Project events", href: "/settings/workspace/automations", category: "Settings", icon: Workflow, aliases: ["automation", "workflow", "rules"], roles: ["owner", "admin"] },
   { id: "trash", title: "Trash", subtitle: "Restore or permanently remove deleted items", href: "/trash", category: "Navigation", icon: Trash2, aliases: ["deleted", "recycle bin"], roles: ["owner", "admin"] },
   { id: "shared-with-me", title: "Shared with Me", subtitle: "Open resources shared with your account", href: "/shared-with-me", category: "Navigation", icon: FolderOpen, aliases: ["shared"] },
   { id: "project-health", title: "Project Health", subtitle: "Review project progress and risks", href: "/project-health", category: "Navigation", icon: Activity, aliases: ["project health", "health"], roles: ["owner", "admin", "manager"] },

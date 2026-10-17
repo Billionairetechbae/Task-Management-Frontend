@@ -20,6 +20,18 @@ export interface Company {
   updatedAt: string;
 }
 
+export type AutomationTrigger = "task_created" | "task_status_changed" | "task_completed" | "task_reopened" | "task_priority_changed" | "task_assignee_changed" | "task_due_date_changed" | "task_overdue" | "project_created" | "project_status_changed";
+export type AutomationAction = "SEND_ADMIINO_NOTIFICATION" | "CREATE_FOLLOW_UP_TASK";
+export interface AutomationRule {
+  id: string; companyId: string; name: string; description: string | null; enabled: boolean;
+  triggerType: AutomationTrigger; triggerConfig: Record<string, never>; conditions: Array<{ field: string; operator: "equals"; value: string | boolean }>;
+  actionType: AutomationAction; actionConfig: Record<string, unknown>; createdBy: string | null; lastTriggeredAt: string | null; archivedAt?: string | null; createdAt: string; updatedAt: string;
+}
+export interface AutomationExecution {
+  id: string; automationRuleId: string | null; automationNameSnapshot: string; entityType: string; entityId: string | null; eventType: string;
+  status: "pending" | "succeeded" | "skipped" | "failed"; errorCode: string | null; errorMessageSafe: string | null; resultSummary: string | null; createdAt: string; completedAt: string | null;
+}
+
 export interface User {
   id: string;
   firstName: string;
@@ -3011,6 +3023,25 @@ class ApiClient {
     const query = new URLSearchParams();
     Object.entries(filters || {}).forEach(([key, value]) => { if (value !== undefined && value !== "") query.set(key, String(value)); });
     return this.request(`/audit-events${query.toString() ? `?${query}` : ""}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async getAutomations(): Promise<{ status: string; data: { automations: AutomationRule[] } }> {
+    return this.request("/automations", { method: "GET", headers: this.getAuthHeaders() });
+  }
+  async createAutomation(input: Partial<AutomationRule>): Promise<{ status: string; data: { automation: AutomationRule } }> {
+    return this.request("/automations", { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify(input) });
+  }
+  async updateAutomation(id: string, input: Partial<AutomationRule>): Promise<{ status: string; data: { automation: AutomationRule } }> {
+    return this.request(`/automations/${encodeURIComponent(id)}`, { method: "PATCH", headers: this.getAuthHeaders(), body: JSON.stringify(input) });
+  }
+  async setAutomationEnabled(id: string, enabled: boolean): Promise<{ status: string; data: { automation: AutomationRule } }> {
+    return this.request(`/automations/${encodeURIComponent(id)}/${enabled ? "enable" : "disable"}`, { method: "POST", headers: this.getAuthHeaders(), body: "{}" });
+  }
+  async archiveAutomation(id: string): Promise<{ status: string; data: { automation: AutomationRule } }> {
+    return this.request(`/automations/${encodeURIComponent(id)}`, { method: "DELETE", headers: this.getAuthHeaders() });
+  }
+  async getAutomationExecutions(id: string, limit = 30): Promise<{ status: string; data: { executions: AutomationExecution[] } }> {
+    return this.request(`/automations/${encodeURIComponent(id)}/executions?limit=${limit}`, { method: "GET", headers: this.getAuthHeaders() });
   }
 
   async getWorkspaceDeliveryInsights(filters?: {

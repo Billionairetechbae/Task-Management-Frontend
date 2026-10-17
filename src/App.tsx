@@ -59,6 +59,7 @@ import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 import SharedWithMe from "@/pages/SharedWithMe";
 import WorkspaceInsights from "@/pages/WorkspaceInsights";
 import WorkspaceActivity from "@/pages/WorkspaceActivity";
+import WorkspaceAutomations from "@/pages/WorkspaceAutomations";
 
 import AuditExport from "@/pages/AuditExport";
 import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
@@ -415,6 +416,7 @@ const App = () => {
         />
         <Route path="/settings/workspace/customization" element={<ProtectedRoute><WorkspaceCustomization /></ProtectedRoute>} />
         <Route path="/settings/workspace/activity" element={<ProtectedRoute><WorkspaceActivity /></ProtectedRoute>} />
+        <Route path="/settings/workspace/automations" element={<ProtectedRoute><WorkspaceAutomations /></ProtectedRoute>} />
         <Route
           path="/integrations"
           element={
