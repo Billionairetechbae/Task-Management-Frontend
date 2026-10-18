@@ -970,9 +970,16 @@ export interface TeamAssistantsResponse {
   status: string;
   results: number;
   data: {
-    team_members: any;
+    team_members: any[];
     members?: CompanyMember[];
   };
+}
+
+export function normalizeCompanyAssistantsResponse(response: TeamAssistantsResponse): TeamAssistantsResponse {
+  if (!Array.isArray(response?.data?.team_members)) {
+    throw new Error("Team member data was unavailable. Please refresh and try again.");
+  }
+  return response;
 }
 
 export interface PendingVerificationsResponse {
@@ -3123,10 +3130,11 @@ class ApiClient {
 
   // GET /team/team_members
   async getCompanyAssistants(): Promise<TeamAssistantsResponse> {
-    return this.request("/team/team_members", {
+    const response = await this.request<TeamAssistantsResponse>("/team/team_members", {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
+    return normalizeCompanyAssistantsResponse(response);
   }
 
   async listTeams(workspaceId?: string): Promise<{ status: string; results: number; data: { teams: Team[] } }> {

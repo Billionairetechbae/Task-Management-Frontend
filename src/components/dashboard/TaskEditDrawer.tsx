@@ -3,7 +3,7 @@ import { dependencyWarningMessage } from "@/lib/taskDependencies";
 // src/components/dashboard/TaskEditDrawer.tsx
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -213,8 +213,7 @@ export default function TaskEditDrawer({
         : [];
 
       const usable = list
-        .filter((m) => m.status !== "removed")
-        .filter((m) => m.isVerified === true)
+        .filter((m) => m.status === "active")
         .filter((m) => m.user && m.user.id);
 
       setMembers(usable);
@@ -308,6 +307,7 @@ export default function TaskEditDrawer({
       );
 
       const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
+      if (!updated?.id) throw new Error("Task assignment could not be confirmed. Please refresh and try again.");
 
       setTask(updated);
 
@@ -342,6 +342,7 @@ export default function TaskEditDrawer({
       );
 
       const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
+      if (!updated?.id) throw new Error("Task assignment could not be confirmed. Please refresh and try again.");
 
       setTask(updated);
 
@@ -369,6 +370,7 @@ export default function TaskEditDrawer({
       setSaving(true);
       const res = await api.updateTask(task.id, { assigneeId: userId } as any);
       const updated = (res as any).data?.task ?? (res as any).data?.data?.task;
+      if (!updated?.id) throw new Error("Task assignment could not be confirmed. Please refresh and try again.");
       setTask(updated);
       const multiIds = (updated?.assignees || []).map((u: any) => u?.id).filter(Boolean);
       const primaryId = updated?.assigneeId ? [updated.assigneeId] : [];
@@ -496,6 +498,7 @@ export default function TaskEditDrawer({
               )}
             </div>
           </SheetTitle>
+          <SheetDescription className="sr-only">Review and update task details, assignees, and activity.</SheetDescription>
         </SheetHeader>
       )}
 

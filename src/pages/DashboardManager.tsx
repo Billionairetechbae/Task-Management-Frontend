@@ -90,7 +90,11 @@ const DashboardManager = () => {
       const tasksRes = await api.getTasks();
       const assistantsRes = await api.getCompanyAssistants();
 
-      const assistantList = assistantsRes.data.team_members.filter(
+      const rawAssistantRows = assistantsRes?.data?.team_members;
+      if (!Array.isArray(rawAssistantRows)) {
+        throw new Error("Team member data was unavailable. Please refresh and try again.");
+      }
+      const assistantList = rawAssistantRows.filter(
         (a) => a.role === "team_member"
       );
 
