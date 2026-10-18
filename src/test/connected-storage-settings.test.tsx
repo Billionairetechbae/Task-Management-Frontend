@@ -18,6 +18,7 @@ vi.mock("sonner", () => ({ toast: mocks.toast }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ workspaceRole: mocks.role, user: { id: "u1" } }) }));
 vi.mock("@/hooks/use-google-integration", () => ({ default: () => ({ data: { connected: false } }) }));
 vi.mock("@/hooks/useGoogleIntegration", () => ({ useGoogleIntegration: () => mocks.google }));
+vi.mock("@/hooks/useWorkspaceGovernance", () => ({ useWorkspaceGovernance: () => ({ capabilities: { googleDriveEnabled: true, dropboxEnabled: true, automationsEnabled: true, timeTrackingEnabled: true, memberInvitesRestricted: false, projectCreationRestricted: false, teamManagementRestricted: false, clientInvitesRestricted: false, integrationManagementRestricted: false }, settings: undefined, permitted: true, isLoading: false }) }));
 vi.mock("@/components/dashboard/DashboardLayout", () => ({ default: ({ children }: any) => <div>{children}</div> }));
 vi.mock("@/components/integrations/WhatsAppSettings", () => ({ WhatsAppSettings: () => null }));
 

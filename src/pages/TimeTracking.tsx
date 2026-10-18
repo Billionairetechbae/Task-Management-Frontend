@@ -9,12 +9,14 @@ import { formatDuration, weekStartInput, localDateInput } from "@/lib/timeTracki
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 
 const dateLabel = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(`${value}T12:00:00`));
 const Stat = ({ label, value, icon: Icon }: { label: string; value: string; icon: any }) => <div className="rounded-xl border bg-card p-4"><div className="flex items-center justify-between"><span className="text-xs text-muted-foreground">{label}</span><Icon className="h-4 w-4 text-primary" /></div><p className="mt-2 text-xl font-semibold tabular-nums">{value}</p></div>;
 
 export default function TimeTracking() {
   const { activeCompanyId } = useAuth();
+  const governance = useWorkspaceGovernance();
   const [from, setFrom] = useState(weekStartInput()); const [to, setTo] = useState(localDateInput());
   const [userId, setUserId] = useState(""); const [projectId, setProjectId] = useState(""); const [teamId, setTeamId] = useState(""); const [taskId, setTaskId] = useState(""); const [billable, setBillable] = useState(""); const [source, setSource] = useState(""); const [page, setPage] = useState(1);
   const baseFilters = useMemo(() => ({ from, to }), [from, to]);
@@ -27,6 +29,7 @@ export default function TimeTracking() {
   const clear = () => { setUserId(""); setProjectId(""); setTeamId(""); setTaskId(""); setBillable(""); setSource(""); setPage(1); };
   const hasExtraFilters = Boolean(userId || projectId || teamId || taskId || billable || source);
   return <DashboardLayout hidePadding fullWidth><main className="mx-auto w-full max-w-[1560px] space-y-5 p-4 sm:p-6">
+    {governance.capabilities?.timeTrackingEnabled === false && <p role="status" className="rounded-md border px-3 py-2 text-sm text-muted-foreground">Time Tracking is disabled for this workspace. Historical entries remain available to authorized users.</p>}
     <header className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary" /><h1 className="text-2xl font-semibold tracking-tight">Time Tracking</h1></div><p className="mt-1 max-w-2xl text-sm text-muted-foreground">Review time recorded against Tasks in this workspace. This is tracked time, not employee capacity or attendance.</p><a href="https://www.admiino.com/guide/tasks#time-tracking" target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-medium text-primary hover:underline">Learn about Task time tracking</a></div><Badge variant="outline" className="gap-1.5"><Timer className="h-3.5 w-3.5" />{result?.visibility === "workspace" ? "Workspace view" : result?.visibility === "own_and_led_teams" ? "Your work & led Teams" : "Your entries"}</Badge></header>
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"><Stat label="Tracked (range)" value={formatDuration(summary?.totalSeconds || 0)} icon={Clock3} /><Stat label="This week" value={formatDuration(weekQuery.data?.totalSeconds || 0)} icon={Clock3} /><Stat label="Billable" value={formatDuration(summary?.billableSeconds || 0)} icon={Clock3} /><Stat label="Non-billable" value={formatDuration(summary?.nonBillableSeconds || 0)} icon={Clock3} /><Stat label="Active timers" value={String(summary?.activeTimers || 0)} icon={Timer} /></div>
     <section className="rounded-xl border bg-card p-4"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-semibold">Filters</h2>{hasExtraFilters && <Button variant="ghost" size="sm" onClick={clear}><FilterX className="mr-1.5 h-4 w-4" />Clear</Button>}</div><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">

@@ -158,6 +158,30 @@ export interface TrashItem {
 
 export type PermissionMode = "restricted" | "free";
 
+export type GovernancePolicy = "owners_admins" | "existing_permissions";
+export interface WorkspaceGovernanceSettings {
+  memberInvitePolicy: GovernancePolicy;
+  projectCreationPolicy: GovernancePolicy;
+  teamManagementPolicy: GovernancePolicy;
+  clientInvitePolicy: GovernancePolicy;
+  integrationManagementPolicy: GovernancePolicy;
+  googleDriveEnabled: boolean;
+  dropboxEnabled: boolean;
+  automationsEnabled: boolean;
+  timeTrackingEnabled: boolean;
+}
+export type WorkspaceGovernanceResponse = {
+  status: string;
+  data: {
+    settings: WorkspaceGovernanceSettings;
+    teamLeadMemberManagement: { enabled: boolean; available: boolean; message: string };
+  };
+};
+export type WorkspaceGovernanceCapabilities = {
+  status: string;
+  data: Pick<WorkspaceGovernanceSettings, "googleDriveEnabled" | "dropboxEnabled" | "automationsEnabled" | "timeTrackingEnabled"> & { memberInvitesRestricted: boolean; projectCreationRestricted: boolean; teamManagementRestricted: boolean; clientInvitesRestricted: boolean; integrationManagementRestricted: boolean };
+};
+
 export interface WorkspaceSettings {
   invitePermissionMode: PermissionMode;
   assistancePermissionMode: PermissionMode;
@@ -4139,6 +4163,18 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
       body: JSON.stringify(settings),
     });
+  }
+
+  async getWorkspaceGovernance(): Promise<WorkspaceGovernanceResponse> {
+    return this.request("/workspace/governance", { method: "GET", headers: this.getAuthHeaders(true) });
+  }
+
+  async getWorkspaceGovernanceCapabilities(): Promise<WorkspaceGovernanceCapabilities> {
+    return this.request("/workspace/governance/capabilities", { method: "GET", headers: this.getAuthHeaders(true) });
+  }
+
+  async updateWorkspaceGovernance(settings: Partial<WorkspaceGovernanceSettings>): Promise<WorkspaceGovernanceResponse> {
+    return this.request("/workspace/governance", { method: "PATCH", headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" }, body: JSON.stringify(settings) });
   }
 
   async updateWorkspaceMemberRole(

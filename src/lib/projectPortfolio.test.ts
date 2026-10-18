@@ -68,4 +68,10 @@ describe("Project Portfolio filtering and sorting", () => {
     expect(getSearchNavigation("automation", "admin", () => true).Settings?.[0]?.title).toBe("Automations");
     expect(getSearchNavigation("rules", "member", () => true).Settings).toBeUndefined();
   });
+
+  it("shows Workspace Governance in search only to owners and admins", () => {
+    expect(getSearchNavigation("access policies", "owner", () => true).Settings?.[0]?.href).toBe("/settings/workspace/governance");
+    expect(getSearchNavigation("admin controls", "admin", () => true).Settings?.[0]?.title).toBe("Workspace Governance");
+    expect(getSearchNavigation("governance", "member", () => true).Settings).toBeUndefined();
+  });
 });

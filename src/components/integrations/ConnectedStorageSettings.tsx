@@ -8,6 +8,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { api, type ConnectedStorageConnectionSummary } from "@/lib/api";
+import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Only internal workspace roles ever see this section. Clients / guests / external users get nothing (the backend rejects them too).
@@ -21,6 +22,7 @@ const CALLBACK_MESSAGES: Record<string, string> = {
   account_mismatch: "That is a different Dropbox account from the one originally connected. Disconnect first to connect a different account.",
   insufficient_scope: "Dropbox did not grant all the permissions Admiino needs. Please try again and allow every permission.",
   forbidden: "Only workspace owners and admins can connect Dropbox.",
+  feature_disabled: "Dropbox is disabled by your workspace administrator.",
 };
 
 type StatusView = { label: string; tone: "default" | "secondary" | "destructive" | "outline" };
@@ -33,6 +35,8 @@ const statusView = (connection?: ConnectedStorageConnectionSummary): StatusView 
 
 export function ConnectedStorageSettings() {
   const { workspaceRole } = useAuth();
+  const governance = useWorkspaceGovernance();
+  const dropboxEnabled = governance.capabilities?.dropboxEnabled !== false;
   const [connection, setConnection] = useState<ConnectedStorageConnectionSummary | undefined>();
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -77,9 +81,11 @@ export function ConnectedStorageSettings() {
 
   if (!isInternal) return null;
 
-  const manage = canManage && roleCanManage;
+  const manage = canManage && roleCanManage && dropboxEnabled;
   const view = statusView(connection);
   const isCurrent = connection && connection.status !== "disconnected";
+
+  if (!dropboxEnabled) return <section className="rounded-xl border p-4 text-sm" role="status"><p className="font-medium">Dropbox is disabled by your workspace administrator.</p><p className="mt-1 text-muted-foreground">Existing Dropbox files and stored references are not deleted.</p></section>;
 
   const redirectToDropbox = async (mode: "connect" | "reconnect") => {
     setBusy(mode);

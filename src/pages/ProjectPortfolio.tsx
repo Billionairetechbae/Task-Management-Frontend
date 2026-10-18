@@ -6,6 +6,7 @@ import { format, formatDistanceToNowStrict, isValid } from "date-fns";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 import { api, type ProjectHealthProject, type ProjectHealthStatus } from "@/lib/api";
 import { defaultPortfolioFilters, filterAndSortPortfolioProjects, portfolioDeadline, portfolioIsCompleted, portfolioIsOverdue, portfolioNeedsAttention, portfolioProgress, type PortfolioDeadlineFilter, type PortfolioFilters, type PortfolioProgressFilter, type PortfolioSort } from "@/lib/projectPortfolio";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ export default function ProjectPortfolio() {
   const navigate = useNavigate();
   const { activeCompanyId, workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
+  const governance = useWorkspaceGovernance();
   const [filters, setFilters] = useState<PortfolioFilters>(defaultPortfolioFilters);
   const externalRole = ["guest", "external_viewer"].includes(workspaceRole || "");
   const query = useQuery({
@@ -84,7 +86,7 @@ export default function ProjectPortfolio() {
   const completed = summary?.completedProjects ?? projects.filter(portfolioIsCompleted).length;
   const overdue = summary?.overdueProjects ?? projects.filter((row) => portfolioIsOverdue(row)).length;
   const attention = summary?.needsAttentionProjects ?? projects.filter((row) => portfolioNeedsAttention(row)).length;
-  const canCreate = canPerformRoleOperation("create_projects", workspaceRole);
+  const canCreate = canPerformRoleOperation("create_projects", workspaceRole) && !governance.capabilities?.projectCreationRestricted;
 
   const set = <K extends keyof PortfolioFilters>(key: K, value: PortfolioFilters[K]) => setFilters((current) => ({ ...current, [key]: value }));
   const openProject = (row: ProjectHealthProject) => navigate(`/projects/${row.project.id}?workspace=${encodeURIComponent(activeCompanyId || "")}`);

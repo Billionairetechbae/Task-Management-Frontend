@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api, CompanyMember } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 import { canAdminWorkspace, canManageWorkspace } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -31,13 +32,14 @@ type ActivityEvent = { id: string; type: "removed" | "restored"; userName: strin
 const TeamManagement = () => {
   const { user, workspaceRole, activeCompanyId } = useAuth();
   const { toast } = useToast();
+  const governance = useWorkspaceGovernance();
   const queryClient = useQueryClient();
   const globalRole = user?.role ?? null;
-  const canManageTeam = canManageWorkspace(workspaceRole, globalRole);
-  const canAdminTeam = canAdminWorkspace(workspaceRole, globalRole);
+  const canManageTeam = canManageWorkspace(workspaceRole, globalRole) && !governance.capabilities?.teamManagementRestricted;
+  const canAdminTeam = canAdminWorkspace(workspaceRole, globalRole) && !governance.capabilities?.teamManagementRestricted;
   const [invitePermissionMode, setInvitePermissionMode] = useState<"restricted" | "free">("restricted");
   const canInviteTeam =
-    invitePermissionMode === "free" ? !!workspaceRole || user?.role === "admin" : canManageTeam;
+    (invitePermissionMode === "free" ? !!workspaceRole || user?.role === "admin" : canManageTeam) && !governance.capabilities?.memberInvitesRestricted;
 
   const [teamMembers, setTeamMembers] = useState<CompanyMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,6 +204,7 @@ const TeamManagement = () => {
               ) : undefined
             }
           />
+          {governance.capabilities?.memberInvitesRestricted && <p role="status" className="text-sm text-muted-foreground">Member invitations are restricted to workspace owners and admins.</p>}
 
           {/* Stats row */}
           {canManageTeam && (

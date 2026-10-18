@@ -6,12 +6,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ConnectedStorageAttachmentsSection } from "./ConnectedStorageAttachmentsSection";
 import { Button } from "@/components/ui/button";
+import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 
 const INTERNAL_ROLES = new Set(["owner", "admin", "manager", "member"]);
 type Target = { type: "task" | "project"; id: string };
 
 export default function DropboxDriveHub() {
   const { workspaceRole, user } = useAuth();
+  const governance = useWorkspaceGovernance();
+  const dropboxEnabled = governance.capabilities?.dropboxEnabled !== false;
   const { toast } = useToast();
   const internal = INTERNAL_ROLES.has(String(workspaceRole));
   const canConnect = workspaceRole === "owner" || workspaceRole === "admin";
@@ -64,6 +67,7 @@ export default function DropboxDriveHub() {
   const projectWritable = Boolean(selectedProject && (isManager || (selectedProject.members as any[] | undefined)?.some((member) => member.id === user?.id && ["owner", "admin"].includes(member.ProjectMember?.role ?? member.role))));
   const canAttach = target?.type === "task" ? taskWritable === true : target?.type === "project" ? projectWritable : false;
   if (!internal) return <section className="rounded-xl border p-6 text-sm text-muted-foreground">Dropbox Connected Storage is available to internal workspace members only.</section>;
+  if (!dropboxEnabled) return <section role="status" className="rounded-xl border p-6 text-sm text-muted-foreground">Dropbox Connected Storage is disabled by your workspace administrator. Existing Dropbox files and stored references are not deleted.</section>;
 
   return <section className="space-y-5 rounded-xl border bg-card p-5 sm:p-6">
     <header className="flex items-start gap-3">

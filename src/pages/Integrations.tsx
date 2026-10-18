@@ -28,6 +28,7 @@ import {
 import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
 import { WhatsAppSettings } from "@/components/integrations/WhatsAppSettings";
 import { ConnectedStorageSettings } from "@/components/integrations/ConnectedStorageSettings";
+import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 
 const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
   const Shell = embedded
@@ -49,6 +50,8 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
   // Ensure Google integration status is fetched and cached when this page loads
   useGoogleIntegrationStatus();
   const google = useGoogleIntegration();
+  const governance = useWorkspaceGovernance();
+  const googleDriveEnabled = governance.capabilities?.googleDriveEnabled !== false;
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -93,6 +96,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
     const params = new URLSearchParams(location.search);
     const connected = params.get("connected");
     const failed = params.get("error");
+    const googleResult = params.get("google");
     if (connected) {
       toast.success(`${connected[0].toUpperCase()}${connected.slice(1)} connected successfully.`);
       load(true);
@@ -101,6 +105,10 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
     } else if (failed) {
       toast.error("Integration connection failed", { description: failed });
       params.delete("error");
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    } else if (googleResult === "disabled_by_admin") {
+      toast.error("Google Drive is disabled by your workspace administrator.");
+      params.delete("google");
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     }
   }, [location.search, location.pathname, navigate, load]);
@@ -135,6 +143,8 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
 
   const handleConnect = (integration: Integration) => {
     if (!integration.available) return;
+    if (governance.capabilities?.integrationManagementRestricted) { toast.error("Integration management is restricted to workspace owners and admins."); return; }
+    if (integration.id === "google" && !googleDriveEnabled) { toast.error("Google Drive is disabled by your workspace administrator."); return; }
     sessionStorage.setItem("integration_return", "/settings/integrations");
 
     if (integration.id === "google") {
@@ -213,6 +223,8 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
         </div>
 
         {/* Summary */}
+        {!googleDriveEnabled && <p role="status" className="rounded-md border px-3 py-2 text-sm text-muted-foreground">Google Drive is disabled by your workspace administrator. Google sign-in remains available; Drive files are not deleted.</p>}
+        {governance.capabilities?.integrationManagementRestricted && <p role="status" className="rounded-md border px-3 py-2 text-sm text-muted-foreground">Integration management is restricted to workspace owners and admins.</p>}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard label="Connected" value={loading ? "—" : String(summary.connectedCount)} icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />} />
           <SummaryCard label="Available" value={loading ? "—" : String(summary.availableCount)} icon={<Plug className="w-4 h-4 text-primary" />} />
@@ -240,7 +252,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
               Integrate your productivity tools to unlock calendar syncing, meeting scheduling,
               document management and workflow automation.
             </p>
-            <Button onClick={() => handleConnect({ id: "google", name: "Google", available: true } as Integration)}>
+            <Button onClick={() => handleConnect({ id: "google", name: "Google", available: true } as Integration)} disabled={!googleDriveEnabled || governance.capabilities?.integrationManagementRestricted}>
               Connect Google
             </Button>
           </Card>
@@ -263,6 +275,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
                   onManage={() => setSelected(i)}
                   onDisconnect={() => setDisconnectTarget(i)}
                   onConnect={() => handleConnect(i)}
+                  connectDisabled={(i.id === "google" && !googleDriveEnabled) || Boolean(governance.capabilities?.integrationManagementRestricted)}
                   googleState={{
                     isConnected: google.isConnected,
                     status: google.status as { connected: boolean; email?: string; scopes?: any[] },
@@ -292,6 +305,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
                   onManage={() => setSelected(i)}
                   onDisconnect={() => setDisconnectTarget(i)}
                   onConnect={() => handleConnect(i)}
+                  connectDisabled={(i.id === "google" && !googleDriveEnabled) || Boolean(governance.capabilities?.integrationManagementRestricted)}
                   googleState={{
                     isConnected: google.isConnected,
                     status: google.status as { connected: boolean; email?: string; scopes?: any[] },
@@ -500,13 +514,14 @@ const SectionSkeleton = ({ title, count = 3 }: { title: string; count?: number }
 );
 
 const IntegrationCard = ({
-  integration, busy, onManage, onDisconnect, onConnect, googleState,
+  integration, busy, onManage, onDisconnect, onConnect, googleState, connectDisabled,
 }: {
   integration: Integration;
   busy: boolean;
   onManage: () => void;
   onDisconnect: () => void;
   onConnect: () => void;
+  connectDisabled: boolean;
   googleState: {
     isConnected: boolean;
     status: { connected: boolean; email?: string; scopes?: any[] };
@@ -592,7 +607,7 @@ const IntegrationCard = ({
             size="sm"
             className="flex-1"
             onClick={onConnect}
-            disabled={integration.id === "google" ? googleState.connectLoading : busy}
+            disabled={connectDisabled || (integration.id === "google" ? googleState.connectLoading : busy)}
           >
             {(integration.id === "google" ? googleState.connectLoading : busy)
               ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />

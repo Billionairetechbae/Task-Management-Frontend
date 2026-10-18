@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 import { useProjectsQuery } from "@/hooks/useCoreQueries";
 import { queryKeys } from "@/lib/queryKeys";
 import { SkeletonProjectGrid, RefreshingIndicator } from "@/components/skeletons/AppSkeletons";
@@ -29,7 +30,8 @@ export default function Projects() {
   const { workspaceRole, activeCompanyId } = useAuth();
   const queryClient = useQueryClient();
   const { canPerformRoleOperation } = useWorkspaceSettings();
-  const canCreateProject = canPerformRoleOperation("create_projects", workspaceRole);
+  const governance = useWorkspaceGovernance();
+  const canCreateProject = canPerformRoleOperation("create_projects", workspaceRole) && !governance.capabilities?.projectCreationRestricted;
   const hasProjectViewFilter =
     (workspaceRole === "admin" || workspaceRole === "manager" || workspaceRole === "member") &&
     !canPerformRoleOperation("view_all_projects", workspaceRole);
@@ -112,6 +114,7 @@ export default function Projects() {
               )}
             </div>
             <div className="flex items-center gap-2">
+            {governance.capabilities?.projectCreationRestricted && <span role="status" className="text-xs text-muted-foreground">Project creation is restricted to workspace owners and admins.</span>}
             <Button variant="outline" onClick={() => setTemplateFlowOpen(true)} disabled={!canCreateProject} className="gap-2">New from template</Button>
             <Tooltip>
               <TooltipTrigger asChild>

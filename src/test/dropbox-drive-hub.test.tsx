@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const mocks = vi.hoisted(() => ({ role: "owner" as string | null, list: vi.fn(), tasks: vi.fn(), projects: vi.fn(), toast: vi.fn() }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ workspaceRole: mocks.role, user: { id: "u1" } }) }));
@@ -9,7 +10,7 @@ vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: mocks.toast }) }
 vi.mock("@/components/connectedStorage/ConnectedStorageAttachmentsSection", () => ({ ConnectedStorageAttachmentsSection: () => <div data-testid="target-scoped-files" /> }));
 import DropboxDriveHub from "@/components/connectedStorage/DropboxDriveHub";
 
-function view() { return render(<MemoryRouter><DropboxDriveHub /></MemoryRouter>); }
+function view() { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><DropboxDriveHub /></MemoryRouter></QueryClientProvider>); }
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("Dropbox file hub", () => {
