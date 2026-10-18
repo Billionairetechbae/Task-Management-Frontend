@@ -48,6 +48,7 @@ import Integrations from "./Integrations";
 import AuditExport from "./AuditExport";
 import { canExportWorkspace } from "@/lib/permissions";
 import { NotificationPreferencesMatrix } from "@/components/notifications/NotificationPreferencesMatrix";
+import { WorkspaceNotificationDelivery, canManageWorkspaceNotificationDeliveries } from "@/components/notifications/WorkspaceNotificationDelivery";
 
 type TabId =
   | "profile"
@@ -396,6 +397,7 @@ const Settings = () => {
             <SectionCard title="Delivery preferences" description="Choose the channels used for each notification category.">
               <NotificationPreferencesMatrix />
             </SectionCard>
+            {canManageWorkspaceNotificationDeliveries(workspaceRole) && <WorkspaceNotificationDelivery companyId={activeCompanyId} />}
           </div>
         );
 

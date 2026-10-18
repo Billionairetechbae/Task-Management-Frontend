@@ -1404,6 +1404,8 @@ export interface NotificationsListResponse {
 export type NotificationPreferenceCategory = "assignments" | "mentions_replies" | "status_review" | "due_work" | "project_team" | "client_access" | "workspace_commercial";
 export interface NotificationPreference { category: NotificationPreferenceCategory; inAppEnabled: boolean; emailEnabled: boolean; whatsAppEnabled: boolean; }
 export interface NotificationPreferencesResponse { status: string; data: { preferences: NotificationPreference[]; whatsApp: { linked: boolean; globallyEnabled: boolean } }; }
+export interface NotificationDeliveryMetrics { freshQueued: number; staleQueued: number; retrying: number; failed: number; sentRecently: number; }
+export interface NotificationDeliverySummary { selected: number; sent: number; failed: number; retrying: number; expired: number; }
 
 
 
@@ -4086,6 +4088,14 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       method: "GET",
       headers: this.getAuthHeaders(),
     });
+  }
+
+  async getWorkspaceNotificationDeliveryStatus(): Promise<{ status: string; data: NotificationDeliveryMetrics }> {
+    return this.request("/notifications/delivery-status", { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async processWorkspaceNotificationDeliveries(): Promise<{ status: string; data: { summary: NotificationDeliverySummary } }> {
+    return this.request("/notifications/process-deliveries", { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify({ limit: 50 }) });
   }
 
   async getUnreadNotificationsCount(): Promise<{
