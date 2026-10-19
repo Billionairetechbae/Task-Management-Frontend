@@ -9,7 +9,9 @@ function Stat({ label, value, hint }: { label: string; value: string | number; h
 }
 
 export default function WorkspaceSubscription() {
-  const { overview, isLoading, isError, permitted } = useWorkspaceCommercial();
+  const { overview, isLoading, isError, error, permitted } = useWorkspaceCommercial();
+  // 404/501/503 mean the commercial service is not available for this deployment or workspace: explain, don't show a generic failure.
+  const unavailable = isError && [404, 501, 503].includes(Number((error as { statusCode?: number } | null)?.statusCode));
 
   if (!permitted) {
     return <DashboardLayout><main className="mx-auto max-w-3xl p-6"><Card><CardContent className="flex items-start gap-3 p-6"><ShieldAlert className="mt-0.5 h-5 w-5 text-muted-foreground" /><div><h1 className="font-semibold">Subscription &amp; Seats</h1><p className="mt-1 text-sm text-muted-foreground">Workspace owner or admin access is required to view subscription details.</p></div></CardContent></Card></main></DashboardLayout>;
@@ -23,7 +25,8 @@ export default function WorkspaceSubscription() {
     <header className="flex items-start gap-3"><CreditCard className="mt-1 h-5 w-5 text-primary" /><div><h1 className="text-2xl font-semibold tracking-tight">Subscription &amp; Seats</h1><p className="mt-1 text-sm text-muted-foreground">See how many seats your workspace uses and what they are estimated to cost.</p></div></header>
 
     {isLoading && <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading subscription details…</CardContent></Card>}
-    {isError && <Card><CardContent role="alert" className="p-6 text-sm text-destructive">Subscription details could not be loaded. Refresh the page or try again shortly.</CardContent></Card>}
+    {unavailable && <Card><CardContent role="status" className="p-6 text-sm text-muted-foreground">Subscription details are not available for this workspace right now. If you expected to see them, contact Admiino support.</CardContent></Card>}
+    {isError && !unavailable && <Card><CardContent role="alert" className="p-6 text-sm text-destructive">Subscription details could not be loaded. Refresh the page or try again shortly.</CardContent></Card>}
 
     {overview && u && <>
       <Card>

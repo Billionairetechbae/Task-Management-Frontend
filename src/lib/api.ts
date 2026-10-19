@@ -120,6 +120,10 @@ export interface TeamWorkspaceResponse {
   team: Team;
   messages: TeamMessage[];
   activeAssignments: Task[];
+  /** Every status (completed and cancelled included); capped at 200 most recently updated. */
+  tasks?: Task[];
+  /** Exact per-status counts over all of the Team's parent tasks. */
+  taskCounts?: Partial<import("./teamTaskViews").TeamTaskCounts>;
   workload: Array<{ user: User | null; activeSubtasks: number; overdue: number; nearestDueDate: string | null }>;
   activity: TaskActivity[];
 }

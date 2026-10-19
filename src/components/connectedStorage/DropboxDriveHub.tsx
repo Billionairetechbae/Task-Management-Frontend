@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Cloud, FolderOpen, Loader2 } from "lucide-react";
+import { ResourcePicker, type PickerTarget } from "./ResourcePicker";
 import { api, type Project, type Task } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -9,10 +10,9 @@ import { Button } from "@/components/ui/button";
 import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 
 const INTERNAL_ROLES = new Set(["owner", "admin", "manager", "member"]);
-type Target = { type: "task" | "project"; id: string };
 
 export default function DropboxDriveHub() {
-  const { workspaceRole, user } = useAuth();
+  const { workspaceRole, user, activeCompanyId } = useAuth();
   const governance = useWorkspaceGovernance();
   const dropboxEnabled = governance.capabilities?.dropboxEnabled !== false;
   const { toast } = useToast();
@@ -22,12 +22,17 @@ export default function DropboxDriveHub() {
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [targetKey, setTargetKey] = useState("");
+  const [target, setTarget] = useState<PickerTarget | null>(null);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const knownTasks = useRef(new Map<string, Task>());
+  const taskRequest = useRef(0);
   const [taskWritable, setTaskWritable] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!internal) return;
     let live = true;
+    // A different workspace means different connections, projects and tasks: start clean.
+    setTarget(null); setTasks([]); setProjects([]); setConnected(null); knownTasks.current.clear();
     setLoading(true);
     Promise.all([
       api.listConnectedStorageConnections(),
@@ -36,19 +41,32 @@ export default function DropboxDriveHub() {
     ]).then(([connectionResponse, taskResponse, projectResponse]) => {
       if (!live) return;
       setConnected(connectionResponse.data.connections.some((connection) => connection.provider === "dropbox" && connection.status === "active"));
-      setTasks(taskResponse.data.tasks ?? []);
+      const initial = taskResponse.data.tasks ?? [];
+      initial.forEach((task) => task.id && knownTasks.current.set(String(task.id), task));
+      setTasks(initial);
       setProjects((projectResponse.data as any)?.projects ?? []);
     }).catch((error: any) => {
       if (live) toast({ title: "Could not load Connected Storage", description: error?.message || "Try again later.", variant: "destructive" });
     }).finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, [internal, toast]);
+  }, [internal, toast, activeCompanyId]);
 
-  const target: Target | null = useMemo(() => {
-    const [type, id] = targetKey.split(":");
-    return (type === "task" || type === "project") && id ? { type, id } : null;
-  }, [targetKey]);
-  const selectedTask = target?.type === "task" ? tasks.find((task) => String(task.id) === target.id) : undefined;
+  // Task lists are searched on the server (bounded, already filtered to what this user may see), never loaded in bulk.
+  const searchTasks = useCallback(({ q, projectId }: { q: string; projectId: string | null }) => {
+    const request = ++taskRequest.current;
+    setTasksLoading(true);
+    api.getTasks({ limit: 25, page: 1, ...(q ? { q } : {}), ...(projectId ? { projectId } : {}) }).then((response) => {
+      if (request !== taskRequest.current) return;
+      const found = response.data.tasks ?? [];
+      found.forEach((task) => task.id && knownTasks.current.set(String(task.id), task));
+      setTasks(found);
+    }).catch(() => { if (request === taskRequest.current) setTasks([]); }).finally(() => { if (request === taskRequest.current) setTasksLoading(false); });
+  }, []);
+  const taskProjectId = (task: Task): string | null => (task as any).projectId ?? null;
+  const taskName = (task: Task) => (task as any).project?.name ?? null;
+  const pickerTasks = useMemo(() => tasks.filter((task) => task.id && !task.parentTaskId).map((task) => ({ id: String(task.id), title: task.title || "Untitled task", projectId: taskProjectId(task), projectName: taskName(task) ?? projects.find((project) => project.id === taskProjectId(task))?.name ?? null })), [tasks, projects]);
+  const pickerProjects = useMemo(() => projects.map((project) => ({ id: project.id, name: project.name })), [projects]);
+  const selectedTask = target?.type === "task" ? knownTasks.current.get(target.id) ?? tasks.find((task) => String(task.id) === target.id) : undefined;
   const selectedProject = target?.type === "project" ? projects.find((project) => project.id === target.id) : undefined;
   const isManager = ["owner", "admin", "manager"].includes(String(workspaceRole));
   useEffect(() => {
@@ -77,14 +95,9 @@ export default function DropboxDriveHub() {
     {loading ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking workspace connection…</p>
       : connected === false ? <div className="rounded-lg border border-dashed p-5"><p className="font-medium">Dropbox is not connected for this workspace.</p><p className="mt-1 text-sm text-muted-foreground">{canConnect ? "Connect a workspace Dropbox account to browse and attach files." : "Ask a workspace owner or admin to connect Dropbox."}</p>{canConnect && <Button asChild className="mt-3"><Link to="/settings/integrations">Connect Dropbox</Link></Button>}</div>
       : <>
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-          <label className="space-y-1.5 text-sm font-medium">Choose a task or project
-            <select value={targetKey} onChange={(event) => setTargetKey(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-normal">
-              <option value="">Choose where to browse and attach files</option>
-              {projects.length > 0 && <optgroup label="Projects">{projects.map((project) => <option key={`project:${project.id}`} value={`project:${project.id}`}>{project.name}</option>)}</optgroup>}
-              {tasks.length > 0 && <optgroup label="Tasks">{tasks.map((task) => <option key={`task:${task.id}`} value={`task:${task.id}`}>{task.title || "Untitled task"}</option>)}</optgroup>}
-            </select>
-          </label>
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+          <ResourcePicker projects={pickerProjects} tasks={pickerTasks} value={target} onChange={setTarget} onTaskQuery={searchTasks} tasksLoading={tasksLoading} loading={loading}
+            selectedLabel={target?.type === "task" ? selectedTask?.title : target?.type === "project" ? selectedProject?.name : null} />
           <span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><FolderOpen className="h-4 w-4" />Original files remain in Dropbox</span>
         </div>
         {target && canAttach && <ConnectedStorageAttachmentsSection key={`${target.type}:${target.id}`} targetType={target.type} targetId={target.id} canAttach initialAttachments={[]} title="Files attached from Dropbox" />}

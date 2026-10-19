@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Bell, Plug, Settings, ShieldCheck, UserRound, LogOut, SlidersHorizontal, Activity } from "lucide-react";
+import { Building2, Bell, CreditCard, Plug, Settings, ShieldCheck, UserRound, LogOut, SlidersHorizontal, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { SUBSCRIPTION_PATH, canViewSubscription } from "@/lib/workspaceNavigation";
 
 export default function AccountMenu() {
   const { user, logout, workspaceRole, activeWorkspace } = useAuth();
@@ -12,6 +13,7 @@ export default function AccountMenu() {
   const initials = useMemo(() => name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase(), [name]);
   const staff = user?.globalRole === "admin" || user?.globalRole === "super_admin" || user?.platformRole === "admin" || user?.platformRole === "super_admin";
   const workspaceAdmin = workspaceRole === "owner" || workspaceRole === "admin";
+  const showSubscription = canViewSubscription(workspaceRole);
   const roleLabel = staff ? (user?.globalRole === "super_admin" || user?.platformRole === "super_admin" ? "Super Admin" : "Platform Admin") : workspaceRole ? workspaceRole[0].toUpperCase() + workspaceRole.slice(1) : null;
 
   return <DropdownMenu>
@@ -39,6 +41,7 @@ export default function AccountMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Workspace</DropdownMenuLabel>
         <DropdownMenuItem asChild><Link to="/company-profile"><Building2 className="mr-2 h-4 w-4" />Workspace Settings</Link></DropdownMenuItem>
+        {showSubscription && <DropdownMenuItem asChild><Link to={SUBSCRIPTION_PATH}><CreditCard className="mr-2 h-4 w-4" />Subscription &amp; Seats</Link></DropdownMenuItem>}
         <DropdownMenuItem asChild><Link to="/settings/workspace/customization"><SlidersHorizontal className="mr-2 h-4 w-4" />Workspace Customization</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/settings/workspace/activity"><Activity className="mr-2 h-4 w-4" />Activity Log</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/team-management"><UserRound className="mr-2 h-4 w-4" />Workspace Members</Link></DropdownMenuItem>

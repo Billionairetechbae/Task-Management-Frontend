@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { googleDriveService } from "@/services/googleDriveService";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DriveError, googleDriveService, toDriveError } from "@/services/googleDriveService";
 import type { DriveFolder, GoogleDriveFile } from "@/types/googleDrive";
+
+/** Matches the backend multer limit; checked here only to fail fast with a clear message. */
+export const MAX_DRIVE_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 export type GoogleDriveView = "my-drive" | "shared";
 
@@ -19,12 +22,15 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
   const [deleting, setDeleting] = useState(false);
   const [moving, setMoving] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<DriveError | null>(null);
+  const uploadInFlight = useRef(false);
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
   const pageSize = 50;
 
   const listFolderFiles = useCallback(
     async (folderId?: string, pageToken?: string) => {
       setLoading(true);
+      setError(null);
       try {
         const response = await googleDriveService.listFiles({
           folderId,
@@ -34,6 +40,8 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
         });
         setItems(response.files ?? []);
         setNextPageToken(response.nextPageToken);
+      } catch (e) {
+        setError(toDriveError(e));
       } finally {
         setLoading(false);
       }
@@ -51,6 +59,8 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
         });
         setItems(response.files ?? []);
         setNextPageToken(response.nextPageToken);
+      } catch (e) {
+        setError(toDriveError(e));
       } finally {
         setLoading(false);
       }
@@ -66,7 +76,9 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
       setCurrentFolder(root);
       setBreadcrumbs([root]);
       await listFolderFiles(root.id);
-    } finally {
+    } catch (e) {
+        setError(toDriveError(e));
+      } finally {
       setLoading(false);
     }
   }, [listFolderFiles]);
@@ -135,6 +147,8 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
         });
         setSearchResults(response.files ?? []);
         setNextPageToken(response.nextPageToken);
+      } catch (e) {
+        setError(toDriveError(e));
       } finally {
         setSearching(false);
       }
@@ -174,7 +188,9 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
       });
       setItems((previous) => [...previous, ...(response.files ?? [])]);
       setNextPageToken(response.nextPageToken);
-    } finally {
+    } catch (e) {
+        setError(toDriveError(e));
+      } finally {
       setLoading(false);
     }
   }, [currentFolder?.id, nextPageToken, pageSize, searchQuery, view]);
@@ -203,8 +219,8 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
       setDeleting(true);
       try {
         await googleDriveService.deleteFile(fileId);
-        setItems((previous) => previous.filter((item) => item.id !== fileId));
-        setSearchResults((previous) => previous.filter((item) => item.id !== fileId));
+        setItems((previous) => previous.filter((item) => (item.id ?? item.fileId) !== fileId));
+        setSearchResults((previous) => previous.filter((item) => (item.id ?? item.fileId) !== fileId));
       } finally {
         setDeleting(false);
       }
@@ -217,6 +233,9 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
       if (!file) {
         throw new Error("No file selected");
       }
+      if (file.size > MAX_DRIVE_UPLOAD_BYTES) throw new DriveError("unknown", "This file is larger than 20 MB.");
+      if (uploadInFlight.current) return; // prevent duplicate submissions
+      uploadInFlight.current = true;
       setUploading(true);
       try {
         await googleDriveService.uploadFile({
@@ -227,6 +246,7 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
         });
         await refresh();
       } finally {
+        uploadInFlight.current = false;
         setUploading(false);
       }
     },
@@ -326,6 +346,7 @@ export const useGoogleDrive = (initialView: GoogleDriveView = "my-drive", enable
     deleting,
     moving,
     downloading,
+    error,
     nextPageToken,
     createFolder,
     removeFile,

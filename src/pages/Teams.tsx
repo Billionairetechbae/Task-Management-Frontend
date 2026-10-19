@@ -14,6 +14,7 @@ import {
   ExternalLink,
   FileText,
   Filter,
+  RotateCcw,
   MessageSquare,
   MoreHorizontal,
   Paperclip,
@@ -52,6 +53,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import { TEAM_TASK_VIEWS, countTeamTasks, isTaskOverdue, mergeTeamTasks, taskMatchesView } from "@/lib/teamTaskViews";
+import type { TeamTaskCounts, TeamTaskView } from "@/lib/teamTaskViews";
 import {
   api,
   CompanyMember,
@@ -75,6 +80,11 @@ type TeamTab = "overview" | "tasks" | "chat" | "activity" | "settings";
 type DialogMode = "members" | "lead" | "edit" | "create" | null;
 type DueFilter = "all" | "overdue" | "today" | "week" | "none";
 type SortKey = "due" | "priority" | "status" | "updated" | "created" | "title";
+
+/** The Team page works without a live socket (tests, signed-out previews): the provider is optional here. */
+function useOptionalWebSocket() {
+  try { return useWebSocket(); } catch { return null; }
+}
 
 const statuses: TaskStatus[] = ["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"];
 const priorities: TaskPriority[] = ["low", "medium", "high", "urgent"];
@@ -100,9 +110,7 @@ const dateInputValue = (value?: string | null) => value ? value.slice(0, 10) : "
 const dateValue = (value: string) => value ? new Date(`${value}T12:00:00`).toISOString() : null;
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
-const isOverdue = (task: Pick<Task, "deadline" | "status">) =>
-  !!task.deadline && new Date(task.deadline).getTime() < new Date(new Date().toDateString()).getTime()
-  && task.status !== "completed" && task.status !== "cancelled";
+const isOverdue = (task: Pick<Task, "deadline" | "status">) => isTaskOverdue(task);
 const taskAssigneeId = (task: Task) => task.assigneeId || task.assignee?.id || "";
 const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 const statusOrder: Record<string, number> = { in_progress: 0, in_review: 1, pending: 2, delayed: 3, completed: 4, cancelled: 5 };
@@ -258,6 +266,16 @@ export default function Teams() {
   const refreshWorkspace = async () => {
     await Promise.all([workspaceQuery.refetch(), teamTasksQuery.refetch()]);
   };
+  // Realtime: a task changing elsewhere refetches (merge-by-id), so a completed Team task is updated in place, never dropped.
+  const realtime = useOptionalWebSocket();
+  const selectedTeamId = selectedTeam?.id;
+  useEffect(() => {
+    if (!realtime || !selectedTeamId) return;
+    const refresh = () => { void workspaceQuery.refetch(); void teamTasksQuery.refetch(); };
+    realtime.on("task_updated", refresh);
+    return () => realtime.off("task_updated", refresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtime, selectedTeamId]);
 
   if (!activeCompanyId) {
     return <DashboardLayout><div className="p-6 text-sm text-muted-foreground">Choose a workspace to view Teams.</div></DashboardLayout>;
@@ -265,8 +283,8 @@ export default function Teams() {
 
   const workspace = workspaceQuery.data?.data;
   const currentTeam = workspace?.team || selectedTeam;
-  const teamTasks = (teamTasksQuery.data?.data?.tasks || workspace?.activeAssignments || [])
-    .filter((item) => !item.parentTaskId);
+  // Never fall back to the active-only list: the full Team workspace payload carries every status.
+  const teamTasks = mergeTeamTasks(workspace?.tasks, teamTasksQuery.data?.data?.tasks, workspace?.activeAssignments);
   const teamLeadUserId = currentTeam?.leadMember?.userId || currentTeam?.leadMember?.user?.id;
   const isTeamLead = !!user?.id && String(teamLeadUserId || "") === String(user.id);
 
@@ -336,6 +354,7 @@ export default function Teams() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               canManage={canManage}
+              canReview={canManage || isTeamLead}
               onOpenTask={(id) => navigate(teamTaskPath(selectedTeam.id, id))}
               onEdit={() => {
                 setTeamName(selectedTeam.name);
@@ -419,7 +438,7 @@ export default function Teams() {
 }
 
 function TeamHome({
-  team, tasks, workspace, loading, activeTab, setActiveTab, canManage, onOpenTask, onEdit, onMembers, onLead, onDelete, onRefresh, onTaskChanged,
+  team, tasks, workspace, loading, activeTab, setActiveTab, canManage, canReview, onOpenTask, onEdit, onMembers, onLead, onDelete, onRefresh, onTaskChanged,
 }: {
   team: Team;
   tasks: Task[];
@@ -428,6 +447,7 @@ function TeamHome({
   activeTab: TeamTab;
   setActiveTab: (tab: TeamTab) => void;
   canManage: boolean;
+  canReview: boolean;
   onOpenTask: (id: string) => void;
   onEdit: () => void;
   onMembers: () => void;
@@ -436,11 +456,12 @@ function TeamHome({
   onRefresh: () => void;
   onTaskChanged: () => void;
 }) {
-  const completed = tasks.filter((task) => task.status === "completed").length;
-  const overdue = tasks.filter(isOverdue).length;
-  const activeCount = tasks.filter((task) => !["completed", "cancelled"].includes(task.status || "")).length;
+  const counts = countTeamTasks(tasks, workspace?.taskCounts);
+  const completed = counts.completed;
+  const overdue = counts.overdue;
+  const activeCount = counts.active;
   const tabs: Array<[TeamTab, string]> = [["overview", "Overview"], ["tasks", "Tasks"], ["chat", "Chat"], ["activity", "Activity"], ["settings", "Team settings"]];
-  const openCount = tasks.filter((task) => !["completed", "cancelled"].includes(task.status || "")).length;
+  const openCount = counts.active;
 
   return (
     <div className="min-h-full">
@@ -507,7 +528,7 @@ function TeamHome({
         {loading ? <div className="space-y-3"><div className="h-32 animate-pulse rounded-lg bg-muted" /><div className="h-48 animate-pulse rounded-lg bg-muted" /></div> : (
           <>
             {activeTab === "overview" && <Overview team={team} tasks={tasks} workspace={workspace} onOpenTask={onOpenTask} onMembers={onMembers} onLead={onLead} />}
-            {activeTab === "tasks" && <TeamTaskList team={team} tasks={tasks} canManage={canManage} onOpenTask={onOpenTask} onTaskChanged={onTaskChanged} />}
+            {activeTab === "tasks" && <TeamTaskList team={team} tasks={tasks} counts={counts} canManage={canManage} canReview={canReview} onOpenTask={onOpenTask} onTaskChanged={onTaskChanged} />}
             {activeTab === "chat" && <TeamChat team={team} initialMessages={workspace?.messages || []} />}
             {activeTab === "activity" && <ActivityTimeline items={workspace?.activity || []} />}
             {activeTab === "settings" && <TeamSettings team={team} canManage={canManage} onEdit={onEdit} onLead={onLead} onMembers={onMembers} onDelete={onDelete} />}
@@ -582,12 +603,13 @@ function Overview({ team, tasks, workspace, onOpenTask, onMembers, onLead }: {
   );
 }
 
-function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
-  team: Team; tasks: Task[]; canManage: boolean; onOpenTask: (id: string) => void; onTaskChanged: () => void;
+function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, onTaskChanged }: {
+  team: Team; tasks: Task[]; counts: TeamTaskCounts; canManage: boolean; canReview: boolean; onOpenTask: (id: string) => void; onTaskChanged: () => void;
 }) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<TeamTaskView>("all");
   const [status, setStatus] = useState("all");
   const [priority, setPriority] = useState("all");
   const [due, setDue] = useState<DueFilter>("all");
@@ -604,6 +626,7 @@ function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
     const weekEnd = startToday + 7 * 24 * 60 * 60 * 1000;
     const selected = tasks.filter((task) => {
       const matchText = !query || [task.title, task.description, task.project?.name].some((text) => text?.toLocaleLowerCase().includes(query));
+      if (!taskMatchesView(task, view)) return false;
       const matchStatus = status === "all" || (status === "overdue" ? isOverdue(task) : task.status === status);
       const matchPriority = priority === "all" || task.priority === priority;
       const dueTime = task.deadline ? new Date(task.deadline).getTime() : null;
@@ -624,7 +647,7 @@ function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
       if (sortBy === "created") comparison = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
       return descending ? -comparison : comparison;
     });
-  }, [tasks, search, status, priority, due, assignee, sortBy, descending]);
+  }, [tasks, view, search, status, priority, due, assignee, sortBy, descending]);
 
   const clearFilters = () => { setStatus("all"); setPriority("all"); setDue("all"); setAssignee("all"); };
   const markComplete = async (task: Task) => {
@@ -632,10 +655,25 @@ function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
     try {
       setMutatingId(task.id);
       await api.updateTask(task.id, { status: "completed" });
-      toast({ title: "Task marked complete" });
+      // The task is not gone: say where it went when the current view no longer lists it.
+      if (view === "active") toast({ title: "Task marked complete", description: "It now appears under Completed.", action: <ToastAction altText="View completed tasks" onClick={() => setView("completed")}>View completed</ToastAction> });
+      else toast({ title: "Task marked complete" });
       onTaskChanged();
     } catch (error) {
       toast({ title: "Could not update task", description: errorMessage(error, "Please try again."), variant: "destructive" });
+    } finally {
+      setMutatingId("");
+    }
+  };
+  const reopen = async (task: Task) => {
+    if (!task.id) return;
+    try {
+      setMutatingId(task.id);
+      await api.updateTask(task.id, { status: "in_progress" });
+      toast({ title: "Task reopened" });
+      onTaskChanged();
+    } catch (error) {
+      toast({ title: "Could not reopen task", description: errorMessage(error, "Please try again."), variant: "destructive" });
     } finally {
       setMutatingId("");
     }
@@ -660,7 +698,10 @@ function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
   return (
     <section className="overflow-hidden rounded-lg border bg-background">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3">
-        <div><h3 className="text-sm font-semibold">Tasks</h3><p className="mt-0.5 text-[11px] text-muted-foreground">{filteredTasks.length} of {tasks.length} Team tasks</p></div>
+        <div><h3 className="text-sm font-semibold">Tasks</h3><p className="mt-0.5 text-[11px] text-muted-foreground">{filteredTasks.length} of {tasks.length} Team tasks</p>
+          <div role="tablist" aria-label="Team task views" className="mt-2 flex flex-wrap gap-1">
+            {TEAM_TASK_VIEWS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} data-testid={`team-view-${key}`} onClick={() => setView(key)} className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", view === key ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted")}>{label}<span className="ml-1 tabular-nums">{counts[key]}</span></button>)}
+          </div></div>
         <div className="flex flex-wrap items-center gap-1.5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
@@ -697,7 +738,7 @@ function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
             const total = task.execution?.total ?? task.subtasks?.length ?? 0;
             const done = task.execution?.completed ?? task.subtasks?.filter((item) => item.status === "completed").length ?? 0;
             const progress = total ? Math.round(done / total * 100) : null;
-            const canUpdateTask = canManage;
+            const canUpdateTask = canReview;
             return <div key={task.id} className="group relative grid grid-cols-[minmax(260px,1fr)_110px_90px_105px_100px_110px_38px] items-center border-b px-3 py-2.5 last:border-0 hover:bg-primary/[0.035]">
               <button type="button" aria-label={`Open task ${task.title}`} onClick={() => task.id && onOpenTask(task.id)} className="absolute inset-0 z-0 rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary" />
               <span className="pointer-events-none relative z-[1] min-w-0 pr-2"><span className="block truncate text-xs font-medium">{task.title}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{task.description || team.name}</span></span>
@@ -711,7 +752,9 @@ function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
                   <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Actions for ${task.title}`} disabled={mutatingId === task.id}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => task.id && onOpenTask(task.id)}><ExternalLink className="mr-2 h-3.5 w-3.5" />Open Team task</DropdownMenuItem>
-                    <DropdownMenuItem disabled={!task.id || !canUpdateTask || task.status === "completed"} onSelect={() => void markComplete(task)}><Check className="mr-2 h-3.5 w-3.5" />Mark complete</DropdownMenuItem>
+                    {task.status === "completed"
+                      ? <DropdownMenuItem disabled={!task.id || !canUpdateTask} onSelect={() => void reopen(task)}><RotateCcw className="mr-2 h-3.5 w-3.5" />Reopen</DropdownMenuItem>
+                      : <DropdownMenuItem disabled={!task.id || !canUpdateTask} onSelect={() => void markComplete(task)}><Check className="mr-2 h-3.5 w-3.5" />Mark complete</DropdownMenuItem>}
                     <DropdownMenuItem onSelect={() => task.id && navigate(taskWorkbenchPath(task.id))}><FileText className="mr-2 h-3.5 w-3.5" />Open in Task Workbench</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {canManage && <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteTask(task)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete</DropdownMenuItem>}
@@ -720,9 +763,9 @@ function TeamTaskList({ team, tasks, canManage, onOpenTask, onTaskChanged }: {
               </div>
             </div>;
           }) : <div className="px-4 py-12 text-center">
-            <p className="text-sm font-medium">{search || filtersCount ? "No tasks match your search or filters." : "No Team tasks yet."}</p>
+            <p className="text-sm font-medium">{search || filtersCount || view !== "all" ? "No tasks match your search or filters." : "No Team tasks yet."}</p>
             <p className="mt-1 text-xs text-muted-foreground">{search || filtersCount ? "Try changing the search or clearing filters." : "Create a task to start organizing Team work."}</p>
-            {filtersCount > 0 && <Button variant="link" size="sm" onClick={clearFilters}>Clear filters</Button>}
+            {(filtersCount > 0 || view !== "all") && <Button variant="link" size="sm" onClick={() => { clearFilters(); setView("all"); }}>Show all tasks</Button>}
           </div>}
         </div>
       </div>

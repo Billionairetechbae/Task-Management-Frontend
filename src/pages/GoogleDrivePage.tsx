@@ -70,10 +70,12 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
     openBreadcrumb,
     refresh,
     downloadFile,
+    error,
   } = useGoogleDrive("my-drive", canBrowseDrive);
   const [newFolderName, setNewFolderName] = useState("");
   const [selectedFile, setSelectedFile] = useState<any | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const folderItems = useMemo(
     () => displayedFiles.filter(isFolder),
@@ -104,7 +106,8 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
     try {
       await uploadFile(pendingFile);
       setPendingFile(null);
-      toast({ title: "Upload successful" });
+      setFileInputKey((k) => k + 1);
+      toast({ title: "Upload successful", description: `${pendingFile.name} was uploaded to Google Drive.` });
     } catch (error: any) {
       toast({ title: "Upload failed", description: error?.message || "Unable to upload file", variant: "destructive" });
     }
@@ -261,6 +264,8 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                       <Input
+                        key={fileInputKey}
+                        aria-label="File to upload to Google Drive"
                         type="file"
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null;
@@ -289,7 +294,22 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
                 )}
               </div>
 
-              {!currentFolder && !loading ? (
+              <p className="mb-3 text-xs text-muted-foreground" data-testid="drive-scope-note">
+                Admiino shows files it created in your Drive and files you have chosen to share with it. To use another Drive file, pick it with “Select from Google Drive” when attaching to a task, or upload through Google Drive directly.
+              </p>
+
+              {error && !loading ? (
+                <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-center" data-testid={`drive-error-${error.kind}`}>
+                  <p className="font-medium">
+                    {error.kind === "reconnect" || error.kind === "not_connected" ? "Reconnect Google Drive" : error.kind === "forbidden" ? "Google denied access" : error.kind === "disabled" ? "Google Drive is turned off" : error.kind === "rate_limited" ? "Google is busy" : "Google Drive couldn't be loaded"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{error.kind === "disabled" ? "An administrator has turned off Google Drive for this workspace." : error.message}</p>
+                  <div className="mt-3 flex justify-center gap-2">
+                    {(error.kind === "reconnect" || error.kind === "not_connected") && <Button onClick={() => google.connect()} disabled={google.connectLoading}>Reconnect Google Drive</Button>}
+                    {error.kind !== "disabled" && <Button variant="outline" onClick={() => void refresh()}>Try again</Button>}
+                  </div>
+                </div>
+              ) : !currentFolder && !loading ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <HardDrive className="h-12 w-12 mx-auto mb-3 opacity-40" />
                   <p>Select a folder to get started.</p>

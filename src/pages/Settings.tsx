@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Bell,
   Check,
   ChevronRight,
   Copy,
+  CreditCard,
   FileArchive,
   Info,
   KeyRound,
@@ -47,6 +48,7 @@ import Profile from "./Profile";
 import Integrations from "./Integrations";
 import AuditExport from "./AuditExport";
 import { canExportWorkspace } from "@/lib/permissions";
+import { SUBSCRIPTION_PATH, canViewSubscription } from "@/lib/workspaceNavigation";
 import { NotificationPreferencesMatrix } from "@/components/notifications/NotificationPreferencesMatrix";
 import { WorkspaceNotificationDelivery, canManageWorkspaceNotificationDeliveries } from "@/components/notifications/WorkspaceNotificationDelivery";
 
@@ -261,6 +263,16 @@ const Settings = () => {
                 }
               />
             </SectionCard>
+
+            {canViewSubscription(workspaceRole) && (
+              <SectionCard title="Subscription & Seats" description="Your plan, seat usage and estimated monthly charge for this workspace.">
+                <div className="pt-1">
+                  <Button asChild variant="outline" className="justify-start">
+                    <Link to={SUBSCRIPTION_PATH}><CreditCard className="h-4 w-4 mr-2" /> View Subscription &amp; Seats</Link>
+                  </Button>
+                </div>
+              </SectionCard>
+            )}
 
             <SectionCard
               title="Security & session"
