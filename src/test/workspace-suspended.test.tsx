@@ -54,3 +54,19 @@ describe("API handling of HTTP 423 WORKSPACE_SUSPENDED", () => {
     await expect(api.getMyWorkspaces()).rejects.toBeInstanceOf(ApiError); expect(seen).not.toHaveBeenCalled(); window.removeEventListener("workspace:suspended", seen as EventListener); vi.unstubAllGlobals();
   });
 });
+
+describe("HTTP 423 without workspace detail (resource-level responses)", () => {
+  it("asks the app to resolve it instead of guessing, and still raises the typed error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 423, json: async () => ({ status: "error", code: "WORKSPACE_SUSPENDED", message: "This workspace is temporarily suspended." }) }));
+    const known = vi.fn(); const unknown = vi.fn(); window.addEventListener("workspace:suspended", known as EventListener); window.addEventListener("workspace:suspended-unknown", unknown as EventListener);
+    await expect(api.getMyWorkspaces()).rejects.toMatchObject({ statusCode: 423 });
+    expect(known).not.toHaveBeenCalled(); expect(unknown).toHaveBeenCalledTimes(1);
+    window.removeEventListener("workspace:suspended", known as EventListener); window.removeEventListener("workspace:suspended-unknown", unknown as EventListener); vi.unstubAllGlobals();
+  });
+  it("an ordinary 500 never triggers the suspension flow", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({ message: "Server error" }) }));
+    const any = vi.fn(); window.addEventListener("workspace:suspended-unknown", any as EventListener); window.addEventListener("workspace:suspended", any as EventListener);
+    await expect(api.getMyWorkspaces()).rejects.toMatchObject({ statusCode: 500 }); expect(any).not.toHaveBeenCalled();
+    window.removeEventListener("workspace:suspended-unknown", any as EventListener); window.removeEventListener("workspace:suspended", any as EventListener); vi.unstubAllGlobals();
+  });
+});

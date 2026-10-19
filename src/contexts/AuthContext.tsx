@@ -102,8 +102,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSuspendedWorkspace(detail);
       setWorkspaces((current) => current.filter((w) => w.id !== detail.id));
     };
+    // A 423 without workspace detail: only take over the screen if the workspace the user is working in is the suspended one
+    // (the item may belong to another workspace; then the caller just shows its error).
+    const onUnknown = () => {
+      const activeId = localStorage.getItem("activeCompanyId");
+      api.getSuspendedWorkspaces().then((res) => {
+        const match = (res.data?.workspaces || []).find((w) => w.id === activeId);
+        if (match) onSuspended(new CustomEvent("workspace:suspended", { detail: match }));
+      }).catch(() => {});
+    };
     window.addEventListener("workspace:suspended", onSuspended);
-    return () => window.removeEventListener("workspace:suspended", onSuspended);
+    window.addEventListener("workspace:suspended-unknown", onUnknown);
+    return () => { window.removeEventListener("workspace:suspended", onSuspended); window.removeEventListener("workspace:suspended-unknown", onUnknown); };
   }, []);
 
   const mapWorkspaces = (items: any[]): Workspace[] => (Array.isArray(items) ? items : [])

@@ -2140,8 +2140,10 @@ class ApiClient {
       // Suspended workspace: a recoverable, clearly-worded state (not a generic failure). Only name + support reference are exposed.
       if (response.status === 423 && result?.code === "WORKSPACE_SUSPENDED") {
         const workspace = result?.data?.workspace;
-        if (typeof window !== "undefined" && workspace?.id) {
-          window.dispatchEvent(new CustomEvent("workspace:suspended", { detail: { id: workspace.id, name: workspace.name ?? null, reference: workspace.reference ?? null } }));
+        if (typeof window !== "undefined") {
+          if (workspace?.id) window.dispatchEvent(new CustomEvent("workspace:suspended", { detail: { id: workspace.id, name: workspace.name ?? null, reference: workspace.reference ?? null } }));
+          // Resource-level responses (e.g. a Task by id) carry no workspace detail: let the app work out whether the ACTIVE workspace is the suspended one.
+          else window.dispatchEvent(new Event("workspace:suspended-unknown"));
         }
         throw new ApiError("This workspace is temporarily suspended.", 423, result);
       }
