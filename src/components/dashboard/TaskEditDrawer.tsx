@@ -1,4 +1,6 @@
 import { triggerBlobDownload } from "@/lib/api";
+import { classifyTaskLoadError } from "@/lib/taskLoadError";
+import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
 // src/components/dashboard/TaskEditDrawer.tsx
 
@@ -108,7 +110,9 @@ export default function TaskEditDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly]);
 
-  const [loading, setLoading] = useState(false);
+  // Start in the loading state when a task is about to be fetched, so the form can never flash (or stay) blank with default values.
+  const [loading, setLoading] = useState(Boolean(taskId) && (inline || open));
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
   const [task, setTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -147,6 +151,7 @@ export default function TaskEditDrawer({
 
   useEffect(() => {
     if ((inline || open) && taskId) {
+      setLoading(true);
       fetchTask();
       if (isManager && canAssignOthers) fetchMembers();
       setActiveTab(initialTab);
@@ -163,6 +168,7 @@ export default function TaskEditDrawer({
     if (!taskId) return;
     try {
       setLoading(true);
+      setLoadError(null);
       setCustomFields({});
 
       const res = await api.getTaskById(taskId);
@@ -189,7 +195,14 @@ export default function TaskEditDrawer({
 
       setSelectedAssigneeIds(nextIds);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      // A failed load is NEVER treated as an empty task. Keep what was already loaded for this same task (and any edits in the
+      // form); otherwise show a specific error state with a retry, and keep Save unavailable.
+      if (task?.id === taskId) {
+        toast({ title: "Couldn't refresh this task", description: classifyTaskLoadError(err).message, variant: "destructive" });
+      } else {
+        setTask(null);
+        setLoadError(err);
+      }
     } finally {
       setLoading(false);
     }
@@ -225,7 +238,7 @@ export default function TaskEditDrawer({
   };
 
   const handleSaveDetails = async () => {
-    if (!task || readOnly) return;
+    if (!task || readOnly || saving) return; // never submit before the task has loaded; never double-submit
 
     try {
       setSaving(true);
@@ -506,6 +519,8 @@ export default function TaskEditDrawer({
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
+      ) : !task ? (
+        <TaskLoadErrorPanel compact error={loadError ?? { statusCode: 404 }} onRetry={() => void fetchTask()} />
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full animate-fade-in">
           <TabsList className="w-full grid grid-cols-4 mb-4">
@@ -717,7 +732,7 @@ export default function TaskEditDrawer({
                 )}
 
                 {!readOnly && (
-                  <Button onClick={handleSaveDetails} disabled={saving} className="w-full">
+                  <Button onClick={handleSaveDetails} disabled={saving || !task} className="w-full">
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                   </Button>
@@ -919,7 +934,7 @@ export default function TaskEditDrawer({
                             </Button>
                           </div>
                         ))}
-                        <Button onClick={handleSaveDetails} disabled={saving} className="w-full mt-2">
+                        <Button onClick={handleSaveDetails} disabled={saving || !task} className="w-full mt-2">
                           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Upload & Save
                         </Button>

@@ -62,6 +62,8 @@ const AllTasks = () => {
 
   const refetchTasks = () => {
     queryClient.invalidateQueries({ queryKey: ["all-tasks-cross-workspace"] });
+    // An edit here must show up in the Workbench and Team Workspace too.
+    for (const key of ["task-details", "task-workbench-list", "teams"]) queryClient.invalidateQueries({ queryKey: [key] });
   };
 
   const [search, setSearch] = useState("");

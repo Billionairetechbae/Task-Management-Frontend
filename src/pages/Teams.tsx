@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMatch, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -54,6 +54,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { TEAM_TASK_VIEWS, countTeamTasks, isTaskOverdue, mergeTeamTasks, taskMatchesView } from "@/lib/teamTaskViews";
 import type { TeamTaskCounts, TeamTaskView } from "@/lib/teamTaskViews";
@@ -143,28 +144,28 @@ export default function Teams() {
 
   const selectedTeam = teams.find((team) => team.id === (routeTeamId || selectedId)) || null;
   const workspaceQuery = useQuery({
-    queryKey: ["teams", "workspace", selectedTeam?.id],
+    queryKey: ["teams", "workspace", selectedTeam?.id, activeCompanyId],
     queryFn: () => api.getTeamWorkspace(selectedTeam!.id),
     enabled: !!selectedTeam,
     staleTime: 30_000,
     retry: false,
   });
   const teamTasksQuery = useQuery({
-    queryKey: ["teams", "tasks", selectedTeam?.id],
+    queryKey: ["teams", "tasks", selectedTeam?.id, activeCompanyId],
     queryFn: () => api.getTasks({ teamId: selectedTeam!.id }),
     enabled: !!selectedTeam,
     staleTime: 30_000,
     retry: false,
   });
   const taskQuery = useQuery({
-    queryKey: ["teams", "task", routeTeamId, taskId],
+    queryKey: ["teams", "task", routeTeamId, taskId, activeCompanyId],
     queryFn: () => api.getTaskById(taskId!),
     enabled: !!routeTeamId && !!taskId,
     retry: false,
     staleTime: 30_000,
   });
   const subtaskQuery = useQuery({
-    queryKey: ["teams", "subtask", subtaskId],
+    queryKey: ["teams", "subtask", subtaskId, activeCompanyId],
     queryFn: () => api.getTaskById(subtaskId!),
     enabled: !!subtaskId,
     retry: false,
@@ -376,6 +377,7 @@ export default function Teams() {
               task={task}
               loading={taskQuery.isLoading}
               taskError={taskQuery.isError}
+              taskErrorDetail={taskQuery.error}
               subtask={subtask}
               subtaskLoading={subtaskQuery.isLoading}
               subtaskError={subtaskQuery.isError}
@@ -922,13 +924,14 @@ function TeamSettings({ team, canManage, onEdit, onLead, onMembers, onDelete }: 
 }
 
 function TaskWorkspace({
-  team, tasks, task, loading, taskError, subtask, subtaskLoading, subtaskError, subtaskId, canEdit, canCollaborate, canCreateSubtasks, canChangeSubtaskStatus, userId, onClose, onRefresh, onRefreshWorkspace, onTaskCreated, onSubtaskChanged,
+  team, tasks, task, loading, taskError, taskErrorDetail, subtask, subtaskLoading, subtaskError, subtaskId, canEdit, canCollaborate, canCreateSubtasks, canChangeSubtaskStatus, userId, onClose, onRefresh, onRefreshWorkspace, onTaskCreated, onSubtaskChanged,
 }: {
   team: Team;
   tasks: Task[];
   task?: Task;
   loading: boolean;
   taskError: boolean;
+  taskErrorDetail?: unknown;
   subtask?: Task;
   subtaskLoading: boolean;
   subtaskError: boolean;
@@ -1024,9 +1027,11 @@ function TaskWorkspace({
     setEditOpen(true);
   };
   if (loading) return <div className="p-5"><div className="h-8 w-48 animate-pulse rounded bg-muted" /><div className="mt-4 h-56 animate-pulse rounded-lg bg-muted" /><div className="mt-3 h-72 animate-pulse rounded-lg bg-muted" /></div>;
-  if (taskError || !task || String(task.teamId || "") !== String(team.id) || task.parentTaskId) {
-    return <div className="p-6"><Button variant="ghost" size="sm" onClick={onClose}><ArrowLeft className="mr-1.5 h-4 w-4" />Back to tasks</Button><h2 className="mt-4 text-sm font-semibold">Team task not available</h2><p className="mt-1 text-xs text-muted-foreground">The task could not be loaded in this Team workspace.</p></div>;
-  }
+  // Each failure is explained specifically (a server error is NOT "not available"), with a retry where retrying can help.
+  if (taskError) return <TaskLoadErrorPanel error={taskErrorDetail} onRetry={() => void onRefresh()} onBack={onClose} backLabel="Back to tasks" />;
+  if (!task) return <TaskLoadErrorPanel error={{ statusCode: 404 }} onBack={onClose} backLabel="Back to tasks" />;
+  if (task.parentTaskId) return <div className="p-6"><Button variant="ghost" size="sm" onClick={onClose}><ArrowLeft className="mr-1.5 h-4 w-4" />Back to tasks</Button><h2 className="mt-4 text-sm font-semibold">This is a subtask</h2><p className="mt-1 text-xs text-muted-foreground">Open it from its parent task.</p></div>;
+  if (String(task.teamId || "") !== String(team.id)) return <div className="p-6" data-testid="task-not-in-team"><Button variant="ghost" size="sm" onClick={onClose}><ArrowLeft className="mr-1.5 h-4 w-4" />Back to tasks</Button><h2 className="mt-4 text-sm font-semibold">This task is not part of this Team</h2><p className="mt-1 text-xs text-muted-foreground">It may have been moved to another Team or removed from Teams. Open it from the Task Workbench instead.</p><Button asChild variant="outline" size="sm" className="mt-3"><Link to={taskWorkbenchPath(task.id)}>Open in Task Workbench</Link></Button></div>;
 
   const taskMembers = team.memberLinks?.map((link) => link.companyMember?.user).filter(Boolean) || [];
   return (

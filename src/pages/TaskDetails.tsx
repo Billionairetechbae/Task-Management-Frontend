@@ -1,4 +1,6 @@
 import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
+import { classifyTaskLoadError } from "@/lib/taskLoadError";
+import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
 import { triggerBlobDownload } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import ClientViewShareButton from "@/components/ClientViewShareButton";
@@ -128,14 +130,14 @@ const TaskDetails = () => {
   const [collabPanelOpen, setCollabPanelOpen] = useState(true);
 
   const taskQuery = useQuery({
-    queryKey: ["task-details", id],
+    queryKey: ["task-details", id, activeCompanyId], // workspace last: prefix invalidations by id still match, but a switch never reuses another workspace's cache
     queryFn: async () => {
       if (!id) throw new Error("No task id");
       try {
         const response = await api.getTaskById(id);
         return response.data;
       } catch (err: any) {
-        if (err?.status === 403) {
+        if (classifyTaskLoadError(err).kind === "forbidden") {
           toast({
             title: "Access Denied",
             description: "You don't have permission to view this task.",
@@ -1315,57 +1317,8 @@ const TaskDetails = () => {
     </div>
   );
 
-  const getErrorState = () => {
-    if (!taskQuery.isError) return null;
-    const error = taskQuery.error as any;
-    if (error?.name === 'NetworkError') {
-      return {
-        title: "You're offline",
-        description: "Check your connection and try again.",
-        icon: AlertCircle,
-        tone: "text-muted-foreground"
-      };
-    }
-    if (error?.status === 403) {
-      return {
-        title: "You don't have permission to view this task",
-        description: "You can still browse other tasks in the list.",
-        icon: AlertCircle,
-        tone: "text-yellow-600"
-      };
-    }
-    if (error?.status === 404) {
-      return {
-        title: "Task not found",
-        description: "This task may have been deleted or you don't have access.",
-        icon: AlertCircle,
-        tone: "text-muted-foreground"
-      };
-    }
-    return {
-      title: "Something went wrong",
-      description: "Please try again later.",
-      icon: AlertCircle,
-      tone: "text-red-600"
-    };
-  };
-
-  const ErrorStatePanel = () => {
-    const state = getErrorState();
-    if (!state) return null;
-    const Icon = state.icon;
-    return (
-      <div className="flex h-full flex-col items-center justify-center bg-muted/20 p-6 text-center">
-        <Icon className={cn("h-12 w-12 mb-4", state.tone)} />
-        <h3 className="text-lg font-semibold mb-2">{state.title}</h3>
-        <p className="text-sm text-muted-foreground mb-6">{state.description}</p>
-        <Button variant="outline" onClick={() => taskQuery.refetch()} className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Try again
-        </Button>
-      </div>
-    );
-  };
+  // Specific, safe state per failure kind (offline / forbidden / not found / suspended / server) with a recovery action.
+  const ErrorStatePanel = () => taskQuery.isError ? <TaskLoadErrorPanel error={taskQuery.error} onRetry={() => void taskQuery.refetch()} /> : null;
 
   const DetailsPanel = taskQuery.isLoading ? DetailsPanelSkeleton :
     taskQuery.isError ? <ErrorStatePanel /> :
@@ -2318,9 +2271,9 @@ const TaskDetails = () => {
   const CollaborationPanel = taskQuery.isLoading ? CollaborationPanelSkeleton :
     taskQuery.isError ? (
       <div className="flex h-full items-center justify-center text-muted-foreground text-sm text-center p-4">
-        {(taskQuery.error as any)?.status === 403 
-          ? "You don't have permission to view this task." 
-          : "Failed to load task details. Please try again."}
+        {classifyTaskLoadError(taskQuery.error).kind === "forbidden"
+          ? "You don't have permission to view this task."
+          : "Task details are unavailable right now."}
       </div>
     ) :
     task ? (
