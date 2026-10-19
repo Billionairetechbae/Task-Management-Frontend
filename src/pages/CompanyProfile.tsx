@@ -290,7 +290,7 @@ const CompanyProfile = () => {
                 <div><p className="text-xs text-muted-foreground">Active members</p><p className="font-semibold">{commercial?.activeSeatCount ?? "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Included seats</p><p className="font-semibold">{commercial?.includedSeats ?? 3}</p></div>
                 <div><p className="text-xs text-muted-foreground">Est. monthly charge</p><p className="font-semibold">${commercial?.estimatedMonthlyChargeUsd ?? 0}</p></div>
-                <p className="col-span-full text-xs text-muted-foreground">No payment method required yet.</p>
+                <p className="col-span-full text-xs text-muted-foreground">Estimates only; no payment is taken online. <Link to="/settings/workspace/subscription" className="text-primary underline">View Subscription &amp; Seats</Link></p>
               </CardContent>
             </Card>
             {/* Basic Information Card */}

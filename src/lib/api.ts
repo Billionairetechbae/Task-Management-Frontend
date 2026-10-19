@@ -158,6 +158,32 @@ export interface TrashItem {
 
 export type PermissionMode = "restricted" | "free";
 
+export type CommercialStatusKey = "free" | "trial" | "active" | "payment_pending" | "overdue" | "grace_period" | "suspended" | "cancelled" | "custom";
+/** Owner/admin view of the organization's own subscription. Amounts are integer cents. No internal notes or payment-review data. */
+export interface WorkspaceCommercialOverview {
+  plan: { code: string; name: string };
+  commercialStatus: CommercialStatusKey;
+  currency: string;
+  usage: { activeSeats: number; includedSeats: number; additionalSeats: number; unitPriceCents: number; fixedMonthlyCents: number; estimatedMonthlyCents: number; contractedMaxSeats: number | null };
+  customTerms: boolean;
+  billingPeriod: { start: string; end: string };
+  outstandingCents: number;
+  paymentStatus: "none" | "paid_up" | "outstanding" | "overdue";
+  estimateNote: string;
+  billingRecords: Array<{ id: string; periodStart: string; periodEnd: string; currency: string; totalCents: number; status: "issued" | "partially_paid" | "paid"; dueDate: string | null; outstandingCents: number; isOverdue: boolean; activeSeats: number; additionalSeats: number }>;
+  contactEmail: string | null;
+}
+export interface WorkspaceSeatImpact {
+  currency: string;
+  currentActiveSeats: number;
+  includedSeats: number;
+  currentEstimatedMonthlyCents: number;
+  activeSeatsAfterAcceptance: number;
+  additionalSeatsAfterAcceptance: number;
+  estimatedMonthlyCentsAfterAcceptance: number;
+  note: string;
+}
+
 export type GovernancePolicy = "owners_admins" | "existing_permissions";
 export interface WorkspaceGovernanceSettings {
   memberInvitePolicy: GovernancePolicy;
@@ -4181,6 +4207,14 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
       body: JSON.stringify(settings),
     });
+  }
+
+  async getWorkspaceCommercial(): Promise<{ status: string; data: WorkspaceCommercialOverview }> {
+    return this.request("/workspace/commercial", { method: "GET", headers: this.getAuthHeaders(true) });
+  }
+
+  async getWorkspaceSeatImpact(additional = 1): Promise<{ status: string; data: WorkspaceSeatImpact }> {
+    return this.request(`/workspace/commercial/seat-impact?additional=${encodeURIComponent(String(additional))}`, { method: "GET", headers: this.getAuthHeaders(true) });
   }
 
   async getWorkspaceGovernance(): Promise<WorkspaceGovernanceResponse> {

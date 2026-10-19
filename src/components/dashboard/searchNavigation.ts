@@ -1,7 +1,7 @@
 import {
   Activity, Bell, CalendarDays, Columns3, FileText, FolderKanban, FolderOpen,
   LayoutDashboard, LayoutTemplate, Plug, Settings, ShieldCheck, Trash2, User,
-  Users, ClipboardList, Workflow, Clock3, type LucideIcon,
+  Users, ClipboardList, Workflow, Clock3, CreditCard, type LucideIcon,
 } from "lucide-react";
 
 export type SearchNavigationResult = {
@@ -33,6 +33,7 @@ const entries: Entry[] = [
   { id: "customization", title: "Workspace Customization", subtitle: "Manage custom fields and workspace configuration", href: "/settings/workspace/customization", category: "Settings", icon: Settings, aliases: ["custom field", "custom fields", "customization"], roles: ["owner", "admin", "manager"] },
   { id: "automations", title: "Automations", subtitle: "Create simple rules for Task and Project events", href: "/settings/workspace/automations", category: "Settings", icon: Workflow, aliases: ["automation", "workflow", "rules"], roles: ["owner", "admin"] },
   { id: "workspace-governance", title: "Workspace Governance", subtitle: "Control workspace policies and feature access", href: "/settings/workspace/governance", category: "Settings", icon: ShieldCheck, aliases: ["governance", "admin controls", "workspace policies", "permissions", "access policies", "integrations policy"], roles: ["owner", "admin"] },
+  { id: "workspace-subscription", title: "Subscription & Seats", subtitle: "Review your plan, seat usage and estimated monthly charge", href: "/settings/workspace/subscription", category: "Settings", icon: CreditCard, aliases: ["billing", "subscription", "seats", "plan", "pricing"], roles: ["owner", "admin"] },
   { id: "trash", title: "Trash", subtitle: "Restore or permanently remove deleted items", href: "/trash", category: "Navigation", icon: Trash2, aliases: ["deleted", "recycle bin"], roles: ["owner", "admin"] },
   { id: "shared-with-me", title: "Shared with Me", subtitle: "Open resources shared with your account", href: "/shared-with-me", category: "Navigation", icon: FolderOpen, aliases: ["shared"] },
   { id: "project-health", title: "Project Health", subtitle: "Review project progress and risks", href: "/project-health", category: "Navigation", icon: Activity, aliases: ["project health", "health"], roles: ["owner", "admin", "manager"] },

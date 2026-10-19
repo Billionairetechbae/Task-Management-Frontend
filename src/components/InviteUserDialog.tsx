@@ -18,6 +18,7 @@ import {
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import SeatImpactNotice from "@/components/commercial/SeatImpactNotice";
 
 type InvitedRole = "team_member" | "manager" | "executive";
 
@@ -121,6 +122,8 @@ const InviteUserDialog = ({
               </SelectContent>
             </Select>
           </div>
+
+          <SeatImpactNotice active={open} />
 
           <Button className="w-full h-12" disabled={loading} onClick={handleInvite}>
             {loading ? "Sending Invite..." : "Send Invitation"}

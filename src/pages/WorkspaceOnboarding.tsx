@@ -97,13 +97,13 @@ const WorkspaceOnboarding = () => {
                       <p className="font-semibold">Free</p><p className="text-sm">$0/month</p><p className="mt-1 text-xs text-muted-foreground">Up to 3 internal members.</p>
                     </button>
                     <button type="button" onClick={() => setSelectedPlan("team")} className={`rounded-lg border p-3 text-left ${selectedPlan === "team" ? "border-primary ring-1 ring-primary" : "border-border"}`}>
-                      <p className="font-semibold">Team</p><p className="text-sm">$5/additional member/month</p><p className="mt-1 text-xs text-muted-foreground">First 3 internal members included.</p>
+                      <p className="font-semibold">Standard</p><p className="text-sm">$5/additional member/month</p><p className="mt-1 text-xs text-muted-foreground">First 3 internal members included.</p>
                     </button>
                     <a href="mailto:hello@admiino.com?subject=Enterprise%20enquiry" className="rounded-lg border border-border p-3 text-left hover:border-primary">
                       <p className="font-semibold">Enterprise</p><p className="text-sm">Contact us</p><p className="mt-1 text-xs text-muted-foreground">Tailored commercial arrangement.</p>
                     </a>
                   </fieldset>
-                  <p className="text-xs text-muted-foreground">Your Free or Team selection is saved with the workspace. Enterprise enquiries are handled manually.</p>
+                  <p className="text-xs text-muted-foreground">Your Free or Standard selection is saved with the workspace. Enterprise enquiries are handled manually.</p>
                   <div>
                     <Label>Name</Label>
                     <Input value={name} onChange={(e) => setName(e.target.value)} required />

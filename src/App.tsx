@@ -61,6 +61,7 @@ import WorkspaceInsights from "@/pages/WorkspaceInsights";
 import WorkspaceActivity from "@/pages/WorkspaceActivity";
 import WorkspaceAutomations from "@/pages/WorkspaceAutomations";
 import WorkspaceGovernance from "@/pages/WorkspaceGovernance";
+import WorkspaceSubscription from "@/pages/WorkspaceSubscription";
 import TimeTracking from "@/pages/TimeTracking";
 
 import AuditExport from "@/pages/AuditExport";
@@ -421,6 +422,7 @@ const App = () => {
         <Route path="/settings/workspace/activity" element={<ProtectedRoute><WorkspaceActivity /></ProtectedRoute>} />
         <Route path="/settings/workspace/automations" element={<ProtectedRoute><WorkspaceAutomations /></ProtectedRoute>} />
         <Route path="/settings/workspace/governance" element={<ProtectedRoute><WorkspaceGovernance /></ProtectedRoute>} />
+        <Route path="/settings/workspace/subscription" element={<ProtectedRoute><WorkspaceSubscription /></ProtectedRoute>} />
         <Route
           path="/integrations"
           element={

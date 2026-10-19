@@ -43,6 +43,7 @@ import {
   LayoutTemplate,
   Workflow,
   Clock3,
+  CreditCard,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 import GlobalSearch from "@/components/dashboard/GlobalSearch";
@@ -272,6 +273,11 @@ const DashboardLayout = ({
           icon: <ShieldCheck className="w-[18px] h-[18px]" />,
         },
         {
+          label: "Subscription & Seats",
+          href: "/settings/workspace/subscription",
+          icon: <CreditCard className="w-[18px] h-[18px]" />,
+        },
+        {
           label: "Company Profile",
           href: "/company-profile",
           icon: <Building2 className="w-[18px] h-[18px]" />,
@@ -401,6 +407,7 @@ const DashboardLayout = ({
         { label: "Customization", href: "/settings/workspace/customization", icon: <Columns3 className="w-[18px] h-[18px]" /> },
         { label: "Automations", href: "/settings/workspace/automations", icon: <Workflow className="w-[18px] h-[18px]" /> },
         { label: "Workspace Governance", href: "/settings/workspace/governance", icon: <ShieldCheck className="w-[18px] h-[18px]" /> },
+        { label: "Subscription & Seats", href: "/settings/workspace/subscription", icon: <CreditCard className="w-[18px] h-[18px]" /> },
         { label: "Activity Log", href: "/settings/workspace/activity", icon: <Activity className="w-[18px] h-[18px]" /> },
         { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
       ];
