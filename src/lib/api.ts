@@ -2137,6 +2137,15 @@ class ApiClient {
         throw new ApiError(rateLimitMessage, 429);
       }
 
+      // Suspended workspace: a recoverable, clearly-worded state (not a generic failure). Only name + support reference are exposed.
+      if (response.status === 423 && result?.code === "WORKSPACE_SUSPENDED") {
+        const workspace = result?.data?.workspace;
+        if (typeof window !== "undefined" && workspace?.id) {
+          window.dispatchEvent(new CustomEvent("workspace:suspended", { detail: { id: workspace.id, name: workspace.name ?? null, reference: workspace.reference ?? null } }));
+        }
+        throw new ApiError("This workspace is temporarily suspended.", 423, result);
+      }
+
       // Workspace missing guard
       if (
         response.status === 400 &&
@@ -2382,6 +2391,10 @@ class ApiClient {
   logout(): void {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("token");
+  }
+
+  async getSuspendedWorkspaces(): Promise<{ status: string; data: { workspaces: { id: string; name: string; reference: string }[] } }> {
+    return this.request("/workspaces/suspended", { method: "GET", headers: this.getAuthHeaders(false) });
   }
 
   async getMyWorkspaces(): Promise<{

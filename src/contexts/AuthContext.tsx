@@ -74,7 +74,12 @@ interface AuthContextType {
   workspaceRole: WorkspaceRole | null;
   workspaces: Workspace[];
   setActiveCompanyId: (id: string | null) => void;
+  /** Set when the workspace the user was working in (or their only workspace) has been suspended by Admiino. */
+  suspendedWorkspace: SuspendedWorkspace | null;
+  clearSuspendedWorkspace: () => void;
 }
+
+export interface SuspendedWorkspace { id: string; name: string | null; reference: string | null }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -87,6 +92,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>(loadCachedWorkspaces);
+  const [suspendedWorkspace, setSuspendedWorkspace] = useState<SuspendedWorkspace | null>(null);
+
+  // A 423 from the API means the active workspace is suspended. Drop it from the usable list so "Switch workspace" only offers live ones.
+  useEffect(() => {
+    const onSuspended = (event: Event) => {
+      const detail = (event as CustomEvent<SuspendedWorkspace>).detail;
+      if (!detail?.id) return;
+      setSuspendedWorkspace(detail);
+      setWorkspaces((current) => current.filter((w) => w.id !== detail.id));
+    };
+    window.addEventListener("workspace:suspended", onSuspended);
+    return () => window.removeEventListener("workspace:suspended", onSuspended);
+  }, []);
 
   const mapWorkspaces = (items: any[]): Workspace[] => (Array.isArray(items) ? items : [])
     .map(mapWorkspaceSummary)
@@ -292,6 +310,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const logout = () => {
+    setSuspendedWorkspace(null);
     api.logout();
     clearAllQueryCache();
     clearAllAuthState();
@@ -314,6 +333,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
 
+  // A user whose only workspace is suspended has no usable workspace: ask the server which of theirs are suspended.
+  useEffect(() => {
+    if (loading || !user || workspaces.length > 0 || (user as any)?.accountType === "admin") return;
+    let current = true;
+    api.getSuspendedWorkspaces().then((res) => { const first = res.data?.workspaces?.[0]; if (current && first) setSuspendedWorkspace(first); }).catch(() => {});
+    return () => { current = false; };
+  }, [loading, user, workspaces.length]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -330,6 +357,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         workspaceRole,
         workspaces,
         setActiveCompanyId,
+        suspendedWorkspace,
+        clearSuspendedWorkspace: () => setSuspendedWorkspace(null),
       }}
     >
       {children}

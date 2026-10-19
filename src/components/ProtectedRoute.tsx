@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { preserveAuthReturnPath } from '@/lib/authReturnPath';
+import WorkspaceSuspended from '@/pages/WorkspaceSuspended';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, suspendedWorkspace } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -32,6 +33,9 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
   if ((user as any)?.accountType === "admin") {
     return <Navigate to="/" replace />;
   }
+
+  // A suspended workspace replaces every workspace page with the recovery screen (support, switch workspace, sign out).
+  if (suspendedWorkspace) return <WorkspaceSuspended />;
 
   if (allowedRoles && !allowedRoles.includes(user.role as any)) {
     return <Navigate to="/unauthorized" replace />;

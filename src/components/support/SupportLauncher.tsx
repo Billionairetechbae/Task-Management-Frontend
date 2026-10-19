@@ -25,6 +25,8 @@ export default function SupportLauncher() {
   const socket = useWebSocket();
   const supportAgent = useSupportAgent();
   const [open, setOpen] = useState(false);
+  // Lets other screens (e.g. the suspended-workspace page) open Support without importing its internals.
+  useEffect(() => { const openSupport = () => setOpen(true); window.addEventListener("support:open", openSupport); return () => window.removeEventListener("support:open", openSupport); }, []);
   const [view, setView] = useState<View>("home");
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatLine[]>([]);
