@@ -47,7 +47,7 @@ import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, TeamMember } from "@/lib/api";
-import { filterTopLevelTasks, isUserInvolvedInTask } from "@/lib/taskListUtils";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -112,6 +112,7 @@ const DashboardExecutive = () => {
     useTaskCacheUpdater();
 
   const tasks: Task[] = dashboardQuery.data?.tasks ?? [];
+  const myTasks: Task[] = dashboardQuery.data?.myTasks ?? [];
 
   const teamStats: DashboardTeamStats = dashboardQuery.data?.teamStats ?? {
     totalAssistants: 0,
@@ -129,6 +130,8 @@ const DashboardExecutive = () => {
     urgentTasks: 0,
     completionRate: 0,
   };
+
+  const myStats: DashboardTaskStats = dashboardQuery.data?.myStats ?? taskStats;
 
   const pendingAssistants: TeamMember[] = pendingQuery.data ?? [];
 
@@ -172,15 +175,11 @@ const DashboardExecutive = () => {
     setCurrentPage(1);
   };
 
-  const filteredTasks = tasks.filter((task) => {
+  // Personal view = canonical My Tasks (created by me OR assigned to me), always server-computed.
+  const personalView = workspaceRole === "member" || (showTaskScopeToggle && taskScope === "my");
+  const shownStats: DashboardTaskStats = personalView ? myStats : taskStats;
+  const filteredTasks = (personalView ? myTasks : tasks).filter((task) => {
     if (statusFilter && task.status !== statusFilter) return false;
-    if (
-      showTaskScopeToggle &&
-      taskScope === "my" &&
-      !isUserInvolvedInTask(task, user?.id)
-    ) {
-      return false;
-    }
     return true;
   });
 
@@ -342,31 +341,39 @@ const DashboardExecutive = () => {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className={cn("grid grid-cols-2 gap-3 mb-6", personalView ? "lg:grid-cols-3 xl:grid-cols-6" : "lg:grid-cols-4")} data-testid="dashboard-stats">
         <StatsCard
-          title={workspaceRole === "member" ? "My Tasks" : "Total Tasks"}
-          value={taskStats.totalTasks}
+          title={personalView ? "My Tasks" : "Total Tasks"}
+          value={shownStats.totalTasks}
           icon={ClipboardList}
           iconClassName="bg-primary/10"
         />
 
         <StatsCard
           title="Completion Rate"
-          value={`${taskStats.completionRate}%`}
+          value={`${shownStats.completionRate}%`}
           icon={TrendingUp}
           iconClassName="bg-success/10"
         />
 
+        {personalView && (
+          <StatsCard title="My Pending" value={shownStats.pendingTasks} icon={Clock} iconClassName="bg-warning/10" />
+        )}
+
         <StatsCard
-          title={workspaceRole === "member" ? "My In Progress" : "In Progress"}
-          value={taskStats.inProgressTasks}
+          title={personalView ? "My In Progress" : "In Progress"}
+          value={shownStats.inProgressTasks}
           icon={Clock}
           iconClassName="bg-info/10"
         />
 
+        {personalView && (
+          <StatsCard title="My Completed" value={shownStats.completedTasks} icon={TrendingUp} iconClassName="bg-success/10" />
+        )}
+
         <StatsCard
-          title={workspaceRole === "member" ? "My Overdue" : "Overdue"}
-          value={taskStats.overdueTasks}
+          title={personalView ? "My Overdue" : "Overdue"}
+          value={shownStats.overdueTasks}
           icon={AlertTriangle}
           iconClassName="bg-destructive/10"
         />
@@ -483,15 +490,11 @@ const DashboardExecutive = () => {
           <div className="space-y-4">
             <SectionHeader
               title={
-                workspaceRole === "member"
-                  ? "My Tasks"
-                  : showTaskScopeToggle && taskScope === "my"
-                    ? "My Tasks"
-                    : "Recent Tasks"
+                personalView ? "My Tasks" : "Recent Tasks"
               }
               description={
                 totalItems > 0
-                  ? `${totalItems} ${workspaceRole === "member" ? "assigned tasks" : "total tasks"}`
+                  ? `${totalItems} ${personalView ? "created by or assigned to you" : "total tasks"}`
                   : undefined
               }
               actions={

@@ -843,6 +843,14 @@ export interface TaskFilters {
   category?: string;
 }
 
+export interface MyTaskSummary {
+  relation: "all" | "assigned" | "created";
+  totalTasks: number; pendingTasks: number; inProgressTasks: number; inReviewTasks: number; delayedTasks: number;
+  completedTasks: number; cancelledTasks: number; openTasks: number; overdueTasks: number; urgentTasks: number;
+  /** completed / (total - cancelled), percent with one decimal */
+  completionRate: number;
+}
+
 export interface AllTasksFilters {
   page?: number;
   limit?: number;
@@ -855,6 +863,8 @@ export interface AllTasksFilters {
   customFieldColumns?: string[];
   customFieldFilters?: { fieldId: string; op: string; value?: unknown }[];
   scope?: "workspace" | "all_workspaces" | "assigned_all" | "assigned_workspace";
+  /** Only for the personal scopes: "assigned" = assigned to me, "created" = created by me, default both (canonical My Tasks). */
+  relation?: "all" | "assigned" | "created";
 }
 
 export interface AllTasksResponse {
@@ -2616,6 +2626,11 @@ class ApiClient {
     return this.request(`/global-search?${params.toString()}`, { method: "GET", headers, signal });
   }
 
+  /** Server-side personal metrics over the full canonical My Tasks population of the active workspace. */
+  async getMyTaskSummary(relation: "all" | "assigned" | "created" = "all"): Promise<{ status: string; data: { summary: MyTaskSummary } }> {
+    return this.request(`/tasks/my/summary${relation !== "all" ? `?relation=${relation}` : ""}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
   async getAllTasksCrossWorkspace(
     filters?: AllTasksFilters
   ): Promise<AllTasksResponse> {
@@ -2630,6 +2645,7 @@ class ApiClient {
     if (filters?.companyId) queryParams.append("companyId", filters.companyId);
     if (filters?.teamId) queryParams.append("teamId", filters.teamId);
     if (filters?.projectId) queryParams.append("projectId", filters.projectId);
+    if (filters?.relation && filters.relation !== "all") queryParams.append("relation", filters.relation);
 
     // For workspace scopes, we need to send x-company-id header
     const useCompanyHeader = scope === "workspace" || scope === "assigned_workspace";

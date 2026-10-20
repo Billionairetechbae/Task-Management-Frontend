@@ -1,3 +1,4 @@
+import { memberLabel } from "@/lib/memberIdentity";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -133,7 +134,7 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
                   <SelectContent>
                     {members.map(m => (
                       <SelectItem key={m.userId} value={m.userId}>
-                        {m.user.firstName} {m.user.lastName}
+                        {memberLabel(m)}
                       </SelectItem>
                     ))}
                   </SelectContent>

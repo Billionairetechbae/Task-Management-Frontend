@@ -23,10 +23,8 @@ export const useRealtimeCacheSync = (isConnected: boolean) => {
       if (!taskId) return;
       queryClient.setQueriesData({ queryKey: ["dashboard"] }, (old: any) => {
         if (!old?.tasks) return old;
-        return {
-          ...old,
-          tasks: old.tasks.map((t: any) => (t.id === taskId ? { ...t, ...patch } : t)),
-        };
+        const apply = (list: any[]) => list.map((t: any) => (t.id === taskId ? { ...t, ...patch } : t));
+        return { ...old, tasks: apply(old.tasks), ...(Array.isArray(old.myTasks) ? { myTasks: apply(old.myTasks) } : {}) };
       });
       queryClient.setQueriesData({ queryKey: ["tasks"] }, (old: any) => {
         if (!old) return old;
@@ -51,10 +49,10 @@ export const useRealtimeCacheSync = (isConnected: boolean) => {
     const onTaskUpdated = (message: any) => {
       const task = message?.task || message?.data?.task;
       patchTask(task?.id || message?.taskId, task || {});
-      invalidate(["tasks", "dashboard", "calendar-events", "board-tasks", "task-custom-fields"]);
+      invalidate(["tasks", "dashboard", "all-tasks-cross-workspace", "calendar-events", "board-tasks", "task-custom-fields"]);
     };
 
-    const onTaskCreatedOrDeleted = () => invalidate(["tasks", "dashboard", "projects", "calendar-events"]);
+    const onTaskCreatedOrDeleted = () => invalidate(["tasks", "dashboard", "all-tasks-cross-workspace", "projects", "calendar-events"]);
 
     const onComment = (message: any) => {
       const taskId = message?.taskId || message?.comment?.taskId;

@@ -23,6 +23,9 @@ export interface DashboardTaskStats {
 
 export interface DashboardData {
   tasks: Task[];
+  /** Canonical personal view (created by me OR assigned to me), computed server-side for every role. */
+  myTasks: Task[];
+  myStats: DashboardTaskStats;
   teamStats: DashboardTeamStats;
   taskStats: DashboardTaskStats;
 }
@@ -51,42 +54,53 @@ const computeMemberStats = (tasks: Task[]): DashboardTaskStats => {
   };
 };
 
+const emptyStats = (): DashboardTaskStats => computeMemberStats([]);
+
+/** Personal metrics and list come from the SAME canonical backend population as /tasks/my (creator OR assignee). */
+const fetchPersonal = async (): Promise<{ myTasks: Task[]; myStats: DashboardTaskStats }> => {
+  const [summaryRes, listRes] = await Promise.all([
+    api.getMyTaskSummary(),
+    api.getAllTasksCrossWorkspace({ scope: "assigned_workspace", limit: 50 }),
+  ]);
+  const s = summaryRes.data.summary;
+  return {
+    myTasks: filterTopLevelTasks(listRes.data?.tasks || []) as Task[],
+    myStats: {
+      totalTasks: s.totalTasks,
+      pendingTasks: s.pendingTasks,
+      inProgressTasks: s.inProgressTasks,
+      completedTasks: s.completedTasks,
+      overdueTasks: s.overdueTasks,
+      urgentTasks: s.urgentTasks,
+      completionRate: s.completionRate,
+    },
+  };
+};
+
 export const fetchDashboardData = async (
   workspaceRole: string | null | undefined,
-  userId?: string
+  _userId?: string
 ): Promise<DashboardData> => {
+  const personal = await fetchPersonal();
   if (workspaceRole === "member") {
-    const res = await api.getTasks();
-    const wsTasks = (res as any)?.data?.tasks || [];
-    
-    // Filter for assigned tasks, then remove subtasks
-    const assignedTasks = wsTasks.filter((task: any) => {
-      if (task.assigneeId && task.assigneeId === userId) return true;
-      if (Array.isArray(task.assignees) && task.assignees.some((a: any) => a?.id === userId)) {
-        return true;
-      }
-      return false;
-    });
-    
-    const mine = filterTopLevelTasks(assignedTasks) as Task[];
-
-    return { tasks: mine, teamStats: emptyTeamStats, taskStats: computeMemberStats(mine) };
+    return { tasks: personal.myTasks, ...personal, teamStats: emptyTeamStats, taskStats: personal.myStats };
   }
 
   const response = await api.getExecutiveDashboard();
   const {
-    overview = { team: emptyTeamStats, tasks: computeMemberStats([]) },
+    overview = { team: emptyTeamStats, tasks: emptyStats() },
     recentActivity = { tasks: [] as Task[] },
   } = (response.data || {}) as any;
 
   const team = overview.team || emptyTeamStats;
-  const taskOverview = overview.tasks || computeMemberStats([]);
+  const taskOverview = overview.tasks || emptyStats();
 
   // Filter to remove subtasks only - project tasks are workspace tasks and should appear
   const dashboardTasks = filterTopLevelTasks(recentActivity.tasks || []) as Task[];
 
   return {
     tasks: dashboardTasks,
+    ...personal,
     teamStats: {
       totalAssistants: team.totalAssistants || 0,
       availableAssistants: team.availableAssistants || 0,
@@ -159,10 +173,8 @@ export const useTaskCacheUpdater = () => {
   const patchTaskEverywhere = (taskId: string, patch: Partial<Task> & Record<string, any>) => {
     queryClient.setQueriesData({ queryKey: ["dashboard"] }, (old: any) => {
       if (!old?.tasks) return old;
-      return {
-        ...old,
-        tasks: old.tasks.map((t: any) => (t.id === taskId ? { ...t, ...patch } : t)),
-      };
+      const apply = (list: any[]) => list.map((t: any) => (t.id === taskId ? { ...t, ...patch } : t));
+      return { ...old, tasks: apply(old.tasks), ...(Array.isArray(old.myTasks) ? { myTasks: apply(old.myTasks) } : {}) };
     });
     queryClient.setQueriesData({ queryKey: ["tasks"] }, (old: any) => {
       if (!old) return old;
@@ -185,7 +197,7 @@ export const useTaskCacheUpdater = () => {
   const removeTaskEverywhere = (taskId: string) => {
     queryClient.setQueriesData({ queryKey: ["dashboard"] }, (old: any) => {
       if (!old?.tasks) return old;
-      return { ...old, tasks: old.tasks.filter((t: any) => t.id !== taskId) };
+      return { ...old, tasks: old.tasks.filter((t: any) => t.id !== taskId), ...(Array.isArray(old.myTasks) ? { myTasks: old.myTasks.filter((t: any) => t.id !== taskId) } : {}) };
     });
     queryClient.setQueriesData({ queryKey: ["tasks"] }, (old: any) => {
       if (!old) return old;
@@ -204,6 +216,7 @@ export const useTaskCacheUpdater = () => {
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(activeCompanyId) as any, exact: false });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["all-tasks-cross-workspace"] });
   };
 
   return { patchTaskEverywhere, removeTaskEverywhere, invalidateTasks };

@@ -1,6 +1,7 @@
 // src/components/dashboard/CreateTaskDialog.tsx
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,8 @@ import { getFileIcon } from "@/utils/fileIcons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import TeamSelector from "@/components/TeamSelector";
+import { AssigneeMultiSelect } from "@/components/tasks/AssigneeMultiSelect";
+import { assignableMembers } from "@/lib/memberIdentity";
 import { useTemplateNavigation } from "@/components/templates/useTemplateNavigation";
 import UseTemplateFlow from "@/components/templates/UseTemplateFlow";
 import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
@@ -35,6 +38,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   const [templateOpen, setTemplateOpen] = useState(false);
   const goTask = useTemplateNavigation("task");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { workspaceRole } = useAuth();
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const googleStatus = useGoogleIntegrationStatus();
@@ -56,7 +60,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
     priority: "medium" as "low" | "medium" | "high",
     deadline: "",
     category: "",
-    assigneeId: "", // USER ID
+    assigneeIds: [] as string[], // USER IDs (never display names)
     teamId: null as string | null,
   });
   const canCreateTaskByPolicy = projectId
@@ -86,6 +90,23 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, canAssignOthers]);
 
+  // Team tasks may only be assigned to members of that Team (the backend enforces it; the picker mirrors it).
+  const [teamMemberIds, setTeamMemberIds] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    const teamId = formData.teamId;
+    if (!open || !teamId) { setTeamMemberIds(null); return; }
+    let current = true;
+    api.getTeam(teamId).then((res) => {
+      if (!current) return;
+      const ids = new Set<string>((res.data?.team?.memberLinks || []).map((link) => link.companyMember?.userId).filter(Boolean) as string[]);
+      const lead = res.data?.team?.leadMember?.userId; if (lead) ids.add(lead);
+      setTeamMemberIds(ids);
+      setFormData((prev) => ({ ...prev, assigneeIds: prev.assigneeIds.filter((id) => ids.has(id)) }));
+    }).catch(() => { if (current) setTeamMemberIds(new Set()); });
+    return () => { current = false; };
+  }, [open, formData.teamId]);
+  const pickerMembers = teamMemberIds ? members.filter((m) => teamMemberIds.has(m.userId)) : members;
+
   const fetchMembers = async () => {
     try {
       setMembersLoading(true);
@@ -99,12 +120,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
         ? data.team_members
         : [];
 
-      const usable = list
-        .filter((m) => m.status !== "removed")
-        .filter((m) => m.isVerified === true)
-        .filter((m) => m.user && m.user.id);
-
-      setMembers(usable);
+      setMembers(assignableMembers(list, user?.id));
     } catch (error: any) {
       toast({
         title: "Error",
@@ -174,7 +190,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
           priority: formData.priority,
           deadline: new Date(formData.deadline).toISOString(),
           category: formData.category,
-          assigneeId: formData.assigneeId || undefined,
+          ...(formData.assigneeIds.length ? { assigneeId: formData.assigneeIds[0], assigneeIds: formData.assigneeIds } : {}),
           teamId: formData.teamId,
           customFields,
         };
@@ -189,7 +205,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
         form.append("category", formData.category);
         form.append("customFields", JSON.stringify(customFields));
 
-        if (formData.assigneeId) form.append("assigneeId", formData.assigneeId);
+        if (formData.assigneeIds.length) { form.append("assigneeId", formData.assigneeIds[0]); form.append("assigneeIds", JSON.stringify(formData.assigneeIds)); }
         if (formData.teamId) form.append("teamId", formData.teamId);
         files.forEach((file) => form.append("files", file));
 
@@ -204,7 +220,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
         priority: "medium",
         deadline: "",
         category: "",
-        assigneeId: "",
+        assigneeIds: [],
         teamId: null,
       });
 
@@ -212,6 +228,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
       setCustomFields({});
       setFileInputKey(Date.now());
 
+      for (const root of ["tasks", "dashboard", "all-tasks-cross-workspace", "notifications"]) void queryClient.invalidateQueries({ queryKey: [root] });
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
@@ -408,7 +425,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
           </div>
 
           <div>
-            <Label>Assign to Team Member (Optional)</Label>
+            <Label>Assignees (Optional)</Label>
 
             {!canAssignOthers ? (
               <div className="space-y-2 mt-2">
@@ -420,37 +437,20 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => setFormData({ ...formData, assigneeId: user?.id || "" })}
+                  aria-pressed={formData.assigneeIds.includes(user?.id || "")}
+                  onClick={() => setFormData({ ...formData, assigneeIds: formData.assigneeIds.includes(user?.id || "") ? [] : user?.id ? [user.id] : [] })}
                 >
-                  {formData.assigneeId === user?.id ? "✓ " : ""}Assign to Me
+                  {formData.assigneeIds.includes(user?.id || "") ? "✓ " : ""}Assign to Me
                 </Button>
               </div>
-            ) : membersLoading ? (
-              <div className="text-sm flex items-center gap-2 opacity-70 mt-2">
-                <Clock className="w-4 h-4 animate-spin" /> Loading...
-              </div>
-            ) : members.length === 0 ? (
-              <div className="text-sm text-muted-foreground mt-2 border border-dashed rounded-lg p-4 text-center">
-                <User className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                No verified team members available
-              </div>
             ) : (
-              <Select
-                value={formData.assigneeId || "none"}
-                onValueChange={(v) => setFormData({ ...formData, assigneeId: v === "none" ? "" : v })}
-              >
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {[...members].sort((a, b) => (a.userId === user?.id ? -1 : b.userId === user?.id ? 1 : 0)).map((m) => (
-                    <SelectItem key={m.userId} value={m.userId}>
-                      {m.userId === user?.id ? "Me — " : ""}{m.user.firstName} {m.user.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AssigneeMultiSelect
+                members={pickerMembers}
+                value={formData.assigneeIds}
+                onChange={(ids) => setFormData({ ...formData, assigneeIds: ids })}
+                meId={user?.id}
+                loading={membersLoading}
+              />
             )}
           </div>
 

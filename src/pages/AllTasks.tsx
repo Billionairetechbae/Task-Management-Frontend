@@ -112,6 +112,8 @@ const AllTasks = () => {
   );
 
   const canViewAllTasks = canPerformRoleOperation("view_all_tasks", workspaceRole);
+  // Narrows My Tasks (created by me OR assigned to me) to one relationship.
+  const [relation, setRelation] = useState<"all" | "assigned" | "created">("all");
 
   // Without view_all_tasks there is no "All Tasks" to show — pin to My Tasks.
   useEffect(() => {
@@ -188,6 +190,7 @@ const AllTasks = () => {
         : companyId === "all"
           ? "all_workspaces"
           : "workspace",
+    relation: taskScope === "my" && relation !== "all" ? relation : undefined,
     customFieldColumns: singleWorkspaceContext ? customFieldColumnIds : undefined,
     customFieldFilters: requestCustomFieldFilters,
   };
@@ -294,6 +297,15 @@ const AllTasks = () => {
             </button>
           )}
         </div>
+
+        {taskScope === "my" && (
+          <div role="group" aria-label="My Tasks relationship" className="flex flex-wrap items-center gap-1.5">
+            {([["all", "Created by or assigned to me"], ["assigned", "Assigned to me"], ["created", "Created by me"]] as const).map(([value, text]) => (
+              <button key={value} type="button" aria-pressed={relation === value} onClick={() => { setRelation(value); setPage(1); }}
+                className={`rounded-full border px-3 py-1 text-xs transition ${relation === value ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>{text}</button>
+            ))}
+          </div>
+        )}
 
         <ContentCard className="shadow-soft">
           <div className="flex flex-col gap-4">

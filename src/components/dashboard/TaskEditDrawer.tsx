@@ -1,3 +1,4 @@
+import { memberLabel } from "@/lib/memberIdentity";
 import { triggerBlobDownload } from "@/lib/api";
 import { classifyTaskLoadError } from "@/lib/taskLoadError";
 import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
@@ -818,7 +819,7 @@ export default function TaskEditDrawer({
                           <SelectItem value="select">Select...</SelectItem>
                           {availableToAdd.map((m) => (
                             <SelectItem key={m.userId} value={m.userId}>
-                              {m.user.firstName} {m.user.lastName}
+                              {memberLabel(m, user?.id)}
                             </SelectItem>
                           ))}
                         </SelectContent>
