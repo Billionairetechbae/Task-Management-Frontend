@@ -180,3 +180,27 @@ describe("server capability detection (frontend deployed before/after the backen
     expect(service.supportsCommentAck()).toBe(true);
   });
 });
+
+describe("multi-tab server behaviour: refused/revoked rooms and connection cap", () => {
+  beforeEach(() => { FakeSocket.instances = []; vi.useFakeTimers(); vi.stubGlobal("WebSocket", FakeSocket); vi.spyOn(Math, "random").mockReturnValue(0); });
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  it("the too-many-connections close (4429) is final: no reconnect storm", async () => {
+    expect(reconnectDecision(4429)).toBe("none");
+    const service = new WebSocketService(); const p = service.connect("tok"); last().open(); await p;
+    last().serverClose(4429);
+    await vi.advanceTimersByTimeAsync(120000);
+    expect(FakeSocket.instances.length).toBe(1);
+  });
+
+  it("a revoked or refused room is forgotten, so a reconnect does not keep asking for it (but other rooms are restored)", async () => {
+    const service = new WebSocketService(); const p = service.connect("tok"); last().open(); await p;
+    service.joinTaskRoom("kept"); service.joinTaskRoom("revoked"); service.joinTaskRoom("denied"); service.joinTaskRoom("later");
+    last().serverSend({ type: "room_revoked", taskId: "revoked", reason: "membership_changed" });
+    last().serverSend({ type: "error", taskId: "denied", message: "Access denied" });
+    last().serverSend({ type: "error", taskId: "later", code: "DATABASE_UNAVAILABLE", retryable: true, message: "Service temporarily unavailable" }); // transient: keep
+    last().serverClose(1006);
+    await vi.advanceTimersByTimeAsync(31000); last().open();
+    expect(last().sent.filter((m) => m.type === "join_task").map((m) => m.taskId).sort()).toEqual(["kept", "later"]);
+  });
+});

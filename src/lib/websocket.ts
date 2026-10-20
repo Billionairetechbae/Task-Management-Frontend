@@ -23,6 +23,7 @@ export class CommentSendError extends Error {
 export function reconnectDecision(code: number): 'none' | 'auth' | 'retry' {
   if (code === 1000) return 'none';
   if (code === 1008) return 'auth';
+  if (code === 4429) return 'none'; // the account has too many open connections: retrying would only add load
   return 'retry';
 }
 
@@ -365,6 +366,11 @@ export class WebSocketService {
   }
 
   private handleMessage(message: WebSocketMessage): void {
+    // Access to a task room was refused or revoked (membership removed, workspace suspended, task no longer visible): forget the
+    // room so a reconnect does not keep asking for it.
+    if ((message.type === 'room_revoked' || (message.type === 'error' && message.taskId && message.code !== 'DATABASE_UNAVAILABLE')) && message.taskId) {
+      this.taskRooms.delete(message.taskId);
+    }
     // Acknowledgements settle the pending send; they are still dispatched to handlers below (the UI adds the saved comment).
     if (message.type === 'new_comment' && message.ack && message.messageId && this.pendingAcks.has(message.messageId)) {
       const pending = this.pendingAcks.get(message.messageId)!;
