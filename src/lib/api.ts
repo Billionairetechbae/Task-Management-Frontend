@@ -843,6 +843,14 @@ export interface TaskFilters {
   category?: string;
 }
 
+/** Canonical membership counts (backend `workspaceMembershipSummaryService`). Categories never overlap. */
+export interface MembershipSummary {
+  workspaceMembers: number; owners: number; admins: number; managers: number; members: number;
+  guests: number; pendingInvitations: number;
+  /** null when the viewer may not see join requests (owners/admins only) */
+  pendingJoinRequests: number | null;
+}
+
 export interface MyTaskSummary {
   relation: "all" | "assigned" | "created";
   totalTasks: number; pendingTasks: number; inProgressTasks: number; inReviewTasks: number; delayedTasks: number;
@@ -2627,6 +2635,10 @@ class ApiClient {
   }
 
   /** Server-side personal metrics over the full canonical My Tasks population of the active workspace. */
+  async getMembershipSummary(): Promise<{ status: string; data: { summary: MembershipSummary } }> {
+    return this.request("/companies/members/summary", { method: "GET", headers: this.getAuthHeaders() });
+  }
+
   async getMyTaskSummary(relation: "all" | "assigned" | "created" = "all"): Promise<{ status: string; data: { summary: MyTaskSummary } }> {
     return this.request(`/tasks/my/summary${relation !== "all" ? `?relation=${relation}` : ""}`, { method: "GET", headers: this.getAuthHeaders() });
   }

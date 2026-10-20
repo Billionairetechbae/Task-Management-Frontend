@@ -62,6 +62,8 @@ export const useRealtimeCacheSync = (isConnected: boolean) => {
     };
 
     const onProjectEvent = () => invalidate(["projects", "dashboard"]);
+    // Membership changed (join approval, invitation accepted, removal/restore, role change, account (de)activation).
+    const onMembershipChanged = () => invalidate(["dashboard", "team", "workspaceJoinRequests"]);
     const onNotification = () => invalidate(["notifications"]);
 
     const listeners: Array<[string, (m: any) => void]> = [
@@ -77,6 +79,8 @@ export const useRealtimeCacheSync = (isConnected: boolean) => {
       ["project_created", onProjectEvent],
       ["project_deleted", onProjectEvent],
       ["project_task_updated", onProjectEvent],
+      ["workspace_membership_changed", onMembershipChanged],
+      ["workspace_join_request_changed", onMembershipChanged],
       ["notification", onNotification],
       ["new_notification", onNotification],
     ];

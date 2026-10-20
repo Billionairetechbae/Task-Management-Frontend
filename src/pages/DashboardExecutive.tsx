@@ -115,6 +115,7 @@ const DashboardExecutive = () => {
   const myTasks: Task[] = dashboardQuery.data?.myTasks ?? [];
 
   const teamStats: DashboardTeamStats = dashboardQuery.data?.teamStats ?? {
+    membership: null,
     totalAssistants: 0,
     availableAssistants: 0,
     pendingVerifications: 0,
@@ -398,24 +399,39 @@ const DashboardExecutive = () => {
                 </Button>
               </div>
               <CollapsibleContent>
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <div className="text-center p-3 bg-muted/50 rounded-lg">
-                    <p className="text-xl font-bold">{teamStats.totalAssistants}</p>
-                    <p className="text-xs text-muted-foreground">Team Members</p>
+                {teamStats.membership ? (
+                  <div data-testid="team-overview" className="mt-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xl font-bold" data-testid="count-workspace-members">{teamStats.membership.workspaceMembers}</p>
+                        <p className="text-xs text-muted-foreground">Workspace Members</p>
+                      </div>
+                      <div className="text-center p-3 bg-success/10 rounded-lg">
+                        <p className="text-xl font-bold text-success" data-testid="count-members">{teamStats.membership.members}</p>
+                        <p className="text-xs text-muted-foreground">Members</p>
+                      </div>
+                      <div className="text-center p-3 bg-info/10 rounded-lg">
+                        <p className="text-xl font-bold" data-testid="count-managers">{teamStats.membership.managers}</p>
+                        <p className="text-xs text-muted-foreground">Managers</p>
+                      </div>
+                      <div className="text-center p-3 bg-primary/10 rounded-lg">
+                        <p className="text-xl font-bold text-primary" data-testid="count-owners-admins">{teamStats.membership.owners + teamStats.membership.admins}</p>
+                        <p className="text-xs text-muted-foreground">Owners &amp; Admins</p>
+                      </div>
+                    </div>
+                    <dl className="grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
+                      <div className="flex items-center justify-between rounded-md border px-3 py-2"><dt className="text-muted-foreground">Pending invitations</dt><dd className="font-semibold text-warning" data-testid="count-pending-invitations">{teamStats.membership.pendingInvitations}</dd></div>
+                      {teamStats.membership.pendingJoinRequests !== null && (
+                        <div className="flex items-center justify-between rounded-md border px-3 py-2"><dt className="text-muted-foreground"><Link to="/settings/workspace/join-requests" className="underline-offset-2 hover:underline">Pending join requests</Link></dt><dd className="font-semibold text-warning" data-testid="count-pending-join-requests">{teamStats.membership.pendingJoinRequests}</dd></div>
+                      )}
+                    </dl>
+                    <p className="text-[11px] leading-snug text-muted-foreground">Active workspace members only. Invited people, join requests and deactivated accounts are not counted as members.</p>
                   </div>
-                  <div className="text-center p-3 bg-success/10 rounded-lg">
-                    <p className="text-xl font-bold text-success">{teamStats.availableAssistants}</p>
-                    <p className="text-xs text-muted-foreground">Available</p>
-                  </div>
-                  <div className="text-center p-3 bg-warning/10 rounded-lg">
-                    <p className="text-xl font-bold text-warning">{teamStats.pendingVerifications}</p>
-                    <p className="text-xs text-muted-foreground">Pending</p>
-                  </div>
-                  <div className="text-center p-3 bg-primary/10 rounded-lg">
-                    <p className="text-xl font-bold text-primary">{teamStats.totalExecutives}</p>
-                    <p className="text-xs text-muted-foreground">Executives</p>
-                  </div>
-                </div>
+                ) : (
+                  <p className={cn("mt-4 text-sm", dashboardQuery.isError ? "text-destructive" : "text-muted-foreground")} role="status">
+                    {dashboardQuery.isPending && !dashboardQuery.data ? "Loading member counts…" : dashboardQuery.isError ? "Member counts could not be loaded." : "Member counts are temporarily unavailable."}
+                  </p>
+                )}
               </CollapsibleContent>
             </ContentCard>
           </Collapsible>

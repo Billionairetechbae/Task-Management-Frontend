@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { cn } from "@/lib/utils";
+import { websocketService } from "@/lib/websocket";
+import { countByRole, isCountedMember } from "@/lib/membershipCounts";
 
 const TeamDirectory = () => {
   const { activeWorkspace } = useAuth();
@@ -21,19 +23,33 @@ const TeamDirectory = () => {
 
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<CompanyMember[]>([]);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<
     "all" | "executive" | "manager" | "team_member"
   >("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // A different workspace must never show the previous workspace's people while loading.
   useEffect(() => {
+    setTeam([]);
+    setSelectedId(null);
     loadTeam();
   }, [activeWorkspace?.id]);
 
-  const loadTeam = async () => {
+  // Membership changed (join approved, invitation accepted, removal, role change, deactivation): reload this workspace's list.
+  useEffect(() => {
+    const onChange = (message: { type: string; companyId?: string }) => {
+      if (!message?.companyId || message.companyId === activeWorkspace?.id) void loadTeam(true);
+    };
+    websocketService.on("workspace_membership_changed", onChange);
+    return () => websocketService.off("workspace_membership_changed", onChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkspace?.id]);
+
+  const loadTeam = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.getCompanyTeam();
       const data: any = res.data || {};
 
@@ -54,8 +70,10 @@ const TeamDirectory = () => {
         } as CompanyMember));
       }
 
+      setLoadFailed(false);
       setTeam(members);
     } catch (err: any) {
+      setLoadFailed(true);
       toast({
         title: "Error",
         description: err.message || "Failed to load team members",
@@ -88,16 +106,15 @@ const TeamDirectory = () => {
     role === "member" ? "Member" : "Member";
 
   const filteredTeam = useMemo(() => {
+    const seen = new Set<string>(); // one card per person, matching how they are counted
     return team.filter((member) => {
-      if (
-        member.status === "removed" ||
-        member.user?.isActive === false ||
-        member.user?.invitationStatus === "removed"
-      ) return false;
+      if (isCountedMember(member)) { if (seen.has(member.userId)) return false; seen.add(member.userId); }
+      // Same definition as the Dashboard's Workspace Members (active internal members; no invited/pending/removed/guest rows).
+      if (!isCountedMember(member)) return false;
 
       if (roleFilter !== "all") {
         const r = member.role;
-        if (roleFilter === "executive" && r !== "owner") return false;
+        if (roleFilter === "executive" && r !== "owner" && r !== "admin") return false;
         if (roleFilter === "manager" && r !== "manager") return false;
         if (roleFilter === "team_member" && r !== "member") return false;
       }
@@ -119,6 +136,7 @@ const TeamDirectory = () => {
   );
 
   const canViewMembers = canPerformRoleOperation("view_workspace_members");
+  const counts = useMemo(() => countByRole(team), [team]);
 
   if (settingsLoading) {
     return (
@@ -151,11 +169,17 @@ const TeamDirectory = () => {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">Company Directory</h1>
           <p className="text-sm text-muted-foreground">
-            Browse executives, managers, and team members in{" "}
+            Browse owners, admins, managers, and members in{" "}
             <span className="font-semibold text-foreground">
               {activeWorkspace?.name || "your workspace"}
             </span>.
           </p>
+          {!loading && !loadFailed && (
+            <p className="mt-1 text-xs text-muted-foreground" data-testid="directory-counts" role="status">
+              <span className="font-semibold text-foreground">{counts.workspaceMembers}</span> workspace members · {counts.owners + counts.admins} owners &amp; admins · {counts.managers} managers · {counts.members} members
+            </p>
+          )}
+          {loadFailed && <p className="mt-1 text-xs text-destructive" role="alert">The member list could not be loaded.</p>}
         </div>
       </div>
 
@@ -164,7 +188,7 @@ const TeamDirectory = () => {
         <div className="flex gap-1.5 overflow-x-auto">
           {[
             { key: "all", label: "All" },
-            { key: "executive", label: "Executives" },
+            { key: "executive", label: "Owners & Admins" },
             { key: "manager", label: "Managers" },
             { key: "team_member", label: "Members" },
           ].map((r) => (

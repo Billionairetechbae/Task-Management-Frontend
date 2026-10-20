@@ -1,12 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Project, Task, TeamMember } from "@/lib/api";
+import { api, MembershipSummary, Project, Task, TeamMember } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryKeys } from "@/lib/queryKeys";
 import { filterTopLevelTasks } from "@/lib/taskListUtils";
 
 export interface DashboardTeamStats {
+  /** Canonical, explicit categories. Absent only when talking to a backend that predates the membership summary. */
+  membership: MembershipSummary | null;
+  // Deprecated aliases (remapped server-side); the UI uses `membership`.
   totalAssistants: number;
-  availableAssistants: number;
+  availableAssistants: number | null;
   pendingVerifications: number;
   totalExecutives: number;
 }
@@ -31,6 +34,7 @@ export interface DashboardData {
 }
 
 const emptyTeamStats: DashboardTeamStats = {
+  membership: null,
   totalAssistants: 0,
   availableAssistants: 0,
   pendingVerifications: 0,
@@ -125,8 +129,9 @@ export const fetchDashboardData = async (
     tasks: dashboardTasks,
     ...personal,
     teamStats: {
+      membership: team.membership || null,
       totalAssistants: team.totalAssistants || 0,
-      availableAssistants: team.availableAssistants || 0,
+      availableAssistants: team.availableAssistants ?? null,
       pendingVerifications: team.pendingVerifications || 0,
       totalExecutives: team.totalExecutives || 0,
     },
