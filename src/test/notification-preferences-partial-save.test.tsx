@@ -38,3 +38,45 @@ describe("notification preferences partial save", () => {
     expect(apiMock.updateNotificationPreferences).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("Workspace & commercial email explanation", () => {
+  const render1 = (row: object) => {
+    apiMock.getNotificationPreferences.mockResolvedValue({ status: "success", data: { preferences: [{ category: "workspace_commercial", inAppEnabled: true, emailEnabled: false, whatsAppEnabled: false, ...row }], whatsApp: { linked: true, globallyEnabled: true } } });
+    return render(<MemoryRouter><NotificationPreferencesMatrix /></MemoryRouter>);
+  };
+  const defaults = [{ channel: "emailEnabled", types: ["workspace_join_requested", "workspace_join_decided"], defaultEnabled: true, effectiveEnabled: true }];
+
+  it("new user (nothing chosen): explains join-request email is on by default and other emails are off", async () => {
+    render1({ explicit: { inAppEnabled: false, emailEnabled: false, whatsAppEnabled: false }, eventDefaults: defaults });
+    const note = await screen.findByText(/on by default for join-request alerts/i);
+    expect(note).toHaveTextContent(/other workspace emails .* off until you turn email on/i);
+    expect(screen.getByRole("switch", { name: "Workspace & commercial email" })).toHaveAttribute("aria-describedby", note.id);
+  });
+
+  it("migrated user with an existing false value: shown as an explicit opt-out that includes join requests", async () => {
+    render1({ explicit: { inAppEnabled: true, emailEnabled: true, whatsAppEnabled: true }, eventDefaults: [{ ...defaults[0], effectiveEnabled: false }] });
+    expect(await screen.findByText(/You turned email off.*including join-request alerts/i)).toBeInTheDocument();
+    expect(screen.queryByText(/on by default/i)).not.toBeInTheDocument();
+  });
+
+  it("explicitly enabled: says all workspace emails, including join requests, are sent", async () => {
+    render1({ emailEnabled: true, explicit: { inAppEnabled: false, emailEnabled: true, whatsAppEnabled: false }, eventDefaults: defaults });
+    expect(await screen.findByText(/You turned email on/i)).toBeInTheDocument();
+  });
+
+  it("toggling email updates the explanation immediately and saves only that channel", async () => {
+    apiMock.updateNotificationPreferences.mockClear();
+    render1({ explicit: { inAppEnabled: false, emailEnabled: false, whatsAppEnabled: false }, eventDefaults: defaults });
+    fireEvent.click(await screen.findByRole("switch", { name: "Workspace & commercial email" }));
+    expect(await screen.findByText(/You turned email on/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Save notification preferences/i }));
+    await waitFor(() => expect(apiMock.updateNotificationPreferences).toHaveBeenCalledWith([{ category: "workspace_commercial", emailEnabled: true }]));
+  });
+
+  it("categories without mixed defaults show no extra explanation", async () => {
+    apiMock.getNotificationPreferences.mockResolvedValue({ status: "success", data: { preferences: [{ category: "assignments", inAppEnabled: true, emailEnabled: true, whatsAppEnabled: true }], whatsApp: { linked: true, globallyEnabled: true } } });
+    render(<MemoryRouter><NotificationPreferencesMatrix /></MemoryRouter>);
+    await screen.findByRole("switch", { name: "Assignments email" });
+    expect(screen.queryByText(/by default|You turned/i)).not.toBeInTheDocument();
+  });
+});

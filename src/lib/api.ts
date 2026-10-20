@@ -1432,7 +1432,13 @@ export interface NotificationsListResponse {
 }
 
 export type NotificationPreferenceCategory = "assignments" | "mentions_replies" | "status_review" | "due_work" | "project_team" | "client_access" | "workspace_commercial";
-export interface NotificationPreference { category: NotificationPreferenceCategory; inAppEnabled: boolean; emailEnabled: boolean; whatsAppEnabled: boolean; }
+export interface NotificationPreference {
+  category: NotificationPreferenceCategory; inAppEnabled: boolean; emailEnabled: boolean; whatsAppEnabled: boolean;
+  /** Display-only: channels the user explicitly chose. Missing/false = never chosen, the default applies. */
+  explicit?: { inAppEnabled: boolean; emailEnabled: boolean; whatsAppEnabled: boolean };
+  /** Display-only: event types whose default differs from the category value. */
+  eventDefaults?: Array<{ channel: "inAppEnabled" | "emailEnabled" | "whatsAppEnabled"; types: string[]; defaultEnabled: boolean; effectiveEnabled: boolean }>;
+}
 export interface NotificationPreferencesResponse { status: string; data: { preferences: NotificationPreference[]; whatsApp: { linked: boolean; globallyEnabled: boolean } }; }
 export interface NotificationDeliveryMetrics { freshQueued: number; staleQueued: number; retrying: number; failed: number; sentRecently: number; }
 export interface NotificationDeliverySummary { selected: number; sent: number; failed: number; retrying: number; expired: number; }
