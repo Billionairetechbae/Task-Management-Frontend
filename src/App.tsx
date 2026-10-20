@@ -50,6 +50,7 @@ import ProjectDetails from "./pages/ProjectDetails";
 import Drive from "./pages/Drive";
 import ProjectInvite from "./pages/ProjectInvite";
 import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
+import WorkspaceJoinRequests from "@/pages/WorkspaceJoinRequests";
 
 import ProjectHealth from "@/pages/ProjectHealth";
 import ProjectPortfolio from "@/pages/ProjectPortfolio";
@@ -236,6 +237,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="/settings/workspace/join-requests" element={<ProtectedRoute><WorkspaceJoinRequests /></ProtectedRoute>} />
 
         <Route
           path="/ai-hub"

@@ -8,11 +8,17 @@ import { Label } from "@/components/ui/label";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { MyJoinRequests } from "@/components/workspaces/MyJoinRequests";
+import { myJoinRequestKey } from "@/hooks/useWorkspaceJoinRequests";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const WorkspaceOnboarding = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { setActiveCompanyId, refreshWorkspaces } = useAuth();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState("create");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -62,6 +68,7 @@ const WorkspaceOnboarding = () => {
       }
       const res: any = await api.requestWorkspaceJoin(companyCode.trim());
       toast({ title: "Request sent", description: res?.message || `Your request to join ${resolvedWorkspace} has been sent for approval.` });
+      await queryClient.invalidateQueries({ queryKey: myJoinRequestKey() });
     } catch (err: any) {
       toast({ title: "Join request failed", description: err?.message || "Check the company code and try again", variant: "destructive" as any });
     } finally {
@@ -167,6 +174,15 @@ const WorkspaceOnboarding = () => {
                 </form>
               </CardContent>
             </Card>
+            <MyJoinRequests onOpenWorkspace={async (workspaceId) => {
+              const available = await refreshWorkspaces().catch(() => []);
+              if (!available.some((workspace) => workspace.id === workspaceId)) {
+                toast({ title: "Workspace unavailable", description: "You are no longer a member of that workspace.", variant: "destructive" as any });
+                return;
+              }
+              setActiveCompanyId(workspaceId);
+              navigate("/dashboard");
+            }} />
           </TabsContent>
         </Tabs>
       </div>

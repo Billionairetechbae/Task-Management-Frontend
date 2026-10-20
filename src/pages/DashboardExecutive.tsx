@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { cn } from "@/lib/utils";
+import { JoinRequestsPreview } from "@/components/workspaces/JoinRequestsPreview";
 import {
   useDashboardData,
   usePendingVerificationsQuery,
@@ -73,7 +74,7 @@ import {
 let sessionDashTaskScope: "my" | "all" | null = null;
 
 const DashboardExecutive = () => {
-  const { user, workspaceRole } = useAuth();
+  const { user, workspaceRole, activeCompanyId, workspaces, setActiveCompanyId, refreshWorkspaces } = useAuth();
   const { toast } = useToast();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
@@ -81,6 +82,20 @@ const DashboardExecutive = () => {
   const [sideColumnOpen, setSideColumnOpen] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
+  const workspaceSwitchAttempted = useRef<string | null>(null);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("workspaceId");
+    if (!requested || requested === activeCompanyId) return;
+    const switchWhenAvailable = (items: typeof workspaces) => {
+      if (items.some((workspace) => workspace.id === requested)) setActiveCompanyId(requested);
+    };
+    if (workspaces.some((workspace) => workspace.id === requested)) switchWhenAvailable(workspaces);
+    else if (workspaceSwitchAttempted.current !== requested) {
+      workspaceSwitchAttempted.current = requested;
+      void refreshWorkspaces().then(switchWhenAvailable).catch(() => {});
+    }
+  }, [activeCompanyId, refreshWorkspaces, setActiveCompanyId, workspaces]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
@@ -462,6 +477,8 @@ const DashboardExecutive = () => {
           </ContentCard>
         ) : null;
 
+        const pendingJoinRequests = canManageTeam ? <div className="mt-5"><JoinRequestsPreview /></div> : null;
+
         const tasksSection = (
           <div className="space-y-4">
             <SectionHeader
@@ -640,6 +657,7 @@ const DashboardExecutive = () => {
                 <div className="space-y-4 animate-fade-in">
                   {teamOverview}
                   {quickActions}
+                  {pendingJoinRequests}
                 </div>
               )}
               {tasksSection}
@@ -684,6 +702,7 @@ const DashboardExecutive = () => {
                           </div>
                           {teamOverview}
                           {quickActions}
+                          {pendingJoinRequests}
                         </div>
                       </ResizablePanel>
                       <ResizableHandle withHandle className="bg-transparent mx-1" />

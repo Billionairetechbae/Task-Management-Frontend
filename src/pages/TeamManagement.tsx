@@ -25,6 +25,7 @@ import { PageHeader, LoadingState } from "@/components/dashboard/DashboardCompon
 import { Pagination } from "@/components/dashboard/TaskComponents";
 import { cn } from "@/lib/utils";
 import { toApiRole, toUiRole, type UiWorkspaceRoleLabel, useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { JoinRequestsPreview } from "@/components/workspaces/JoinRequestsPreview";
 
 type Tab = "active" | "removed";
 type ActivityEvent = { id: string; type: "removed" | "restored"; userName: string; role: string; at: string };
@@ -205,6 +206,7 @@ const TeamManagement = () => {
             }
           />
           {governance.capabilities?.memberInvitesRestricted && <p role="status" className="text-sm text-muted-foreground">Member invitations are restricted to workspace owners and admins.</p>}
+          {(workspaceRole === "owner" || workspaceRole === "admin") && <JoinRequestsPreview compact />}
 
           {/* Stats row */}
           {canManageTeam && (

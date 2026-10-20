@@ -1702,9 +1702,31 @@ export interface WorkspaceAccessRequest {
 
 export interface WorkspaceJoinRequest {
   id: string;
+  companyId: string;
+  requesterUserId: string;
   status: "pending" | "approved" | "denied" | string;
+  message?: string | null;
   createdAt: string;
-  requester?: { id: string; email: string; firstName: string; lastName: string };
+  updatedAt?: string;
+  decidedAt?: string | null;
+  requester?: { id: string; email: string; firstName: string; lastName: string; emailVerified: boolean; isActive: boolean } | null;
+  decidedBy?: { id: string; email: string; firstName: string; lastName: string } | null;
+  workspace?: { id: string; name: string } | null;
+}
+
+export interface MyWorkspaceJoinRequest {
+  id: string;
+  companyId: string;
+  status: "pending" | "approved" | "denied" | "withdrawn" | string;
+  message?: string | null;
+  createdAt: string;
+  decidedAt?: string | null;
+  workspace?: { id: string; name: string } | null;
+}
+
+export interface WorkspaceJoinRequestPage {
+  requests: WorkspaceJoinRequest[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
 }
 
 
@@ -4695,16 +4717,30 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async listWorkspaceJoinRequests(): Promise<{ status: string; data: { requests: WorkspaceJoinRequest[] } }> {
-    return this.request("/companies/join/requests", { method: "GET", headers: this.getAuthHeaders() });
+  async listWorkspaceJoinRequests(params: { status?: string; search?: string; page?: number; pageSize?: number } = {}): Promise<{ status: string; data: WorkspaceJoinRequestPage }> {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => { if (value !== undefined && value !== "") query.set(key, String(value)); });
+    return this.request(`/companies/join/requests${query.size ? `?${query.toString()}` : ""}`, { method: "GET", headers: this.getAuthHeaders() });
   }
 
-  async decideWorkspaceJoinRequest(id: string, action: "approve" | "reject"): Promise<{ status: string; message?: string }> {
+  async listMyWorkspaceJoinRequests(): Promise<{ status: string; data: { requests: MyWorkspaceJoinRequest[] } }> {
+    return this.request("/companies/join/requests/mine", { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async getWorkspaceJoinRequest(id: string): Promise<{ status: string; data: { request: WorkspaceJoinRequest } }> {
+    return this.request(`/companies/join/requests/${encodeURIComponent(id)}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async decideWorkspaceJoinRequest(id: string, action: "approve" | "decline" | "reject"): Promise<{ status: string; message?: string; data?: { request: { id: string; status: string } } }> {
     return this.request(`/companies/join/requests/${id}`, {
       method: "PATCH",
       headers: this.getAuthHeaders(true),
       body: JSON.stringify({ action }),
     });
+  }
+
+  async withdrawWorkspaceJoinRequest(id: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/companies/join/requests/${encodeURIComponent(id)}`, { method: "DELETE", headers: this.getAuthHeaders(false) });
   }
 
 

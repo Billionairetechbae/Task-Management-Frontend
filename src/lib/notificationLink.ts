@@ -21,6 +21,8 @@ export function getNotificationLink(n: Notification): string {
   if (d.inviteToken) return `/invite/${d.inviteToken}`;
   if (d.invite_token) return `/invite/${d.invite_token}`;
   if (d.requestId && (n.type || "").includes("access")) return "/workspace-access";
+  if (n.type === "workspace_join_requested" && d.requestId) return `/settings/workspace/join-requests?workspaceId=${encodeURIComponent(d.companyId || n.companyId || "")}&requestId=${encodeURIComponent(d.requestId)}`;
+  if (n.type === "workspace_join_decided") return d.status === "approved" ? `/dashboard?workspaceId=${encodeURIComponent(d.companyId || n.companyId || "")}` : "/onboarding/workspace";
   if (d.assistanceRequestId) return "/assistance-requests";
 
   // Type-based fallbacks
