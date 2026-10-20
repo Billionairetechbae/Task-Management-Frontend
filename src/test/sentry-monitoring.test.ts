@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const sentry = vi.hoisted(() => ({
   init: vi.fn(),
   captureException: vi.fn(),
-  withScope: vi.fn((callback) => callback({ setTag: vi.fn(), setExtra: vi.fn() })),
+  withScope: vi.fn((callback) => callback({ setTag: vi.fn(), setExtra: vi.fn(), setContext: vi.fn(), setFingerprint: vi.fn() })),
 }));
 
 vi.mock("@sentry/react", () => sentry);

@@ -10,6 +10,8 @@ interface WebSocketContextType {
   joinTaskRoom: (taskId: string) => void;
   leaveTaskRoom: (taskId: string) => void;
   sendComment: (taskId: string, content: string) => string | undefined;
+  /** Resolves only after the server acknowledges persistence; rejects (CommentSendError) otherwise. */
+  sendCommentWithAck: (taskId: string, content: string, clientMessageId: string, timeoutMs?: number) => Promise<any>;
   sendTypingIndicator: (taskId: string, isTyping: boolean) => void;
   on: (eventType: string, handler: (message: any) => void) => void;
   off: (eventType: string, handler: (message: any) => void) => void;
@@ -47,30 +49,16 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return;
     }
 
-    const connectWebSocket = async () => {
-      try {
-        // Use the token from localStorage
-        await websocketService.connect(token);
-        setIsConnected(true);
-        
-        console.log('✅ WebSocket connected');
-        
-        // Listen for connection status changes
-        websocketService.on('connection_established', () => {
-          console.log('✅ WebSocket connection established');
-          setIsConnected(true);
-        });
+    // Reflect every transition (including drops and automatic reconnects), not just the first successful connect.
+    const unsubscribe = websocketService.onStatusChange(setIsConnected);
+    setIsConnected(websocketService.isConnected());
 
-      } catch (error) {
-        console.error('❌ Failed to connect WebSocket:', error);
-        setIsConnected(false);
-      }
-    };
-
-    connectWebSocket();
+    // A failed first attempt is retried by the service itself (backoff, indefinitely); nothing to do here.
+    websocketService.connect(token).catch(() => undefined);
 
     // Cleanup on user logout or component unmount
     return () => {
+      unsubscribe();
       // Only disconnect if user is logging out
       // This allows WebSocket to persist across route changes
       if (!user) {
@@ -97,6 +85,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       return websocketService.sendComment(taskId, content);
     },
+    sendCommentWithAck: (taskId: string, content: string, clientMessageId: string, timeoutMs?: number) =>
+      websocketService.sendCommentWithAck(taskId, content, clientMessageId, timeoutMs),
     sendTypingIndicator: (taskId: string, isTyping: boolean) => {
       if (!isConnected) {
         return;

@@ -1,3 +1,4 @@
+import { deliverComment, describeCommentFailure } from "@/lib/commentDelivery";
 import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
 import { classifyTaskLoadError } from "@/lib/taskLoadError";
 import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
@@ -111,7 +112,7 @@ const TaskDetails = () => {
   const canTrackTime = ["owner", "admin", "manager", "member"].includes(String(workspaceRole));
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
-  const { isConnected, joinTaskRoom, leaveTaskRoom, sendComment, sendTypingIndicator, on, off } = useWebSocket();
+  const { isConnected, joinTaskRoom, leaveTaskRoom, sendCommentWithAck, sendTypingIndicator, on, off } = useWebSocket();
   const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
@@ -336,12 +337,13 @@ const TaskDetails = () => {
     const handleNewComment = (message: any) => {
       console.log('📨 WebSocket comment received:', message);
       
-      if (message.comment && message.taskId === id) {
+      if (message.comment && (message.taskId ?? message.comment?.taskId) === id) {
         // Fix the profilePicture field if needed
         const fixedComment = fixCommentProfilePicture(message.comment);
         
         const echoedMessageId =
           message.messageId ||
+          message.comment?.metadata?.clientMessageId ||
           message.comment?.metadata?.messageId ||
           message.comment?.messageId;
 
@@ -442,6 +444,7 @@ const TaskDetails = () => {
       console.error('WebSocket error:', message);
       
       if (message.type === 'comment_error') {
+        if (message.messageId) return; // correlated with a send in progress: that flow restores the draft and reports the failure
         toast({
           title: "Failed to send comment",
           description: message.message || "Please try again",
@@ -790,46 +793,22 @@ const TaskDetails = () => {
       // Store in ref for quick access
       optimisticCommentRef.current.set(messageId, optimisticComment);
       
-      // Try WebSocket first if connected
-      if (isConnected && !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0 && pendingConnectedStorage.length === 0) {
-        try {
-          // Ensure we are in the room; backend also auto-joins, but this keeps UX consistent
-          joinTaskRoom(id);
-          // Send via WebSocket with messageId
-          const wsMsgId = sendComment(id, content);
-          if (wsMsgId) {
-            // Align optimistic messageId with the one the server will echo back
-            if (wsMsgId !== messageId) {
-              // Update maps to use wsMsgId
-              setPendingComments(prev => {
-                const next = new Map(prev);
-                const pending = next.get(messageId);
-                if (pending) {
-                  next.delete(messageId);
-                  next.set(wsMsgId, pending);
-                }
-                return next;
-              });
-              const optimistic = optimisticCommentRef.current.get(messageId);
-              if (optimistic) {
-                optimistic.metadata = { ...optimistic.metadata, messageId: wsMsgId };
-                optimisticCommentRef.current.delete(messageId);
-                optimisticCommentRef.current.set(wsMsgId, optimistic);
-              }
-              messageId = wsMsgId;
-            }
-          }
-          console.log('Comment sent via WebSocket with messageId:', messageId);
-        } catch (wsError) {
-          console.error('WebSocket send failed, falling back to HTTP:', wsError);
-          // Fallback to HTTP
-          await sendCommentViaHttp(content, messageId);
+      // Delivery is confirmed only by a server acknowledgement (socket) or the HTTP response; the same clientMessageId is
+      // used for every attempt so a retry can never duplicate the comment.
+      const simpleComment = !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0 && pendingConnectedStorage.length === 0;
+      await deliverComment({
+        clientMessageId: messageId,
+        viaSocket: isConnected && simpleComment ? () => { joinTaskRoom(id); return sendCommentWithAck(id, content, messageId); } : null,
+        viaHttp: () => sendCommentViaHttp(content, messageId),
+      }).then(({ comment, via }) => {
+        if (via === 'websocket') {
+          removeOptimisticComment(messageId);
+          const fixed = fixCommentProfilePicture(comment);
+          setComments(prev => (prev.some(c => c.id === fixed.id) ? prev : [...prev, fixed]));
+          scrollToBottom();
         }
-      } else {
-        // WebSocket not connected, use HTTP
-        await sendCommentViaHttp(content, messageId);
-      }
-      
+      });
+
       setNewComment("");
       setReplyToComment(null);
       setPendingCommentFiles([]);
@@ -844,15 +823,14 @@ const TaskDetails = () => {
       }
       
     } catch (error: any) {
-      console.error('Error sending comment:', error);
+      // Never present an undelivered comment as sent: drop the optimistic copy and put the text back in the composer.
       toast({
-        title: "Error",
-        description: error.message || "Failed to send comment",
+        title: "Comment not sent",
+        description: describeCommentFailure(error),
         variant: "destructive",
       });
-      
-      // Remove optimistic comment on error
       removeOptimisticComment(messageId);
+      setNewComment((current) => (current.trim() ? current : content));
     } finally {
       setSendingComment(false);
     }
@@ -863,7 +841,7 @@ const TaskDetails = () => {
     try {
       const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
       const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
-      const response = await api.addTaskComment(id!, content, { parentCommentId: replyToComment?.id || null, mentionedUserIds, files: pendingCommentFiles, connectedStorageAttachments: pendingConnectedStorage.map(({ connectionId, item }) => ({ connectionId, providerItemId: item.providerItemId })) });
+      const response = await api.addTaskComment(id!, content, { clientMessageId: messageId, parentCommentId: replyToComment?.id || null, mentionedUserIds, files: pendingCommentFiles, connectedStorageAttachments: pendingConnectedStorage.map(({ connectionId, item }) => ({ connectionId, providerItemId: item.providerItemId })) });
       
       // Fix the profile picture in the response
       const fixedComment = fixCommentProfilePicture(response.comment);
@@ -871,8 +849,8 @@ const TaskDetails = () => {
       // Remove optimistic comment
       removeOptimisticComment(messageId);
       
-      // Add real comment
-      setComments(prev => [...prev, fixedComment]);
+      // Add real comment (a duplicate response or the socket echo may already have added it)
+      setComments(prev => (prev.some(c => c.id === fixedComment.id) ? prev : [...prev, fixedComment]));
       
       scrollToBottom();
     } catch (error: any) {

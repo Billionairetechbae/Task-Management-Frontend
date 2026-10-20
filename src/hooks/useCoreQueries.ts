@@ -56,23 +56,46 @@ const computeMemberStats = (tasks: Task[]): DashboardTaskStats => {
 
 const emptyStats = (): DashboardTaskStats => computeMemberStats([]);
 
+/** Locally computed fallback with the SAME formulas as the server summary (used only when the backend predates the summary route). */
+const statsFromTasks = (tasks: Task[]): DashboardTaskStats => {
+  const by = (status: string) => tasks.filter((t: any) => t.status === status).length;
+  const cancelled = by("cancelled");
+  const completed = by("completed");
+  const denominator = tasks.length - cancelled;
+  return {
+    totalTasks: tasks.length,
+    pendingTasks: by("pending"),
+    inProgressTasks: by("in_progress"),
+    completedTasks: completed,
+    overdueTasks: tasks.filter((t: any) => t.deadline && !["completed", "cancelled"].includes(t.status) && new Date(t.deadline).getTime() < Date.now()).length,
+    urgentTasks: tasks.filter((t: any) => t.priority === "urgent" && !["completed", "cancelled"].includes(t.status)).length,
+    completionRate: denominator > 0 ? Math.round((completed / denominator) * 1000) / 10 : 0,
+  };
+};
+
 /** Personal metrics and list come from the SAME canonical backend population as /tasks/my (creator OR assignee). */
 const fetchPersonal = async (): Promise<{ myTasks: Task[]; myStats: DashboardTaskStats }> => {
-  const [summaryRes, listRes] = await Promise.all([
-    api.getMyTaskSummary(),
-    api.getAllTasksCrossWorkspace({ scope: "assigned_workspace", limit: 50 }),
-  ]);
-  const s = summaryRes.data.summary;
+  const listPromise = api.getAllTasksCrossWorkspace({ scope: "assigned_workspace", limit: 50 });
+  listPromise.catch(() => undefined); // awaited below; avoids an unhandled rejection if the summary request throws first
+  // Version skew: a newer frontend can reach a backend without /tasks/my/summary (404 "Route not found"). That must degrade the
+  // metrics (computed from the loaded page), never take the whole Dashboard down. Outages (503) and other errors still surface.
+  const summary = await api.getMyTaskSummary().then((res) => res.data.summary).catch((error: any) => {
+    if (error?.statusCode === 404) return null;
+    throw error;
+  });
+  const listRes = await listPromise;
+  const myTasks = filterTopLevelTasks(listRes.data?.tasks || []) as Task[];
+  if (!summary) return { myTasks, myStats: statsFromTasks(myTasks) };
   return {
-    myTasks: filterTopLevelTasks(listRes.data?.tasks || []) as Task[],
+    myTasks,
     myStats: {
-      totalTasks: s.totalTasks,
-      pendingTasks: s.pendingTasks,
-      inProgressTasks: s.inProgressTasks,
-      completedTasks: s.completedTasks,
-      overdueTasks: s.overdueTasks,
-      urgentTasks: s.urgentTasks,
-      completionRate: s.completionRate,
+      totalTasks: summary.totalTasks,
+      pendingTasks: summary.pendingTasks,
+      inProgressTasks: summary.inProgressTasks,
+      completedTasks: summary.completedTasks,
+      overdueTasks: summary.overdueTasks,
+      urgentTasks: summary.urgentTasks,
+      completionRate: summary.completionRate,
     },
   };
 };

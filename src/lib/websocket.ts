@@ -8,18 +8,44 @@ export interface WebSocketMessage {
 
 export type WebSocketHandler = (message: WebSocketMessage) => void;
 
-class WebSocketService {
+export class CommentSendError extends Error {
+  code: string;
+  retryable: boolean;
+  constructor(code: string, retryable: boolean, message?: string) {
+    super(message || code);
+    this.name = 'CommentSendError';
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
+
+/** What to do after a close: 'none' (normal), 'auth' (session invalid/expired: do not retry), 'retry' (everything else, incl. 1006 and 1013). */
+export function reconnectDecision(code: number): 'none' | 'auth' | 'retry' {
+  if (code === 1000) return 'none';
+  if (code === 1008) return 'auth';
+  return 'retry';
+}
+
+export function reconnectDelay(attempt: number, base = 1000, random = Math.random): number {
+  return Math.min(base * Math.pow(1.5, Math.max(0, attempt - 1)), 30000) + Math.floor(random() * 500);
+}
+
+export class WebSocketService {
   private processedMessageIds = new Set<string>(); // Track processed messages
   private pendingComments = new Map<string, string>(); // taskId -> messageId
   private socket: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
   private reconnectDelay = 1000;
   private handlers: Map<string, WebSocketHandler[]> = new Map();
   private taskRooms: Set<string> = new Set();
   private isTypingTimeout: ReturnType<typeof setTimeout> | null = null;
   private connectionCheckInterval: ReturnType<typeof setInterval> | null = null;
   private lastPingTime: number = 0;
+  private connecting: Promise<void> | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private authFailed = false;
+  private statusListeners = new Set<(connected: boolean) => void>();
+  private pendingAcks = new Map<string, { resolve: (comment: any) => void; reject: (error: CommentSendError) => void; timer: ReturnType<typeof setTimeout> }>();
 
   constructor() {
     // Auto-reconnect on close
@@ -47,22 +73,40 @@ class WebSocketService {
     return `${protocol}://${host}/ws?token=${token}`;
   }
 
+  /** Subscribe to connected/disconnected transitions (true once OPEN, false on every close). Returns an unsubscribe. */
+  onStatusChange(listener: (connected: boolean) => void): () => void {
+    this.statusListeners.add(listener);
+    return () => this.statusListeners.delete(listener);
+  }
+
+  private emitStatus(connected: boolean): void {
+    this.statusListeners.forEach((listener) => { try { listener(connected); } catch { /* listener errors must not break the socket */ } });
+  }
+
+  /** Idempotent: a second call while connecting/open reuses the existing socket instead of opening a duplicate. */
   async connect(token: string): Promise<void> {
-    return new Promise((resolve, reject) => {
+    this.authFailed = false;
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) return;
+    if (this.connecting) return this.connecting;
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    this.connecting = new Promise<void>((resolve, reject) => {
+      let settled = false;
       try {
         const wsUrl = this.getWebSocketUrl(token);
-        console.log('🔌 Connecting to WebSocket:', wsUrl);
-        
-        this.socket = new WebSocket(wsUrl);
+        const socket = new WebSocket(wsUrl);
+        this.socket = socket;
 
-        this.socket.onopen = () => {
-          console.log('✅ WebSocket connected');
+        socket.onopen = () => {
           this.reconnectAttempts = 0;
           this.startConnectionCheck();
+          // The server forgets rooms when a socket drops: re-join every room this client still has open.
+          this.taskRooms.forEach((taskId) => { try { socket.send(JSON.stringify({ type: 'join_task', taskId })); } catch { /* retried on next open */ } });
+          this.emitStatus(true);
+          settled = true; this.connecting = null;
           resolve();
         };
 
-        this.socket.onmessage = (event) => {
+        socket.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
             this.handleMessage(message);
@@ -71,25 +115,28 @@ class WebSocketService {
           }
         };
 
-        this.socket.onerror = (error) => {
-          console.error('❌ WebSocket error:', error);
-          reject(error);
+        socket.onerror = () => {
+          // The close event that follows drives reconnection; only the initial connect promise needs the rejection.
+          if (!settled) { settled = true; this.connecting = null; reject(new Error('WebSocket connection failed')); }
         };
 
-        this.socket.onclose = (event) => {
-          console.log('🔌 WebSocket disconnected:', event.code, event.reason);
-          this.socket = null;
+        socket.onclose = (event) => {
+          if (this.socket === socket) this.socket = null;
+          this.connecting = null;
           this.stopConnectionCheck();
-          
-          // Only attempt reconnect if it wasn't a normal closure
-          if (event.code !== 1000) {
-            this.attemptReconnect(token);
-          }
+          this.failPendingAcks('CONNECTION_LOST');
+          this.emitStatus(false);
+          if (!settled) { settled = true; reject(new Error('WebSocket closed before it opened')); }
+          const decision = reconnectDecision(event.code);
+          if (decision === 'auth') { this.authFailed = true; return; } // an expired/invalid session cannot be fixed by retrying
+          if (decision === 'retry') this.attemptReconnect(token);
         };
       } catch (error) {
+        this.connecting = null;
         reject(error);
       }
     });
+    return this.connecting;
   }
 
   private startConnectionCheck(): void {
@@ -116,34 +163,27 @@ class WebSocketService {
   }
 
   private attemptReconnect(token: string): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Max reconnection attempts reached');
-      toast({
-        title: 'Connection lost',
-        description: 'Unable to connect to chat server. Please refresh the page.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+    if (this.reconnectTimer || this.authFailed) return;
     this.reconnectAttempts++;
-    const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1), 30000);
-
-    console.log(`Attempting reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
-
-    setTimeout(() => {
+    // Exponential backoff with jitter, capped. Retries continue indefinitely (a backend/database outage can last minutes);
+    // a single, non-alarming notice is shown after a sustained failure.
+    const delay = reconnectDelay(this.reconnectAttempts, this.reconnectDelay);
+    if (this.reconnectAttempts === 6) {
+      toast({ title: 'Reconnecting…', description: 'Live updates are paused. We will reconnect automatically.' });
+    }
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
       if (!this.socket || this.socket.readyState === WebSocket.CLOSED) {
-        this.connect(token).catch(console.error);
+        this.connect(token).catch(() => { /* onclose schedules the next attempt */ });
       }
     }, delay);
   }
 
   private handleOnline(): void {
-    console.log('🌐 Network online, attempting reconnect...');
-  const token =
-    localStorage.getItem('auth_token') || localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     if (token) {
-      this.connect(token).catch(console.error);
+      this.reconnectAttempts = 0; // network is back: do not wait out a long backoff
+      this.connect(token).catch(() => { /* onclose schedules a retry */ });
     }
   }
 
@@ -158,6 +198,9 @@ class WebSocketService {
 
   disconnect(): void {
     this.stopConnectionCheck();
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    this.authFailed = true; // an explicit disconnect (logout) must not auto-reconnect
+    this.failPendingAcks('CONNECTION_LOST');
     
     if (this.socket) {
       // Leave all task rooms
@@ -211,6 +254,36 @@ class WebSocketService {
     this.taskRooms.delete(taskId);
     console.log(`Left task room: ${taskId}`);
   }
+
+    /**
+     * Sends a comment and resolves ONLY when the server acknowledges that it is persisted (an `ack` with the same
+     * clientMessageId). Rejects with a CommentSendError (never "delivered") on a closed socket, a server error, a lost
+     * connection or a timeout. The same clientMessageId makes any later retry (e.g. over HTTP) idempotent on the server.
+     */
+    sendCommentWithAck(taskId: string, content: string, clientMessageId: string, timeoutMs = 8000): Promise<any> {
+      return new Promise((resolve, reject) => {
+        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+          reject(new CommentSendError('NOT_CONNECTED', true));
+          return;
+        }
+        const timer = setTimeout(() => {
+          this.pendingAcks.delete(clientMessageId);
+          reject(new CommentSendError('ACK_TIMEOUT', true));
+        }, timeoutMs);
+        this.pendingAcks.set(clientMessageId, { resolve, reject, timer });
+        try {
+          this.socket.send(JSON.stringify({ type: 'new_comment', taskId, comment: { content }, messageId: clientMessageId }));
+        } catch {
+          clearTimeout(timer);
+          this.pendingAcks.delete(clientMessageId);
+          reject(new CommentSendError('SEND_FAILED', true));
+        }
+      });
+    }
+
+    private failPendingAcks(code: string): void {
+      this.pendingAcks.forEach((pending, id) => { clearTimeout(pending.timer); pending.reject(new CommentSendError(code, true)); this.pendingAcks.delete(id); });
+    }
 
 // In src/lib/websocket.ts - Update sendComment method
     sendComment(taskId: string, content: string): string {
@@ -290,7 +363,17 @@ class WebSocketService {
   }
 
   private handleMessage(message: WebSocketMessage): void {
-    console.log('📨 WebSocket message received:', message);
+    // Acknowledgements settle the pending send; they are still dispatched to handlers below (the UI adds the saved comment).
+    if (message.type === 'new_comment' && message.ack && message.messageId && this.pendingAcks.has(message.messageId)) {
+      const pending = this.pendingAcks.get(message.messageId)!;
+      clearTimeout(pending.timer); this.pendingAcks.delete(message.messageId);
+      pending.resolve(message.comment);
+    }
+    if (message.type === 'comment_error' && message.messageId && this.pendingAcks.has(message.messageId)) {
+      const pending = this.pendingAcks.get(message.messageId)!;
+      clearTimeout(pending.timer); this.pendingAcks.delete(message.messageId);
+      pending.reject(new CommentSendError(String(message.code || 'COMMENT_REJECTED'), message.retryable !== false, message.message));
+    }
 
     // Handle specific message types
     switch (message.type) {
@@ -309,6 +392,7 @@ class WebSocketService {
         break;
 
       case 'new_comment':
+        if (message.ack) break; // acknowledgement of our own send, not news
         toast({
           title: 'New comment',
           description: `${message.userName} posted a comment`,

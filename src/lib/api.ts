@@ -3779,15 +3779,18 @@ class ApiClient {
   async addTaskComment(
     taskId: string,
     content: string,
-    options?: { parentCommentId?: string | null; mentionedUserIds?: string[]; files?: File[]; connectedStorageAttachments?: Array<{ connectionId: string; providerItemId: string }> }
+    options?: { parentCommentId?: string | null; mentionedUserIds?: string[]; files?: File[]; connectedStorageAttachments?: Array<{ connectionId: string; providerItemId: string }>; clientMessageId?: string }
   ): Promise<{
     success: boolean;
+    duplicate?: boolean;
     comment: TaskComment;
     involvedUsers: string[];
   }> {
     const files = options?.files || [];
     const body = new FormData();
     body.append("content", content);
+    // Reused on every delivery attempt of this comment: the server returns the saved comment instead of creating a duplicate.
+    if (options?.clientMessageId) body.append("clientMessageId", options.clientMessageId);
     // Dropbox files chosen in the composer: only ids are sent; the server re-reads every detail from Dropbox.
     if (options?.connectedStorageAttachments?.length) body.append("connectedStorageAttachments", JSON.stringify(options.connectedStorageAttachments.map(({ connectionId, providerItemId }) => ({ connectionId, providerItemId }))));
     if (options?.parentCommentId) body.append("parentCommentId", options.parentCommentId);

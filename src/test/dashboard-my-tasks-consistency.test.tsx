@@ -51,4 +51,16 @@ describe("Dashboard personal tasks use the canonical My Tasks population", () =>
     api.getMyTaskSummary.mockRejectedValue(new Error("boom"));
     await expect(fetchDashboardData("member", "kv")).rejects.toThrow("boom");
   });
+
+  it("version skew: a backend WITHOUT /tasks/my/summary (404) degrades the metrics instead of breaking the Dashboard", async () => {
+    api.getMyTaskSummary.mockRejectedValue(Object.assign(new Error("Route not found"), { name: "ApiError", statusCode: 404 }));
+    const data = await fetchDashboardData("member", "kv");
+    expect(data.tasks.map((t) => t.id)).toContain("project-richie");
+    expect(data.taskStats).toMatchObject({ totalTasks: 3, completedTasks: 2, pendingTasks: 1, completionRate: 66.7 });
+  });
+
+  it("an outage (503) on the summary is NOT mistaken for version skew: it surfaces so the UI can retry", async () => {
+    api.getMyTaskSummary.mockRejectedValue(Object.assign(new Error("unavailable"), { name: "ApiError", statusCode: 503 }));
+    await expect(fetchDashboardData("member", "kv")).rejects.toMatchObject({ statusCode: 503 });
+  });
 });
