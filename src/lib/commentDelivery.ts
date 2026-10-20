@@ -34,3 +34,13 @@ export function describeCommentFailure(error: unknown): string {
   if (e?.statusCode === 503 || e?.body?.code === "DATABASE_UNAVAILABLE") return "The service is temporarily unavailable. Your comment was not sent and has been kept so you can try again.";
   return e?.message || "Your comment was not sent and has been kept so you can try again.";
 }
+
+/**
+ * A failed attempt may nevertheless have been saved (the acknowledgement or response was lost). When the user sends the SAME text
+ * again, reuse the failed attempt's client id so the server returns the saved comment instead of creating a second one.
+ * Different text, a different task or a reply gets a fresh id.
+ */
+export interface FailedAttempt { taskId: string; content: string; id: string }
+export function messageIdForAttempt(previous: FailedAttempt | null, taskId: string, content: string, isReply: boolean, make: () => string = newClientMessageId): string {
+  return previous && !isReply && previous.taskId === taskId && previous.content === content ? previous.id : make();
+}

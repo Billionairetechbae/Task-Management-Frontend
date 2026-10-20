@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { deliverComment, describeCommentFailure, newClientMessageId } from "@/lib/commentDelivery";
+import { deliverComment, describeCommentFailure, newClientMessageId, messageIdForAttempt } from "@/lib/commentDelivery";
 
 const retryable = (code: string) => Object.assign(new Error(code), { name: "CommentSendError", code, retryable: true });
 
@@ -53,5 +53,29 @@ describe("comment delivery policy", () => {
     expect(describeCommentFailure(Object.assign(new Error("x"), { name: "NetworkError" }))).toMatch(/offline.*kept/i);
     expect(describeCommentFailure(Object.assign(new Error("x"), { name: "ApiError", statusCode: 503 }))).toMatch(/temporarily unavailable.*kept/i);
     expect(describeCommentFailure(Object.assign(new Error("Read-only access"), { name: "ApiError", statusCode: 403 }))).toBe("Read-only access");
+  });
+
+  it("resending the SAME text after a failed attempt reuses its client id (the failed attempt may have been saved); anything else gets a fresh id", () => {
+    const failed = { taskId: "t1", content: "hello", id: "msg-failed-0001" };
+    const make = vi.fn(() => "msg-fresh-0002");
+    expect(messageIdForAttempt(failed, "t1", "hello", false, make)).toBe("msg-failed-0001");
+    expect(make).not.toHaveBeenCalled();
+    expect(messageIdForAttempt(failed, "t1", "hello edited", false, make)).toBe("msg-fresh-0002");
+    expect(messageIdForAttempt(failed, "t2", "hello", false, make)).toBe("msg-fresh-0002");
+    expect(messageIdForAttempt(failed, "t1", "hello", true, make)).toBe("msg-fresh-0002"); // a reply is a different comment
+    expect(messageIdForAttempt(null, "t1", "hello", false, make)).toBe("msg-fresh-0002");
+  });
+
+  it("scenario: WS persisted but the ack was lost and HTTP also failed; the user presses send again => same id => server returns the saved comment", async () => {
+    const serverRows = new Map<string, string>();
+    const http = async (id: string, text: string) => { if (!serverRows.has(id)) serverRows.set(id, text); return { id: `c-${id}`, duplicate: serverRows.has(id) }; };
+    let failed: { taskId: string; content: string; id: string } | null = null;
+    const first = messageIdForAttempt(failed, "t1", "hello", false);
+    serverRows.set(first, "hello"); // the socket write did reach the database
+    await expect(deliverComment({ clientMessageId: first, viaSocket: async () => { throw Object.assign(new Error("x"), { retryable: true }); }, viaHttp: async () => { throw Object.assign(new Error("offline"), { name: "NetworkError" }); } })).rejects.toBeTruthy();
+    failed = { taskId: "t1", content: "hello", id: first };
+    const second = messageIdForAttempt(failed, "t1", "hello", false);
+    await deliverComment({ clientMessageId: second, viaSocket: null, viaHttp: () => http(second, "hello") });
+    expect(second).toBe(first); expect(serverRows.size).toBe(1);
   });
 });

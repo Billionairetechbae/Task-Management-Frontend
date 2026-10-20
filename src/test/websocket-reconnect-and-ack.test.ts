@@ -146,3 +146,37 @@ describe("acknowledged comment sending", () => {
     await vi.advanceTimersByTimeAsync(5000); // would throw an unhandled rejection if the timer still fired
   });
 });
+
+describe("server capability detection (frontend deployed before/after the backend)", () => {
+  beforeEach(() => { FakeSocket.instances = []; vi.useFakeTimers(); vi.stubGlobal("WebSocket", FakeSocket); vi.spyOn(Math, "random").mockReturnValue(0); });
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  it("an OLD backend (no features in connection_established) is never asked for acknowledged comments: HTTP only, so nothing can be saved twice", async () => {
+    const service = new WebSocketService(); const p = service.connect("tok"); last().open(); await p;
+    expect(service.supportsCommentAck()).toBe(false); // before any greeting: unknown => unsupported
+    last().serverSend({ type: "connection_established", message: "Connected to task chat server", userId: "u1" });
+    expect(service.supportsCommentAck()).toBe(false);
+  });
+
+  it("a NEW backend announces comments.ack; the flag is dropped when the socket closes and re-learned on reconnect", async () => {
+    const service = new WebSocketService(); const p = service.connect("tok"); last().open(); await p;
+    last().serverSend({ type: "connection_established", features: ["comments.ack"] });
+    expect(service.supportsCommentAck()).toBe(true);
+    last().serverClose(1001);
+    expect(service.supportsCommentAck()).toBe(false);
+    await vi.advanceTimersByTimeAsync(31000); last().open();
+    expect(service.supportsCommentAck()).toBe(false); // the new server (maybe an older build mid-deploy) has not announced yet
+    last().serverSend({ type: "connection_established", features: [] });
+    expect(service.supportsCommentAck()).toBe(false);
+    last().serverSend({ type: "connection_established", features: ["comments.ack"] });
+    expect(service.supportsCommentAck()).toBe(true);
+  });
+
+  it("malformed feature lists are ignored safely", async () => {
+    const service = new WebSocketService(); const p = service.connect("tok"); last().open(); await p;
+    last().serverSend({ type: "connection_established", features: "comments.ack" });
+    expect(service.supportsCommentAck()).toBe(false);
+    last().serverSend({ type: "connection_established", features: [42, null, "comments.ack"] });
+    expect(service.supportsCommentAck()).toBe(true);
+  });
+});

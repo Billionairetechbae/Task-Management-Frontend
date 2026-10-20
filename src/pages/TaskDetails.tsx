@@ -1,4 +1,4 @@
-import { deliverComment, describeCommentFailure } from "@/lib/commentDelivery";
+import { deliverComment, describeCommentFailure, messageIdForAttempt, type FailedAttempt } from "@/lib/commentDelivery";
 import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
 import { classifyTaskLoadError } from "@/lib/taskLoadError";
 import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
@@ -112,7 +112,7 @@ const TaskDetails = () => {
   const canTrackTime = ["owner", "admin", "manager", "member"].includes(String(workspaceRole));
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
-  const { isConnected, joinTaskRoom, leaveTaskRoom, sendCommentWithAck, sendTypingIndicator, on, off } = useWebSocket();
+  const { isConnected, joinTaskRoom, leaveTaskRoom, sendCommentWithAck, supportsCommentAck, sendTypingIndicator, on, off } = useWebSocket();
   const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
@@ -325,6 +325,7 @@ const TaskDetails = () => {
   const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "";
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const optimisticCommentRef = useRef<Map<string, any>>(new Map());
+  const failedAttemptRef = useRef<FailedAttempt | null>(null);
 
   // WebSocket setup
   useEffect(() => {
@@ -739,7 +740,7 @@ const TaskDetails = () => {
     if (!id || !content || sendingComment || !canCollaborate) return;
     
     // messageId will be determined by WebSocket send (preferred) or local fallback
-    let messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    let messageId = messageIdForAttempt(failedAttemptRef.current, id, content, Boolean(replyToComment));
     
     try {
       setSendingComment(true);
@@ -798,9 +799,10 @@ const TaskDetails = () => {
       const simpleComment = !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0 && pendingConnectedStorage.length === 0;
       await deliverComment({
         clientMessageId: messageId,
-        viaSocket: isConnected && simpleComment ? () => { joinTaskRoom(id); return sendCommentWithAck(id, content, messageId); } : null,
+        viaSocket: isConnected && simpleComment && supportsCommentAck() ? () => { joinTaskRoom(id); return sendCommentWithAck(id, content, messageId); } : null,
         viaHttp: () => sendCommentViaHttp(content, messageId),
       }).then(({ comment, via }) => {
+        failedAttemptRef.current = null;
         if (via === 'websocket') {
           removeOptimisticComment(messageId);
           const fixed = fixCommentProfilePicture(comment);
@@ -830,6 +832,7 @@ const TaskDetails = () => {
         variant: "destructive",
       });
       removeOptimisticComment(messageId);
+      failedAttemptRef.current = { taskId: id!, content, id: messageId }; // a resend of the same text reuses this id
       setNewComment((current) => (current.trim() ? current : content));
     } finally {
       setSendingComment(false);

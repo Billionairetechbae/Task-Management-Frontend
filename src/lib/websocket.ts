@@ -42,6 +42,7 @@ export class WebSocketService {
   private connectionCheckInterval: ReturnType<typeof setInterval> | null = null;
   private lastPingTime: number = 0;
   private connecting: Promise<void> | null = null;
+  private serverFeatures = new Set<string>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private authFailed = false;
   private statusListeners = new Set<(connected: boolean) => void>();
@@ -125,6 +126,7 @@ export class WebSocketService {
           this.connecting = null;
           this.stopConnectionCheck();
           this.failPendingAcks('CONNECTION_LOST');
+          this.serverFeatures = new Set();
           this.emitStatus(false);
           if (!settled) { settled = true; reject(new Error('WebSocket closed before it opened')); }
           const decision = reconnectDecision(event.code);
@@ -378,7 +380,8 @@ export class WebSocketService {
     // Handle specific message types
     switch (message.type) {
       case 'connection_established':
-        console.log('✅ WebSocket connection established');
+        // Learn what THIS server build supports. A backend that predates acknowledged comments sends no features.
+        this.serverFeatures = new Set(Array.isArray(message.features) ? message.features.filter((f: unknown) => typeof f === 'string') : []);
         // toast({
         //   title: 'Connected',
         //   description: 'Chat features enabled',
@@ -413,6 +416,11 @@ export class WebSocketService {
     // Call registered handlers
     const handlers = this.handlers.get(message.type) || [];
     handlers.forEach(handler => handler(message));
+  }
+
+  /** True only when the connected server announced acknowledged-comment support (unknown/older backend => false => use HTTP only). */
+  supportsCommentAck(): boolean {
+    return this.isConnected() && this.serverFeatures.has('comments.ack');
   }
 
   isConnected(): boolean {

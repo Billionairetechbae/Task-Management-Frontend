@@ -11,6 +11,7 @@ interface WebSocketContextType {
   leaveTaskRoom: (taskId: string) => void;
   sendComment: (taskId: string, content: string) => string | undefined;
   /** Resolves only after the server acknowledges persistence; rejects (CommentSendError) otherwise. */
+  supportsCommentAck: () => boolean;
   sendCommentWithAck: (taskId: string, content: string, clientMessageId: string, timeoutMs?: number) => Promise<any>;
   sendTypingIndicator: (taskId: string, isTyping: boolean) => void;
   on: (eventType: string, handler: (message: any) => void) => void;
@@ -85,6 +86,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       return websocketService.sendComment(taskId, content);
     },
+    supportsCommentAck: () => websocketService.supportsCommentAck(),
     sendCommentWithAck: (taskId: string, content: string, clientMessageId: string, timeoutMs?: number) =>
       websocketService.sendCommentWithAck(taskId, content, clientMessageId, timeoutMs),
     sendTypingIndicator: (taskId: string, isTyping: boolean) => {
