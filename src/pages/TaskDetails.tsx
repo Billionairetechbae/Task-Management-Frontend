@@ -549,19 +549,8 @@ const TaskDetails = () => {
 
     try {
       setUpdating(true);
-      const isPrivileged =
-        user?.role === "admin" ||
-        user?.role === "executive" ||
-        user?.role === "manager" ||
-        user?.id === task.creator?.id;
-
-      let warning: string | null = null;
-      if (isPrivileged) {
-        const res = await api.updateTask(task.id, { status: newStatus as any });
-        warning = dependencyWarningMessage(res?.warnings);
-      } else {
-        await api.updateTaskProgress(task.id, { status: newStatus });
-      }
+      const res = await api.updateTask(task.id, { status: newStatus as any });
+      const warning = dependencyWarningMessage(res?.warnings);
       toast({ title: "Success", description: warning || "Task status updated" });
       taskQuery.refetch();
     } catch (error: any) {
