@@ -1018,16 +1018,29 @@ export interface TeamAssistantsResponse {
   status: string;
   results: number;
   data: {
-    team_members: any[];
+    // Current contract: workspace membership rows (role "member") with the nested user.
     members?: CompanyMember[];
+    // Legacy contract kept for older deployments.
+    team_members?: any[];
   };
 }
 
+/**
+ * GET /team/team_members returns `data.members` (membership rows). Older servers returned `data.team_members`.
+ * Either array is valid, including an empty one. A 200 with neither is a contract violation and must surface as an
+ * error rather than be rendered as "zero team members".
+ */
 export function normalizeCompanyAssistantsResponse(response: TeamAssistantsResponse): TeamAssistantsResponse {
-  if (!Array.isArray(response?.data?.team_members)) {
+  const data = response?.data;
+  if (!Array.isArray(data?.members) && !Array.isArray(data?.team_members)) {
     throw new Error("Team member data was unavailable. Please refresh and try again.");
   }
   return response;
+}
+
+export function teamMemberRows(response: TeamAssistantsResponse): Array<{ isVerified?: boolean }> {
+  const data = normalizeCompanyAssistantsResponse(response).data;
+  return (Array.isArray(data.members) ? data.members : data.team_members) as Array<{ isVerified?: boolean }>;
 }
 
 export interface PendingVerificationsResponse {

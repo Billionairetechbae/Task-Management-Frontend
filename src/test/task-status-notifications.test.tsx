@@ -81,3 +81,18 @@ it("backend rejection stays an error and does not show success", async () => {
   await waitFor(() => expect(mocks.statusToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Error", description: "Permission denied" })));
   expect(mocks.statusToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
 });
+it("after an HTTP 500 the status is not left changed in the UI, and a retry sends exactly one more request", async () => {
+  mocks.api.updateTask.mockRejectedValueOnce(Object.assign(new Error("Something went wrong. Please try again later."), { status: 500 })).mockResolvedValueOnce({ status: "success" });
+  mount();
+  await screen.findAllByText("Report");
+  const pick = async () => within((await screen.findAllByTestId("status-control")).find(c => c.getAttribute("data-current") === "completed")!).getByRole("button", { name: "in_progress" });
+  fireEvent.click(await pick());
+  await waitFor(() => expect(mocks.statusToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Error", description: "Something went wrong. Please try again later." })));
+  expect(mocks.api.updateTask).toHaveBeenCalledTimes(1);
+  // The server state did not change, so the control still reflects the persisted status and offers the action again.
+  expect((await screen.findAllByTestId("status-control")).some(c => c.getAttribute("data-current") === "completed")).toBe(true);
+  fireEvent.click(await pick());
+  await waitFor(() => expect(mocks.statusToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" })));
+  expect(mocks.api.updateTask).toHaveBeenCalledTimes(2);
+  expect(mocks.api.updateTask).toHaveBeenLastCalledWith("task-1", { status: "in_progress" });
+});
