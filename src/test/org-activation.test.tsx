@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SECRET = "ab".repeat(32);
 const state = vi.hoisted(() => ({
-  auth: {} as any,
+  auth: {} as Record<string, unknown>,
   inspect: vi.fn(), activate: vi.fn(), accept: vi.fn(), toast: vi.fn(),
 }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => state.auth }));
