@@ -3776,6 +3776,14 @@ class ApiClient {
     });
   }
 
+  /* Email verification with password setup (public, secret-bearing). Inspecting never changes anything; completing sets the password and verifies in one step. */
+  async inspectEmailVerification(token: string): Promise<{ status: string; data: { email: string } }> {
+    return this.request("/auth/verify-email/inspect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+  }
+  async completeEmailVerification(input: { token: string; password: string; confirmPassword: string }): Promise<{ status: string; data: { email: string } }> {
+    return this.request("/auth/verify-email/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  }
+
   async resendVerificationEmail(email: string): Promise<{
     status: string;
     message: string;

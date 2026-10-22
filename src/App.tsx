@@ -44,6 +44,7 @@ import Signup from "./pages/Signup";
 import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
 import ActivateAccount from "./pages/ActivateAccount";
+import VerifyEmailSetup from "./pages/VerifyEmailSetup";
 import ClaimOwnership from "./pages/ClaimOwnership";
 import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
@@ -134,6 +135,7 @@ const App = () => {
         <Route path="/activate-account" element={<ActivateAccount />} />
         <Route path="/claim-ownership" element={<ClaimOwnership />} />
         <Route path="/invite/:token" element={<Invite />} />
+        <Route path="/verify-email/setup" element={<VerifyEmailSetup />} />
         <Route path="/verify-email/:token" element={<Login />} />
         <Route path="/forgot-password" element={<Login />} />
         <Route path="/reset-password/:token" element={<Login />} />
