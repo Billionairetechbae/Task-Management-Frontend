@@ -17,4 +17,3 @@ test("production builds require the canonical production API", () => {
   assert.equal(validateBuildEnvironment({ VERCEL: "1", VERCEL_ENV: "production", VITE_API_BASE_URL: production }).api, production);
   assert.throws(() => validateBuildEnvironment({ VERCEL: "1", VERCEL_ENV: "production", VITE_API_BASE_URL: "https://admiino-staging.onrender.com/api/v1" }), /must use/);
 });
-
