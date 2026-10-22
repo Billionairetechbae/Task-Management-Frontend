@@ -2317,6 +2317,23 @@ class ApiClient {
     return this.request(`/tasks/${encodeURIComponent(taskId)}/connected-storage-attachments`, { method: "GET", headers: this.getAuthHeaders() });
   }
 
+  /* Organization onboarding invitations (public, secret-bearing). The email, role and workspace always come from the invitation on the server. */
+  async inspectOrgInvitation(token: string): Promise<{ status: string; data: { invitation: import("./orgActivation").OrgInvitationInfo } }> {
+    return this.request("/auth/org-activation/inspect", { method: "POST", body: JSON.stringify({ token }) });
+  }
+  async activateOrgAccount(input: { token: string; firstName: string; lastName: string; password: string; confirmPassword: string; ownership?: boolean }): Promise<{ status: string; token: string; data: { workspaces: unknown[]; companyId: string; role: string } }> {
+    const { ownership, ...body } = input;
+    const result = await this.request<{ status: string; token: string; data: { workspaces: unknown[]; companyId: string; role: string } }>(`/auth/org-activation/${ownership ? "owner/activate" : "activate"}`, { method: "POST", body: JSON.stringify(ownership ? { ...body, acceptOwnership: true } : body) });
+    if (result.token) {
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("token", result.token);
+    }
+    return result;
+  }
+  async acceptOrgInvitation(token: string, ownership = false): Promise<{ status: string; data: { workspaces: unknown[]; companyId: string; role: string } }> {
+    return this.request(`/auth/org-activation/${ownership ? "owner/accept" : "accept"}`, { method: "POST", headers: this.getAuthHeaders(false), body: JSON.stringify(ownership ? { token, acceptOwnership: true } : { token }) });
+  }
+
   async signupExecutive(data: SignupExecutiveData): Promise<AuthResponse> {
     const result = await this.request<AuthResponse>("/auth/signup/executive", {
       method: "POST",

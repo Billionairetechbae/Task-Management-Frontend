@@ -43,6 +43,8 @@ import Harmony from "./pages/Harmony";
 import Signup from "./pages/Signup";
 import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
+import ActivateAccount from "./pages/ActivateAccount";
+import ClaimOwnership from "./pages/ClaimOwnership";
 import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
 import Templates from "./pages/Templates";
@@ -129,6 +131,8 @@ const App = () => {
         <Route path="/signup-executive-join" element={<SignupExecutiveJoin />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/signup-with-invite" element={<Invite />} />
+        <Route path="/activate-account" element={<ActivateAccount />} />
+        <Route path="/claim-ownership" element={<ClaimOwnership />} />
         <Route path="/invite/:token" element={<Invite />} />
         <Route path="/verify-email/:token" element={<Login />} />
         <Route path="/forgot-password" element={<Login />} />

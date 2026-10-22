@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 import { consumeWhatsAppConnectReturn } from "@/lib/whatsappConnectJourney";
 import { consumeAuthReturnPath, preserveAuthReturnPath } from "@/lib/authReturnPath";
+import { peekPendingInvitation } from "@/lib/orgActivation";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -39,6 +40,12 @@ const Login = () => {
         navigate(returnPath, { replace: true });
         return;
       }
+    }
+
+    // An organization invitation for an existing account was parked before sign-in: resume it before anything else, including onboarding.
+    if (peekPendingInvitation()) {
+      navigate("/activate-account", { replace: true });
+      return;
     }
 
     const pendingInvite = sessionStorage.getItem("pending_workspace_invite");
