@@ -1,5 +1,6 @@
 // src/lib/websocket.ts - Updated for Render
 import { toast } from "@/hooks/use-toast";
+import { buildBackendWebSocketUrl } from "@/lib/backendWebSocket";
 
 export interface WebSocketMessage {
   type: string;
@@ -60,19 +61,7 @@ export class WebSocketService {
   private getWebSocketUrl(token: string): string {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5001/api/v1" : "");
     if (!apiBaseUrl) throw new Error("VITE_API_BASE_URL is required outside local development");
-    
-    // Remove /api/v1 from the end
-    const baseUrl = apiBaseUrl.replace('/api/v1', '');
-    
-    // Determine protocol
-    const isSecure = baseUrl.startsWith('https://');
-    const protocol = isSecure ? 'wss' : 'ws';
-    
-    // Get hostname
-    const host = baseUrl.replace(/^https?:\/\//, '');
-    
-    // For Render, WebSocket should be on the same domain
-    return `${protocol}://${host}/ws?token=${token}`;
+    return buildBackendWebSocketUrl(apiBaseUrl, token);
   }
 
   /** Subscribe to connected/disconnected transitions (true once OPEN, false on every close). Returns an unsubscribe. */
