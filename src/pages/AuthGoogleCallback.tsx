@@ -24,6 +24,7 @@ const AuthGoogleCallback = () => {
             "invalid_state": "Invalid state parameter",
             "state_expired": "Authentication session expired",
             "google_auth_failed": "Google authentication failed",
+            "google_sign_in_unavailable": "We couldn't sign you in with Google. Sign in with your email and password, or use “Forgot password” to regain access.",
           };
           // Check if this is an integration error
           const integrationReturn = sessionStorage.getItem("integration_return");
