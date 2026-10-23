@@ -6,8 +6,10 @@ import { validateBuildEnvironment } from "./scripts/build-environment.mjs";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
+  let buildTarget = "local";
   if (command === "build") {
     const result = validateBuildEnvironment({ ...loadEnv(mode, process.cwd(), ""), ...process.env });
+    buildTarget = result.target;
     console.log(`[build-env] environment=${result.target} api=${result.api}`);
   }
   return ({
@@ -40,6 +42,7 @@ export default defineConfig(({ command, mode }) => {
   define: {
     "process.env": {},
     "__APP_VERSION__": JSON.stringify(process.env.npm_package_version),
+    "__BUILD_TARGET__": JSON.stringify(buildTarget),
   },
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom"]

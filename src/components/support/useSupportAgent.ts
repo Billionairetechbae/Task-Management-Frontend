@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { api } from "@/lib/api";
+import { assertPreviewWebSocketTarget } from "@/lib/backendWebSocket";
 
 type AgentResponse = { answer: string; uncertain: boolean; recommendHuman: boolean; guide?: { title: string; href: string } | null; guides?: Array<{ title: string; href: string }> };
 type ToolHandoff = (name: string, args: Record<string, unknown>, complete: (result: unknown) => void) => void;
@@ -41,6 +42,11 @@ export function connectSupportSocket(
   configure: (socket: WebSocket) => void = () => {},
   socketFactory: (url: string) => WebSocket = (url) => new WebSocket(url),
 ): Promise<WebSocket> {
+  try {
+    assertPreviewWebSocketTarget(signedUrl, import.meta.env.VITE_API_BASE_URL || "", __BUILD_TARGET__);
+  } catch (error) {
+    return Promise.reject(error);
+  }
   return new Promise((resolve, reject) => {
     const socket = socketFactory(signedUrl);
     configure(socket);
