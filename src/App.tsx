@@ -43,6 +43,7 @@ import Harmony from "./pages/Harmony";
 import Signup from "./pages/Signup";
 import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
+import VerifyEmailSetup from "./pages/VerifyEmailSetup";
 import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
 import Templates from "./pages/Templates";
@@ -130,6 +131,7 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/signup-with-invite" element={<Invite />} />
         <Route path="/invite/:token" element={<Invite />} />
+        <Route path="/verify-email/setup" element={<VerifyEmailSetup />} />
         <Route path="/verify-email/:token" element={<Login />} />
         <Route path="/forgot-password" element={<Login />} />
         <Route path="/reset-password/:token" element={<Login />} />
