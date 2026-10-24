@@ -233,11 +233,7 @@ const DashboardLayout = ({
               href: "/settings/workspace/governance",
               icon: <ShieldCheck className="w-[18px] h-[18px]" />,
             },
-            {
-              label: "Activity Log",
-              href: "/settings/workspace/activity",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
+            { label: "Activity Log", href: "/settings/workspace/activity", icon: <Activity className="w-[18px] h-[18px]" /> },
           ],
         },
         {
@@ -386,16 +382,6 @@ const DashboardLayout = ({
               label: "Workspace Access",
               href: "/workspace-access",
               icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Governance",
-              href: "/settings/workspace/governance",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Activity Log",
-              href: "/settings/workspace/activity",
-              icon: <Activity className="w-[18px] h-[18px]" />,
             },
           ],
         },
