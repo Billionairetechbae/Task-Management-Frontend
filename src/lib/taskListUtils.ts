@@ -1,4 +1,4 @@
-import type { Task, TaskWatcher } from "@/lib/api";
+import { api, type AllTasksFilters, type Task, type TaskWatcher } from "@/lib/api";
 
 /** True when the task is a top-level task (not a subtask row). */
 export function isTopLevelTask(task: { parentTaskId?: string | null }): boolean {
@@ -12,6 +12,39 @@ export function filterTopLevelTasks<T extends { parentTaskId?: string | null }>(
 ): T[] {
   if (!tasks?.length) return [];
   return tasks.filter(isTopLevelTask);
+}
+
+export async function fetchAllTasks(
+  filters: Omit<AllTasksFilters, "page" | "limit">,
+  pageSize = 100
+): Promise<Task[]> {
+  const tasks: Task[] = [];
+  let page = 1;
+  let total: number | undefined;
+
+  while (true) {
+    const response = await api.getAllTasksCrossWorkspace({ ...filters, page, limit: pageSize });
+    const pageTasks = response.data?.tasks;
+    if (!Array.isArray(pageTasks)) {
+      throw new Error("The task service returned an invalid task list.");
+    }
+
+    tasks.push(...pageTasks);
+    total = response.total ?? response.pagination?.totalResults ?? total;
+
+    if (response.pagination) {
+      if (!response.pagination.hasNextPage || pageTasks.length === 0) break;
+      page = response.pagination.currentPage + 1;
+    } else if (total !== undefined) {
+      if (tasks.length >= total || pageTasks.length === 0) break;
+      page += 1;
+    } else {
+      if (pageTasks.length < pageSize) break;
+      page += 1;
+    }
+  }
+
+  return tasks;
 }
 
 /** True when the user is directly involved in the task: creator, primary assignee, or in multi-assignees. */

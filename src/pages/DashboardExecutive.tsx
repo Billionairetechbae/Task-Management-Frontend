@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +56,7 @@ import Board from "@/pages/Board";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, TeamMember } from "@/lib/api";
-import { filterTopLevelTasks } from "@/lib/taskListUtils";
+import { fetchAllTasks, filterTopLevelTasks } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -85,6 +86,7 @@ const DashboardExecutive = () => {
   const { user, workspaceRole, activeCompanyId, workspaces, setActiveCompanyId, refreshWorkspaces } = useAuth();
   const { toast } = useToast();
   const { canPerformRoleOperation } = useWorkspaceSettings();
+  const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [taskSearch, setTaskSearch] = useState("");
@@ -94,6 +96,8 @@ const DashboardExecutive = () => {
   const [priorityFilter, setPriorityFilter] = useState("");
   const [taskView, setTaskView] = useState<"list" | "board">("list");
   const [sideColumnOpen, setSideColumnOpen] = useState(true);
+  const preferredSideColumnOpen = useRef(true);
+  const [boardSideColumnOpen, setBoardSideColumnOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const workspaceSwitchAttempted = useRef<string | null>(null);
@@ -124,9 +128,6 @@ const DashboardExecutive = () => {
   const pendingQuery = usePendingVerificationsQuery(canSeeTeamAdmin);
   const { patchTaskEverywhere, removeTaskEverywhere, invalidateTasks } =
     useTaskCacheUpdater();
-
-  const tasks: Task[] = dashboardQuery.data?.tasks ?? [];
-  const myTasks: Task[] = dashboardQuery.data?.myTasks ?? [];
 
   const teamStats: DashboardTeamStats = dashboardQuery.data?.teamStats ?? {
     membership: null,
@@ -193,7 +194,29 @@ const DashboardExecutive = () => {
   // Personal view = canonical My Tasks (created by me OR assigned to me), always server-computed.
   const personalView = workspaceRole === "member" || (showTaskScopeToggle && taskScope === "my");
   const shownStats: DashboardTaskStats = personalView ? myStats : taskStats;
-  const sourceTasks = personalView ? myTasks : tasks;
+  const taskScopeKey = personalView ? "my" : "all";
+  const allTasksQueryKey = ["dashboard-all-tasks", activeCompanyId, taskScopeKey] as const;
+  const allTasksQuery = useQuery({
+    queryKey: allTasksQueryKey,
+    queryFn: async () => filterTopLevelTasks(await fetchAllTasks({ scope: personalView ? "assigned_workspace" : "workspace" })),
+    enabled: Boolean(activeCompanyId),
+    staleTime: 0,
+  });
+  const sourceTasks = allTasksQuery.data ?? [];
+  const sideRailOpen = taskView === "board" ? boardSideColumnOpen : sideColumnOpen;
+
+  useEffect(() => {
+    if (taskView === "board") setBoardSideColumnOpen(false);
+    else setSideColumnOpen(preferredSideColumnOpen.current);
+  }, [taskView]);
+
+  const updateSideRailOpen = (open: boolean) => {
+    if (taskView === "board") setBoardSideColumnOpen(open);
+    else {
+      preferredSideColumnOpen.current = open;
+      setSideColumnOpen(open);
+    }
+  };
   const filterOptions = useMemo(() => {
     const projects = new Map<string, string>();
     const teams = new Map<string, string>();
@@ -254,6 +277,7 @@ const DashboardExecutive = () => {
 
   const handleTaskCreated = () => {
     fetchDashboard();
+    void queryClient.invalidateQueries({ queryKey: ["dashboard-all-tasks", activeCompanyId] });
     setCreateTaskOpen(false);
     setCurrentPage(1);
   };
@@ -307,11 +331,17 @@ const DashboardExecutive = () => {
   const handleTaskUpdated = (updatedTask: Task) => {
     // Optimistic: patch every cached list instantly, then refresh in background.
     patchTaskEverywhere(updatedTask.id, updatedTask as any);
+    queryClient.setQueryData<Task[]>(allTasksQueryKey, (current) =>
+      current?.map((task) => task.id === updatedTask.id ? updatedTask : task)
+    );
     dashboardQuery.refetch();
   };
 
   const handleTaskDeleted = (taskId: string) => {
     removeTaskEverywhere(taskId);
+    queryClient.setQueryData<Task[]>(allTasksQueryKey, (current) =>
+      current?.filter((task) => task.id !== taskId)
+    );
     dashboardQuery.refetch();
   };
 
@@ -360,24 +390,11 @@ const DashboardExecutive = () => {
               </Button>
             )}
 
-            {canCreateTask && (
-              <Button
-                variant={workspaceRole === "member" ? "default" : "outline"}
-                onClick={() => setCreateTaskOpen(true)}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">
-                  {workspaceRole === "member" ? "Create Task" : "Delegate Task"}
-                </span>
-                <span className="sm:hidden">New</span>
-              </Button>
-            )}
           </div>
         }
       />
 
-      <div className={cn("grid grid-cols-2 gap-2.5 mb-5", personalView ? "sm:grid-cols-3 xl:grid-cols-6" : "sm:grid-cols-4")} data-testid="dashboard-stats">
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="dashboard-stats">
         <StatsCard
           title={personalView ? "My Tasks" : "Total Tasks"}
           value={shownStats.totalTasks}
@@ -394,24 +411,16 @@ const DashboardExecutive = () => {
           className="p-3 sm:p-3.5"
         />
 
-        {personalView && (
-          <StatsCard title="My Pending" value={shownStats.pendingTasks} icon={Clock} iconClassName="bg-warning/10" className="p-3 sm:p-3.5" />
-        )}
-
         <StatsCard
-          title={personalView ? "My In Progress" : "In Progress"}
+          title="In Progress"
           value={shownStats.inProgressTasks}
           icon={Clock}
           iconClassName="bg-info/10"
           className="p-3 sm:p-3.5"
         />
 
-        {personalView && (
-          <StatsCard title="My Completed" value={shownStats.completedTasks} icon={TrendingUp} iconClassName="bg-success/10" className="p-3 sm:p-3.5" />
-        )}
-
         <StatsCard
-          title={personalView ? "My Overdue" : "Overdue"}
+          title="Overdue"
           value={shownStats.overdueTasks}
           icon={AlertTriangle}
           iconClassName="bg-destructive/10"
@@ -459,7 +468,7 @@ const DashboardExecutive = () => {
                       </div>
                     </div>
                     <dl className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between rounded-md border px-3 py-1.5"><dt className="text-muted-foreground">Pending invitations</dt><dd className="font-semibold text-warning" data-testid="count-pending-invitations">{teamStats.membership.pendingInvitations}</dd></div>
+                      {teamStats.membership.pendingInvitations > 0 && <div className="flex items-center justify-between rounded-md border px-3 py-1.5"><dt className="text-muted-foreground">Pending invitations</dt><dd className="font-semibold text-warning" data-testid="count-pending-invitations">{teamStats.membership.pendingInvitations}</dd></div>}
                       {teamStats.membership.pendingJoinRequests !== null && teamStats.membership.pendingJoinRequests > 0 && (
                         <div className="flex items-center justify-between rounded-md border border-warning/30 bg-warning/5 px-3 py-1.5"><dt className="text-muted-foreground"><Link to="/settings/workspace/join-requests" className="underline-offset-2 hover:underline">Pending join requests</Link></dt><dd className="font-semibold text-warning" data-testid="count-pending-join-requests">{teamStats.membership.pendingJoinRequests}</dd></div>
                       )}
@@ -542,28 +551,15 @@ const DashboardExecutive = () => {
         const pendingJoinRequests = canManageTeam && (teamStats.membership?.pendingJoinRequests || 0) > 0 ? <div className="mt-4"><JoinRequestsPreview compact /></div> : null;
 
         const tasksSection = (
-          <div className="space-y-4">
-            <SectionHeader
-              title={
-                personalView ? "My Tasks" : "Recent Tasks"
-              }
-              description={
-                totalItems > 0
-                  ? `${totalItems} ${personalView ? "created by or assigned to you" : "total tasks"}`
-                  : undefined
-              }
-              actions={
-                canCreateTask ? (
-                  <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    New Task
-                  </Button>
-                ) : undefined
-              }
-            />
-
+          <div className="space-y-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0 flex-1 overflow-x-auto flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 pr-1">
+                  <h2 className="text-sm font-semibold">Tasks</h2>
+                  <span className="text-xs text-muted-foreground" aria-live="polite">
+                    {totalItems} {personalView ? "created by or assigned to you" : "total tasks"}
+                  </span>
+                </div>
                 {showTaskScopeToggle && (
                   <div
                     role="tablist"
@@ -626,8 +622,12 @@ const DashboardExecutive = () => {
                   <button type="button" role="tab" aria-selected={taskView === "list"} onClick={() => setTaskView("list")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutList className="mr-1 inline h-3.5 w-3.5" />List</button>
                   <button type="button" role="tab" aria-selected={taskView === "board"} onClick={() => setTaskView("board")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "board" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Columns3 className="mr-1 inline h-3.5 w-3.5" />Board</button>
                 </div>
+                {canCreateTask && <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="h-8 shrink-0 gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  New Task
+                </Button>}
               </div>
-              {totalPages > 1 && (
+              {taskView === "list" && totalPages > 1 && (
                 <div className="flex items-center justify-end gap-1 shrink-0">
                   <span className="text-[11px] text-muted-foreground mr-1">
                     {startIndex + 1}–{Math.min(endIndex, totalItems)} / {totalItems}
@@ -663,7 +663,14 @@ const DashboardExecutive = () => {
               </p>
             )}
 
-            {filteredTasks.length === 0 ? (
+            {allTasksQuery.isLoading ? (
+              <div className="flex h-40 items-center justify-center text-sm text-muted-foreground" role="status">Loading tasks…</div>
+            ) : allTasksQuery.isError ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm" role="alert">
+                <span>Could not load authorized tasks. Please try again.</span>
+                <Button variant="outline" size="sm" onClick={() => void allTasksQuery.refetch()}>Retry</Button>
+              </div>
+            ) : filteredTasks.length === 0 ? (
               <ContentCard>
                 <EmptyState
                   icon={ClipboardList}
@@ -688,14 +695,22 @@ const DashboardExecutive = () => {
               </ContentCard>
             ) : (
               <div className="animate-fade-in">
-                {taskView === "board" ? <Board embeddedTasks={filteredTasks} hideEmbeddedControls onEmbeddedTaskUpdated={(updated) => patchTaskEverywhere(updated.id, updated as any)} /> : <TaskTable
+                {taskView === "board" ? <Board embeddedTasks={filteredTasks} hideEmbeddedControls onEmbeddedTaskUpdated={(updated) => {
+                  patchTaskEverywhere(updated.id, updated as any);
+                  queryClient.setQueryData<Task[]>(allTasksQueryKey, (current) =>
+                    current?.map((task) => task.id === updated.id ? updated : task)
+                  );
+                }} /> : <TaskTable
                   tasks={currentTasks}
                   showAssignee={workspaceRole !== "member"}
                   showExecutive
                   showActions={workspaceRole !== "member"}
-                  onStatusChange={(taskId, status) =>
-                    patchTaskEverywhere(taskId, { status: status as any })
-                  }
+                  onStatusChange={(taskId, status) => {
+                    patchTaskEverywhere(taskId, { status: status as any });
+                    queryClient.setQueryData<Task[]>(allTasksQueryKey, (current) =>
+                      current?.map((task) => task.id === taskId ? { ...task, status: status as any } : task)
+                    );
+                  }}
 
                   onEdit={workspaceRole !== "member" ? (task) => openDrawer(task, "details") : undefined}
                   onAssign={workspaceRole !== "member" ? (task) => openDrawer(task, "assignees") : undefined}
@@ -716,27 +731,24 @@ const DashboardExecutive = () => {
             {/* Mobile / tablet stacked — overview + quick actions collapsible */}
             <div className="space-y-4 lg:hidden">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Overview
-                </h2>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setSideColumnOpen((v) => !v)}
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => updateSideRailOpen(!sideRailOpen)}
                 >
-                  {sideColumnOpen ? (
+                  {sideRailOpen ? (
                     <>
                       <ChevronUp className="h-3.5 w-3.5" /> Hide
                     </>
                   ) : (
                     <>
-                      <ChevronDown className="h-3.5 w-3.5" /> Show
+                      <ChevronDown className="h-3.5 w-3.5" /> Show Overview
                     </>
                   )}
                 </Button>
               </div>
-              {sideColumnOpen && (
+              {sideRailOpen && (
                 <div className="space-y-4 animate-fade-in">
                   {teamOverview}
                   {quickActions}
@@ -749,27 +761,25 @@ const DashboardExecutive = () => {
             {/* Desktop resizable with collapsible side column */}
             <div className="hidden lg:block">
               <div className="flex h-[calc(100dvh-16rem)] min-h-[22rem] gap-1">
-                {!sideColumnOpen && (
-                  <div className="w-11 shrink-0 flex flex-col items-center gap-2 pt-2">
+                {!sideRailOpen && (
+                  <div className="shrink-0 pt-2">
                     <Button
                       variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      aria-label="Show overview column"
-                      onClick={() => setSideColumnOpen(true)}
+                      size="sm"
+                      className="h-8 gap-1 px-2 text-[11px]"
+                      aria-label="Show Overview"
+                      onClick={() => updateSideRailOpen(true)}
                     >
                       <ChevronRight className="h-4 w-4" />
+                      Show Overview
                     </Button>
-                    <span className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
-                      Overview
-                    </span>
                   </div>
                 )}
                 <ResizablePanelGroup
                   direction="horizontal"
                   className="h-full flex-1 rounded-xl"
                 >
-                  {sideColumnOpen && (
+                  {sideRailOpen && (
                     <>
                       <ResizablePanel id="side" order={1} defaultSize={21} minSize={18} maxSize={27}>
                         <div className="pr-2 space-y-3 h-full overflow-y-auto">
@@ -778,7 +788,7 @@ const DashboardExecutive = () => {
                               variant="ghost"
                               size="sm"
                               className="gap-1.5 text-xs"
-                              onClick={() => setSideColumnOpen(false)}
+                              onClick={() => updateSideRailOpen(false)}
                             >
                               <ChevronLeft className="h-3.5 w-3.5" /> Collapse
                             </Button>
@@ -791,8 +801,8 @@ const DashboardExecutive = () => {
                       <ResizableHandle withHandle className="bg-transparent mx-1" />
                     </>
                   )}
-                  <ResizablePanel id="main" order={2} defaultSize={sideColumnOpen ? 79 : 100} minSize={73}>
-                    <div className={cn("h-full overflow-y-auto", sideColumnOpen && "pl-3")}>
+                  <ResizablePanel id="main" order={2} defaultSize={sideRailOpen ? 79 : 100} minSize={73}>
+                    <div className={cn("h-full overflow-y-auto", sideRailOpen && "pl-3")}>
                       {tasksSection}
                     </div>
                   </ResizablePanel>

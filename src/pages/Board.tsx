@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CalendarDays, CheckSquare, ChevronDown, FolderKanban, Users } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckSquare, ChevronDown, FolderKanban, MessageSquare, Users } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
@@ -13,6 +13,7 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 import BlockedBadge from "@/components/tasks/BlockedBadge";
 import RepeatBadge from "@/components/tasks/RepeatBadge";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
+import { fetchAllTasks } from "@/lib/taskListUtils";
 
 const BOARD_KEY = "board-tasks";
 const STATUS_LABELS = Object.fromEntries(TASK_STATUSES.map((status) => [status, getStatusStyle(status).label])) as Record<TaskStatus, string>;
@@ -72,7 +73,12 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
   const { data: result, isLoading: queryLoading, isError: queryError } = useQuery({
     queryKey,
     enabled: Boolean(activeCompanyId) && !embedded,
-    queryFn: () => api.getAllTasksCrossWorkspace({ scope: "workspace", limit: 100, search: filters.search || undefined, projectId: filters.projectId || undefined, teamId: filters.teamId || undefined }),
+    queryFn: () => fetchAllTasks({
+      scope: "workspace",
+      search: filters.search || undefined,
+      projectId: filters.projectId || undefined,
+      teamId: filters.teamId || undefined,
+    }),
     staleTime: 0,
   });
   const { data: projectResult } = useQuery({ queryKey: ["board-projects", activeCompanyId], enabled: Boolean(activeCompanyId), queryFn: () => api.getProjects(), staleTime: 60_000 });
@@ -80,12 +86,12 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
   const [embeddedState, setEmbeddedState] = useState<Task[]>(embeddedTasks || []);
   useEffect(() => { if (embedded) setEmbeddedState(embeddedTasks || []); }, [embedded, embeddedTasks]);
   const boardFilter = (task: Task) => {
-    if (filters.search && !`${task.title} ${(task as any).project?.name || ""} ${(task as any).team?.name || ""}`.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.search && !`${task.title} ${task.description || ""} ${(task as any).project?.name || ""} ${(task as any).team?.name || ""}`.toLowerCase().includes(filters.search.toLowerCase())) return false;
     if (filters.projectId && String((task as any).projectId || (task as any).project?.id || "") !== filters.projectId) return false;
     if (filters.teamId && String((task as any).teamId || (task as any).team?.id || "") !== filters.teamId) return false;
     return true;
   };
-  const tasks = (embedded ? embeddedState : result?.data?.tasks || []).filter(boardFilter);
+  const tasks = (embedded ? embeddedState : result || []).filter(boardFilter);
   const isLoading = embedded ? false : queryLoading;
   const isError = embedded ? false : queryError;
   const projects = (projectResult as any)?.data?.projects || (projectResult as any)?.data?.items || [];
@@ -105,7 +111,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
       const previousEmbedded = embeddedState;
       setLeavingId(null);
       flash(id);
-      queryClient.setQueryData(queryKey, (old: any) => old ? { ...old, data: { ...old.data, tasks: old.data.tasks.map((task: Task) => task.id === id ? { ...task, status } : task) } } : old);
+      queryClient.setQueryData(queryKey, (old: Task[] | undefined) => old?.map((task) => task.id === id ? { ...task, status } : task));
       if (embedded) setEmbeddedState((current) => current.map((task) => task.id === id ? { ...task, status } : task));
       return { previous, previousEmbedded };
     },
@@ -140,22 +146,21 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
     return String(a.deadline || "9999").localeCompare(String(b.deadline || "9999")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   })])), [tasks]);
 
-  const content = <main className={embedded ? "flex min-h-[26rem] flex-col overflow-hidden rounded-xl border bg-slate-100/70" : "flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col overflow-hidden bg-slate-100/70"}>
-      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
-        {!embedded && <WorkspaceSwitcher />}
+  const content = <main className={embedded ? "flex h-[calc(100dvh-22rem)] min-h-[25rem] min-w-0 flex-col overflow-hidden bg-slate-100/70" : "flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col overflow-hidden bg-slate-100/70"}>
+      {!embedded && <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
+        <WorkspaceSwitcher />
         <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold">Board</h1><p className="text-sm text-muted-foreground">Active workspace tasks by status</p></div>
         {!hideEmbeddedControls && <>
           <input aria-label="Search board tasks" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search tasks" className="h-9 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-52" />
           <select aria-label="Filter board by project" value={filters.projectId} onChange={(e) => setFilters({ ...filters, projectId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All projects</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
           <select aria-label="Filter board by team" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All teams</option>{teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
         </>}
-      </header>
+      </header>}
       {isError && <p role="alert" className="m-4 text-sm text-destructive">Could not load board tasks. Please try again.</p>}
-      {/* Mobile: swipeable lanes. Tablet: 2 columns (grid scrolls). Desktop (xl): fixed 3 x 2 grid, only the lanes scroll. */}
       <section
         aria-label="Task board"
         data-testid="board-grid"
-        className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto p-3 sm:p-4 md:grid md:snap-none md:grid-cols-2 md:content-start md:overflow-y-auto md:overflow-x-hidden xl:grid-cols-3 xl:grid-rows-2 xl:overflow-hidden"
+        className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto p-2 sm:p-3"
       >
         {TASK_STATUSES.map((status) => {
           const accent = STATUS_ACCENT[status];
@@ -163,7 +168,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
             key={status}
             aria-label={`${STATUS_LABELS[status]} column`}
             data-testid={`board-panel-${status}`}
-            className={`flex h-full w-[86vw] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm md:h-[26rem] md:w-auto md:shrink xl:h-auto xl:min-h-0 ${accent.bar} ${accent.panel}`}
+            className={`flex h-full w-[min(86vw,290px)] min-w-[260px] max-w-[290px] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm ${accent.bar} ${accent.panel}`}
           >
             <header className="flex shrink-0 items-center justify-between border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
               <span className="flex items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
@@ -182,7 +187,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
                 >
                   <button onClick={() => navigate(resolveTaskPath(task, task.teamId ? "team" : "workbench"))} className="w-full text-left text-sm font-semibold leading-snug hover:text-blue-700 hover:underline focus:outline-none focus-visible:underline">{task.title}</button>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium capitalize text-slate-700">{task.priority}</span>
+                    <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${task.priority === "urgent" || task.priority === "high" ? "bg-red-100 text-red-800" : task.priority === "medium" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700"}`}>{task.priority}</span>
                     <BlockedBadge task={task} />
                     <RepeatBadge task={task} />
                     {task.deadline && (overdue
@@ -193,6 +198,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
                     {(task as any).project && <span className="flex min-w-0 items-center gap-1"><FolderKanban size={12} className="shrink-0" /><span className="truncate">{(task as any).project.name}</span></span>}
                     {task.team && <span className="flex min-w-0 items-center gap-1"><Users size={12} className="shrink-0" /><span className="truncate">{task.team.name}</span></span>}
                     {Number(task.subtaskCount || 0) > 0 && <span className="flex items-center gap-1"><CheckSquare size={12} />{task.subtaskCount} subtask{task.subtaskCount === 1 ? "" : "s"}</span>}
+                    {Number((task as any).commentCount || 0) > 0 && <span className="flex items-center gap-1"><MessageSquare size={12} />{(task as any).commentCount}</span>}
                   </div>}
                   {Array.isArray((task as any).customFieldChips) && (task as any).customFieldChips.length > 0 && <div className="mt-2 flex flex-wrap gap-1" aria-label="Custom fields">{(task as any).customFieldChips.slice(0, 3).map((chip: any) => <span key={chip.fieldId} title={chip.name} className="max-w-full truncate rounded border bg-slate-50 px-2 py-0.5 text-[10px] text-slate-700">{chip.name}: {Array.isArray(chip.display) ? chip.display.join(", ") : String(chip.display)}</span>)}</div>}
                   {people.length > 0 && <p className="mt-2 truncate text-xs text-muted-foreground">{people.slice(0, 3).join(", ")}{people.length > 3 ? ` +${people.length - 3}` : ""}</p>}

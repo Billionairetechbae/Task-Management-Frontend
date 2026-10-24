@@ -43,6 +43,19 @@ function renderBoard() {
     </QueryClientProvider>
   );
 }
+function renderEmbeddedBoard(tasks: any[], onUpdated = vi.fn()) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return {
+    onUpdated,
+    ...render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/board"]}>
+          <Board embeddedTasks={tasks} hideEmbeddedControls onEmbeddedTaskUpdated={onUpdated} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    ),
+  };
+}
 const resolved = (tasks: any[]) => ({ data: { tasks } });
 
 beforeEach(() => {
@@ -54,6 +67,21 @@ beforeEach(() => {
 });
 
 describe("Board page", () => {
+  it("embeds the full six-lane board without the redundant board heading and preserves status updates", async () => {
+    h.auth.workspaceRole = "manager";
+    const onUpdated = vi.fn();
+    h.updateTask.mockResolvedValue({ status: "success", data: { task: task("a", "in_progress") } });
+    renderEmbeddedBoard([task("a", "pending")], onUpdated);
+
+    for (const label of ["Pending", "In Progress", "In Review", "Completed", "Delayed", "Cancelled"]) {
+      expect(await screen.findByRole("region", { name: `${label} column` })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("heading", { name: "Board" })).toBeNull();
+    await userEvent.selectOptions(screen.getByLabelText("Move Task a to"), "in_progress");
+    await waitFor(() => expect(h.updateTask).toHaveBeenCalledWith("a", { status: "in_progress" }));
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ id: "a", status: "in_progress" })));
+  });
+
   it("renders six status columns with tasks in the right one", async () => {
     h.getAll.mockResolvedValue(resolved([task("a", "pending"), task("b", "completed"), task("c", "cancelled")]));
     renderBoard();
@@ -122,14 +150,14 @@ describe("Board page", () => {
     await waitFor(() => expect(h.getAll.mock.calls.length).toBeGreaterThan(1));
   });
 
-  it("desktop layout is a fixed 3 x 2 grid; each lane has its own scroll area and the page does not scroll", async () => {
+  it("keeps practical lane widths, scrolls horizontally, and independently scrolls each lane", async () => {
     h.getAll.mockResolvedValue(resolved([task("a", "pending")]));
     renderBoard();
     const grid = await screen.findByTestId("board-grid");
-    expect(grid.className).toContain("xl:grid-cols-3");
-    expect(grid.className).toContain("xl:grid-rows-2");
-    expect(grid.className).toContain("xl:overflow-hidden");
+    expect(grid.className).toContain("overflow-x-auto");
     expect(grid.closest("main")!.className).toContain("overflow-hidden");
+    expect(screen.getByTestId("board-panel-pending").className).toContain("min-w-[260px]");
+    expect(screen.getByTestId("board-panel-pending").className).toContain("max-w-[290px]");
     const order = Array.from(grid.children).map((el) => el.getAttribute("data-testid"));
     expect(order).toEqual(["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"].map((s) => `board-panel-${s}`));
     for (const status of ["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"]) {
@@ -141,14 +169,27 @@ describe("Board page", () => {
     }
   });
 
-  it("falls back to swipeable lanes on mobile and two columns on tablet", async () => {
+  it("keeps lanes swipeable at narrow viewport widths", async () => {
     h.getAll.mockResolvedValue(resolved([]));
     renderBoard();
     const grid = await screen.findByTestId("board-grid");
     expect(grid.className).toContain("overflow-x-auto");
     expect(grid.className).toContain("snap-x");
-    expect(grid.className).toContain("md:grid-cols-2");
-    expect(screen.getByTestId("board-panel-pending").className).toContain("w-[86vw]");
+    expect(screen.getByTestId("board-panel-pending").className).toContain("w-[min(86vw,290px)]");
+  });
+
+  it("loads every task page instead of truncating the board at the first 100", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, i) => task(`page-1-${i}`, "pending"));
+    const secondPage = [task("page-2-1", "completed")];
+    h.getAll
+      .mockResolvedValueOnce(resolved(firstPage))
+      .mockResolvedValueOnce(resolved(secondPage));
+    renderBoard();
+    expect(await screen.findByText("Task page-2-1")).toBeInTheDocument();
+    await waitFor(() => expect(h.getAll).toHaveBeenCalledTimes(2));
+    expect(h.getAll.mock.calls.map(([filters]) => filters.page)).toEqual([1, 2]);
+    expect(screen.getByLabelText("100 tasks")).toBeInTheDocument();
+    expect(screen.getByLabelText("1 tasks")).toBeInTheDocument();
   });
 
   it("shows the lane count and a stronger overdue treatment", async () => {

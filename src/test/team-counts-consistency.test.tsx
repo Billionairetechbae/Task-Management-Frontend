@@ -7,7 +7,7 @@ const state = vi.hoisted(() => ({
   role: "owner" as string,
   workspace: { id: "w1", name: "Richie Tech" },
   dashboard: { data: undefined as any, isPending: false, isError: false },
-  api: { getCompanyTeam: vi.fn() },
+  api: { getCompanyTeam: vi.fn(), getAllTasksCrossWorkspace: vi.fn() },
   invalidated: [] as string[],
 }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "kv", firstName: "K", lastName: "V" }, workspaceRole: state.role, activeCompanyId: state.workspace.id, activeWorkspace: state.workspace, workspaces: [{ id: "w1" }, { id: "w2" }], setActiveCompanyId: vi.fn(), refreshWorkspaces: vi.fn() }) }));
@@ -46,7 +46,11 @@ const summary = (o: Record<string, unknown> = {}) => ({ workspaceMembers: 6, own
 const teamStats = (membership: any) => ({ membership, totalAssistants: 0, availableAssistants: null, pendingVerifications: 0, totalExecutives: 0 });
 const stats = { totalTasks: 0, pendingTasks: 0, inProgressTasks: 0, completedTasks: 0, overdueTasks: 0, urgentTasks: 0, completionRate: 0 };
 
-const renderDashboard = () => render(<MemoryRouter><DashboardExecutive /></MemoryRouter>);
+const renderDashboard = () => render(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter><DashboardExecutive /></MemoryRouter>
+  </QueryClientProvider>
+);
 const renderDirectory = () => render(<MemoryRouter><TeamDirectory /></MemoryRouter>);
 
 describe("shared membership definition", () => {
@@ -62,6 +66,7 @@ describe("Dashboard Team Overview", () => {
   beforeEach(() => {
     state.role = "owner";
     state.dashboard = { data: { tasks: [], myTasks: [], taskStats: stats, myStats: stats, teamStats: teamStats(summary()) }, isPending: false, isError: false };
+    state.api.getAllTasksCrossWorkspace.mockReset().mockResolvedValue({ status: "success", results: 0, total: 0, data: { tasks: [] } });
   });
 
   it("shows explicit, non-overlapping categories: 6 workspace members = 4 members + 1 manager + 1 owner/admin", () => {

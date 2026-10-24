@@ -878,6 +878,7 @@ export interface AllTasksFilters {
 export interface AllTasksResponse {
   status: string;
   results: number;
+  total?: number;
   data: {
     tasks: Task[];
   };
