@@ -32,6 +32,11 @@ const prefersReducedMotion = () => typeof window !== "undefined" && Boolean(wind
 
 type Filters = { projectId: string; teamId: string; search: string };
 
+interface BoardProps {
+  embeddedTasks?: Task[];
+  onEmbeddedTaskUpdated?: (task: Task) => void;
+}
+
 function userCanMove(task: Task, userId?: string | null, workspaceRole?: string | null) {
   if (["owner", "admin", "manager", "platform_admin"].includes(workspaceRole || "")) return true;
   if (!userId) return false;
@@ -46,7 +51,8 @@ function dueLabel(deadline?: string | null) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(deadline));
 }
 
-export default function Board() {
+export default function Board({ embeddedTasks, onEmbeddedTaskUpdated }: BoardProps = {}) {
+  const embedded = Array.isArray(embeddedTasks);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, activeCompanyId, workspaceRole } = useAuth();
@@ -61,15 +67,25 @@ export default function Board() {
   const later = useCallback((fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); }, []);
   const flash = useCallback((id: string) => { setSettledId(id); later(() => setSettledId((cur) => (cur === id ? null : cur)), SETTLE_MS); }, [later]);
 
-  const { data: result, isLoading, isError } = useQuery({
+  const { data: result, isLoading: queryLoading, isError: queryError } = useQuery({
     queryKey,
-    enabled: Boolean(activeCompanyId),
+    enabled: Boolean(activeCompanyId) && !embedded,
     queryFn: () => api.getAllTasksCrossWorkspace({ scope: "workspace", limit: 100, search: filters.search || undefined, projectId: filters.projectId || undefined, teamId: filters.teamId || undefined }),
     staleTime: 0,
   });
   const { data: projectResult } = useQuery({ queryKey: ["board-projects", activeCompanyId], enabled: Boolean(activeCompanyId), queryFn: () => api.getProjects(), staleTime: 60_000 });
   const { data: teamResult } = useQuery({ queryKey: ["board-teams", activeCompanyId], enabled: Boolean(activeCompanyId), queryFn: () => api.listTeams(), staleTime: 60_000 });
-  const tasks = result?.data?.tasks || [];
+  const [embeddedState, setEmbeddedState] = useState<Task[]>(embeddedTasks || []);
+  useEffect(() => { if (embedded) setEmbeddedState(embeddedTasks || []); }, [embedded, embeddedTasks]);
+  const boardFilter = (task: Task) => {
+    if (filters.search && !`${task.title} ${(task as any).project?.name || ""} ${(task as any).team?.name || ""}`.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.projectId && String((task as any).projectId || (task as any).project?.id || "") !== filters.projectId) return false;
+    if (filters.teamId && String((task as any).teamId || (task as any).team?.id || "") !== filters.teamId) return false;
+    return true;
+  };
+  const tasks = (embedded ? embeddedState : result?.data?.tasks || []).filter(boardFilter);
+  const isLoading = embedded ? false : queryLoading;
+  const isError = embedded ? false : queryError;
   const projects = (projectResult as any)?.data?.projects || (projectResult as any)?.data?.items || [];
   const teams = (teamResult as any)?.data?.teams || [];
 
@@ -84,22 +100,27 @@ export default function Board() {
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: [BOARD_KEY] });
       const previous = queryClient.getQueryData(queryKey);
+      const previousEmbedded = embeddedState;
       setLeavingId(null);
       flash(id);
       queryClient.setQueryData(queryKey, (old: any) => old ? { ...old, data: { ...old.data, tasks: old.data.tasks.map((task: Task) => task.id === id ? { ...task, status } : task) } } : old);
-      return { previous };
+      if (embedded) setEmbeddedState((current) => current.map((task) => task.id === id ? { ...task, status } : task));
+      return { previous, previousEmbedded };
     },
     onError: (error: any, values, context) => {
       queryClient.setQueryData(queryKey, context?.previous);
+      if (embedded) setEmbeddedState(context?.previousEmbedded || []);
       flash(values.id);
       toast.error("Couldn’t move task", { description: error?.message || "Your permissions may have changed." });
     },
     // Advisory only: the move already succeeded; the server tells us when dependencies are still unfinished.
     onSuccess: (res) => {
+      const updated = (res as any)?.data?.task;
+      if (embedded && updated?.id) onEmbeddedTaskUpdated?.(updated);
       const warning = dependencyWarningMessage(res?.warnings);
       if (warning) toast.warning(warning); else toast.success("Task status updated");
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: [BOARD_KEY] }),
+    onSettled: () => { if (!embedded) void queryClient.invalidateQueries({ queryKey: [BOARD_KEY] }); },
   });
 
   const startMove = (task: Task, status: TaskStatus) => {
@@ -117,10 +138,9 @@ export default function Board() {
     return String(a.deadline || "9999").localeCompare(String(b.deadline || "9999")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   })])), [tasks]);
 
-  return <DashboardLayout hidePadding fullWidth>
-    <main className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col overflow-hidden bg-slate-100/70">
+  const content = <main className={embedded ? "flex min-h-[26rem] flex-col overflow-hidden rounded-xl border bg-slate-100/70" : "flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col overflow-hidden bg-slate-100/70"}>
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
-        <WorkspaceSwitcher />
+        {!embedded && <WorkspaceSwitcher />}
         <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold">Board</h1><p className="text-sm text-muted-foreground">Active workspace tasks by status</p></div>
         <input aria-label="Search board tasks" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search tasks" className="h-9 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-52" />
         <select aria-label="Filter board by project" value={filters.projectId} onChange={(e) => setFilters({ ...filters, projectId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All projects</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
@@ -179,6 +199,6 @@ export default function Board() {
           </section>;
         })}
       </section>
-    </main>
-  </DashboardLayout>;
+    </main>;
+  return embedded ? content : <DashboardLayout hidePadding fullWidth>{content}</DashboardLayout>;
 }

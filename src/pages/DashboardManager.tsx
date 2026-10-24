@@ -8,6 +8,8 @@ import {
   Clock,
   AlertTriangle,
   TrendingUp,
+  Columns3,
+  LayoutList,
 } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -25,6 +27,7 @@ import {
   Pagination,
 } from "@/components/dashboard/TaskComponents";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
+import Board from "@/pages/Board";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, teamMemberRows, Task } from "@/lib/api";
@@ -48,6 +51,7 @@ const DashboardManager = () => {
   const [membersError, setMembersError] = useState<string | null>(null);
   const loadSequence = useRef(0);
   const [statusFilter, setStatusFilter] = useState("");
+  const [taskView, setTaskView] = useState<"list" | "board">("list");
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -257,7 +261,13 @@ const DashboardManager = () => {
       />
 
       <div className="mb-4">
-        <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
+          <div role="tablist" aria-label="Task view" className="inline-flex shrink-0 items-center rounded-lg border border-border bg-muted/50 p-0.5">
+            <button type="button" role="tab" aria-selected={taskView === "list"} onClick={() => setTaskView("list")} className={`rounded-md px-2.5 py-1 text-xs font-medium ${taskView === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}><LayoutList className="mr-1 inline h-3.5 w-3.5" />List</button>
+            <button type="button" role="tab" aria-selected={taskView === "board"} onClick={() => setTaskView("board")} className={`rounded-md px-2.5 py-1 text-xs font-medium ${taskView === "board" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}><Columns3 className="mr-1 inline h-3.5 w-3.5" />Board</button>
+          </div>
+        </div>
       </div>
       {hasTaskViewFilter && (
         <p className="text-xs text-muted-foreground mb-4">
@@ -276,22 +286,22 @@ const DashboardManager = () => {
         </ContentCard>
       ) : (
         <>
-          <TaskTable
+          {taskView === "board" ? <Board embeddedTasks={filteredTasks} onEmbeddedTaskUpdated={handleTaskUpdated} /> : <TaskTable
             tasks={currentTasks}
             showAssignee
             showActions
             onEdit={(task) => openDrawer(task, "details")}
             onAssign={(task) => openDrawer(task, "assignees")}
             onDelete={(task) => openDrawer(task, "danger")}
-          />
-          <Pagination
+          />}
+          {taskView === "list" && <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
             startIndex={startIndex}
             endIndex={endIndex}
             onPageChange={setCurrentPage}
-          />
+          />}
         </>
       )}
 

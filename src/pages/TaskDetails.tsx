@@ -128,7 +128,7 @@ const TaskDetails = () => {
   const [showFullDescription, setShowFullDescription] = useState(false);
   
   // NEW: State for collapsible collaboration panel
-  const [collabPanelOpen, setCollabPanelOpen] = useState(true);
+  const [collabPanelOpen, setCollabPanelOpen] = useState(false);
 
   const taskQuery = useQuery({
     queryKey: ["task-details", id, activeCompanyId], // workspace last: prefix invalidations by id still match, but a switch never reuses another workspace's cache
@@ -2511,9 +2511,11 @@ const TaskDetails = () => {
                       if (isTablet) setCollabSheetOpen(true);
                       else setCollabPanelOpen(!collabPanelOpen);
                     }}
+                    aria-label={isTablet ? "Open collaboration panel" : collabPanelOpen ? "Collapse collaboration panel" : "Expand collaboration panel"}
+                    aria-expanded={isTablet ? collabSheetOpen : collabPanelOpen}
                     className={cn(
                       "absolute right-0 top-1/2 -translate-y-1/2 z-20 h-14 w-7 shadow-lg transition-all duration-200",
-                      "bg-background hover:bg-primary hover:text-primary-foreground",
+                      "bg-background hover:bg-primary hover:text-primary-foreground motion-safe:transition-all motion-reduce:transition-none",
                       "rounded-r-none rounded-l-lg border-r-0"
                     )}
                   >

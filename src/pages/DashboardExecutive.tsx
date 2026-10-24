@@ -18,6 +18,8 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
+  Columns3,
+  LayoutList,
 } from "lucide-react";
 import {
   Collapsible,
@@ -44,6 +46,7 @@ import {
   TaskFilters,
 } from "@/components/dashboard/TaskComponents";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
+import Board from "@/pages/Board";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, TeamMember } from "@/lib/api";
@@ -79,6 +82,7 @@ const DashboardExecutive = () => {
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [taskView, setTaskView] = useState<"list" | "board">("list");
   const [sideColumnOpen, setSideColumnOpen] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
@@ -562,6 +566,10 @@ const DashboardExecutive = () => {
                   </div>
                 )}
                 <TaskFilters statusFilter={statusFilter} onStatusChange={setStatusFilter} />
+                <div role="tablist" aria-label="Task view" className="inline-flex shrink-0 items-center rounded-lg border border-border bg-muted/50 p-0.5">
+                  <button type="button" role="tab" aria-selected={taskView === "list"} onClick={() => setTaskView("list")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutList className="mr-1 inline h-3.5 w-3.5" />List</button>
+                  <button type="button" role="tab" aria-selected={taskView === "board"} onClick={() => setTaskView("board")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "board" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Columns3 className="mr-1 inline h-3.5 w-3.5" />Board</button>
+                </div>
               </div>
               {totalPages > 1 && (
                 <div className="flex items-center justify-end gap-1 shrink-0">
@@ -624,7 +632,7 @@ const DashboardExecutive = () => {
               </ContentCard>
             ) : (
               <div className="animate-fade-in">
-                <TaskTable
+                {taskView === "board" ? <Board embeddedTasks={filteredTasks} onEmbeddedTaskUpdated={(updated) => patchTaskEverywhere(updated.id, updated as any)} /> : <TaskTable
                   tasks={currentTasks}
                   showAssignee={workspaceRole !== "member"}
                   showExecutive
@@ -636,7 +644,7 @@ const DashboardExecutive = () => {
                   onEdit={workspaceRole !== "member" ? (task) => openDrawer(task, "details") : undefined}
                   onAssign={workspaceRole !== "member" ? (task) => openDrawer(task, "assignees") : undefined}
                   onDelete={workspaceRole !== "member" ? (task) => openDrawer(task, "danger") : undefined}
-                />
+                />}
               </div>
             )}
             {pendingVerifications}
