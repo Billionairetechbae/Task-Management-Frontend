@@ -35,6 +35,8 @@ type Filters = { projectId: string; teamId: string; search: string };
 interface BoardProps {
   embeddedTasks?: Task[];
   onEmbeddedTaskUpdated?: (task: Task) => void;
+  /** Dashboard owns the unified task toolbar; keep the board surface focused when embedded. */
+  hideEmbeddedControls?: boolean;
 }
 
 function userCanMove(task: Task, userId?: string | null, workspaceRole?: string | null) {
@@ -51,7 +53,7 @@ function dueLabel(deadline?: string | null) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(deadline));
 }
 
-export default function Board({ embeddedTasks, onEmbeddedTaskUpdated }: BoardProps = {}) {
+export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbeddedControls = false }: BoardProps = {}) {
   const embedded = Array.isArray(embeddedTasks);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -142,9 +144,11 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated }: BoardPro
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
         {!embedded && <WorkspaceSwitcher />}
         <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold">Board</h1><p className="text-sm text-muted-foreground">Active workspace tasks by status</p></div>
-        <input aria-label="Search board tasks" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search tasks" className="h-9 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-52" />
-        <select aria-label="Filter board by project" value={filters.projectId} onChange={(e) => setFilters({ ...filters, projectId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All projects</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
-        <select aria-label="Filter board by team" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All teams</option>{teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
+        {!hideEmbeddedControls && <>
+          <input aria-label="Search board tasks" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search tasks" className="h-9 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-52" />
+          <select aria-label="Filter board by project" value={filters.projectId} onChange={(e) => setFilters({ ...filters, projectId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All projects</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
+          <select aria-label="Filter board by team" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All teams</option>{teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
+        </>}
       </header>
       {isError && <p role="alert" className="m-4 text-sm text-destructive">Could not load board tasks. Please try again.</p>}
       {/* Mobile: swipeable lanes. Tablet: 2 columns (grid scrolls). Desktop (xl): fixed 3 x 2 grid, only the lanes scroll. */}
