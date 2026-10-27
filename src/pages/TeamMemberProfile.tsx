@@ -1,6 +1,6 @@
 // src/pages/TeamMemberProfile.tsx
 import { useParams, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api, CompanyMember, ProfessionalProfileBundle } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,9 @@ const TeamMemberProfile = () => {
   const [workspaceMember, setWorkspaceMember] = useState<CompanyMember | null>(null);
   const [profileBundle, setProfileBundle] = useState<ProfessionalProfileBundle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const loadSequence = useRef(0);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -47,9 +50,12 @@ const TeamMemberProfile = () => {
 
   const loadMember = async () => {
     if (!userId) return;
+    const sequence = ++loadSequence.current;
 
     try {
       setLoading(true);
+      setMemberError(null);
+      setProfileError(null);
 
       // Fetch both APIs in parallel!
       const [workspaceRes, profileRes] = await Promise.allSettled([
@@ -66,24 +72,23 @@ const TeamMemberProfile = () => {
         } else if (resData?.id || resData?.userId) {
           memberData = resData as CompanyMember;
         }
-        setWorkspaceMember(memberData);
+        if (sequence === loadSequence.current) setWorkspaceMember(memberData);
+      } else if (sequence === loadSequence.current) {
+        setMemberError(workspaceRes.reason?.message || "Workspace membership details could not be loaded.");
       }
 
       // Process profile bundle response
       if (profileRes.status === "fulfilled") {
-        setProfileBundle(profileRes.value.data);
+        if (sequence === loadSequence.current) setProfileBundle(profileRes.value.data);
+      } else if (sequence === loadSequence.current) {
+        setProfileError(profileRes.reason?.message || "Professional profile details could not be loaded.");
       }
 
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load team member.",
-        variant: "destructive",
-      });
-      setWorkspaceMember(null);
-      setProfileBundle(null);
+      if (sequence === loadSequence.current && workspaceRes.status === "rejected" && profileRes.status === "rejected") {
+        toast({ title: "Unable to load profile", description: "Retry to load this team member.", variant: "destructive" });
+      }
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current) setLoading(false);
     }
   };
 
@@ -174,9 +179,10 @@ const TeamMemberProfile = () => {
         <div>
           <h2 className="text-lg font-semibold">Member not found</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            This profile is unavailable or you don't have access to it in the current workspace.
+            {memberError || profileError ? "Some profile details could not be loaded." : "This profile is unavailable or you don't have access to it in the current workspace."}
           </p>
         </div>
+        {(memberError || profileError) && <Button onClick={() => void loadMember()}>Retry</Button>}
         <Button asChild variant="outline">
           <Link to="/team-directory">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Directory
@@ -208,6 +214,7 @@ const TeamMemberProfile = () => {
       </header>
 
       <main className="w-full px-6 py-10">
+        {(memberError || profileError) && <div role="alert" className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{memberError || profileError} <Button variant="outline" size="sm" className="ml-3" onClick={() => void loadMember()}>Retry</Button></div>}
         {/* Back Button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/team-directory">

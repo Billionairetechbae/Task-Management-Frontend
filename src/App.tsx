@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 
 
@@ -18,7 +18,6 @@ import DashboardExecutive from "./pages/DashboardExecutive";
 import DashboardManager from "./pages/DashboardManager";
 import DashboardRoleRouter from "./pages/DashboardRoleRouter";
 
-import AIHub from "./pages/AIHub";
 import AllTasks from "./pages/AllTasks";
 import TaskDetails from "./pages/TaskDetails";
 import TaskWorkbench from "./pages/TaskWorkbench";
@@ -39,47 +38,47 @@ import OnboardingProfileModal from "./components/OnboardingProfileModal";
 import { api } from "./lib/api";
 import { useAuth } from "./contexts/AuthContext";
 
-import Harmony from "./pages/Harmony";
 import Signup from "./pages/Signup";
-import WorkspaceOnboarding from "./pages/WorkspaceOnboarding";
 import Invite from "./pages/Invite";
 import ActivateAccount from "./pages/ActivateAccount";
 import VerifyEmailSetup from "./pages/VerifyEmailSetup";
 import ClaimOwnership from "./pages/ClaimOwnership";
 import NotificationsPage from "./pages/Notifications";
 import Projects from "./pages/Projects";
-import Templates from "./pages/Templates";
 import ProjectDetails from "./pages/ProjectDetails";
-import Drive from "./pages/Drive";
 import ProjectInvite from "./pages/ProjectInvite";
-import WorkspaceAccessRequests from "@/pages/WorkspaceAccessRequests";
-import WorkspaceJoinRequests from "@/pages/WorkspaceJoinRequests";
-
-import ProjectHealth from "@/pages/ProjectHealth";
-import ProjectPortfolio from "@/pages/ProjectPortfolio";
-import Workload from "@/pages/Workload";
-import ClientView from "@/pages/ClientView";
-import ExternalPortal from "@/pages/ExternalPortal";
-import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
-import SharedWithMe from "@/pages/SharedWithMe";
-import WorkspaceInsights from "@/pages/WorkspaceInsights";
-import WorkspaceActivity from "@/pages/WorkspaceActivity";
-import WorkspaceAutomations from "@/pages/WorkspaceAutomations";
-import WorkspaceGovernance from "@/pages/WorkspaceGovernance";
-import WorkspaceSubscription from "@/pages/WorkspaceSubscription";
-import TimeTracking from "@/pages/TimeTracking";
-
-import AuditExport from "@/pages/AuditExport";
-import ExecutiveAssistanceRequests from "@/pages/ExecutiveAssistanceRequests";
+import Board from "./pages/Board";
 import OnboardingTour from "@/components/OnboardingTour";
 import OnboardingFlowController from "@/components/OnboardingFlowController";
 import AuthGoogleCallback from "./pages/AuthGoogleCallback";
-import Integrations from "./pages/Integrations";
+const AIHub = lazy(() => import("./pages/AIHub"));
+const Harmony = lazy(() => import("./pages/Harmony"));
+const WorkspaceOnboarding = lazy(() => import("./pages/WorkspaceOnboarding"));
+const Templates = lazy(() => import("./pages/Templates"));
+const Drive = lazy(() => import("./pages/Drive"));
+const WorkspaceAccessRequests = lazy(() => import("@/pages/WorkspaceAccessRequests"));
+const WorkspaceJoinRequests = lazy(() => import("@/pages/WorkspaceJoinRequests"));
+const ProjectHealth = lazy(() => import("@/pages/ProjectHealth"));
+const ProjectPortfolio = lazy(() => import("@/pages/ProjectPortfolio"));
+const Workload = lazy(() => import("@/pages/Workload"));
+const ClientView = lazy(() => import("@/pages/ClientView"));
+const ExternalPortal = lazy(() => import("@/pages/ExternalPortal"));
+const ResourceAccessRequests = lazy(() => import("@/pages/ResourceAccessRequests"));
+const SharedWithMe = lazy(() => import("@/pages/SharedWithMe"));
+const WorkspaceInsights = lazy(() => import("@/pages/WorkspaceInsights"));
+const WorkspaceActivity = lazy(() => import("@/pages/WorkspaceActivity"));
+const WorkspaceAutomations = lazy(() => import("@/pages/WorkspaceAutomations"));
+const WorkspaceGovernance = lazy(() => import("@/pages/WorkspaceGovernance"));
+const WorkspaceSubscription = lazy(() => import("@/pages/WorkspaceSubscription"));
+const TimeTracking = lazy(() => import("@/pages/TimeTracking"));
+const AuditExport = lazy(() => import("@/pages/AuditExport"));
+const ExecutiveAssistanceRequests = lazy(() => import("@/pages/ExecutiveAssistanceRequests"));
+const Integrations = lazy(() => import("./pages/Integrations"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Help = lazy(() => import("./pages/Help"));
+const Trash = lazy(() => import("./pages/Trash"));
 
-import Calendar from "./pages/Calendar";
-import Board from "./pages/Board";
-import Help from "./pages/Help";
-import Trash from "./pages/Trash";
+const RouteFallback = () => <div className="min-h-[50vh] flex items-center justify-center text-sm text-muted-foreground">Loading page…</div>;
 
 const App = () => {
   const { user, loading } = useAuth();
@@ -121,6 +120,7 @@ const App = () => {
         onSuccess={() => setShowOnboardingModal(false)}
       />
 
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route path="/" element={<Login />} />
@@ -447,6 +447,7 @@ const App = () => {
         <Route path="*" element={<NotFound />} />
 
       </Routes>
+      </Suspense>
     </>
   );
 };

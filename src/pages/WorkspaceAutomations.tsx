@@ -21,11 +21,9 @@ const TRIGGERS: Array<[AutomationTrigger, string]> = [
 const friendly = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (m) => m.toUpperCase());
 
 export default function WorkspaceAutomations() {
-  const { workspaceRole } = useAuth(); const permitted = workspaceRole === "owner" || workspaceRole === "admin";
+  const { workspaceRole, activeCompanyId } = useAuth(); const permitted = workspaceRole === "owner" || workspaceRole === "admin";
   const governance = useWorkspaceGovernance();
   const automationsEnabled = governance.capabilities?.automationsEnabled !== false;
-  const queryClient = useQueryClient(); const query = useQuery({ queryKey: ["workspace-automations"], queryFn: () => api.getAutomations(), enabled: permitted });
-  const members = useQuery({ queryKey: ["automation-workspace-members"], queryFn: () => api.getCompanyTeam(), enabled: permitted });
   const [builder, setBuilder] = useState(false); const [name, setName] = useState(""); const [triggerType, setTriggerType] = useState<AutomationTrigger>("task_status_changed"); const [status, setStatus] = useState("completed"); const [actionType, setActionType] = useState<AutomationAction>("SEND_ADMIINO_NOTIFICATION"); const [recipientType, setRecipientType] = useState("project_owner"); const [followupTitle, setFollowupTitle] = useState(""); const [historyId, setHistoryId] = useState("");
   const [presetName, setPresetName] = useState("");
   const [reviewing, setReviewing] = useState(false);
@@ -34,11 +32,14 @@ export default function WorkspaceAutomations() {
   const [projectMode, setProjectMode] = useState("same");
   const [teamMode, setTeamMode] = useState("same");
   const [dueInDays, setDueInDays] = useState("");
-  const reload = () => queryClient.invalidateQueries({ queryKey: ["workspace-automations"] });
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ["workspace-automations", activeCompanyId], queryFn: () => api.getAutomations(), enabled: permitted && Boolean(activeCompanyId) });
+  const members = useQuery({ queryKey: ["automation-workspace-members", activeCompanyId], queryFn: () => api.getCompanyTeam(), enabled: permitted && Boolean(activeCompanyId) && builder && recipientType === "selected_members" });
+  const reload = () => queryClient.invalidateQueries({ queryKey: ["workspace-automations", activeCompanyId] });
   const save = useMutation({ mutationFn: (input: Partial<AutomationRule>) => api.createAutomation(input), onSuccess: () => { reload(); setBuilder(false); setName(""); setPresetName(""); } });
   const toggle = useMutation({ mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => api.setAutomationEnabled(id, enabled), onSuccess: reload });
   const archive = useMutation({ mutationFn: (id: string) => api.archiveAutomation(id), onSuccess: reload });
-  const runs = useQuery({ queryKey: ["automation-executions", historyId], queryFn: () => api.getAutomationExecutions(historyId), enabled: Boolean(historyId) });
+  const runs = useQuery({ queryKey: ["automation-executions", activeCompanyId, historyId], queryFn: () => api.getAutomationExecutions(historyId), enabled: Boolean(activeCompanyId) && Boolean(historyId) });
   const applyPreset = (preset: Preset) => { setName(preset.name); setTriggerType(preset.triggerType); setActionType(preset.actionType); setRecipientType(String(preset.actionConfig.recipientType || "project_owner")); setFollowupTitle(String(preset.actionConfig.title || "")); setStatus("completed"); setPresetName(preset.name); setSelectedUserIds([]); setReviewing(false); setBuilder(true); };
   const submit = () => {
     const conditions = triggerType === "task_status_changed" ? [{ field: "status", operator: "equals" as const, value: status }] : [];
