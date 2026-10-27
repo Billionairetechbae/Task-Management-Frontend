@@ -59,6 +59,7 @@ import ProjectHealth from "@/pages/ProjectHealth";
 import ProjectPortfolio from "@/pages/ProjectPortfolio";
 import Workload from "@/pages/Workload";
 import ClientView from "@/pages/ClientView";
+import ExternalPortal from "@/pages/ExternalPortal";
 import ResourceAccessRequests from "@/pages/ResourceAccessRequests";
 import SharedWithMe from "@/pages/SharedWithMe";
 import WorkspaceInsights from "@/pages/WorkspaceInsights";
@@ -141,6 +142,8 @@ const App = () => {
         <Route path="/reset-password/:token" element={<Login />} />
         <Route path="/project-invite/:token" element={<ProjectInvite />} />
         <Route path="/client-view/:token" element={<ClientView />} />
+        <Route path="/external/project/:shareReference" element={<ExternalPortal />} />
+        <Route path="/external/task/:shareReference" element={<ExternalPortal />} />
         <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
         <Route path="/board" element={<ProtectedRoute><Board /></ProtectedRoute>} />
         <Route path="/help" element={<Help />} />
