@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, CheckSquare, ChevronDown, FolderKanban, MessageSquare, Users } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -13,7 +13,6 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 import BlockedBadge from "@/components/tasks/BlockedBadge";
 import RepeatBadge from "@/components/tasks/RepeatBadge";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
-import { fetchAllTasks } from "@/lib/taskListUtils";
 
 const BOARD_KEY = "board-tasks";
 const STATUS_LABELS = Object.fromEntries(TASK_STATUSES.map((status) => [status, getStatusStyle(status).label])) as Record<TaskStatus, string>;
@@ -61,7 +60,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
   const { user, activeCompanyId, workspaceRole } = useAuth();
   const ws = useWebSocket();
   const [filters, setFilters] = useState<Filters>({ projectId: "", teamId: "", search: "" });
-  const queryKey = [BOARD_KEY, activeCompanyId, filters] as const;
+  const queryKey = [BOARD_KEY, activeCompanyId, workspaceRole, filters] as const;
   // Purely visual: which card is animating out of its lane / settling into a lane. Task data stays in react-query.
   const [leavingId, setLeavingId] = useState<string | null>(null);
   const [settledId, setSettledId] = useState<string | null>(null);
@@ -70,19 +69,39 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
   const later = useCallback((fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); }, []);
   const flash = useCallback((id: string) => { setSettledId(id); later(() => setSettledId((cur) => (cur === id ? null : cur)), SETTLE_MS); }, [later]);
 
-  const { data: result, isLoading: queryLoading, isError: queryError } = useQuery({
+  const boardQuery = useInfiniteQuery({
     queryKey,
     enabled: Boolean(activeCompanyId) && !embedded,
-    queryFn: () => fetchAllTasks({
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => api.getAllTasksCrossWorkspace({
       scope: "workspace",
+      page: pageParam,
+      limit: 100,
       search: filters.search || undefined,
       projectId: filters.projectId || undefined,
       teamId: filters.teamId || undefined,
     }),
-    staleTime: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const pageTasks = lastPage.data?.tasks || [];
+      const total = lastPage.total ?? lastPage.pagination?.totalResults;
+      if (lastPage.pagination) return lastPage.pagination.hasNextPage ? allPages.length + 1 : undefined;
+      if (total !== undefined) return allPages.reduce((count, page) => count + (page.data?.tasks?.length || 0), 0) < total ? allPages.length + 1 : undefined;
+      return pageTasks.length === 100 ? allPages.length + 1 : undefined;
+    },
+    staleTime: 30_000,
   });
-  const { data: projectResult } = useQuery({ queryKey: ["board-projects", activeCompanyId], enabled: Boolean(activeCompanyId), queryFn: () => api.getProjects(), staleTime: 60_000 });
-  const { data: teamResult } = useQuery({ queryKey: ["board-teams", activeCompanyId], enabled: Boolean(activeCompanyId), queryFn: () => api.listTeams(), staleTime: 60_000 });
+  const { data: boardData, isPending: boardPending, isError: boardIsError, hasNextPage, isFetchingNextPage, fetchNextPage } = boardQuery;
+  // Keep the first page useful immediately, then complete the authorized set
+  // in the background so board counts and drag/drop remain complete.
+  useEffect(() => {
+    if (embedded || !hasNextPage || isFetchingNextPage) return;
+    void fetchNextPage();
+  }, [embedded, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const result = boardData?.pages.flatMap((page) => page.data?.tasks || []) || [];
+  const queryLoading = boardPending;
+  const queryError = boardIsError;
+  const { data: projectResult } = useQuery({ queryKey: ["board-projects", activeCompanyId], enabled: Boolean(activeCompanyId) && !embedded, queryFn: () => api.getProjects(), staleTime: 60_000 });
+  const { data: teamResult } = useQuery({ queryKey: ["board-teams", activeCompanyId], enabled: Boolean(activeCompanyId) && !embedded, queryFn: () => api.listTeams(), staleTime: 60_000 });
   const [embeddedState, setEmbeddedState] = useState<Task[]>(embeddedTasks || []);
   useEffect(() => { if (embedded) setEmbeddedState(embeddedTasks || []); }, [embedded, embeddedTasks]);
   const boardFilter = (task: Task) => {
@@ -111,7 +130,13 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
       const previousEmbedded = embeddedState;
       setLeavingId(null);
       flash(id);
-      queryClient.setQueryData(queryKey, (old: Task[] | undefined) => old?.map((task) => task.id === id ? { ...task, status } : task));
+      queryClient.setQueryData(queryKey, (old: any) => old ? {
+        ...old,
+        pages: old.pages.map((page: any) => ({
+          ...page,
+          data: { ...page.data, tasks: (page.data?.tasks || []).map((task: Task) => task.id === id ? { ...task, status } : task) },
+        })),
+      } : old);
       if (embedded) setEmbeddedState((current) => current.map((task) => task.id === id ? { ...task, status } : task));
       return { previous, previousEmbedded };
     },
@@ -172,7 +197,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
           >
             <header className="flex shrink-0 items-center justify-between border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
               <span className="flex items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
-              <span aria-label={`${columns[status].length} tasks`} className={`min-w-[1.75rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{columns[status].length}</span>
+              <span aria-label={`${!embedded && (hasNextPage || isFetchingNextPage) ? "loading" : columns[status].length} tasks`} className={`min-w-[1.75rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{!embedded && (hasNextPage || isFetchingNextPage) ? "…" : columns[status].length}</span>
             </header>
             <div data-testid={`board-scroll-${status}`} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-2.5">
               {isLoading ? <p className="p-2 text-sm text-muted-foreground">Loading…</p> : columns[status].length === 0 ? <p className="rounded-lg border border-dashed bg-white/60 p-4 text-center text-sm text-muted-foreground">No tasks</p> : columns[status].map((task) => {

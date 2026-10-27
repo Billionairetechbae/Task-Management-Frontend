@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +56,7 @@ import Board from "@/pages/Board";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, TeamMember } from "@/lib/api";
-import { fetchAllTasks, filterTopLevelTasks } from "@/lib/taskListUtils";
+import { filterTopLevelTasks } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -196,13 +196,34 @@ const DashboardExecutive = () => {
   const shownStats: DashboardTaskStats = personalView ? myStats : taskStats;
   const taskScopeKey = personalView ? "my" : "all";
   const allTasksQueryKey = ["dashboard-all-tasks", activeCompanyId, taskScopeKey] as const;
-  const allTasksQuery = useQuery({
+  const allTasksQuery = useInfiniteQuery({
     queryKey: allTasksQueryKey,
-    queryFn: async () => filterTopLevelTasks(await fetchAllTasks({ scope: personalView ? "assigned_workspace" : "workspace" })),
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => api.getAllTasksCrossWorkspace({
+      scope: personalView ? "assigned_workspace" : "workspace",
+      page: pageParam,
+      limit: 100,
+    }),
     enabled: Boolean(activeCompanyId),
-    staleTime: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const pageTasks = lastPage.data?.tasks || [];
+      const total = lastPage.total ?? lastPage.pagination?.totalResults;
+      if (lastPage.pagination) return lastPage.pagination.hasNextPage ? allPages.length + 1 : undefined;
+      if (total !== undefined) return allPages.reduce((count, page) => count + (page.data?.tasks?.length || 0), 0) < total ? allPages.length + 1 : undefined;
+      return pageTasks.length === 100 ? allPages.length + 1 : undefined;
+    },
+    staleTime: 30_000,
   });
-  const sourceTasks = allTasksQuery.data ?? [];
+  const { data: allTasksData, hasNextPage, isFetchingNextPage, fetchNextPage } = allTasksQuery;
+  const sourceTasks = filterTopLevelTasks(allTasksData?.pages.flatMap((page) => page.data?.tasks || []) || []);
+  const taskPopulationComplete = !hasNextPage && !isFetchingNextPage;
+
+  // Render the first authorized page immediately, then finish loading the set
+  // in the background so local filters and the board eventually remain complete.
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   const sideRailOpen = taskView === "board" ? boardSideColumnOpen : sideColumnOpen;
 
   useEffect(() => {
@@ -557,7 +578,7 @@ const DashboardExecutive = () => {
                 <div className="flex items-center gap-2 pr-1">
                   <h2 className="text-sm font-semibold">Tasks</h2>
                   <span className="text-xs text-muted-foreground" aria-live="polite">
-                    {totalItems} {personalView ? "created by or assigned to you" : "total tasks"}
+                    {totalItems} {taskPopulationComplete ? (personalView ? "created by or assigned to you" : "total tasks") : "tasks loaded…"}
                   </span>
                 </div>
                 {showTaskScopeToggle && (

@@ -108,12 +108,18 @@ export const fetchDashboardData = async (
   workspaceRole: string | null | undefined,
   _userId?: string
 ): Promise<DashboardData> => {
-  const personal = await fetchPersonal();
+  const personalPromise = fetchPersonal();
   if (workspaceRole === "member") {
+    const personal = await personalPromise;
     return { tasks: personal.myTasks, ...personal, teamStats: emptyTeamStats, taskStats: personal.myStats };
   }
 
-  const response = await api.getExecutiveDashboard();
+  // The personal task list/summary and workspace dashboard summary are independent
+  // authorized reads. Starting them together removes a full request waterfall.
+  const [personal, response] = await Promise.all([
+    personalPromise,
+    api.getExecutiveDashboard(),
+  ]);
   const {
     overview = { team: emptyTeamStats, tasks: emptyStats() },
     recentActivity = { tasks: [] as Task[] },
@@ -155,7 +161,6 @@ export const useDashboardData = () => {
     queryKey: queryKeys.dashboard(activeCompanyId, workspaceRole),
     queryFn: () => fetchDashboardData(workspaceRole, user?.id),
     enabled: Boolean(user),
-    placeholderData: (previous) => previous,
   });
 };
 

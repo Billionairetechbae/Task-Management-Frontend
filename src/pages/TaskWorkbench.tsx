@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Loader2, ListChecks, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,10 +15,25 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
  */
 const TaskWorkbench = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user, activeCompanyId, workspaceRole } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
+  const cachedFirstTask = (['all', 'my'] as const)
+    .map((scope) => queryClient.getQueryData<any>(["dashboard-all-tasks", activeCompanyId, scope]))
+    .flatMap((cached) => cached?.pages?.flatMap((page: any) => page?.data?.tasks || []) || [])
+    .find((task: any) => task?.id);
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["task-workbench-entry"],
-    queryFn: () => api.getAllTasksCrossWorkspace({ page: 1, limit: 1 }),
+    // The entry lookup is cross-workspace, but its cache still includes the
+    // authenticated user and active workspace context. The detail endpoint
+    // remains the authorization authority after navigation.
+    queryKey: ["task-workbench-entry", user?.id, activeCompanyId, workspaceRole],
+    queryFn: () => api.getAllTasksCrossWorkspace({ scope: "assigned_all", page: 1, limit: 50 }),
+    enabled: Boolean(user),
+    // Dashboard → Workbench can navigate from an already authorized task
+    // population. The detail request below still performs the final access
+    // check, so a cached ID can never grant access by itself.
+    initialData: cachedFirstTask ? { status: "success", data: { tasks: [cachedFirstTask] } } : undefined,
+    staleTime: 30_000,
   });
 
   useEffect(() => {

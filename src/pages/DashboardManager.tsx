@@ -43,6 +43,7 @@ const DashboardManager = () => {
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [loading, setLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(true);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -93,51 +94,57 @@ const DashboardManager = () => {
     setCurrentPage(1);
   }, [statusFilter]);
 
-  // Tasks and team members are independent sources: one failing must neither erase nor fake the other's numbers.
-  // The sequence guard drops responses that arrive after the workspace changed or a newer load started.
+  // Tasks and team members are independent sources. Render the task dashboard as
+  // soon as its source resolves; the slower team request must not block it.
   const loadDashboard = async () => {
     const sequence = ++loadSequence.current;
     setLoading(true);
-    const [tasksResult, membersResult] = await Promise.allSettled([api.getTasks(), api.getCompanyAssistants()]);
-    if (sequence !== loadSequence.current) return;
+    setMembersLoading(true);
 
-    let topTasks: Task[] = [];
-    let taskError: string | null = null;
-    if (tasksResult.status === "fulfilled" && Array.isArray(tasksResult.value?.data?.tasks)) {
-      topTasks = filterTopLevelTasks(tasksResult.value.data.tasks);
-    } else {
-      taskError = tasksResult.status === "rejected" ? (tasksResult.reason?.message || "Tasks could not be loaded.") : "Tasks could not be loaded.";
-    }
-
-    let memberRows: Array<{ isVerified?: boolean }> | null = null;
-    let memberError: string | null = null;
-    if (membersResult.status === "fulfilled") {
-      try { memberRows = teamMemberRows(membersResult.value); }
-      catch (err: any) { memberError = err.message || "Team member data was unavailable."; }
-    } else {
-      memberError = membersResult.reason?.message || "Team member data was unavailable.";
-    }
-
-    const completed = topTasks.filter((t) => t.status === "completed").length;
-    const total = topTasks.length;
-    setTasks(topTasks);
-    setTasksError(taskError);
-    setMembersError(memberError);
-    setStats({
-      totalTasks: total,
-      pending: topTasks.filter((t) => t.status === "pending").length,
-      inProgress: topTasks.filter((t) => t.status === "in_progress").length,
-      completed,
-      overdue: topTasks.filter((t) => new Date(t.deadline) < new Date() && t.status !== "completed").length,
-      urgent: topTasks.filter((t) => t.priority === "high").length,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-      totalAssistants: memberRows ? memberRows.length : 0,
-      verifiedAssistants: memberRows ? memberRows.filter((a) => a.isVerified).length : 0,
+    void api.getTasks().then((result) => {
+      if (sequence !== loadSequence.current) return;
+      if (!Array.isArray(result?.data?.tasks)) throw new Error("Tasks could not be loaded.");
+      const topTasks = filterTopLevelTasks(result.data.tasks);
+      const completed = topTasks.filter((t) => t.status === "completed").length;
+      const total = topTasks.length;
+      setTasks(topTasks);
+      setTasksError(null);
+      setStats((current) => ({
+        ...current,
+        totalTasks: total,
+        pending: topTasks.filter((t) => t.status === "pending").length,
+        inProgress: topTasks.filter((t) => t.status === "in_progress").length,
+        completed,
+        overdue: topTasks.filter((t) => t.deadline && new Date(t.deadline) < new Date() && t.status !== "completed").length,
+        urgent: topTasks.filter((t) => t.priority === "high").length,
+        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      }));
+    }).catch((error: any) => {
+      if (sequence !== loadSequence.current) return;
+      const message = error?.message || "Tasks could not be loaded.";
+      setTasksError(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
+    }).finally(() => {
+      if (sequence === loadSequence.current) setLoading(false);
     });
-    if (taskError || memberError) {
-      toast({ title: "Error", description: taskError || memberError || "Failed to load dashboard", variant: "destructive" });
-    }
-    setLoading(false);
+
+    void api.getCompanyAssistants().then((result) => {
+      if (sequence !== loadSequence.current) return;
+      const memberRows = teamMemberRows(result);
+      setMembersError(null);
+      setStats((current) => ({
+        ...current,
+        totalAssistants: memberRows.length,
+        verifiedAssistants: memberRows.filter((a) => a.isVerified).length,
+      }));
+    }).catch((error: any) => {
+      if (sequence !== loadSequence.current) return;
+      const message = error?.message || "Team member data was unavailable.";
+      setMembersError(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
+    }).finally(() => {
+      if (sequence === loadSequence.current) setMembersLoading(false);
+    });
   };
 
   useEffect(() => {
@@ -146,6 +153,7 @@ const DashboardManager = () => {
     setStats(EMPTY_STATS);
     setTasksError(null);
     setMembersError(null);
+    setMembersLoading(true);
     void loadDashboard();
     return () => { loadSequence.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,15 +226,15 @@ const DashboardManager = () => {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <StatsCard
           title="TeamMembers"
-          value={membersError ? "—" : stats.totalAssistants}
-          description={membersError ? "Unavailable" : undefined}
+          value={membersError ? "—" : membersLoading ? "…" : stats.totalAssistants}
+          description={membersError ? "Unavailable" : membersLoading ? "Loading" : undefined}
           icon={Users}
           iconClassName="bg-primary/10"
         />
         <StatsCard
           title="Verified TeamMembers"
-          value={membersError ? "—" : stats.verifiedAssistants}
-          description={membersError ? "Unavailable" : undefined}
+          value={membersError ? "—" : membersLoading ? "…" : stats.verifiedAssistants}
+          description={membersError ? "Unavailable" : membersLoading ? "Loading" : undefined}
           icon={CheckCircle2}
           iconClassName="bg-success/10"
         />

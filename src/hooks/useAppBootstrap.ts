@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryKeys } from "@/lib/queryKeys";
-import { api } from "@/lib/api";
 import { fetchDashboardData, fetchProjects } from "@/hooks/useCoreQueries";
 
 /**
@@ -34,10 +33,6 @@ export const useAppBootstrap = () => {
         queryClient.prefetchQuery({
           queryKey: queryKeys.projects(activeCompanyId),
           queryFn: fetchProjects,
-        }),
-        queryClient.prefetchQuery({
-          queryKey: queryKeys.taskList(activeCompanyId, { page: 1, limit: 50 }),
-          queryFn: () => api.getAllTasksCrossWorkspace({ page: 1, limit: 50 }),
         }),
       ]);
     };
