@@ -6,6 +6,9 @@ import { ConnectedStorageAttachmentsSection } from "@/components/connectedStorag
 import type { ConnectedStorageAttachment } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ClientViewShareButton from "@/components/ClientViewShareButton";
+import ExternalShareDialog from "@/components/external/ExternalShareDialog";
+import ClientCommentsPanel from "@/components/external/ClientCommentsPanel";
+import { Dialog as ClientCommentsDialog, DialogContent as ClientCommentsDialogContent, DialogHeader as ClientCommentsDialogHeader, DialogTitle as ClientCommentsDialogTitle } from "@/components/ui/dialog";
 import {
   api,
   ApiError,
@@ -154,6 +157,8 @@ export default function ProjectDetails() {
   const [checklists, setChecklists] = useState<ProjectChecklist[]>([]);
   const [connectedStorageAttachments, setConnectedStorageAttachments] = useState<ConnectedStorageAttachment[] | undefined>(undefined);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [externalShareOpen, setExternalShareOpen] = useState(false);
+  const [clientCommentsOpen, setClientCommentsOpen] = useState(false);
 
   const [isLogoOpen, setIsLogoOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -922,6 +927,37 @@ export default function ProjectDetails() {
                         resourceType="project"
                         resourceId={project.id}
                       />
+                    )}
+
+                    {project && (workspaceRole === "owner" || workspaceRole === "admin") && (
+                      <>
+                        <Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-sm" onClick={() => setExternalShareOpen(true)}>
+                          <span className="hidden sm:inline text-[11px]">Invite external client</span>
+                          <span className="sm:hidden text-[11px]">Invite</span>
+                        </Button>
+                        <ExternalShareDialog
+                          open={externalShareOpen}
+                          onOpenChange={setExternalShareOpen}
+                          resourceType="project"
+                          resourceId={project.id}
+                          resourceName={project.name}
+                          projectTasks={tasks.filter((t: any) => !t.parentTaskId).map((t: any) => ({ id: t.id, title: t.title }))}
+                        />
+                      </>
+                    )}
+
+                    {project && ["owner", "admin", "manager"].includes(String(workspaceRole)) && (
+                      <>
+                        <Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-sm" onClick={() => setClientCommentsOpen(true)}>
+                          <span className="text-[11px]">Client Comments</span>
+                        </Button>
+                        <ClientCommentsDialog open={clientCommentsOpen} onOpenChange={setClientCommentsOpen}>
+                          <ClientCommentsDialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                            <ClientCommentsDialogHeader><ClientCommentsDialogTitle>Client Comments — {project.name}</ClientCommentsDialogTitle></ClientCommentsDialogHeader>
+                            {clientCommentsOpen && <ClientCommentsPanel resourceType="project" resourceId={project.id} />}
+                          </ClientCommentsDialogContent>
+                        </ClientCommentsDialog>
+                      </>
                     )}
 
                     {canRequestProjectTaskAccess && (

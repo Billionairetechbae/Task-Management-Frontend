@@ -280,6 +280,35 @@ export interface ErrorResponse {
    CLIENT VIEW / RESOURCE ACCESS
 ============================ */
 
+export type ExternalShareResourceType = "project" | "task";
+export type ExternalSharePermission = "viewer" | "commenter";
+
+export interface ExternalShare {
+  id: string;
+  email: string | null;
+  permission: ExternalSharePermission;
+  status: "pending" | "active" | "revoked";
+  resourceType: ExternalShareResourceType;
+  resourceId: string;
+  visibleTaskIds: string[];
+  expiresAt: string | null;
+  expired?: boolean;
+  activatedAt: string | null;
+  lastAccessedAt: string | null;
+  createdAt: string;
+}
+
+export interface ExternalClientComment {
+  id: string;
+  authorKind: "external" | "internal";
+  authorName: string;
+  authorOrganization: string | null;
+  content: string;
+  createdAt: string;
+  editedAt: string | null;
+  isMine: boolean;
+}
+
 export type ClientViewResourceType = "project" | "task";
 
 export interface ClientViewShareLink {
@@ -4951,6 +4980,45 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
       throw new Error(result?.message || "Unable to load client view");
     }
     return result;
+  }
+
+  /* ============================
+     EXTERNAL CLIENT SHARING (internal side; external clients are NOT Admiino users)
+  ============================ */
+
+  async listExternalShares(resourceType: ExternalShareResourceType, resourceId: string): Promise<{ status: string; data: { shares: ExternalShare[] } }> {
+    return this.request(`/external-shares?resourceType=${resourceType}&resourceId=${encodeURIComponent(resourceId)}`, { headers: this.getAuthHeaders(true) });
+  }
+
+  async createExternalShare(payload: {
+    resourceType: ExternalShareResourceType;
+    resourceId: string;
+    email: string;
+    permission: ExternalSharePermission;
+    message?: string;
+    visibleTaskIds?: string[];
+  }): Promise<{ status: string; data: { grant: ExternalShare; emailSent: boolean } }> {
+    return this.request("/external-shares", { method: "POST", headers: this.getAuthHeaders(true), body: JSON.stringify(payload) });
+  }
+
+  async updateExternalShare(id: string, payload: { permission?: ExternalSharePermission; visibleTaskIds?: string[] }): Promise<{ status: string; data: { share: ExternalShare } }> {
+    return this.request(`/external-shares/${encodeURIComponent(id)}`, { method: "PATCH", headers: this.getAuthHeaders(true), body: JSON.stringify(payload) });
+  }
+
+  async resendExternalShare(id: string): Promise<{ status: string; data: { emailSent: boolean } }> {
+    return this.request(`/external-shares/${encodeURIComponent(id)}/resend`, { method: "POST", headers: this.getAuthHeaders(true) });
+  }
+
+  async revokeExternalShare(id: string): Promise<{ status: string; data: { share: ExternalShare } }> {
+    return this.request(`/external-shares/${encodeURIComponent(id)}/revoke`, { method: "PATCH", headers: this.getAuthHeaders(true) });
+  }
+
+  async listExternalClientComments(resourceType: ExternalShareResourceType, resourceId: string): Promise<{ status: string; data: { title: string; hasExternalCollaborators: boolean; comments: ExternalClientComment[] } }> {
+    return this.request(`/external-shares/comments?resourceType=${resourceType}&resourceId=${encodeURIComponent(resourceId)}`, { headers: this.getAuthHeaders(true) });
+  }
+
+  async replyToExternalClients(payload: { resourceType: ExternalShareResourceType; resourceId: string; content: string }): Promise<{ status: string; data: { comment: ExternalClientComment } }> {
+    return this.request("/external-shares/comments", { method: "POST", headers: this.getAuthHeaders(true), body: JSON.stringify(payload) });
   }
 
   async createResourceAccessRequest(payload: {

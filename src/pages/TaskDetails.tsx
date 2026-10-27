@@ -5,6 +5,8 @@ import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
 import { triggerBlobDownload } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import ClientViewShareButton from "@/components/ClientViewShareButton";
+import ExternalShareDialog from "@/components/external/ExternalShareDialog";
+import ClientCommentsPanel from "@/components/external/ClientCommentsPanel";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -109,6 +111,10 @@ const TaskDetails = () => {
   const { user, activeCompanyId, workspaceRole } = useAuth();
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const canSaveAsTemplate = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
+  // Backend enforces both; these only decide whether to show the controls.
+  const canShareExternally = workspaceRole === "owner" || workspaceRole === "admin";
+  const canSeeClientComments = canShareExternally || workspaceRole === "manager";
+  const [externalShareOpen, setExternalShareOpen] = useState(false);
   const canTrackTime = ["owner", "admin", "manager", "member"].includes(String(workspaceRole));
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const { toast } = useToast();
@@ -227,7 +233,7 @@ const TaskDetails = () => {
 
   // Workbench state
   const { isMobile, isTablet } = useBreakpoint();
-  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity" | "edit">("chat");
+  const [rightTab, setRightTab] = useState<"chat" | "files" | "activity" | "client" | "edit">("chat");
   const [listSearch, setListSearch] = useState("");
   const [listStatus, setListStatus] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
@@ -1700,6 +1706,13 @@ const TaskDetails = () => {
               </div>
             )}
 
+            {canShareExternally && task.id && !task.parentTaskId && (
+              <div className="rounded-lg border bg-card p-4">
+                <Button type="button" variant="outline" size="sm" onClick={() => setExternalShareOpen(true)}>Share → Invite external client</Button>
+                <ExternalShareDialog open={externalShareOpen} onOpenChange={setExternalShareOpen} resourceType="task" resourceId={task.id} resourceName={task.title} />
+              </div>
+            )}
+
             {canSaveAsTemplate && task.id && !task.parentTaskId && (
               <div className="rounded-lg border bg-card p-4">
                 <Button type="button" variant="outline" size="sm" onClick={() => setSaveTemplateOpen(true)}>Save as template</Button>
@@ -2278,6 +2291,14 @@ const TaskDetails = () => {
                 </TooltipTrigger>
                 <TooltipContent>Activity — press 3</TooltipContent>
               </Tooltip>
+              {canSeeClientComments && !task.parentTaskId && <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="client" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <User2 className="h-3.5 w-3.5" /> Client
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Client Comments — shared with external clients</TooltipContent>
+              </Tooltip>}
               {canTrackTime && <Tooltip>
                 <TooltipTrigger asChild>
                   <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
@@ -2303,6 +2324,7 @@ const TaskDetails = () => {
         <TabsContent value="files" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{FilesContent}</TabsContent>
         <TabsContent value="activity" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{ActivityContent}</TabsContent>
         {canTrackTime && <TabsContent value="time" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"><TaskTimePanel taskId={task.id} taskTitle={task.title} /></TabsContent>}
+        {canSeeClientComments && !task.parentTaskId && <TabsContent value="client" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden"><ClientCommentsPanel resourceType="task" resourceId={task.id} /></TabsContent>}
         <TabsContent value="edit" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">{EditContent}</TabsContent>
       </Tabs>
     </div>
