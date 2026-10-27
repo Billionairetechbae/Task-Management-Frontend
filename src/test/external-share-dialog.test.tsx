@@ -27,6 +27,10 @@ describe("ExternalShareDialog", () => {
     open();
     expect(await screen.findByText("reviewer@agency.com")).toBeInTheDocument();
     expect(screen.getByText(/no admiino account needed/i)).toBeInTheDocument();
+    const warning = screen.getByRole("note");
+    expect(warning).toHaveTextContent(/description exactly as written/i);
+    expect(warning).toHaveTextContent(/read each other's client comments/i);
+    expect(warning).toHaveTextContent(/attachments stay private/i);
 
     await userEvent.type(screen.getByLabelText("Client email address"), "client@company.com");
     await userEvent.click(screen.getByRole("checkbox", { name: /mock-ups/i }));

@@ -86,6 +86,11 @@ const ExternalShareDialog = ({ open, onOpenChange, resourceType, resourceId, res
           </DialogDescription>
         </DialogHeader>
 
+        <div role="note" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-200">
+          <strong>Check before sharing:</strong> the client will see this {resourceType}'s {resourceType === "project" ? "name and description" : "title and description"} exactly as written
+          {resourceType === "project" ? ", plus the tasks you tick below" : ""}. Anyone invited to the same item can also read each other's Client Comments. Attachments stay private.
+        </div>
+
         <div className="grid gap-3">
           <div className="grid gap-1.5">
             <Label htmlFor="ext-email">Client email address</Label>
