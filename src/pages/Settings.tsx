@@ -51,6 +51,7 @@ import { canExportWorkspace } from "@/lib/permissions";
 import { SUBSCRIPTION_PATH, canViewSubscription } from "@/lib/workspaceNavigation";
 import { NotificationPreferencesMatrix } from "@/components/notifications/NotificationPreferencesMatrix";
 import { WorkspaceNotificationDelivery, canManageWorkspaceNotificationDeliveries } from "@/components/notifications/WorkspaceNotificationDelivery";
+import McpConnections from "@/components/integrations/McpConnections";
 
 type TabId =
   | "profile"
@@ -212,7 +213,12 @@ const Settings = () => {
         return <Profile embedded />;
 
       case "integrations":
-        return <Integrations embedded />;
+        return (
+          <div className="space-y-5">
+            <Integrations embedded />
+            {import.meta.env.VITE_MCP_ENABLED === "true" && <McpConnections />}
+          </div>
+        );
 
       case "audit":
         return <AuditExport embedded />;

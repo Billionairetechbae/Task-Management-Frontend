@@ -2067,6 +2067,12 @@ export interface ProjectHealthSummary {
 // still requires its hosting environment to provide VITE_API_BASE_URL; the
 // empty production fallback preserves the existing same-origin behaviour.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5001/api/v1" : "");
+const configuredMcpUrl = import.meta.env.VITE_MCP_SERVER_URL?.replace(/\/+$/, "");
+const defaultMcpOrigin = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+export const MCP_SERVER_URL = configuredMcpUrl
+  ? (configuredMcpUrl.endsWith("/mcp") ? configuredMcpUrl : `${configuredMcpUrl}/mcp`)
+  : `${defaultMcpOrigin}/mcp`;
+const MCP_API_ORIGIN = MCP_SERVER_URL.replace(/\/mcp$/, "");
 import { captureUnexpectedApiError } from "@/lib/sentry";
 
 /* ============================
@@ -2101,7 +2107,80 @@ export type SupportStatus = "received" | "in_review" | "waiting_on_user" | "in_p
 export interface SupportMessage { id: string; authorType: "user" | "admin" | "ai" | "system"; content: string; createdAt: string; attachments?: Array<{ fileName: string; fileType: string; fileSize?: number; downloadUrl: string }> }
 export interface SupportTicket { id: string; ticketNumber: string; subject: string; category: string; status: SupportStatus; priority: string; aiEscalated: boolean; createdAt: string; updatedAt: string; unread?: boolean; messages?: SupportMessage[] }
 
+export interface McpAuthorizationRequest {
+  client: { name: string; redirectHost: string };
+  scopes: string[];
+  workspaces: Array<{ id: string; name: string; role: string }>;
+}
+export interface McpConnection {
+  id: string;
+  clientName: string;
+  scopes: string[];
+  workspaces: Array<{ id: string; name: string; role: string }>;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
 class ApiClient {
+  private async mcpRequest<T>(path: string, options: RequestInit = {}): Promise<T | null> {
+    const headers = new Headers(options.headers || {});
+    new Headers(this.getAuthHeaders(false)).forEach((value, key) => headers.set(key, value));
+    if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+
+    let response: Response;
+    try {
+      response = await fetch(`${MCP_API_ORIGIN}${path}`, { ...options, headers });
+    } catch (error) {
+      throw new NetworkError(error instanceof Error ? error.message : "Network error");
+    }
+
+    if (response.status === 204) return null;
+    let result: unknown = null;
+    try {
+      result = await response.json();
+    } catch {
+      if (response.ok) throw new ApiError("MCP server returned an invalid response.", response.status);
+    }
+    if (!response.ok) {
+      const body = typeof result === "object" && result !== null
+        ? result as Record<string, unknown>
+        : {};
+      const message = [body.error_description, body.message, body.error]
+        .find((value): value is string => typeof value === "string" && value.length > 0) || "MCP request failed";
+      throw new ApiError(message, response.status, result);
+    }
+    return result as T;
+  }
+
+  async getMcpAuthorizationRequest(requestId: string): Promise<McpAuthorizationRequest> {
+    const result = await this.mcpRequest<McpAuthorizationRequest>(
+      `/oauth/user/authorization-requests/${encodeURIComponent(requestId)}`,
+    );
+    if (!result) throw new ApiError("MCP authorization request was empty.", 500);
+    return result;
+  }
+
+  async completeMcpAuthorization(
+    requestId: string,
+    input: { approved: boolean; workspaceIds?: string[] },
+  ): Promise<{ redirectUrl: string }> {
+    const result = await this.mcpRequest<{ redirectUrl: string }>(
+      `/oauth/user/authorization-requests/${encodeURIComponent(requestId)}`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    if (!result?.redirectUrl) throw new ApiError("MCP authorization response was invalid.", 500);
+    return result;
+  }
+
+  async getMcpConnections(): Promise<McpConnection[]> {
+    const result = await this.mcpRequest<{ connections: McpConnection[] }>("/oauth/user/connections");
+    return result?.connections || [];
+  }
+
+  async revokeMcpConnection(connectionId: string): Promise<void> {
+    await this.mcpRequest(`/oauth/user/connections/${encodeURIComponent(connectionId)}`, { method: "DELETE" });
+  }
+
   async get<T>(
       path: string,
       options?: {
