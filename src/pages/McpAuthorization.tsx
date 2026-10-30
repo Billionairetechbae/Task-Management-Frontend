@@ -120,6 +120,11 @@ export default function McpAuthorization() {
                   </span>
                 </label>
               )}
+              {!request.scopes.includes("mcp:write") && (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted-foreground">
+                  This client requested read-only access. Admiino cannot add task-change access to this request. To authorize task changes, reconnect from the client with write access requested; you can then approve or decline it here.
+                </p>
+              )}
 
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium">Choose the workspaces this connection may access</legend>
