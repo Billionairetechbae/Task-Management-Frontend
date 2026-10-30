@@ -57,6 +57,15 @@ interface TaskTableProps {
   canDelete?: (task: Task) => boolean;
 }
 
+export const formatTaskDeadline = (value: string | Date | null | undefined): string => {
+  if ((typeof value !== "string" && !(value instanceof Date)) ||
+      (typeof value === "string" && value.trim() === "")) {
+    return "—";
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString();
+};
+
 export const getStatusDisplay = (status: string) => {
   const m: Record<string, string> = {
     pending: "Pending",
@@ -375,7 +384,7 @@ export const TaskTable = ({
 
                 <td className="px-4 py-3 text-[12px] text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <span>{new Date(task.deadline).toLocaleDateString()}</span>
+                    <span>{formatTaskDeadline(task.deadline)}</span>
                     {task.calendarSynced ? (
                       <Calendar className="w-3 h-3 text-muted-foreground" />
                     ) : null}
@@ -547,7 +556,7 @@ export const TaskTable = ({
               <div>
                 <p className="text-[10px] uppercase tracking-wide">Deadline</p>
                 <div className="flex items-center gap-1">
-                  <p>{new Date(task.deadline).toLocaleDateString()}</p>
+                  <p>{formatTaskDeadline(task.deadline)}</p>
                   {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
                 </div>
               </div>
@@ -673,7 +682,7 @@ export const CompactTaskTable = ({
                 </Badge>
                 {task.deadline && (
                   <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
-                    Due {new Date(task.deadline).toLocaleDateString()}
+                    Due {formatTaskDeadline(task.deadline)}
                     {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
                   </span>
                 )}

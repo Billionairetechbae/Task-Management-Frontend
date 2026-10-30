@@ -39,10 +39,10 @@ beforeAll(() => {
   Element.prototype.releasePointerCapture ||= () => {};
 });
 
-function mount(onSuccess = vi.fn()) {
+function mount(onSuccess = vi.fn(), initialDeadline = "2026-11-01T10:00") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const spy = vi.spyOn(client, "invalidateQueries");
-  render(<QueryClientProvider client={client}><CreateTaskDialog open onOpenChange={() => undefined} onSuccess={onSuccess} initialDeadline="2026-11-01T10:00" /></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><CreateTaskDialog open onOpenChange={() => undefined} onSuccess={onSuccess} initialDeadline={initialDeadline} /></QueryClientProvider>);
   return { onSuccess, spy };
 }
 async function fillAndPick(...emails: string[]) {
@@ -97,6 +97,17 @@ describe("Create Task: multiple assignees", () => {
     await waitFor(() => expect(api.createTask).toHaveBeenCalled());
     const form: FormData = api.createTask.mock.calls[0][0];
     expect(form.get("assigneeIds")).toBeNull(); expect(form.get("assigneeId")).toBeNull();
+  });
+
+  it("allows manual task creation without a deadline and omits the deadline field", async () => {
+    mount(vi.fn(), "");
+    await userEvent.type(screen.getByPlaceholderText("Enter task title"), "Undated task");
+    await userEvent.type(screen.getByPlaceholderText("Describe the task..."), "No deadline needed");
+    submit();
+
+    await waitFor(() => expect(api.createTask).toHaveBeenCalledTimes(1));
+    const form: FormData = api.createTask.mock.calls[0][0];
+    expect(form.get("deadline")).toBeNull();
   });
 
   it("a rejected assignment is reported, nothing is reported as created, and the selection is kept for correction", async () => {

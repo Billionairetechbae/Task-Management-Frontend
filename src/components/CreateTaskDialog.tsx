@@ -170,7 +170,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.description || !formData.deadline) {
+    if (!formData.title || !formData.description) {
       toast({
         title: "Missing Fields",
         description: "Please complete all required fields.",
@@ -188,7 +188,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
           title: formData.title,
           description: formData.description,
           priority: formData.priority,
-          deadline: new Date(formData.deadline).toISOString(),
+          ...(formData.deadline ? { deadline: new Date(formData.deadline).toISOString() } : {}),
           category: formData.category,
           ...(formData.assigneeIds.length ? { assigneeId: formData.assigneeIds[0], assigneeIds: formData.assigneeIds } : {}),
           teamId: formData.teamId,
@@ -201,7 +201,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
         form.append("title", formData.title);
         form.append("description", formData.description);
         form.append("priority", formData.priority);
-        form.append("deadline", new Date(formData.deadline).toISOString());
+        if (formData.deadline) form.append("deadline", new Date(formData.deadline).toISOString());
         form.append("category", formData.category);
         form.append("customFields", JSON.stringify(customFields));
 
@@ -250,7 +250,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
             <Paperclip className="w-5 h-5" />
             Create New Task
           </DialogTitle>
-          <DialogDescription>Set a clear outcome, owner and deadline. You can add details and files as needed.</DialogDescription>
+          <DialogDescription>Set a clear outcome and owner. A deadline is optional; you can add details and files as needed.</DialogDescription>
         </DialogHeader>
 
         {!projectId && (
@@ -411,12 +411,11 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
           </div>
 
           <div>
-            <Label>Deadline *</Label>
+            <Label>Deadline (Optional)</Label>
             <Input
               type="datetime-local"
               value={formData.deadline}
               onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-              required
             />
             {/* Informational helper when Google Calendar is connected and a deadline is selected */}
             {formData.deadline && googleStatus.data?.connected ? (
