@@ -13,6 +13,7 @@ export default function McpAuthorization() {
   const requestId = searchParams.get("request_id") || "";
   const [request, setRequest] = useState<McpAuthorizationRequest | null>(null);
   const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([]);
+  const [allowWrite, setAllowWrite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,12 @@ export default function McpAuthorization() {
       return () => { active = false; };
     }
     api.getMcpAuthorizationRequest(requestId)
-      .then((result) => { if (active) setRequest(result); })
+      .then((result) => {
+        if (active) {
+          setRequest(result);
+          setAllowWrite(false);
+        }
+      })
       .catch((reason) => {
         if (active) setError(reason instanceof ApiError ? reason.message : "Could not load this authorization request.");
       })
@@ -46,7 +52,10 @@ export default function McpAuthorization() {
     try {
       const result = await api.completeMcpAuthorization(requestId, {
         approved,
-        ...(approved ? { workspaceIds: selectedWorkspaceIds } : {}),
+        ...(approved ? {
+          workspaceIds: selectedWorkspaceIds,
+          scopes: ["mcp:read", ...(allowWrite && request?.scopes.includes("mcp:write") ? ["mcp:write"] : [])],
+        } : {}),
       });
       window.location.assign(result.redirectUrl);
     } catch (reason) {
@@ -91,9 +100,26 @@ export default function McpAuthorization() {
               <section className="space-y-2">
                 <h2 className="text-sm font-medium">Permissions requested</h2>
                 <p className="rounded-lg bg-muted/50 p-3 text-sm">
-                  Read-only access to workspace information, tasks, projects, and team summaries. The assistant cannot create or change data.
+                  Read access to workspace information, tasks, projects, and team summaries.
                 </p>
               </section>
+              {request.scopes.includes("mcp:write") && (
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                    checked={allowWrite}
+                    onChange={(event) => setAllowWrite(event.target.checked)}
+                    disabled={submitting}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">Allow task changes</span>
+                    <span className="block text-xs text-muted-foreground">
+                      The assistant may create tasks, change task status, and post task comments in the workspaces you select. You can leave this unchecked for read-only access.
+                    </span>
+                  </span>
+                </label>
+              )}
 
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium">Choose the workspaces this connection may access</legend>

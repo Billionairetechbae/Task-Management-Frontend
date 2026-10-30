@@ -2162,7 +2162,7 @@ class ApiClient {
 
   async completeMcpAuthorization(
     requestId: string,
-    input: { approved: boolean; workspaceIds?: string[] },
+    input: { approved: boolean; workspaceIds?: string[]; scopes?: string[] },
   ): Promise<{ redirectUrl: string }> {
     const result = await this.mcpRequest<{ redirectUrl: string }>(
       `/oauth/user/authorization-requests/${encodeURIComponent(requestId)}`,
