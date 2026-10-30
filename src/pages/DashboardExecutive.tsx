@@ -153,6 +153,7 @@ const DashboardExecutive = () => {
 
   // Cached data stays visible: only show the skeleton on a true cold start.
   const loading = dashboardQuery.isPending && !dashboardQuery.data;
+  const dashboardStatsUnavailable = dashboardQuery.isError && !dashboardQuery.data;
   const teamLoading = pendingQuery.isPending && !pendingQuery.data;
   const isRefreshing = dashboardQuery.isFetching && !loading;
 
@@ -418,7 +419,7 @@ const DashboardExecutive = () => {
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="dashboard-stats">
         <StatsCard
           title={personalView ? "My Tasks" : "Total Tasks"}
-          value={shownStats.totalTasks}
+          value={dashboardStatsUnavailable ? "—" : loading ? "…" : shownStats.totalTasks}
           icon={ClipboardList}
           iconClassName="bg-primary/10"
           className="p-3 sm:p-3.5"
@@ -426,7 +427,7 @@ const DashboardExecutive = () => {
 
         <StatsCard
           title="Completion Rate"
-          value={`${shownStats.completionRate}%`}
+          value={dashboardStatsUnavailable ? "—" : loading ? "…" : `${shownStats.completionRate}%`}
           icon={TrendingUp}
           iconClassName="bg-success/10"
           className="p-3 sm:p-3.5"
@@ -434,7 +435,7 @@ const DashboardExecutive = () => {
 
         <StatsCard
           title="In Progress"
-          value={shownStats.inProgressTasks}
+          value={dashboardStatsUnavailable ? "—" : loading ? "…" : shownStats.inProgressTasks}
           icon={Clock}
           iconClassName="bg-info/10"
           className="p-3 sm:p-3.5"
@@ -442,7 +443,7 @@ const DashboardExecutive = () => {
 
         <StatsCard
           title="Overdue"
-          value={shownStats.overdueTasks}
+          value={dashboardStatsUnavailable ? "—" : loading ? "…" : shownStats.overdueTasks}
           icon={AlertTriangle}
           iconClassName="bg-destructive/10"
           className="p-3 sm:p-3.5"

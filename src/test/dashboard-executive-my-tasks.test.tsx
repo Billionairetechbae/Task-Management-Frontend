@@ -4,11 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ role: "member" as string, data: undefined as any, canViewAll: true, getAllTasks: vi.fn() }));
+const state = vi.hoisted(() => ({ role: "member" as string, data: undefined as any, isError: false, canViewAll: true, getAllTasks: vi.fn() }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "kv", firstName: "Kehinde", lastName: "Victor" }, workspaceRole: state.role, activeCompanyId: "w1", workspaces: [{ id: "w1" }], setActiveCompanyId: vi.fn(), refreshWorkspaces: vi.fn() }) }));
 vi.mock("@/hooks/useWorkspaceSettings", () => ({ useWorkspaceSettings: () => ({ canPerformRoleOperation: (key: string) => (key === "view_all_tasks" ? state.canViewAll : true) }) }));
 vi.mock("@/hooks/useCoreQueries", () => ({
-  useDashboardData: () => ({ data: state.data, isPending: false, isFetching: false, refetch: vi.fn() }),
+  useDashboardData: () => ({ data: state.data, isPending: false, isError: state.isError, isFetching: false, refetch: vi.fn() }),
   usePendingVerificationsQuery: () => ({ data: [], isPending: false }),
   useTaskCacheUpdater: () => ({ patchTaskEverywhere: vi.fn(), removeTaskEverywhere: vi.fn(), invalidateTasks: vi.fn() }),
 }));
@@ -31,7 +31,7 @@ const mine = [t("Done A", "completed"), t("Done B", "completed"), t("Project Ric
 
 describe("Dashboard personal task population", () => {
   beforeEach(() => {
-    state.role = "member"; state.canViewAll = true;
+    state.role = "member"; state.isError = false; state.canViewAll = true;
     state.data = {
       tasks: mine, myTasks: mine,
       teamStats: { totalAssistants: 0, availableAssistants: 0, pendingVerifications: 0, totalExecutives: 0 },
@@ -78,6 +78,19 @@ describe("Dashboard personal task population", () => {
     state.data = { ...state.data, tasks: [], myTasks: [], taskStats: stat({}), myStats: stat({}) };
     renderPage();
     expect(within(screen.getByTestId("dashboard-stats")).getByText("0%")).toBeInTheDocument();
+  });
+
+  it("shows unavailable KPI values instead of valid-looking zeros when the dashboard request fails", async () => {
+    state.role = "admin";
+    state.data = undefined;
+    state.isError = true;
+    state.getAllTasks.mockResolvedValue({ status: "success", total: 0, data: { tasks: [] } });
+    renderPage();
+
+    const stats = within(screen.getByTestId("dashboard-stats"));
+    expect(stats.getAllByText("—")).toHaveLength(4);
+    expect(await screen.findAllByText("Member counts could not be loaded.")).not.toHaveLength(0);
+    expect(stats.queryByText("0")).not.toBeInTheDocument();
   });
 
   it("loads every authorized task page for Dashboard Board and keeps scope and filters shared with List", async () => {
