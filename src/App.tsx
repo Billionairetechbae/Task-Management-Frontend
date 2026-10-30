@@ -427,7 +427,7 @@ const App = () => {
           path="/settings/integrations"
           element={
             <ProtectedRoute>
-              <Integrations />
+              <Integrations showMcpConnections={import.meta.env.VITE_MCP_ENABLED === "true"} />
             </ProtectedRoute>
           }
         />

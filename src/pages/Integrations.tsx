@@ -28,9 +28,10 @@ import {
 import { IntegrationLogo } from "@/components/integrations/IntegrationLogo";
 import { WhatsAppSettings } from "@/components/integrations/WhatsAppSettings";
 import { ConnectedStorageSettings } from "@/components/integrations/ConnectedStorageSettings";
+import McpConnections from "@/components/integrations/McpConnections";
 import { useWorkspaceGovernance } from "@/hooks/useWorkspaceGovernance";
 
-const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
+const Integrations = ({ embedded = false, showMcpConnections = false }: { embedded?: boolean; showMcpConnections?: boolean }) => {
   const Shell = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
     : DashboardLayout;
@@ -354,6 +355,7 @@ const Integrations = ({ embedded = false }: { embedded?: boolean }) => {
         </section>
 
         <ConnectedStorageSettings />
+        {showMcpConnections && <McpConnections />}
       </div>
 
       {/* Manage drawer */}

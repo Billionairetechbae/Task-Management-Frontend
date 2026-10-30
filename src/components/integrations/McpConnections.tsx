@@ -53,7 +53,7 @@ export default function McpConnections() {
       <CardHeader>
         <CardTitle className="text-base font-semibold">AI assistant connections (MCP)</CardTitle>
         <CardDescription>
-          Connect ChatGPT, Claude, or another remote MCP client with read-only access to the workspaces you approve.
+          Connect ChatGPT, Claude, or another remote MCP client to the workspaces and task actions you authorize.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -89,7 +89,9 @@ export default function McpConnections() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{connection.clientName}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Read-only · {connection.workspaces.map((workspace) => workspace.name).join(", ") || "No currently active workspaces"}
+                      {connection.scopes.includes("mcp:write") ? "Read and task changes" : "Read-only"}
+                      {" · "}
+                      {connection.workspaces.map((workspace) => workspace.name).join(", ") || "No currently active workspaces"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Connected {new Date(connection.createdAt).toLocaleDateString()}
@@ -117,7 +119,7 @@ export default function McpConnections() {
         <div className="space-y-1 text-xs text-muted-foreground">
           <p><span className="font-medium text-foreground">ChatGPT:</span> add the URL as a custom remote connector in ChatGPT settings.</p>
           <p><span className="font-medium text-foreground">Claude:</span> add the URL as a custom remote connector in Claude settings.</p>
-          <p>Both clients complete Admiino sign-in and workspace consent during connection. Only read tools are available.</p>
+          <p>Tools are limited to the permissions and workspaces selected during Admiino consent.</p>
         </div>
       </CardContent>
     </Card>

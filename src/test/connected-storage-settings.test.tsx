@@ -21,6 +21,9 @@ vi.mock("@/hooks/useGoogleIntegration", () => ({ useGoogleIntegration: () => moc
 vi.mock("@/hooks/useWorkspaceGovernance", () => ({ useWorkspaceGovernance: () => ({ capabilities: { googleDriveEnabled: true, dropboxEnabled: true, automationsEnabled: true, timeTrackingEnabled: true, memberInvitesRestricted: false, projectCreationRestricted: false, teamManagementRestricted: false, clientInvitesRestricted: false, integrationManagementRestricted: false }, settings: undefined, permitted: true, isLoading: false }) }));
 vi.mock("@/components/dashboard/DashboardLayout", () => ({ default: ({ children }: any) => <div>{children}</div> }));
 vi.mock("@/components/integrations/WhatsAppSettings", () => ({ WhatsAppSettings: () => null }));
+vi.mock("@/components/integrations/McpConnections", () => ({
+  default: () => <div data-testid="mcp-connections">AI assistant connections (MCP)</div>,
+}));
 
 import { ConnectedStorageSettings } from "@/components/integrations/ConnectedStorageSettings";
 import Integrations from "@/pages/Integrations";
@@ -162,5 +165,18 @@ describe("existing personal Google integration page is unchanged", () => {
     expect(screen.getByRole("heading", { name: "Integrations" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Workspace Connected Storage" })).toBeInTheDocument();
     expect(mocks.api.listIntegrations).toHaveBeenCalled();
+  });
+
+  it("shows MCP connections on the direct settings integrations route when enabled", async () => {
+    respond(true, []);
+    mocks.api.listIntegrations.mockResolvedValue({ data: { integrations: [] } });
+    mocks.api.getWhatsAppAccount.mockResolvedValue({ data: { connected: false } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter><Integrations showMcpConnections /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByTestId("mcp-connections")).toBeInTheDocument();
   });
 });
