@@ -71,7 +71,7 @@ const SignupExecutive = () => {
 
 
   // ============================================
-  // STEP 2 — SUCCESS SCREEN (No auto login!)
+  // STEP 2: SUCCESS SCREEN (No auto login!)
   // ============================================
   if (step === 2) {
     return (
@@ -107,7 +107,7 @@ const SignupExecutive = () => {
 
 
   // ============================================
-  // STEP 1 — REGISTRATION FORM
+  // STEP 1: REGISTRATION FORM
   // ============================================
   return (
     <div className="min-h-screen bg-background py-8 px-4">

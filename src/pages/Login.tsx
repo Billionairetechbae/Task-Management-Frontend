@@ -226,7 +226,7 @@ const Login = () => {
             Welcome to Admiino
           </h2>
           <p className="text-muted-foreground text-lg mb-14 leading-relaxed">
-            The intelligent platform built for executives and their teams—
+            The intelligent platform built for executives and their teams,
             enabling seamless task delegation, workflow automation, and
             team collaboration.
           </p>
