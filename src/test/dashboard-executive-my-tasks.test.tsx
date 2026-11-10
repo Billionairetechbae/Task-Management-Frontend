@@ -118,6 +118,19 @@ describe("Dashboard personal task population", () => {
     expect(screen.queryByText("Second page task")).toBeNull();
   });
 
+  it("keeps the task toolbar contained and gives mobile filters a full-width search row", async () => {
+    state.role = "admin";
+    state.data = { ...state.data, tasks: [t("Responsive task", "pending")] };
+    state.getAllTasks.mockResolvedValue({ status: "success", total: 1, data: { tasks: state.data.tasks } });
+    renderPage();
+
+    const toolbars = await screen.findAllByTestId("dashboard-task-toolbar");
+    const filters = within(screen.getAllByTestId("dashboard-task-filters")[0]);
+    expect(toolbars.every((toolbar) => !toolbar.className.includes("overflow-x-auto"))).toBe(true);
+    expect(screen.getAllByLabelText("Search tasks")[0].parentElement?.className).toContain("basis-full");
+    expect(filters.getByLabelText("Filter by project").className).toContain("min-w-0");
+  });
+
   it("collapses the overview rail in Board mode and restores the preferred state in List mode", async () => {
     state.role = "owner";
     state.getAllTasks.mockResolvedValue({ status: "success", results: 1, total: 1, data: { tasks: [t("Owner task", "pending")] } });

@@ -574,11 +574,11 @@ const DashboardExecutive = () => {
 
         const tasksSection = (
           <div className="space-y-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0 flex-1 overflow-x-auto flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 pr-1">
+            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between" data-testid="dashboard-task-toolbar">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2 pr-1">
                   <h2 className="text-sm font-semibold">Tasks</h2>
-                  <span className="text-xs text-muted-foreground" aria-live="polite">
+                  <span className="max-w-full truncate text-xs text-muted-foreground" aria-live="polite">
                     {totalItems} {taskPopulationComplete ? (personalView ? "created by or assigned to you" : "total tasks") : "tasks loaded…"}
                   </span>
                 </div>
@@ -618,24 +618,24 @@ const DashboardExecutive = () => {
                     </button>
                   </div>
                 )}
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 rounded-xl border border-border/80 bg-card p-1.5 shadow-soft">
-                  <div className="relative min-w-[180px] flex-1">
+                <div data-testid="dashboard-task-filters" className="flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-border/80 bg-card p-1.5 shadow-soft sm:w-auto sm:flex-1">
+                  <div className="relative basis-full sm:min-w-[180px] sm:flex-1">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <input aria-label="Search tasks" value={taskSearch} onChange={(event) => { setTaskSearch(event.target.value); setCurrentPage(1); }} placeholder="Search tasks" className="h-8 w-full rounded-lg border-0 bg-muted/40 pl-8 pr-2 text-xs outline-none ring-0 placeholder:text-muted-foreground/70 focus:bg-background focus:ring-2 focus:ring-primary/15" />
+                    <input aria-label="Search tasks" value={taskSearch} onChange={(event) => { setTaskSearch(event.target.value); setCurrentPage(1); }} placeholder="Search tasks" className="h-9 w-full rounded-lg border-0 bg-muted/40 pl-8 pr-2 text-xs outline-none ring-0 placeholder:text-muted-foreground/70 focus:bg-background focus:ring-2 focus:ring-primary/15" />
                   </div>
-                  <select aria-label="Filter by project" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setCurrentPage(1); }} className="h-8 max-w-[132px] rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15">
+                  <select aria-label="Filter by project" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[132px]">
                     <option value="">All projects</option>{filterOptions.projects.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                   </select>
-                  <select aria-label="Filter by team" value={teamFilter} onChange={(event) => { setTeamFilter(event.target.value); setCurrentPage(1); }} className="h-8 max-w-[120px] rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15">
+                  <select aria-label="Filter by team" value={teamFilter} onChange={(event) => { setTeamFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[120px]">
                     <option value="">All teams</option>{filterOptions.teams.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                   </select>
-                  <select aria-label="Filter by assignee" value={assigneeFilter} onChange={(event) => { setAssigneeFilter(event.target.value); setCurrentPage(1); }} className="h-8 max-w-[132px] rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15">
+                  <select aria-label="Filter by assignee" value={assigneeFilter} onChange={(event) => { setAssigneeFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[132px]">
                     <option value="">All assignees</option>{filterOptions.assignees.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                   </select>
-                  <select aria-label="Filter by priority" value={priorityFilter} onChange={(event) => { setPriorityFilter(event.target.value); setCurrentPage(1); }} className="h-8 max-w-[112px] rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15">
+                  <select aria-label="Filter by priority" value={priorityFilter} onChange={(event) => { setPriorityFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[112px]">
                     <option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
                   </select>
-                  <select aria-label="Filter by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1); }} className="h-8 max-w-[120px] rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15">
+                  <select aria-label="Filter by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[120px]">
                     <option value="">All statuses</option><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="in_review">In Review</option><option value="completed">Completed</option><option value="delayed">Delayed</option><option value="cancelled">Cancelled</option>
                   </select>
                   <button type="button" aria-label="Filter options" className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted sm:flex"><SlidersHorizontal className="h-3.5 w-3.5" /></button>
@@ -644,7 +644,7 @@ const DashboardExecutive = () => {
                   <button type="button" role="tab" aria-selected={taskView === "list"} onClick={() => setTaskView("list")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutList className="mr-1 inline h-3.5 w-3.5" />List</button>
                   <button type="button" role="tab" aria-selected={taskView === "board"} onClick={() => setTaskView("board")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "board" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Columns3 className="mr-1 inline h-3.5 w-3.5" />Board</button>
                 </div>
-                {canCreateTask && <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="h-8 shrink-0 gap-1.5">
+                {canCreateTask && <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="h-9 shrink-0 gap-1.5">
                   <Plus className="h-4 w-4" />
                   New Task
                 </Button>}
@@ -716,7 +716,7 @@ const DashboardExecutive = () => {
                 />
               </ContentCard>
             ) : (
-              <div className="animate-fade-in">
+              <div className={cn("min-w-0 animate-fade-in", taskView === "board" && "overflow-hidden")} data-testid="dashboard-task-content">
                 {taskView === "board" ? <Board embeddedTasks={filteredTasks} hideEmbeddedControls onEmbeddedTaskUpdated={(updated) => {
                   patchTaskEverywhere(updated.id, updated as any);
                   queryClient.setQueryData<Task[]>(allTasksQueryKey, (current) =>
@@ -799,11 +799,11 @@ const DashboardExecutive = () => {
                 )}
                 <ResizablePanelGroup
                   direction="horizontal"
-                  className="h-full flex-1 rounded-xl"
+                  className="h-full min-w-0 flex-1 rounded-xl"
                 >
                   {sideRailOpen && (
                     <>
-                      <ResizablePanel id="side" order={1} defaultSize={21} minSize={18} maxSize={27}>
+                      <ResizablePanel id="side" order={1} defaultSize={21} minSize={18} maxSize={27} className="min-w-0">
                         <div className="pr-2 space-y-3 h-full overflow-y-auto">
                           <div className="flex justify-end">
                             <Button
@@ -823,8 +823,8 @@ const DashboardExecutive = () => {
                       <ResizableHandle withHandle className="bg-transparent mx-1" />
                     </>
                   )}
-                  <ResizablePanel id="main" order={2} defaultSize={sideRailOpen ? 79 : 100} minSize={73}>
-                    <div className={cn("h-full overflow-y-auto", sideRailOpen && "pl-3")}>
+                  <ResizablePanel id="main" order={2} defaultSize={sideRailOpen ? 79 : 100} minSize={73} className="min-w-0">
+                    <div className={cn("h-full min-w-0 overflow-x-hidden overflow-y-auto", sideRailOpen && "pl-3")}>
                       {tasksSection}
                     </div>
                   </ResizablePanel>
