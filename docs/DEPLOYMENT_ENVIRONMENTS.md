@@ -6,12 +6,12 @@
 
 The build uses `VITE_DEPLOYMENT_ENV` as the explicit deployment target because Vercel reports `VERCEL_ENV=production` for both a production deployment and a separate staging Vercel project configured with its own Production environment. `VERCEL_ENV` is still validated for Vercel builds, but it is not sufficient to identify the Admiino environment.
 
-Production Vercel project, Production environment, Git branch `main`:
+Production Vercel project, Production environment, Git branch `main` (the production API is `https://api.admiino.com`, served by the Singapore backend; the legacy `admiino-backend.onrender.com` origin is retired and the build guard rejects it):
 
 ```text
 VITE_DEPLOYMENT_ENV=production
-VITE_API_BASE_URL=https://admiino-backend.onrender.com/api/v1
-VITE_MCP_SERVER_URL=https://admiino-backend.onrender.com/mcp   # optional; omit to derive safely
+VITE_API_BASE_URL=https://api.admiino.com/api/v1
+VITE_MCP_SERVER_URL=https://api.admiino.com/mcp   # optional; omit to derive safely
 ```
 
 Staging Vercel project, Production environment, Git branch `staging`:
