@@ -1,4 +1,5 @@
 // src/pages/TeamMemberProfile.tsx
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 
@@ -196,6 +197,7 @@ const TeamMemberProfile = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <MaintenanceBanner />
       {/* HEADER */}
       <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
         <Logo className="h-8" />
