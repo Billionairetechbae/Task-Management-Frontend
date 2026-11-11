@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main)
+      echo "Blocked: direct pushes to protected production branch main are not allowed." >&2
+      echo "Use the approved pull-request release process." >&2
+      exit 1
+      ;;
+  esac
+done

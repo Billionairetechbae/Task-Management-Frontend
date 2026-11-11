@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { adminPortalUrl } from "@/lib/deployment";
 import { Link } from "react-router-dom";
 import { Building2, Bell, CreditCard, Plug, Settings, ShieldCheck, UserRound, LogOut, SlidersHorizontal, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { SUBSCRIPTION_PATH, canViewSubscription } from "@/lib/workspaceNavigation";
 
 export default function AccountMenu() {
+  const adminUrl = adminPortalUrl();
   const { user, logout, workspaceRole, activeWorkspace } = useAuth();
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || "Admiino user";
   const initials = useMemo(() => name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase(), [name]);
@@ -46,9 +48,9 @@ export default function AccountMenu() {
         <DropdownMenuItem asChild><Link to="/settings/workspace/activity"><Activity className="mr-2 h-4 w-4" />Activity Log</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/team-management"><UserRound className="mr-2 h-4 w-4" />Workspace Members</Link></DropdownMenuItem>
       </>}
-      {staff && <>
+      {staff && adminUrl && <>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><a href={`${import.meta.env.VITE_ADMIN_URL || "https://admin.admiino.com"}/admin`}><ShieldCheck className="mr-2 h-4 w-4" />Admin Portal</a></DropdownMenuItem>
+        <DropdownMenuItem asChild><a href={`${adminUrl}/admin`}><ShieldCheck className="mr-2 h-4 w-4" />Admin Portal</a></DropdownMenuItem>
       </>}
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => logout()} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><LogOut className="mr-2 h-4 w-4" />Sign out</DropdownMenuItem>

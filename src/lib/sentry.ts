@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react";
+import { sentryEnvironment } from "@/lib/deployment";
 
 const enabled = Boolean(import.meta.env.VITE_SENTRY_DSN) && import.meta.env.MODE !== "test";
 
@@ -6,7 +7,7 @@ export function initializeSentry() {
   if (!enabled) return;
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
-    environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE,
+    environment: sentryEnvironment(import.meta.env.VITE_SENTRY_ENVIRONMENT, import.meta.env.MODE),
     release: import.meta.env.VITE_SENTRY_RELEASE || undefined,
     sendDefaultPii: false,
     beforeSend(event) {

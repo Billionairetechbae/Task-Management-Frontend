@@ -15,11 +15,11 @@ export function assertPreviewWebSocketTarget(
   apiBaseUrl: string,
   buildTarget: string,
 ): void {
-  if (buildTarget !== "preview") return;
+  if (buildTarget !== "staging") return;
   const socket = new URL(socketUrl);
   const api = new URL(apiBaseUrl);
   const expectedProtocol = api.protocol === "https:" ? "wss:" : "ws:";
   if (socket.username || socket.password || socket.protocol !== expectedProtocol || socket.origin !== `${expectedProtocol}//${api.host}` || socket.pathname !== "/ws") {
-    throw new Error("Preview WebSockets must connect to the configured staging backend.");
+    throw new Error("Staging WebSockets must connect to the configured staging backend.");
   }
 }
