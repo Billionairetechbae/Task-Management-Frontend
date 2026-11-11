@@ -20,7 +20,12 @@ Staging Vercel project, Production environment, Git branch `staging`:
 VITE_DEPLOYMENT_ENV=staging
 VITE_API_BASE_URL=https://admiino-backend-staging.onrender.com/api/v1
 VITE_MCP_SERVER_URL=https://admiino-backend-staging.onrender.com/mcp   # optional; omit to derive safely
+VITE_ADMIN_URL=https://<staging admin portal origin>                   # optional; without it the "Admin Portal" menu item is hidden in staging
+VITE_SENTRY_ENVIRONMENT=staging                                        # optional; staging builds are tagged "staging" by default
 ```
+
+Staging must never reuse production browser keys: use a separate `VITE_SENTRY_DSN` (or leave it unset), a staging `VITE_TURNSTILE_SITE_KEY`, and a
+`VITE_GOOGLE_API_KEY` restricted to the staging origin. The build guard validates the API and MCP URLs, but it cannot detect a production DSN or key.
 
 If staging is a Preview deployment in the production Vercel project, use the same staging values in that project's Preview environment; Vercel will report `VERCEL_ENV=preview`. Never set production API or MCP URLs in staging. The validator rejects missing variables, malformed URLs, mismatched API/MCP hosts, query strings, credentials, and production URLs in staging.
 
