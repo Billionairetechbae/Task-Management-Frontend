@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+if [ "$branch" = "main" ]; then
+  echo "Blocked: direct commits on protected production branch main are not allowed." >&2
+  echo "Create a feature branch from staging instead." >&2
+  exit 1
+fi
