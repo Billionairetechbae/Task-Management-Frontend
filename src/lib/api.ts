@@ -2066,7 +2066,7 @@ export interface ProjectHealthSummary {
 // Local Vite development talks to the local backend by default. Production
 // still requires its hosting environment to provide VITE_API_BASE_URL; the
 // empty production fallback preserves the existing same-origin behaviour.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5001/api/v1" : "");
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5001/api/v1" : "");
 const configuredMcpUrl = import.meta.env.VITE_MCP_SERVER_URL?.replace(/\/+$/, "");
 const defaultMcpOrigin = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
 export const MCP_SERVER_URL = configuredMcpUrl

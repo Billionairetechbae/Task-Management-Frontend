@@ -1,4 +1,5 @@
 // src/pages/Profile.tsx
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { useEffect, useMemo, useState, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -333,6 +334,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
   return (
     <div className={embedded ? "space-y-6" : "min-h-screen bg-muted/30 py-10 px-4 sm:px-6"}>
       <div className="w-full space-y-6">
+        {!embedded && <MaintenanceBanner />}
 
         {/* ── Hero card ── */}
         <Card className="rounded-2xl overflow-hidden border-none shadow-sm">
