@@ -11,7 +11,7 @@ describe("User Portal backend WebSocket destination", () => {
   it("allows local development sockets but rejects external preview WebSocket destinations", () => {
     expect(buildBackendWebSocketUrl("http://localhost:5001/api/v1", "token")).toBe("ws://localhost:5001/ws?token=token");
     expect(() => assertPreviewWebSocketTarget("wss://api.elevenlabs.io/v1", "https://admiino-backend-staging.onrender.com/api/v1", "staging")).toThrow(/staging backend/);
-    expect(() => assertPreviewWebSocketTarget("wss://admiino-backend.onrender.com/ws", "https://admiino-backend-staging.onrender.com/api/v1", "staging")).toThrow(/staging backend/);
+    expect(() => assertPreviewWebSocketTarget("wss://api.admiino.com/ws", "https://admiino-backend-staging.onrender.com/api/v1", "staging")).toThrow(/staging backend/);
     expect(() => assertPreviewWebSocketTarget("wss://api.elevenlabs.io/v1", "https://admiino-backend-staging.onrender.com/api/v1", "production")).not.toThrow();
   });
 });

@@ -1,4 +1,6 @@
-export const PRODUCTION_API = "https://admiino-backend.onrender.com/api/v1";
+export const PRODUCTION_API = "https://api.admiino.com/api/v1";
+// Retired after the Singapore cutover. Never accepted for any target; kept only so the failure explains itself.
+export const LEGACY_PRODUCTION_API = "https://admiino-backend.onrender.com/api/v1";
 export const STAGING_API = "https://admiino-backend-staging.onrender.com/api/v1";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const DEPLOYMENT_TARGETS = new Set(["local", "staging", "production"]);
@@ -43,6 +45,9 @@ export function validateBuildEnvironment(env) {
   const raw = String(env.VITE_API_BASE_URL || "").trim();
   if (!raw) throw new Error(`VITE_API_BASE_URL is required for ${target} builds.`);
   const normalized = normalizeApiUrl(raw, "VITE_API_BASE_URL");
+  if (normalized === LEGACY_PRODUCTION_API) {
+    throw new Error(`The legacy production API is retired. Production builds must use ${PRODUCTION_API}.`);
+  }
   const expectedApi = target === "production" ? PRODUCTION_API : target === "staging" ? STAGING_API : null;
   if (target === "local" && !LOOPBACK_HOSTS.has(new URL(normalized).hostname)) {
     throw new Error("Local builds may only use an explicitly configured loopback API.");
