@@ -174,3 +174,7 @@ Avoid introducing inconsistent UI styles.
 ## Git workflow
 
 Coding agents must default to feature branches created from `staging`, not `main`. Use `./scripts/install-git-safety.sh` for local safeguards and `./scripts/publish-staging.sh` for approved dual-remote staging publication. Agents may not merge, push, or deploy to production without explicit authorization.
+
+## Vercel deployment workflow
+
+Coding agents must default to feature branches created from `staging`, not `main`. For Vercel builds, set `VITE_DEPLOYMENT_ENV=production` with the production API only on `main`, or `VITE_DEPLOYMENT_ENV=staging` with the staging API only on `staging`. Do not rely on `VERCEL_ENV` alone: a separate staging Vercel project may report `VERCEL_ENV=production`. Never weaken the build validator or allow staging API, MCP, or WebSocket traffic to use production hosts.
