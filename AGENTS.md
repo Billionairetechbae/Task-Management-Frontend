@@ -170,3 +170,7 @@ Maintain:
 
 
 Avoid introducing inconsistent UI styles.
+
+## Git workflow
+
+Coding agents must default to feature branches created from `staging`, not `main`. Use `./scripts/install-git-safety.sh` for local safeguards and `./scripts/publish-staging.sh` for approved dual-remote staging publication. Agents may not merge, push, or deploy to production without explicit authorization.
