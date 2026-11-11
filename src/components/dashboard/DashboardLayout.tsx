@@ -1,3 +1,4 @@
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -866,6 +867,7 @@ const DashboardLayout = ({
             sidebarOpen ? "md:ml-[240px]" : "md:ml-[56px]"
           )}
         >
+          <MaintenanceBanner />
           <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border h-14 shrink-0">
             <div className="flex items-center justify-between px-4 sm:px-6 h-full">
               <div className="flex items-center gap-3">
