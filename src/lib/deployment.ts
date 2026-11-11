@@ -5,7 +5,8 @@ export type DeploymentTarget = "local" | "staging" | "production";
 
 export const DEPLOYMENT_TARGET: DeploymentTarget = typeof __BUILD_TARGET__ !== "undefined" ? __BUILD_TARGET__ : "local";
 
-const PRODUCTION_ADMIN_PORTAL = "https://admin.admiino.com";
+// Folded at build time: a staging bundle does not even contain the production admin host.
+const PRODUCTION_ADMIN_PORTAL = DEPLOYMENT_TARGET === "staging" ? "" : "https://admin.admiino.com";
 
 /**
  * Where the "Admin Portal" menu item points. An explicit VITE_ADMIN_URL always wins. Without it, production and local keep the existing
