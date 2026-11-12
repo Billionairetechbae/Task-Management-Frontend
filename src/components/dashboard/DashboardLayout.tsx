@@ -691,7 +691,11 @@ const DashboardLayout = ({
     );
   };
 
-  const SidebarContent = () => (
+  // A plain render function, NOT a component. It used to be `const SidebarContent = () => ...` declared inside this component, which gives
+  // React a brand-new component type on every render: the whole sidebar - including an open workspace menu - was unmounted and remounted
+  // each time DashboardLayout re-rendered (any auth/workspace refresh), so the menu closed itself. Called as a function, its elements are
+  // part of this component's own tree and keep their identity across renders.
+  const renderSidebarContent = () => (
     <div className="flex flex-col h-full">
       <div
         className={cn(
@@ -831,7 +835,7 @@ const DashboardLayout = ({
             sidebarOpen ? "w-[240px]" : "w-[56px]"
           )}
         >
-          {isDesktop && <SidebarContent />}
+          {isDesktop && renderSidebarContent()}
         </aside>
 
         {mobileOpen && (
@@ -858,7 +862,7 @@ const DashboardLayout = ({
             </Button>
           </div>
 
-          {!isDesktop && mobileOpen && <SidebarContent />}
+          {!isDesktop && mobileOpen && renderSidebarContent()}
         </aside>
 
         <div

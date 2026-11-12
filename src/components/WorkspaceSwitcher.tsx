@@ -33,6 +33,11 @@ const WorkspaceSwitcher = () => {
   const [visibleCount, setVisibleCount] = useState(5);
   const [failedLogoUrls, setFailedLogoUrls] = useState<Record<string, string>>({});
   const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  // The workspace a switch has already been requested for. A second click/Enter on any option (double click, key repeat, a slow render)
+  // must not send another switch; it is released as soon as the active workspace actually changes.
+  const requestedRef = useRef<string | null>(null);
+  useEffect(() => { requestedRef.current = null; }, [activeCompanyId]);
 
   const { matches, visible } = useMemo(
     () => paginateWorkspaces(workspaces, activeCompanyId, search, visibleCount),
@@ -47,6 +52,24 @@ const WorkspaceSwitcher = () => {
   }, [open]);
 
   const setOpen = (next: boolean) => { if (next) menu.open(); else menu.close(); };
+
+  const choose = (workspaceId: string) => {
+    setOpen(false);
+    // Re-choosing the active workspace, or repeating a choice already in flight, is just a close - never another switch.
+    if (workspaceId === activeCompanyId || requestedRef.current === workspaceId) return;
+    requestedRef.current = workspaceId;
+    setActiveCompanyId(workspaceId);
+  };
+
+  // The search box swallows keys so Radix typeahead cannot steal letters, but that also cut keyboard users off from the list.
+  // ArrowDown/ArrowUp now hand focus to the first/last workspace; Radix' own arrow navigation takes over from there.
+  const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    const items = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[role="option"]:not([data-disabled])') ?? []);
+    (event.key === "ArrowDown" ? items[0] : items[items.length - 1])?.focus();
+  };
 
   if (!available) return null;
 
@@ -99,13 +122,13 @@ const WorkspaceSwitcher = () => {
               ref={searchRef}
               value={search}
               onChange={(event) => { setSearch(event.target.value); setVisibleCount(5); }}
-              onKeyDown={(event) => event.stopPropagation()}
+              onKeyDown={onSearchKeyDown}
               placeholder="Search workspaces..."
               aria-label="Search workspaces"
               className="h-8"
             />
           </div>
-          <div className="max-h-64 overflow-y-auto" role="listbox" aria-label="Available workspaces">
+          <div ref={listRef} className="max-h-64 overflow-y-auto" role="listbox" aria-label="Available workspaces">
           {workspaces.length === 0 && (
             <DropdownMenuItem disabled className="text-muted-foreground">
               No workspaces found
@@ -120,10 +143,7 @@ const WorkspaceSwitcher = () => {
             return (
               <DropdownMenuItem
                 key={workspace.id}
-                onClick={() => {
-                  setActiveCompanyId(workspace.id);
-                  setOpen(false);
-                }}
+                onClick={() => choose(workspace.id)}
                 className={cn(
                   "flex items-center gap-3 py-2.5 cursor-pointer transition-colors duration-150",
                   isSelected && "bg-accent"
