@@ -13,6 +13,7 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 import BlockedBadge from "@/components/tasks/BlockedBadge";
 import RepeatBadge from "@/components/tasks/RepeatBadge";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
+import { nextTaskPageParam } from "@/lib/taskListUtils";
 
 const BOARD_KEY = "board-tasks";
 const STATUS_LABELS = Object.fromEntries(TASK_STATUSES.map((status) => [status, getStatusStyle(status).label])) as Record<TaskStatus, string>;
@@ -81,13 +82,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
       projectId: filters.projectId || undefined,
       teamId: filters.teamId || undefined,
     }),
-    getNextPageParam: (lastPage, allPages) => {
-      const pageTasks = lastPage.data?.tasks || [];
-      const total = lastPage.total ?? lastPage.pagination?.totalResults;
-      if (lastPage.pagination) return lastPage.pagination.hasNextPage ? allPages.length + 1 : undefined;
-      if (total !== undefined) return allPages.reduce((count, page) => count + (page.data?.tasks?.length || 0), 0) < total ? allPages.length + 1 : undefined;
-      return pageTasks.length === 100 ? allPages.length + 1 : undefined;
-    },
+    getNextPageParam: (lastPage, allPages) => nextTaskPageParam(lastPage, allPages, 100),
     staleTime: 30_000,
   });
   const { data: boardData, isPending: boardPending, isError: boardIsError, hasNextPage, isFetchingNextPage, fetchNextPage } = boardQuery;
