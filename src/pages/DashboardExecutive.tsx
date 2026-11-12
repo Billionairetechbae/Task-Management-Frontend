@@ -56,7 +56,7 @@ import Board from "@/pages/Board";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { api, Task, TeamMember } from "@/lib/api";
-import { filterTopLevelTasks } from "@/lib/taskListUtils";
+import { filterTopLevelTasks, nextTaskPageParam } from "@/lib/taskListUtils";
 import { useToast } from "@/hooks/use-toast";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
@@ -206,13 +206,7 @@ const DashboardExecutive = () => {
       limit: 100,
     }),
     enabled: Boolean(activeCompanyId),
-    getNextPageParam: (lastPage, allPages) => {
-      const pageTasks = lastPage.data?.tasks || [];
-      const total = lastPage.total ?? lastPage.pagination?.totalResults;
-      if (lastPage.pagination) return lastPage.pagination.hasNextPage ? allPages.length + 1 : undefined;
-      if (total !== undefined) return allPages.reduce((count, page) => count + (page.data?.tasks?.length || 0), 0) < total ? allPages.length + 1 : undefined;
-      return pageTasks.length === 100 ? allPages.length + 1 : undefined;
-    },
+    getNextPageParam: (lastPage, allPages) => nextTaskPageParam(lastPage, allPages, 100),
     staleTime: 30_000,
   });
   const { data: allTasksData, hasNextPage, isFetchingNextPage, fetchNextPage } = allTasksQuery;
