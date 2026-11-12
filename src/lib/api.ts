@@ -1,5 +1,6 @@
 // src/lib/api.ts
 import { envOr } from "@/lib/env";
+import { rememberVerificationProof } from "@/lib/emailVerification";
 import type { CalendarResponse, CalendarEvent } from "../types/calendar";
 
 /* ============================
@@ -2452,6 +2453,7 @@ class ApiClient {
       localStorage.setItem("auth_token", result.token);
       localStorage.setItem("token", result.token);
     }
+    rememberVerificationProof(data.email, (result as any)?.data?.verificationProof);
     return result;
   }
 
@@ -2464,6 +2466,7 @@ class ApiClient {
       localStorage.setItem("auth_token", result.token);
       localStorage.setItem("token", result.token);
     }
+    rememberVerificationProof(data.email, (result as any)?.data?.verificationProof);
     return result;
   }
 
@@ -2527,6 +2530,7 @@ class ApiClient {
       localStorage.setItem("auth_token", t);
       localStorage.setItem("token", t);
     }
+    rememberVerificationProof(data.email, (result as any)?.data?.verificationProof);
     return result as any;
   }
 
@@ -2547,6 +2551,7 @@ class ApiClient {
       localStorage.setItem("auth_token", t);
       localStorage.setItem("token", t);
     }
+    rememberVerificationProof(data.email, (result as any)?.data?.verificationProof);
     return result as any;
   }
 
@@ -3889,7 +3894,8 @@ class ApiClient {
   async inspectEmailVerification(token: string): Promise<{ status: string; data: { email: string } }> {
     return this.request("/auth/verify-email/inspect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
   }
-  async completeEmailVerification(input: { token: string; password: string; confirmPassword: string }): Promise<{ status: string; data: { email: string } }> {
+  /** Exactly one of: `proof` (the registering browser), `currentPassword` (confirm the existing password), or `password`+`confirmPassword` (set a new one). */
+  async completeEmailVerification(input: { token: string; proof?: string; currentPassword?: string; password?: string; confirmPassword?: string }): Promise<{ status: string; data: { email: string; passwordPreserved: boolean } }> {
     return this.request("/auth/verify-email/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
   }
 
