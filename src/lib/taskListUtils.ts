@@ -14,6 +14,43 @@ export function filterTopLevelTasks<T extends { parentTaskId?: string | null }>(
   return tasks.filter(isTopLevelTask);
 }
 
+/** Page size used by the screens that load a complete task population page by page (server-side limit is bounded to 1..100). */
+export const TASK_LIST_PAGE_SIZE = 100;
+
+interface TaskPageLike {
+  data?: { tasks?: readonly unknown[] };
+  total?: number;
+  pagination?: { hasNextPage?: boolean; totalResults?: number };
+}
+
+/**
+ * getNextPageParam for screens that keep requesting pages until the whole task population is loaded (Dashboard, Board).
+ *
+ * The previous rule was "keep going while loaded < total". `total` comes from a SQL count that also counts joined rows (a task with
+ * several assignees/watchers is counted once per joined row), so it can be larger than the number of distinct tasks that exist.
+ * Then `loaded < total` stayed true forever: after the real tasks were loaded every later page came back EMPTY, and the page loop
+ * requested page 2, 3, 4 ... without end - one GET /tasks per round-trip for as long as the screen was open.
+ *
+ * A page can never be followed by another once it is empty, or shorter than the page that was asked for (the server bounds `limit`
+ * to 1..100 and never silently shortens a full page). Those two facts end the loop no matter what `total` claims.
+ */
+export function nextTaskPageParam(
+  lastPage: TaskPageLike,
+  allPages: readonly TaskPageLike[],
+  pageSize: number = TASK_LIST_PAGE_SIZE,
+): number | undefined {
+  const pageTasks = lastPage.data?.tasks ?? [];
+  if (pageTasks.length === 0) return undefined;                       // an empty page is always the last one
+  if (lastPage.pagination) return lastPage.pagination.hasNextPage ? allPages.length + 1 : undefined;
+  if (pageTasks.length < pageSize) return undefined;                  // a short page is always the last one
+  const total = lastPage.total ?? lastPage.pagination?.totalResults;
+  if (typeof total === "number") {
+    const loaded = allPages.reduce((count, page) => count + (page.data?.tasks?.length ?? 0), 0);
+    return loaded < total ? allPages.length + 1 : undefined;
+  }
+  return allPages.length + 1;                                         // a full page and no total: there may be more
+}
+
 export async function fetchAllTasks(
   filters: Omit<AllTasksFilters, "page" | "limit">,
   pageSize = 100
