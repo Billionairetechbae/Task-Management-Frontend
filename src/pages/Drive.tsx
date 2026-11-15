@@ -348,7 +348,7 @@ export default function Drive() {
             <Card className="p-4 border border-border h-full">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold flex items-center gap-2">
-                  <FolderIcon className="h-4 w-4 text-primary" /> Folders
+                  <FolderIcon className="h-4 w-4 text-primary-text" /> Folders
                 </h2>
                 <Badge variant="secondary">{folders.length}</Badge>
               </div>
@@ -402,12 +402,12 @@ export default function Drive() {
                           >
                             <FolderIcon
                               className={`h-4 w-4 shrink-0 ${
-                                active ? "text-primary" : "text-muted-foreground"
+                                active ? "text-primary-text" : "text-muted-foreground"
                               }`}
                             />
                             <div className="min-w-0 flex-1">
                               <div className="font-medium truncate text-sm">{f.name}</div>
-                              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                              <div className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">
                                 {f.scope}
                               </div>
                             </div>
@@ -418,7 +418,7 @@ export default function Drive() {
                               handleDeleteFolder(f);
                             }}
                             disabled={loading || tabDisabled}
-                            className="p-2 mr-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
+                            className="p-2 mr-1 text-muted-foreground hover:text-destructive-text opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
                             title="Delete folder"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -464,8 +464,8 @@ export default function Drive() {
               {isDragging && (
                 <div className="absolute inset-0 z-20 rounded-lg bg-primary/10 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-fade-in">
                   <div className="text-center">
-                    <Upload className="h-12 w-12 mx-auto text-primary mb-2 animate-bounce" />
-                    <p className="font-semibold text-primary">Drop files to upload</p>
+                    <Upload className="h-12 w-12 mx-auto text-primary-text mb-2 animate-bounce" />
+                    <p className="font-semibold text-primary-text">Drop files to upload</p>
                     <p className="text-xs text-muted-foreground mt-1">to "{selectedFolder?.name}"</p>
                   </div>
                 </div>
@@ -552,7 +552,7 @@ export default function Drive() {
                         <Icon className="h-3.5 w-3.5" />
                         <span>{opt.label}</span>
                         <span
-                          className={`ml-0.5 px-1.5 rounded-full text-[10px] ${
+                          className={`ml-0.5 px-1.5 rounded-full text-[0.625rem] ${
                             active ? "bg-primary-foreground/20" : "bg-muted"
                           }`}
                         >
@@ -581,7 +581,7 @@ export default function Drive() {
                     </div>
                     {uploadProgress.map((p, i) => (
                       <div key={i} className="space-y-1">
-                        <div className="flex items-center justify-between text-[11px] gap-2">
+                        <div className="flex items-center justify-between text-[0.6875rem] gap-2">
                           <span className="truncate flex-1">{p.name}</span>
                           <span className="text-muted-foreground shrink-0">
                             {formatBytes(p.size)}
@@ -649,9 +649,9 @@ export default function Drive() {
                       >
                         <div className="aspect-square bg-muted/40 flex items-center justify-center relative overflow-hidden">
                           {isImage ? (
-                            <Icon className="h-12 w-12 text-primary/70 group-hover:scale-110 transition-transform" />
+                            <Icon className="h-12 w-12 text-primary-text/70 group-hover:scale-110 transition-transform" />
                           ) : (
-                            <Icon className="h-12 w-12 text-primary/70 group-hover:scale-110 transition-transform" />
+                            <Icon className="h-12 w-12 text-primary-text/70 group-hover:scale-110 transition-transform" />
                           )}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                             <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -662,7 +662,7 @@ export default function Drive() {
                               handleDeleteFile(file);
                             }}
                             disabled={tabDisabled}
-                            className="absolute top-2 right-2 p-1.5 rounded-md bg-background/90 backdrop-blur text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
+                            className="absolute top-2 right-2 p-1.5 rounded-md bg-background/90 backdrop-blur text-muted-foreground hover:text-destructive-text opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
                             title="Delete file"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -672,7 +672,7 @@ export default function Drive() {
                           <p className="text-xs font-medium truncate" title={file.fileName}>
                             {file.fileName}
                           </p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                             {formatBytes(file.fileSize || 0)}
                           </p>
                         </div>

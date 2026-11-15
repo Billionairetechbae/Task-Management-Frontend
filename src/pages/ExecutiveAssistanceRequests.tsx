@@ -248,7 +248,7 @@ const ExecutiveAssistanceRequests = () => {
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                   <div className="max-w-3xl">
                     <div className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs text-muted-foreground">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      <Sparkles className="h-3.5 w-3.5 text-primary-text" />
                       External operators that plug into your tasks
                     </div>
 
@@ -273,28 +273,28 @@ const ExecutiveAssistanceRequests = () => {
 
                     <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="flex items-start gap-3 rounded-lg border bg-background/70 p-3">
-                        <Users className="h-5 w-5 text-primary mt-0.5" />
+                        <Users className="h-5 w-5 text-primary-text mt-0.5" />
                         <div>
                           <p className="text-sm font-medium">Pre-vetted, trained operators</p>
                           <p className="text-xs text-muted-foreground">Ready to execute without onboarding drag</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 rounded-lg border bg-background/70 p-3">
-                        <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
+                        <ShieldCheck className="h-5 w-5 text-primary-text mt-0.5" />
                         <div>
                           <p className="text-sm font-medium">Role-based access and permissions</p>
                           <p className="text-xs text-muted-foreground">Controlled access. Cleaner accountability</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 rounded-lg border bg-background/70 p-3">
-                        <ListChecks className="h-5 w-5 text-primary mt-0.5" />
+                        <ListChecks className="h-5 w-5 text-primary-text mt-0.5" />
                         <div>
                           <p className="text-sm font-medium">Direct task assignment inside Admiino</p>
                           <p className="text-xs text-muted-foreground">No handoffs or parallel tools</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 rounded-lg border bg-background/70 p-3">
-                        <Paperclip className="h-5 w-5 text-primary mt-0.5" />
+                        <Paperclip className="h-5 w-5 text-primary-text mt-0.5" />
                         <div>
                           <p className="text-sm font-medium">Transparent tracking and accountability</p>
                           <p className="text-xs text-muted-foreground">Everything logged and visible</p>
@@ -530,7 +530,7 @@ const ExecutiveAssistanceRequests = () => {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleCancelRequest(request.id)}
-                                    className="h-9 px-3 text-destructive hover:text-destructive"
+                                    className="h-9 px-3 text-destructive-text hover:text-destructive-text"
                                   >
                                     <XCircle className="w-4 h-4 mr-1.5" />
                                     Cancel

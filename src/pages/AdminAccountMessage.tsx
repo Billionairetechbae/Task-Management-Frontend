@@ -10,7 +10,7 @@ const AdminAccountMessage = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="text-center max-w-md">
         <div className="mb-6">
-          <ShieldAlert className="w-20 h-20 text-destructive mx-auto mb-4" />
+          <ShieldAlert className="w-20 h-20 text-destructive-text mx-auto mb-4" />
           <h1 className="text-3xl font-bold mb-4">This account belongs to the Admin Portal</h1>
           <p className="text-muted-foreground text-lg mb-8">
             The account you signed in with is an administrator account and cannot be used in the Workspace application.

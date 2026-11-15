@@ -97,7 +97,7 @@ const AuditExportContent = () => {
         <Card className="rounded-xl border-primary/20 bg-primary/5">
           <CardContent className="p-6 space-y-4">
             <h3 className="font-semibold flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              <FileSpreadsheet className="h-5 w-5 text-primary-text" />
               Excel Workbook
             </h3>
             <p className="text-sm text-muted-foreground">
@@ -167,7 +167,7 @@ const AuditExport = ({ embedded = false }: { embedded?: boolean }) => {
 
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-primary" />
+            <ShieldCheck className="h-6 w-6 text-primary-text" />
             Workspace Audit Center
           </h1>
           <p className="text-sm text-muted-foreground">

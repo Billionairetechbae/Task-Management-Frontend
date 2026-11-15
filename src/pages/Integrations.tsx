@@ -228,7 +228,7 @@ const Integrations = ({ embedded = false, showMcpConnections = false }: { embedd
         {governance.capabilities?.integrationManagementRestricted && <p role="status" className="rounded-md border px-3 py-2 text-sm text-muted-foreground">Integration management is restricted to workspace owners and admins.</p>}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard label="Connected" value={loading ? "—" : String(summary.connectedCount)} icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />} />
-          <SummaryCard label="Available" value={loading ? "—" : String(summary.availableCount)} icon={<Plug className="w-4 h-4 text-primary" />} />
+          <SummaryCard label="Available" value={loading ? "—" : String(summary.availableCount)} icon={<Plug className="w-4 h-4 text-primary-text" />} />
           <SummaryCard
             label="Automation Ready"
             value={summary.automation ? summary.automation.name : "—"}
@@ -246,7 +246,7 @@ const Integrations = ({ embedded = false, showMcpConnections = false }: { embedd
         {!loading && integrations.length === 0 && (
           <Card className="p-10 text-center border-dashed">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-              <Plug className="w-8 h-8 text-primary" />
+              <Plug className="w-8 h-8 text-primary-text" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Connect your first integration</h3>
             <p className="text-muted-foreground max-w-md mx-auto mb-6">
@@ -541,7 +541,7 @@ const IntegrationCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold truncate">{integration.name}</h3>
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${style.className}`}>
+            <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 ${style.className}`}>
               {style.label}
             </Badge>
           </div>
@@ -579,7 +579,7 @@ const IntegrationCard = ({
           <Badge
             key={c.name}
             variant="secondary"
-            className={`text-[10px] font-normal ${c.enabled ? "" : "opacity-60"}`}
+            className={`text-[0.625rem] font-normal ${c.enabled ? "" : "opacity-60"}`}
           >
             {c.name}
           </Badge>
@@ -594,7 +594,7 @@ const IntegrationCard = ({
             <Button
               size="sm"
               variant="ghost"
-              className="text-destructive hover:text-destructive"
+              className="text-destructive-text hover:text-destructive-text"
               onClick={onDisconnect}
               disabled={integration.id === "google" ? googleState.disconnectLoading : false}
             >

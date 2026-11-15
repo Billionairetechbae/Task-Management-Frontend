@@ -156,8 +156,8 @@ describe("Board page", () => {
     const grid = await screen.findByTestId("board-grid");
     expect(grid.className).toContain("overflow-x-auto");
     expect(grid.closest("main")!.className).toContain("overflow-hidden");
-    expect(screen.getByTestId("board-panel-pending").className).toContain("min-w-[260px]");
-    expect(screen.getByTestId("board-panel-pending").className).toContain("max-w-[290px]");
+    expect(screen.getByTestId("board-panel-pending").className).toContain("min-w-[min(16rem,86vw)]");
+    expect(screen.getByTestId("board-panel-pending").className).toContain("max-w-[18rem]");
     const order = Array.from(grid.children).map((el) => el.getAttribute("data-testid"));
     expect(order).toEqual(["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"].map((s) => `board-panel-${s}`));
     for (const status of ["pending", "in_progress", "in_review", "completed", "delayed", "cancelled"]) {
@@ -175,7 +175,7 @@ describe("Board page", () => {
     const grid = await screen.findByTestId("board-grid");
     expect(grid.className).toContain("overflow-x-auto");
     expect(grid.className).toContain("snap-x");
-    expect(screen.getByTestId("board-panel-pending").className).toContain("w-[min(86vw,290px)]");
+    expect(screen.getByTestId("board-panel-pending").className).toContain("w-[min(86vw,18rem)]");
   });
 
   it("loads every task page instead of truncating the board at the first 100", async () => {

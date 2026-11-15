@@ -100,7 +100,7 @@ const SignupManager = () => {
         <div className="max-w-lg w-full text-center">
           <Logo className="h-10 mb-4 mx-auto" />
 
-          <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-4" />
+          <CheckCircle2 className="w-16 h-16 text-success-text mx-auto mb-4" />
 
           <h2 className="text-3xl font-bold mb-2">
             Manager Account Created
@@ -126,7 +126,7 @@ const SignupManager = () => {
       <div className="max-w-2xl mx-auto">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium"
+          className="inline-flex items-center gap-2 text-foreground hover:text-primary-text mb-8 font-medium"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Login
@@ -134,7 +134,7 @@ const SignupManager = () => {
 
         <div className="text-center mb-6">
           <Logo className="h-8 mx-auto mb-2" />
-          <Users className="w-10 h-10 text-primary mx-auto mb-3" />
+          <Users className="w-10 h-10 text-primary-text mx-auto mb-3" />
           <h2 className="text-3xl font-bold">Join as a Manager</h2>
           <p className="text-muted-foreground">
             Provide the company code to join the team
@@ -244,7 +244,7 @@ const SignupManager = () => {
                 {formData.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm flex items-center gap-2"
+                    className="px-3 py-1 bg-primary/10 text-primary-text rounded-full text-sm flex items-center gap-2"
                   >
                     {skill}
                     <button

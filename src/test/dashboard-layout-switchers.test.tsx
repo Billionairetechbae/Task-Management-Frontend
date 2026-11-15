@@ -19,7 +19,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 const setWidth = (w: number) => { Object.defineProperty(window, "innerWidth", { value: w, configurable: true, writable: true }); };
 const renderLayout = () => render(<MemoryRouter initialEntries={["/dashboard"]}><DashboardLayout><div>page</div></DashboardLayout></MemoryRouter>);
 const count = () => screen.queryAllByTestId("ws-switcher").length;
-const menuButton = (container: HTMLElement) => container.querySelector("button.md\\:hidden") as HTMLElement;
+const menuButton = (container: HTMLElement) => container.querySelector('button[aria-label="Open navigation menu"]') as HTMLElement;
 const original = window.innerWidth;
 
 beforeEach(() => { localStorage.clear(); });
@@ -45,7 +45,7 @@ describe("DashboardLayout mounts exactly one workspace selector", () => {
     expect(document.querySelector("header")!.querySelectorAll('[data-testid="ws-switcher"]').length).toBe(1);
   });
 
-  it("tablet (640-767px): the header owns it; opening the drawer hands it to the drawer - never both", () => {
+  it("tablet / narrow window (640-1023px, which includes high browser zoom): the header owns it; opening the drawer hands it to the drawer - never both", () => {
     setWidth(700);
     const { container } = renderLayout();
     expect(count()).toBe(1);

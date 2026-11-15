@@ -97,7 +97,7 @@ const SectionCard = ({
   <Card className="rounded-2xl border-border/70 shadow-sm">
     <CardHeader className="pb-4">
       <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
-      {description && <CardDescription className="text-[13px]">{description}</CardDescription>}
+      {description && <CardDescription className="text-[0.8125rem]">{description}</CardDescription>}
     </CardHeader>
     <CardContent className="space-y-1 pb-5">{children}</CardContent>
     {footer && <div className="px-6 pb-5">{footer}</div>}
@@ -241,7 +241,7 @@ const Settings = () => {
                 value={
                   <button
                     onClick={() => user?.id && copy(user.id, "User ID")}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary-text"
                   >
                     {user?.id ? `${user.id.slice(0, 12)}…` : "—"}
                     <Copy className="h-3 w-3" />
@@ -261,7 +261,7 @@ const Settings = () => {
                 value={
                   <button
                     onClick={() => activeCompanyId && copy(activeCompanyId, "Workspace ID")}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary-text"
                   >
                     {activeCompanyId ? `${activeCompanyId.slice(0, 12)}…` : "—"}
                     <Copy className="h-3 w-3" />
@@ -325,7 +325,7 @@ const Settings = () => {
                         <opt.icon
                           className={cn(
                             "h-5 w-5",
-                            selected ? "text-primary" : "text-muted-foreground"
+                            selected ? "text-primary-text" : "text-muted-foreground"
                           )}
                         />
                         {selected && (
@@ -556,7 +556,7 @@ const Settings = () => {
       <div className="space-y-6 animate-fade-in">
         {/* Page header */}
         <div className="flex items-start gap-3">
-          <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary-text flex items-center justify-center shrink-0">
             <SettingsIcon className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -578,7 +578,7 @@ const Settings = () => {
                     key={t.id}
                     onClick={() => setActive(t.id)}
                     className={cn(
-                      "flex items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-medium transition-all",
+                      "flex items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[0.8125rem] font-medium transition-all",
                       active === t.id
                         ? "border-primary bg-primary text-primary-foreground shadow-sm"
                         : "border-border bg-card text-muted-foreground hover:text-foreground"
@@ -604,7 +604,7 @@ const Settings = () => {
                         className={cn(
                           "group w-full flex items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200",
                           selected
-                            ? "bg-primary/10 text-primary"
+                            ? "bg-primary/10 text-primary-text"
                             : "text-foreground hover:bg-muted"
                         )}
                       >
@@ -619,10 +619,10 @@ const Settings = () => {
                           <t.icon className="h-3.5 w-3.5" />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[13px] font-semibold truncate">
+                          <span className="block text-[0.8125rem] font-semibold truncate">
                             {t.label}
                           </span>
-                          <span className="block text-[11px] text-muted-foreground truncate">
+                          <span className="block text-[0.6875rem] text-muted-foreground truncate">
                             {t.description}
                           </span>
                         </span>
@@ -637,7 +637,7 @@ const Settings = () => {
                   variant="ghost"
                   size="sm"
                   onClick={logout}
-                  className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  className="w-full justify-start text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
                 >
                   <LogOut className="h-4 w-4 mr-2" /> Sign out
                 </Button>

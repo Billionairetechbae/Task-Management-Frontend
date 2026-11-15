@@ -216,7 +216,7 @@ const TeamMemberProfile = () => {
       </header>
 
       <main className="w-full px-6 py-10">
-        {(memberError || profileError) && <div role="alert" className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{memberError || profileError} <Button variant="outline" size="sm" className="ml-3" onClick={() => void loadMember()}>Retry</Button></div>}
+        {(memberError || profileError) && <div role="alert" className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive-text">{memberError || profileError} <Button variant="outline" size="sm" className="ml-3" onClick={() => void loadMember()}>Retry</Button></div>}
         {/* Back Button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/team-directory">
@@ -235,7 +235,7 @@ const TeamMemberProfile = () => {
                 className="w-32 h-32 rounded-full object-cover border mb-4"
               />
             ) : (
-              <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center border text-4xl font-bold text-primary mb-4">
+              <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center border text-4xl font-bold text-primary-text mb-4">
                 {(u?.firstName?.[0] || "").toUpperCase()}
                 {(u?.lastName?.[0] || "").toUpperCase()}
               </div>
@@ -253,7 +253,7 @@ const TeamMemberProfile = () => {
               {isRemoved ? (
                 <Badge
                   variant="outline"
-                  className="border-destructive/50 text-destructive"
+                  className="border-destructive/50 text-destructive-text"
                 >
                   Removed / Inactive
                 </Badge>
@@ -372,7 +372,7 @@ const TeamMemberProfile = () => {
                 {u.skills.map((skill: string) => (
                   <span
                     key={skill}
-                    className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
+                    className="bg-primary/10 text-primary-text px-3 py-1 rounded-full text-sm font-medium"
                   >
                     {skill}
                   </span>

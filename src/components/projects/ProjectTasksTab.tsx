@@ -113,7 +113,7 @@ const ProjectTasksTab = ({ projectId, onRefresh, isCompact = false, onEdit, onVi
               {tasks.reduce((acc, t) => acc + getTaskWatcherCount(t), 0)} watchers
             </p>
           </div>
-          <Button size="sm" variant="ghost" className="text-primary" onClick={() => setIsCreateCreateDialogOpen(true)}>
+          <Button size="sm" variant="ghost" className="text-primary-text" onClick={() => setIsCreateCreateDialogOpen(true)}>
             <Plus className="w-3.5 h-3.5 mr-1" />
             Add Task
           </Button>

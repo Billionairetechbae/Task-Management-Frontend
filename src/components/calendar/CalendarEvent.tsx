@@ -14,7 +14,7 @@ const fullName = (u: { firstName?: string; lastName?: string }) => `${u.firstNam
 /** Small, low-contrast workspace tag; never competes with the status chip. */
 export function WorkspaceBadge({ name }: { name: string }) {
     return (
-        <span data-testid="workspace-badge" title={`Workspace: ${name}`} className="hidden max-w-[5.5rem] shrink truncate rounded bg-white/60 px-1 text-[10px] font-normal text-gray-600 sm:inline-block">
+        <span data-testid="workspace-badge" title={`Workspace: ${name}`} className="hidden max-w-[5.5rem] shrink truncate rounded bg-white/60 px-1 text-[0.625rem] font-normal text-gray-600 sm:inline-block">
             {name}
         </span>
     );
@@ -41,7 +41,7 @@ export default function CalendarEvent({ event, compact = false, onClick }: Props
                 {event.isRecurring && <Repeat size={10} className="shrink-0 text-indigo-600" aria-label="Repeats" data-testid="calendar-repeat-icon" />}
                 <span className={`truncate ${style.strike ? "line-through" : ""}`}>{event.title}</span>
                 {event.workspace?.name && <WorkspaceBadge name={event.workspace.name} />}
-                <span className="ml-auto shrink-0 text-[10px] font-semibold uppercase opacity-80">
+                <span className="ml-auto shrink-0 text-[0.625rem] font-semibold uppercase opacity-80">
                     {overdue ? "Overdue" : style.label}
                 </span>
             </div>
@@ -60,7 +60,7 @@ export default function CalendarEvent({ event, compact = false, onClick }: Props
         >
             <div className="flex items-start justify-between gap-2">
                 <h4 className={`line-clamp-2 text-sm font-semibold ${style.strike ? "line-through" : ""}`}>{event.title}</h4>
-                <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase">{style.label}</span>
+                <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[0.625rem] font-semibold uppercase">{style.label}</span>
             </div>
 
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">

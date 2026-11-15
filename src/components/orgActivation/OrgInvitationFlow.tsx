@@ -134,12 +134,12 @@ export const OrgInvitationFlow = () => {
           <p className="text-sm">{ownership ? "Owner" : roleLabel(info.workspaceRole)}{where}. This invitation was sent to <strong>{info.email}</strong>, which already has an Admiino account.</p>
           <p className="text-sm text-muted-foreground">Sign in with your existing password. Your password, profile and other workspaces stay exactly as they are.</p>
           {ownership && signedIn && sameAccount && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />I accept ownership of {info.organizationName} and its responsibilities as workspace Owner.</label>}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive-text">{error}</p>}
           {!signedIn && <Button className="w-full" onClick={goSignIn}>Sign in to continue</Button>}
           {signedIn && sameAccount && <Button className="w-full" disabled={busy || (ownership && !accepted)} onClick={accept}>{busy ? "Working…" : ownership ? "Accept ownership & continue" : "Accept & continue"}</Button>}
           {signedIn && !sameAccount && (
             <div className="space-y-3" role="alert">
-              <p className="text-sm text-destructive">You're signed in as a different account. This invitation can only be accepted by the account for {info.email}.</p>
+              <p className="text-sm text-destructive-text">You're signed in as a different account. This invitation can only be accepted by the account for {info.email}.</p>
               <Button className="w-full" variant="outline" onClick={() => { logout(); savePendingInvitation(tokenRef.current); navigate("/", { state: { returnTo: ownership ? "/claim-ownership" : "/activate-account" } }); }}>Sign out and sign in as {info.email}</Button>
             </div>
           )}
@@ -194,12 +194,12 @@ export const OrgInvitationFlow = () => {
           <div className="space-y-1.5">
             <Label htmlFor="oa-confirm">Confirm password</Label>
             <Input id="oa-confirm" type={show ? "text" : "password"} autoComplete="new-password" value={form.confirm} aria-invalid={mismatch} onChange={(e) => setForm({ ...form, confirm: e.target.value })} />
-            {mismatch && <p role="alert" className="text-xs text-destructive">The passwords don't match.</p>}
+            {mismatch && <p role="alert" className="text-xs text-destructive-text">The passwords don't match.</p>}
           </div>
           {ownership && (
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />I accept ownership of {info.organizationName} and its responsibilities as workspace Owner.</label>
           )}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive-text">{error}</p>}
           <Button type="submit" className="h-11 w-full" disabled={!canSubmit}>{busy ? "Activating…" : ownership ? "Accept ownership & continue" : "Activate Account & Continue"}</Button>
           {phase === "done" && <p role="status" className="flex items-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" aria-hidden />Done</p>}
         </form>

@@ -16,22 +16,22 @@ export const StatsCard = ({ title, value, icon: Icon, description, trend, classN
     "bg-card border border-border rounded-xl p-4 sm:p-5 transition-all duration-300 hover:shadow-elevated hover:border-primary/15 group",
     className
   )}>
-    <div className="flex items-start justify-between">
+    <div className="flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">{title}</p>
-        <p className="text-2xl sm:text-3xl font-bold tracking-tight leading-none">{value}</p>
-        {description && <p className="text-[11px] text-muted-foreground mt-1.5">{description}</p>}
+        <p className="mb-1.5 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground [overflow-wrap:anywhere] sm:text-xs">{title}</p>
+        <p className="text-2xl sm:text-3xl font-bold tracking-tight leading-none [overflow-wrap:anywhere]">{value}</p>
+        {description && <p className="text-[0.6875rem] text-muted-foreground mt-1.5">{description}</p>}
         {trend && (
-          <p className={cn("text-[11px] font-semibold mt-2 flex items-center gap-1", trend.isPositive ? "text-success" : "text-destructive")}>
+          <p className={cn("text-[0.6875rem] font-semibold mt-2 flex flex-wrap items-center gap-1 [overflow-wrap:anywhere]", trend.isPositive ? "text-success-text" : "text-destructive-text")}>
             <span>{trend.isPositive ? "↑" : "↓"}</span> {Math.abs(trend.value)}% from last month
           </p>
         )}
       </div>
       <div className={cn(
-        "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-primary/8 transition-all duration-300 group-hover:scale-105 group-hover:bg-primary/12 shrink-0",
+        "w-10 h-10 sm:w-11 sm:h-11 max-[20rem]:hidden rounded-xl flex items-center justify-center bg-primary/8 transition-all duration-300 group-hover:scale-105 group-hover:bg-primary/12 shrink-0",
         iconClassName
       )}>
-        <Icon className="w-5 h-5 text-primary" />
+        <Icon className="w-5 h-5 text-primary-text" />
       </div>
     </div>
   </div>
@@ -44,12 +44,12 @@ interface PageHeaderProps {
 }
 
 export const PageHeader = ({ title, description, actions }: PageHeaderProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-    <div className="min-w-0">
-      <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
+  <div className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 sm:mb-8">
+    <div className="min-w-0 flex-1 basis-[min(100%,18rem)]">
+      <h1 className="text-xl sm:text-2xl font-bold tracking-tight [overflow-wrap:anywhere]">{title}</h1>
       {description && <p className="text-muted-foreground mt-1 text-sm">{description}</p>}
     </div>
-    {actions && <div className="flex items-center gap-2 sm:gap-3 shrink-0">{actions}</div>}
+    {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">{actions}</div>}
   </div>
 );
 
@@ -120,10 +120,10 @@ export const QuickActionCard = ({ title, description, icon: Icon, href, onClick,
         "w-10 h-10 rounded-xl flex items-center justify-center bg-primary/8 mb-3 transition-all duration-300 group-hover:scale-105 group-hover:bg-primary/12",
         iconClassName
       )}>
-        <Icon className="w-5 h-5 text-primary" />
+        <Icon className="w-5 h-5 text-primary-text" />
       </div>
       <h3 className="font-semibold text-sm mb-0.5">{title}</h3>
-      <p className="text-[11px] text-muted-foreground">{description}</p>
+      <p className="text-[0.6875rem] text-muted-foreground">{description}</p>
     </>
   );
 

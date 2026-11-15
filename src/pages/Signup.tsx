@@ -101,7 +101,7 @@ const Signup = () => {
             <div className="relative mx-auto mb-6 h-20 w-20">
               <span className="absolute inset-0 rounded-full bg-primary/10 animate-ping" />
               <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 animate-scale-in">
-                <MailCheck className="h-9 w-9 text-primary" />
+                <MailCheck className="h-9 w-9 text-primary-text" />
               </div>
             </div>
 
@@ -204,7 +204,7 @@ const Signup = () => {
             {error && (
               <div
                 role="alert"
-                className="mb-5 flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive animate-fade-in"
+                className="mb-5 flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive-text animate-fade-in"
               >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="leading-relaxed">{error}</span>

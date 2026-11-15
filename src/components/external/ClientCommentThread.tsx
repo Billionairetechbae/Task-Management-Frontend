@@ -44,7 +44,7 @@ const ClientCommentThread = ({ comments, onSubmit, readOnlyNotice, placeholder =
             <li key={c.id} className={`rounded-lg border p-3 ${c.authorKind === "internal" ? "bg-primary/5" : "bg-card"}`}>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground break-all">{c.authorName}</span>
-                <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                <Badge variant="outline" className="text-[0.625rem] h-4 px-1.5">
                   {c.authorKind === "internal" ? c.authorOrganization || "Team" : "Client"}
                 </Badge>
                 <time dateTime={c.createdAt}>{new Date(c.createdAt).toLocaleString()}</time>
@@ -58,7 +58,7 @@ const ClientCommentThread = ({ comments, onSubmit, readOnlyNotice, placeholder =
       {onSubmit ? (
         <div className="flex flex-col gap-2">
           <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={placeholder} rows={3} maxLength={5000} aria-label="Comment" />
-          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-xs text-destructive-text">{error}</p>}
           <div className="flex justify-end">
             <Button size="sm" onClick={submit} disabled={sending || !draft.trim()} className="gap-1.5">
               {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}

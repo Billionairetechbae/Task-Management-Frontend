@@ -150,7 +150,7 @@ const VerifyEmailSetup = () => {
             <p className="text-xs text-muted-foreground">Nothing changes: this is the password you already set. We only check it.</p>
           </div>
           {toggle}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive-text">{error}</p>}
           <Button type="submit" className="w-full" disabled={!canSubmit}>{busy ? "Working…" : "Confirm email"}</Button>
         </form>
         <div className="mt-4 border-t pt-4 text-center text-xs text-muted-foreground">
@@ -170,15 +170,15 @@ const VerifyEmailSetup = () => {
           <div className="space-y-1.5">
             <Label htmlFor="ve-password">New password</Label>
             <Input id="ve-password" type={show ? "text" : "password"} autoComplete="new-password" value={password} aria-describedby="ve-rules" aria-invalid={!!problem} onChange={(e) => setPassword(e.target.value)} />
-            <p id="ve-rules" className={`text-xs ${problem ? "text-destructive" : "text-muted-foreground"}`}>{problem || `At least ${VERIFY_MIN_PASSWORD} characters.`}</p>
+            <p id="ve-rules" className={`text-xs ${problem ? "text-destructive-text" : "text-muted-foreground"}`}>{problem || `At least ${VERIFY_MIN_PASSWORD} characters.`}</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ve-confirm">Confirm password</Label>
             <Input id="ve-confirm" type={show ? "text" : "password"} autoComplete="new-password" value={confirm} aria-invalid={mismatch} onChange={(e) => setConfirm(e.target.value)} />
-            {mismatch && <p role="alert" className="text-xs text-destructive">The passwords don't match.</p>}
+            {mismatch && <p role="alert" className="text-xs text-destructive-text">The passwords don't match.</p>}
           </div>
           {toggle}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive-text">{error}</p>}
           <Button type="submit" className="w-full" disabled={!canSubmit}>{busy ? "Working…" : "Confirm email & set password"}</Button>
         </form>
         <div className="mt-4 border-t pt-4 text-center text-xs text-muted-foreground">

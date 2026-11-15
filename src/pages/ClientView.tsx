@@ -118,7 +118,7 @@ const ClientView = () => {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-3">
-            <AlertCircle className="w-10 h-10 mx-auto text-destructive" />
+            <AlertCircle className="w-10 h-10 mx-auto text-destructive-text" />
             <h2 className="text-lg font-semibold">Link unavailable</h2>
             <p className="text-sm text-muted-foreground">
               {error || "This share link is invalid, expired, or has been revoked."}
@@ -175,9 +175,9 @@ const ClientView = () => {
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
               {data.resourceType === "project" ? (
-                <FolderKanban className="w-5 h-5 text-primary" />
+                <FolderKanban className="w-5 h-5 text-primary-text" />
               ) : (
-                <ListChecks className="w-5 h-5 text-primary" />
+                <ListChecks className="w-5 h-5 text-primary-text" />
               )}
             </div>
             <div>
@@ -272,7 +272,7 @@ function renderProject(project: ClientViewPayload extends { resourceType: "proje
             ].map(([label, value]) => (
               <div key={label as string} className="rounded-lg border p-3 text-center bg-card">
                 <p className="text-xl font-bold">{value ?? 0}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <p className="text-[0.6875rem] uppercase tracking-wide text-muted-foreground">
                   {label}
                 </p>
               </div>
@@ -392,17 +392,17 @@ function renderTask(task: any) {
                   <span className="text-sm font-medium truncate">{s.title}</span>
                   <div className="flex items-center gap-2 shrink-0">
                     {s.priority && (
-                      <Badge variant="secondary" className="capitalize text-[10px]">
+                      <Badge variant="secondary" className="capitalize text-[0.625rem]">
                         {formatStatus(s.priority)}
                       </Badge>
                     )}
                     {s.status && (
-                      <Badge variant="outline" className="capitalize text-[10px]">
+                      <Badge variant="outline" className="capitalize text-[0.625rem]">
                         {formatStatus(s.status)}
                       </Badge>
                     )}
                     {s.deadline && (
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-[0.6875rem] text-muted-foreground">
                         {formatDate(s.deadline)}
                       </span>
                     )}

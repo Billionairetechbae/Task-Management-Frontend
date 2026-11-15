@@ -79,7 +79,7 @@ const SignupExecutive = () => {
         <div className="max-w-xl mx-auto text-center">
           <Logo className="h-8 mb-6 mx-auto" />
 
-          <MailCheck className="w-16 h-16 text-primary mx-auto mb-4" />
+          <MailCheck className="w-16 h-16 text-primary-text mx-auto mb-4" />
 
           <h2 className="text-3xl font-bold mb-2">Verify Your Email</h2>
 
@@ -115,7 +115,7 @@ const SignupExecutive = () => {
         
         <Link 
           to="/" 
-          className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium"
+          className="inline-flex items-center gap-2 text-foreground hover:text-primary-text mb-8 font-medium"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Login
@@ -124,7 +124,7 @@ const SignupExecutive = () => {
         <div className="text-center mb-8">
           <Logo className="h-8 mb-2 mx-auto" />
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Building2 className="w-8 h-8 text-primary" />
+            <Building2 className="w-8 h-8 text-primary-text" />
           </div>
           <h2 className="text-3xl font-bold mb-2">Create Executive Account</h2>
           <p className="text-muted-foreground">
@@ -240,7 +240,7 @@ const SignupExecutive = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <Link to="/" className="text-primary hover:underline font-medium">
+            <Link to="/" className="text-primary-text hover:underline font-medium">
               Already have an account? Sign In
             </Link>
           </div>
