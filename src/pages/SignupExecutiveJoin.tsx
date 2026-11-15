@@ -67,7 +67,7 @@ const SignupExecutiveJoin = () => {
       <div className="min-h-screen py-10 px-4 bg-background flex justify-center">
         <div className="max-w-lg text-center">
           <Logo className="h-10 mx-auto mb-4" />
-          <CheckCircle2 className="w-14 h-14 text-success mx-auto mb-4" />
+          <CheckCircle2 className="w-14 h-14 text-success-text mx-auto mb-4" />
           <h2 className="text-3xl font-bold mb-2">Welcome Executive!</h2>
           <p className="text-muted-foreground mb-6">
             You have successfully joined the company.
@@ -85,7 +85,7 @@ const SignupExecutiveJoin = () => {
       <div className="max-w-2xl mx-auto">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium"
+          className="inline-flex items-center gap-2 text-foreground hover:text-primary-text mb-8 font-medium"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Login
@@ -93,7 +93,7 @@ const SignupExecutiveJoin = () => {
 
         <div className="text-center mb-6">
           <Logo className="h-8 mx-auto mb-2" />
-          <Crown className="w-10 h-10 text-primary mx-auto mb-3" />
+          <Crown className="w-10 h-10 text-primary-text mx-auto mb-3" />
           <h2 className="text-3xl font-bold">Join as Executive</h2>
           <p className="text-muted-foreground">
             Use the company code to join an existing organization

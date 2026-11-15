@@ -17,6 +17,7 @@ import {
   ProjectInvite,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { viewportAtLeastRem } from "@/hooks/use-viewport-width";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -137,11 +138,11 @@ export default function ProjectDetails() {
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean>(
-    typeof window !== "undefined" ? window.innerWidth >= 1024 : true
+    typeof window !== "undefined" ? viewportAtLeastRem(64) : true
   );
 
   useEffect(() => {
-    const mql = window.matchMedia("(min-width: 1024px)");
+    const mql = window.matchMedia("(min-width: 64rem)");
     const onChange = () => setIsDesktopLayout(mql.matches);
     onChange();
     mql.addEventListener("change", onChange);
@@ -641,7 +642,7 @@ export default function ProjectDetails() {
     return (
       <DashboardLayout fullWidth hidePadding>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
         </div>
       </DashboardLayout>
     );
@@ -727,7 +728,7 @@ export default function ProjectDetails() {
 
               <button
                 onClick={() => navigate("/projects?create=true")}
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:text-primary"
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:text-primary-text"
               >
                 <Plus className="w-3 h-3" />
               </button>
@@ -761,7 +762,7 @@ export default function ProjectDetails() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary-text transition-colors" />
                         )}
                       </button>
                     </TooltipTrigger>
@@ -778,7 +779,7 @@ export default function ProjectDetails() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-[9px] uppercase tracking-wider shrink-0",
+                          "text-[0.5625rem] uppercase tracking-wider shrink-0",
                           getStatusBadgeClass(project.status)
                         )}
                       >
@@ -800,7 +801,7 @@ export default function ProjectDetails() {
                         {project.description.length > 120 && (
                           <button
                             onClick={() => setDescExpanded((v) => !v)}
-                            className="text-[10px] font-semibold text-primary hover:underline mt-0.5"
+                            className="text-[0.625rem] font-semibold text-primary-text hover:underline mt-0.5"
                           >
                             {descExpanded ? "Show less" : "See more"}
                           </button>
@@ -810,7 +811,7 @@ export default function ProjectDetails() {
 
                     <div className="flex items-center gap-4 flex-wrap">
                       {(project.startDate || project.endDate) && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-[0.625rem] text-muted-foreground">
                           <Calendar className="w-3 h-3 shrink-0" />
 
                           <span>
@@ -832,14 +833,14 @@ export default function ProjectDetails() {
                               <Tooltip key={m.id}>
                                 <TooltipTrigger>
                                   <Avatar className="w-5 h-5 border border-background">
-                                    <AvatarFallback className="text-[7px] font-bold bg-primary/10 text-primary">
+                                    <AvatarFallback className="text-[0.4375rem] font-bold bg-primary/10 text-primary-text">
                                       {m.firstName?.[0]}
                                       {m.lastName?.[0]}
                                     </AvatarFallback>
                                   </Avatar>
                                 </TooltipTrigger>
 
-                                <TooltipContent className="text-[10px]">
+                                <TooltipContent className="text-[0.625rem]">
                                   {m.firstName} {m.lastName}
                                 </TooltipContent>
                               </Tooltip>
@@ -849,20 +850,20 @@ export default function ProjectDetails() {
                               <Tooltip>
                                 <TooltipTrigger>
                                   <Avatar className="w-5 h-5 border border-background">
-                                    <AvatarFallback className="text-[7px] font-bold bg-muted text-muted-foreground">
+                                    <AvatarFallback className="text-[0.4375rem] font-bold bg-muted text-muted-foreground">
                                       +{members.length - 5}
                                     </AvatarFallback>
                                   </Avatar>
                                 </TooltipTrigger>
 
-                                <TooltipContent className="text-[10px]">
+                                <TooltipContent className="text-[0.625rem]">
                                   {members.length - 5} more
                                 </TooltipContent>
                               </Tooltip>
                             )}
                           </div>
 
-                          <span className="text-[9px] text-muted-foreground font-medium">
+                          <span className="text-[0.5625rem] text-muted-foreground font-medium">
                             {members.length} member
                             {members.length !== 1 ? "s" : ""}
                           </span>
@@ -932,8 +933,8 @@ export default function ProjectDetails() {
                     {project && (workspaceRole === "owner" || workspaceRole === "admin") && (
                       <>
                         <Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-sm" onClick={() => setExternalShareOpen(true)}>
-                          <span className="hidden sm:inline text-[11px]">Invite external client</span>
-                          <span className="sm:hidden text-[11px]">Invite</span>
+                          <span className="hidden sm:inline text-[0.6875rem]">Invite external client</span>
+                          <span className="sm:hidden text-[0.6875rem]">Invite</span>
                         </Button>
                         <ExternalShareDialog
                           open={externalShareOpen}
@@ -949,7 +950,7 @@ export default function ProjectDetails() {
                     {project && ["owner", "admin", "manager"].includes(String(workspaceRole)) && (
                       <>
                         <Button size="sm" variant="outline" className="h-8 gap-1.5 shadow-sm" onClick={() => setClientCommentsOpen(true)}>
-                          <span className="text-[11px]">Client Comments</span>
+                          <span className="text-[0.6875rem]">Client Comments</span>
                         </Button>
                         <ClientCommentsDialog open={clientCommentsOpen} onOpenChange={setClientCommentsOpen}>
                           <ClientCommentsDialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -972,7 +973,7 @@ export default function ProjectDetails() {
                           >
                             <KeyRound className="w-3.5 h-3.5" />
 
-                            <span className="hidden sm:inline text-[11px]">
+                            <span className="hidden sm:inline text-[0.6875rem]">
                               {hasPendingProjectTaskAccessRequest
                                 ? "Access Pending"
                                 : "Request Access"}
@@ -1016,28 +1017,28 @@ export default function ProjectDetails() {
                         <MiniStat
                           label="Tasks"
                           value={taskStats.total}
-                          color="text-primary"
+                          color="text-primary-text"
                         />
                         <MiniStat
                           label="Done"
                           value={taskStats.completed}
-                          color="text-success"
+                          color="text-success-text"
                         />
                         <MiniStat
                           label="Active"
                           value={taskStats.inProgress}
-                          color="text-info"
+                          color="text-info-text"
                         />
                         <MiniStat
                           label="Pending"
                           value={taskStats.pending}
-                          color="text-warning"
+                          color="text-warning-text"
                         />
                       </div>
 
                       {taskStats.total > 0 && (
                         <div className="space-y-1">
-                          <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
+                          <div className="flex justify-between text-[0.5625rem] text-muted-foreground uppercase font-bold tracking-wider">
                             <span>Completion</span>
                             <span>
                               {Math.round(
@@ -1070,7 +1071,7 @@ export default function ProjectDetails() {
                           value={memberEmail}
                           onChange={(e) => setMemberEmail(e.target.value)}
                           placeholder="email@example.com"
-                          className="h-7 text-[11px] bg-muted/30"
+                          className="h-7 text-[0.6875rem] bg-muted/30"
                           onKeyDown={(e) => e.key === "Enter" && addMember()}
                         />
 
@@ -1115,10 +1116,10 @@ export default function ProjectDetails() {
                         {members.map((m) => (
                           <div
                             key={m.id}
-                            className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors duration-150 group text-[11px]"
+                            className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors duration-150 group text-[0.6875rem]"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-[9px] font-bold text-primary shrink-0">
+                              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-[0.5625rem] font-bold text-primary-text shrink-0">
                                 {m.firstName?.[0]}
                                 {m.lastName?.[0]}
                               </div>
@@ -1128,9 +1129,9 @@ export default function ProjectDetails() {
                                   {m.firstName} {m.lastName}
                                 </p>
 
-                                <div className="text-[9px] text-muted-foreground truncate">
+                                <div className="text-[0.5625rem] text-muted-foreground truncate">
                                   {m.role === "owner" ? (
-                                    <span className="font-semibold text-primary">Owner</span>
+                                    <span className="font-semibold text-primary-text">Owner</span>
                                   ) : (
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
@@ -1161,7 +1162,7 @@ export default function ProjectDetails() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
+                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive-text transition-opacity"
                                     onClick={() => removeMember(m.userId || m.id)}
                                   >
                                     <X className="w-3 h-3" />
@@ -1175,7 +1176,7 @@ export default function ProjectDetails() {
                         ))}
 
                         {members.length === 0 && (
-                          <p className="text-[10px] text-muted-foreground text-center py-4 italic">
+                          <p className="text-[0.625rem] text-muted-foreground text-center py-4 italic">
                             No members yet
                           </p>
                         )}
@@ -1183,7 +1184,7 @@ export default function ProjectDetails() {
 
                       {invites.length > 0 && (
                         <div className="pt-2 border-t border-border space-y-1">
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          <p className="text-[0.5625rem] font-bold text-muted-foreground uppercase tracking-wider">
                             Pending Invites
                           </p>
 
@@ -1196,10 +1197,10 @@ export default function ProjectDetails() {
                             .map((inv) => (
                               <div
                                 key={inv.id}
-                                className="flex items-center justify-between py-1 px-2 rounded-lg bg-warning/5 text-[10px]"
+                                className="flex items-center justify-between py-1 px-2 rounded-lg bg-warning/5 text-[0.625rem]"
                               >
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <Mail className="w-3 h-3 text-warning shrink-0" />
+                                  <Mail className="w-3 h-3 text-warning-text shrink-0" />
                                   <span className="truncate">{inv.email}</span>
                                 </div>
 
@@ -1224,7 +1225,7 @@ export default function ProjectDetails() {
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-5 w-5 text-destructive"
+                                        className="h-5 w-5 text-destructive-text"
                                         onClick={() => revokeInvite(inv.id)}
                                       >
                                         <XCircle className="w-2.5 h-2.5" />
@@ -1249,7 +1250,7 @@ export default function ProjectDetails() {
                   >
                     <div className="px-3 pb-3 space-y-2.5">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <label className="text-[0.5625rem] font-bold text-muted-foreground uppercase tracking-wider">
                           Name
                         </label>
 
@@ -1261,12 +1262,12 @@ export default function ProjectDetails() {
                               name: e.target.value,
                             }))
                           }
-                          className="h-7 text-[11px]"
+                          className="h-7 text-[0.6875rem]"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <label className="text-[0.5625rem] font-bold text-muted-foreground uppercase tracking-wider">
                           Description
                         </label>
 
@@ -1278,14 +1279,14 @@ export default function ProjectDetails() {
                               description: e.target.value,
                             }))
                           }
-                          className="text-[11px] min-h-[50px]"
+                          className="text-[0.6875rem] min-h-[50px]"
                           rows={2}
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          <label className="text-[0.5625rem] font-bold text-muted-foreground uppercase tracking-wider">
                             Start
                           </label>
 
@@ -1298,12 +1299,12 @@ export default function ProjectDetails() {
                                 startDate: e.target.value,
                               }))
                             }
-                            className="h-7 text-[10px] px-1.5"
+                            className="h-7 text-[0.625rem] px-1.5"
                           />
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          <label className="text-[0.5625rem] font-bold text-muted-foreground uppercase tracking-wider">
                             End
                           </label>
 
@@ -1316,13 +1317,13 @@ export default function ProjectDetails() {
                                 endDate: e.target.value,
                               }))
                             }
-                            className="h-7 text-[10px] px-1.5"
+                            className="h-7 text-[0.625rem] px-1.5"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <label className="text-[0.5625rem] font-bold text-muted-foreground uppercase tracking-wider">
                           Status
                         </label>
 
@@ -1334,7 +1335,7 @@ export default function ProjectDetails() {
                               status: e.target.value,
                             }))
                           }
-                          className="flex h-7 w-full rounded-lg border border-input bg-background px-2 text-[11px]"
+                          className="flex h-7 w-full rounded-lg border border-input bg-background px-2 text-[0.6875rem]"
                         >
                           <option value="planning">Planning</option>
                           <option value="active">Active</option>
@@ -1347,7 +1348,7 @@ export default function ProjectDetails() {
                       <Button
                         onClick={saveSettings}
                         disabled={savingSettings}
-                        className="w-full h-7 text-[10px] gap-1.5"
+                        className="w-full h-7 text-[0.625rem] gap-1.5"
                       >
                         {savingSettings ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -1394,7 +1395,7 @@ export default function ProjectDetails() {
                               </button>
                             </TooltipTrigger>
 
-                            <TooltipContent className="text-[10px]">
+                            <TooltipContent className="text-[0.625rem]">
                               Table View
                             </TooltipContent>
                           </Tooltip>
@@ -1417,7 +1418,7 @@ export default function ProjectDetails() {
                               </button>
                             </TooltipTrigger>
 
-                            <TooltipContent className="text-[10px]">
+                            <TooltipContent className="text-[0.625rem]">
                               Board View
                             </TooltipContent>
                           </Tooltip>
@@ -1464,7 +1465,7 @@ export default function ProjectDetails() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[10px] gap-1"
+                          className="h-7 text-[0.625rem] gap-1"
                           onClick={() => setIsCreateTaskOpen(true)}
                           disabled={!canCreateProjectTask}
                         >
@@ -1480,7 +1481,7 @@ export default function ProjectDetails() {
                       />
                     ) : (
                       <div>
-                        <div className="hidden sm:grid grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-1.5 border-b border-border bg-muted/20 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <div className="hidden sm:grid grid-cols-[2fr,1fr,1fr,1fr,auto] gap-1 px-3 py-1.5 border-b border-border bg-muted/20 text-[0.5625rem] font-bold text-muted-foreground uppercase tracking-wider">
                           <div>Task</div>
                           <div>Priority</div>
                           <div>Status</div>
@@ -1510,7 +1511,7 @@ export default function ProjectDetails() {
 
                                 <p
                                   className={cn(
-                                    "font-medium truncate text-[11px]",
+                                    "font-medium truncate text-[0.6875rem]",
                                     task.status === "completed" &&
                                       "line-through text-muted-foreground"
                                   )}
@@ -1523,14 +1524,14 @@ export default function ProjectDetails() {
                                   <Tooltip>
                                     <TooltipTrigger>
                                       <Avatar className="w-4 h-4 shrink-0">
-                                        <AvatarFallback className="text-[6px] font-bold bg-primary/10 text-primary">
+                                        <AvatarFallback className="text-[0.375rem] font-bold bg-primary/10 text-primary-text">
                                           {task.assignee.firstName?.[0]}
                                           {task.assignee.lastName?.[0]}
                                         </AvatarFallback>
                                       </Avatar>
                                     </TooltipTrigger>
 
-                                    <TooltipContent className="text-[10px]">
+                                    <TooltipContent className="text-[0.625rem]">
                                       {task.assignee.firstName}{" "}
                                       {task.assignee.lastName}
                                     </TooltipContent>
@@ -1543,7 +1544,7 @@ export default function ProjectDetails() {
                                   <Badge
                                     variant="outline"
                                     className={cn(
-                                      "text-[8px] px-1.5 h-4",
+                                      "text-[0.5rem] px-1.5 h-4",
                                       getPriorityBadgeClass(task.priority)
                                     )}
                                   >
@@ -1556,7 +1557,7 @@ export default function ProjectDetails() {
                                 <Badge
                                   variant="outline"
                                   className={cn(
-                                    "text-[8px] px-1.5 h-4",
+                                    "text-[0.5rem] px-1.5 h-4",
                                     getStatusBadgeClass(task.status)
                                   )}
                                 >
@@ -1564,7 +1565,7 @@ export default function ProjectDetails() {
                                 </Badge>
                               </div>
 
-                              <div className="text-[10px] text-muted-foreground">
+                              <div className="text-[0.625rem] text-muted-foreground">
                                 {task.deadline
                                   ? format(new Date(task.deadline), "MMM d")
                                   : "—"}
@@ -1585,7 +1586,7 @@ export default function ProjectDetails() {
                                     </Button>
                                   </TooltipTrigger>
 
-                                  <TooltipContent className="text-[10px]">
+                                  <TooltipContent className="text-[0.625rem]">
                                     View
                                   </TooltipContent>
                                 </Tooltip>
@@ -1602,7 +1603,7 @@ export default function ProjectDetails() {
                                     </Button>
                                   </TooltipTrigger>
 
-                                  <TooltipContent className="text-[10px]">
+                                  <TooltipContent className="text-[0.625rem]">
                                     Edit
                                   </TooltipContent>
                                 </Tooltip>
@@ -1613,7 +1614,7 @@ export default function ProjectDetails() {
 
                         {totalTaskPages > 1 && (
                           <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
-                            <span className="text-[9px] text-muted-foreground">
+                            <span className="text-[0.5625rem] text-muted-foreground">
                               {(taskPage - 1) * tasksPerPage + 1}–
                               {Math.min(taskPage * tasksPerPage, tasks.length)}{" "}
                               of {tasks.length}
@@ -1640,7 +1641,7 @@ export default function ProjectDetails() {
                                 <ChevronLeft className="w-3 h-3" />
                               </Button>
 
-                              <span className="text-[10px] px-2 font-medium">
+                              <span className="text-[0.625rem] px-2 font-medium">
                                 {taskPage}/{totalTaskPages}
                               </span>
 
@@ -1723,7 +1724,7 @@ export default function ProjectDetails() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[10px] gap-1"
+                            className="h-7 text-[0.625rem] gap-1"
                             onClick={() => setIsCreateChecklistOpen(true)}
                           >
                             <Plus className="w-3 h-3" />
@@ -1763,14 +1764,14 @@ export default function ProjectDetails() {
                 <div className="px-3 pb-3 space-y-3">
                   {project?.id && <CustomFieldValueDisplay entityType="project" entityId={project.id} />}
                   <div className="grid grid-cols-4 gap-2">
-                    <MiniStat label="Tasks" value={taskStats.total} color="text-primary" />
-                    <MiniStat label="Done" value={taskStats.completed} color="text-success" />
-                    <MiniStat label="Active" value={taskStats.inProgress} color="text-info" />
-                    <MiniStat label="Pending" value={taskStats.pending} color="text-warning" />
+                    <MiniStat label="Tasks" value={taskStats.total} color="text-primary-text" />
+                    <MiniStat label="Done" value={taskStats.completed} color="text-success-text" />
+                    <MiniStat label="Active" value={taskStats.inProgress} color="text-info-text" />
+                    <MiniStat label="Pending" value={taskStats.pending} color="text-warning-text" />
                   </div>
                   {taskStats.total > 0 && (
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                      <div className="flex justify-between text-[0.625rem] text-muted-foreground uppercase font-bold tracking-wider">
                         <span>Completion</span>
                         <span>{Math.round((taskStats.completed / taskStats.total) * 100)}%</span>
                       </div>
@@ -1823,16 +1824,16 @@ export default function ProjectDetails() {
                           <BlockedBadge task={task} />
                         </div>
                         <div className="mt-1 flex items-center gap-2 flex-wrap pl-3.5">
-                          <Badge variant="outline" className={cn("text-[9px] px-1.5 h-4", getStatusBadgeClass(task.status))}>
+                          <Badge variant="outline" className={cn("text-[0.5625rem] px-1.5 h-4", getStatusBadgeClass(task.status))}>
                             {getStatusDisplay(task.status)}
                           </Badge>
                           {task.priority && (
-                            <Badge variant="outline" className={cn("text-[9px] px-1.5 h-4", getPriorityBadgeClass(task.priority))}>
+                            <Badge variant="outline" className={cn("text-[0.5625rem] px-1.5 h-4", getPriorityBadgeClass(task.priority))}>
                               {getPriorityDisplay(task.priority)}
                             </Badge>
                           )}
                           {task.deadline && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[0.625rem] text-muted-foreground">
                               {format(new Date(task.deadline), "MMM d")}
                             </span>
                           )}
@@ -1843,7 +1844,7 @@ export default function ProjectDetails() {
                 )}
                 {totalTaskPages > 1 && (
                   <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[0.625rem] text-muted-foreground">
                       {(taskPage - 1) * tasksPerPage + 1}–
                       {Math.min(taskPage * tasksPerPage, tasks.length)} of {tasks.length}
                     </span>
@@ -1851,7 +1852,7 @@ export default function ProjectDetails() {
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setTaskPage((p) => p - 1)} disabled={taskPage === 1}>
                         <ChevronLeft className="w-3.5 h-3.5" />
                       </Button>
-                      <span className="text-[11px] px-1 font-medium">{taskPage}/{totalTaskPages}</span>
+                      <span className="text-[0.6875rem] px-1 font-medium">{taskPage}/{totalTaskPages}</span>
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setTaskPage((p) => p + 1)} disabled={taskPage === totalTaskPages}>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </Button>
@@ -1922,20 +1923,20 @@ export default function ProjectDetails() {
                     {members.map((m) => (
                       <div key={m.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-muted/20">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[0.625rem] font-bold text-primary-text shrink-0">
                             {m.firstName?.[0]}{m.lastName?.[0]}
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-medium truncate">{m.firstName} {m.lastName}</p>
                             {m.role === "owner" ? (
-                              <p className="text-[10px] font-semibold text-primary truncate">Owner</p>
+                              <p className="text-[0.625rem] font-semibold text-primary-text truncate">Owner</p>
                             ) : (
-                              <p className="text-[10px] text-muted-foreground truncate capitalize">{m.role}</p>
+                              <p className="text-[0.625rem] text-muted-foreground truncate capitalize">{m.role}</p>
                             )}
                           </div>
                         </div>
                         {m.role !== "owner" && (
-                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeMember(m.userId || m.id)}>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive-text" onClick={() => removeMember(m.userId || m.id)}>
                             <X className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -2008,7 +2009,7 @@ export default function ProjectDetails() {
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-primary" />
+                    <Lock className="w-4 h-4 text-primary-text" />
                     Request Project Task Access
                   </DialogTitle>
 
@@ -2019,7 +2020,7 @@ export default function ProjectDetails() {
                 </DialogHeader>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  <label className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider">
                     Reason optional
                   </label>
 
@@ -2143,7 +2144,7 @@ function CollapsiblePanel({
 
         <span className="text-muted-foreground">{icon}</span>
 
-        <span className="text-[11px] font-semibold flex-1 tracking-tight">
+        <span className="text-[0.6875rem] font-semibold flex-1 tracking-tight">
           {title}
         </span>
 
@@ -2179,7 +2180,7 @@ function MiniStat({
         {value}
       </p>
 
-      <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+      <p className="text-[0.5rem] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
         {label}
       </p>
     </div>
@@ -2236,11 +2237,11 @@ function ChecklistPanel({
           )}
         </button>
 
-        <span className="text-[11px] font-semibold flex-1 truncate">
+        <span className="text-[0.6875rem] font-semibold flex-1 truncate">
           {checklist.title}
         </span>
 
-        <span className="text-[9px] text-muted-foreground shrink-0">
+        <span className="text-[0.5625rem] text-muted-foreground shrink-0">
           {completed}/{items.length}
         </span>
 
@@ -2261,7 +2262,7 @@ function ChecklistPanel({
 
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              className="text-destructive text-xs"
+              className="text-destructive-text text-xs"
               onClick={() => onDeleteChecklist(checklist.id)}
             >
               <Trash2 className="w-3 h-3 mr-1.5" />
@@ -2285,7 +2286,7 @@ function ChecklistPanel({
 
               <span
                 className={cn(
-                  "text-[11px] flex-1 transition-all",
+                  "text-[0.6875rem] flex-1 transition-all",
                   item.isCompleted && "line-through text-muted-foreground"
                 )}
               >
@@ -2297,7 +2298,7 @@ function ChecklistPanel({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
+                    className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive-text transition-opacity"
                     onClick={() => onDeleteItem(checklist.id, item.id)}
                   >
                     <Trash2 className="w-2.5 h-2.5" />
@@ -2314,7 +2315,7 @@ function ChecklistPanel({
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
               placeholder="Add item..."
-              className="h-6 text-[10px] bg-transparent border-none shadow-none px-0 focus-visible:ring-0"
+              className="h-6 text-[0.625rem] bg-transparent border-none shadow-none px-0 focus-visible:ring-0"
               onKeyDown={(e) => e.key === "Enter" && addItem()}
             />
 

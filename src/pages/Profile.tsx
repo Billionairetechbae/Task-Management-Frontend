@@ -75,10 +75,10 @@ const fmtDate = (v?: string | null) => {
 };
 
 const ROLE_META: Record<WorkspaceRole, { label: string; icon: typeof Crown; colour: string }> = {
-  owner:   { label: "Owner",   icon: Crown,       colour: "bg-yellow-500/10 text-yellow-600 border-yellow-300/50" },
+  owner:   { label: "Owner",   icon: Crown,       colour: "bg-yellow-500/10 text-warning-text border-yellow-300/50" },
   admin:   { label: "Admin",   icon: ShieldCheck, colour: "bg-purple-500/10 text-purple-600 border-purple-300/50" },
   manager: { label: "Manager", icon: Briefcase,   colour: "bg-blue-500/10   text-blue-600   border-blue-300/50"   },
-  member:  { label: "Member",  icon: Users,       colour: "bg-green-500/10  text-green-600  border-green-300/50"  },
+  member:  { label: "Member",  icon: Users,       colour: "bg-green-500/10  text-success-text border-green-300/50"  },
 };
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
@@ -90,8 +90,8 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
 
 const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => (
   <div className="flex items-center justify-between gap-3 py-2.5 border-b border-border/50 last:border-0">
-    <span className="text-sm text-muted-foreground">{label}</span>
-    <span className="text-sm font-medium text-foreground text-right">{value}</span>
+    <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
+    <span className="min-w-0 text-sm font-medium text-foreground text-right [overflow-wrap:anywhere]">{value}</span>
   </div>
 );
 
@@ -166,7 +166,7 @@ const WorkspaceCard = ({
       )}
     >
       {/* logo / initials */}
-      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary overflow-hidden">
+      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-sm font-bold text-primary-text overflow-hidden">
         {ws.company?.name?.[0]?.toUpperCase() ?? "W"}
       </div>
 
@@ -176,7 +176,7 @@ const WorkspaceCard = ({
             {ws.company?.name || ws.company?.companyCode || "Workspace"}
           </p>
           {isActive && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[0.625rem] font-medium text-primary-text bg-primary/10 px-1.5 py-0.5 rounded-full">
               <CheckCircle2 className="w-3 h-3" /> Active
             </span>
           )}
@@ -193,9 +193,9 @@ const WorkspaceCard = ({
           </span>
 
           <span className={cn(
-            "inline-flex items-center gap-1 text-[10px] border rounded-full px-2 py-0.5",
+            "inline-flex items-center gap-1 text-[0.625rem] border rounded-full px-2 py-0.5",
             ws.status === "active"
-              ? "bg-green-500/10 text-green-600 border-green-300/50"
+              ? "bg-green-500/10 text-success-text border-green-300/50"
               : "bg-muted text-muted-foreground border-border"
           )}>
             {ws.status === "active"
@@ -354,7 +354,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
                       className="w-24 h-24 rounded-full object-cover border-4 border-background shadow-md"
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-full bg-primary/10 border-4 border-background shadow-md flex items-center justify-center text-2xl font-bold text-primary select-none">
+                    <div className="w-24 h-24 rounded-full bg-primary/10 border-4 border-background shadow-md flex items-center justify-center text-2xl font-bold text-primary-text select-none">
                       {user.firstName?.[0]}{user.lastName?.[0]}
                     </div>
                   )}
@@ -404,7 +404,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
         </Card>
 
         {/* ── Two-column layout on md+ ── */}
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
 
           {/* LEFT ── Contact & about */}
           <div className="space-y-5">
@@ -413,7 +413,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
             <Card className="rounded-xl shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-primary" />
+                  <Mail className="h-4 w-4 text-primary-text" />
                   Contact information
                 </CardTitle>
               </CardHeader>
@@ -448,7 +448,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
               <Card className="rounded-xl shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-primary" />
+                    <Globe className="h-4 w-4 text-primary-text" />
                     Links
                   </CardTitle>
                 </CardHeader>
@@ -459,7 +459,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
                       href={href!}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium border rounded-full px-3 py-1.5 hover:border-primary/50 hover:text-primary transition-colors"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium border rounded-full px-3 py-1.5 hover:border-primary/50 hover:text-primary-text transition-colors"
                     >
                       <Icon className="h-3.5 w-3.5" />
                       {label}
@@ -475,7 +475,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
               <Card className="rounded-xl shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <UserIcon className="h-4 w-4 text-primary" />
+                    <UserIcon className="h-4 w-4 text-primary-text" />
                     About
                   </CardTitle>
                 </CardHeader>
@@ -506,7 +506,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
             <Card className="rounded-xl shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-primary" />
+                  <Building2 className="h-4 w-4 text-primary-text" />
                   Active workspace
                 </CardTitle>
               </CardHeader>
@@ -525,7 +525,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
             <Card className="rounded-xl shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
+                  <Users className="h-4 w-4 text-primary-text" />
                   All workspaces
                   {workspaces.length > 0 && (
                     <Badge variant="secondary" className="ml-1 text-xs">{workspaces.length}</Badge>
@@ -548,7 +548,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
                         {activeWs && (
                           <div className="flex items-center gap-2 pt-1">
                             <Separator className="flex-1" />
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Other workspaces</span>
+                            <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wider">Other workspaces</span>
                             <Separator className="flex-1" />
                           </div>
                         )}

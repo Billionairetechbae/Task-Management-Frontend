@@ -146,7 +146,7 @@ const WorkspaceLifecycleSettings = () => {
     </Card>
 
     <Card className="border-destructive/50">
-      <CardHeader><CardTitle className="text-destructive">Danger Zone</CardTitle><CardDescription>Changes here affect your access to this workspace.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-destructive-text">Danger Zone</CardTitle><CardDescription>Changes here affect your access to this workspace.</CardDescription></CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Leave workspace</p><p className="text-sm text-muted-foreground">You will lose access to its projects, tasks and files.</p></div><Button variant="outline" onClick={() => setLeaveOpen(true)}><LogOut className="mr-2 h-4 w-4" />Leave workspace</Button></div>
         {isOwner && <div className="flex flex-col gap-3 rounded-lg border border-destructive/30 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Delete workspace</p><p className="text-sm text-muted-foreground">Move this workspace and its content to Trash for 30 days.</p></div><Button variant="destructive" onClick={() => setDeleteOpen(true)}><Trash2 className="mr-2 h-4 w-4" />Delete workspace</Button></div>}

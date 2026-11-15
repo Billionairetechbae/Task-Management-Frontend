@@ -41,7 +41,7 @@ const ProjectOverviewTab = ({ project }: ProjectOverviewTabProps) => {
         <Card className="lg:col-span-2 border border-border shadow-soft">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Info className="w-4 h-4 text-primary" />
+              <Info className="w-4 h-4 text-primary-text" />
               About Project
             </CardTitle>
           </CardHeader>
@@ -74,14 +74,14 @@ const ProjectOverviewTab = ({ project }: ProjectOverviewTabProps) => {
         <Card className="border border-border shadow-soft">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
+              <TrendingUp className="w-4 h-4 text-primary-text" />
               Project Health
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="w-20 h-20 rounded-full border-4 border-primary/20 flex items-center justify-center mb-4">
-                <span className="text-2xl font-bold text-primary">--</span>
+                <span className="text-2xl font-bold text-primary-text">--</span>
               </div>
               <p className="text-sm font-medium">Analytics coming soon</p>
               <p className="text-xs text-muted-foreground mt-1 px-4">

@@ -18,7 +18,7 @@ const HarmonyIntro = ({ hasProfile, onGetStarted, onViewProfile }: HarmonyIntroP
       <CardContent className="relative grid gap-8 p-6 md:grid-cols-[1.1fr_0.9fr] md:p-8">
         <div className="space-y-5">
           <div>
-            <p className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+            <p className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary-text">
               <Sparkles className="h-4 w-4" />
               Harmony Work Style Index
             </p>
@@ -70,7 +70,7 @@ const HarmonyIntro = ({ hasProfile, onGetStarted, onViewProfile }: HarmonyIntroP
           </div>
 
           <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-fuchsia-500/5 p-4">
-            <p className="text-sm font-semibold text-primary flex items-center gap-1.5">
+            <p className="text-sm font-semibold text-primary-text flex items-center gap-1.5">
               <Heart className="h-4 w-4" />
               Instruction for Respondents
             </p>
@@ -98,7 +98,7 @@ const HarmonyIntro = ({ hasProfile, onGetStarted, onViewProfile }: HarmonyIntroP
 
         <div className="rounded-3xl border bg-gradient-to-br from-primary/20 via-background to-fuchsia-500/15 p-6">
           <div className="rounded-2xl border bg-background/90 backdrop-blur p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wider text-primary flex items-center gap-1.5">
+            <p className="text-xs font-medium uppercase tracking-wider text-primary-text flex items-center gap-1.5">
               <Compass className="h-3.5 w-3.5" />
               What Harmony shows
             </p>

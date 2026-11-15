@@ -106,7 +106,7 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
       >
         {/* Header */}
         <div className="flex items-center gap-3 p-3 sm:p-4 border-b border-border bg-card">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary-text flex items-center justify-center shrink-0">
             <Icon className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
@@ -171,7 +171,7 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
                 </div>
               )}
               {textError && (
-                <div className="text-destructive text-sm">Failed to load: {textError}</div>
+                <div className="text-destructive-text text-sm">Failed to load: {textError}</div>
               )}
               {!loadingText && !textError && textContent !== null && (
                 <pre className="text-xs sm:text-sm bg-card border border-border rounded-lg p-4 whitespace-pre-wrap break-words font-mono">

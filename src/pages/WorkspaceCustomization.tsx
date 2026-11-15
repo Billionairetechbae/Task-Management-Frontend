@@ -17,7 +17,7 @@ export default function WorkspaceCustomization() {
           </div>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Set up workspace-level fields that fit the way your team works. Managers can create and manage task and project fields.</p>
         </div>
-        <a href="https://www.admiino.com/guide#custom-fields" target="_blank" rel="noreferrer" className="text-sm font-medium text-primary underline-offset-4 hover:underline">Learn more in the Guide</a>
+        <a href="https://www.admiino.com/guide#custom-fields" target="_blank" rel="noreferrer" className="text-sm font-medium text-primary-text underline-offset-4 hover:underline">Learn more in the Guide</a>
       </header>
 
       <section className="rounded-xl border bg-card p-4 sm:p-5" aria-labelledby="custom-fields-heading">

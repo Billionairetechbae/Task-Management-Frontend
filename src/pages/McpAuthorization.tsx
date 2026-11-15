@@ -70,7 +70,7 @@ export default function McpAuthorization() {
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-xl rounded-2xl">
         <CardHeader>
-          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary-text">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <CardTitle>Authorize an AI assistant</CardTitle>
@@ -84,7 +84,7 @@ export default function McpAuthorization() {
               <Loader2 className="h-4 w-4 animate-spin" /> Checking authorization request…
             </div>
           ) : error && !request ? (
-            <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>
+            <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive-text">{error}</p>
           ) : request ? (
             <>
               <div className="rounded-xl border p-4">
@@ -149,7 +149,7 @@ export default function McpAuthorization() {
                 )}
               </fieldset>
 
-              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+              {error && <p role="alert" className="text-sm text-destructive-text">{error}</p>}
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" disabled={submitting} onClick={() => void finishAuthorization(false)}>

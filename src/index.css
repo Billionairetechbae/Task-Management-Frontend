@@ -22,7 +22,7 @@
     --secondary-foreground: 222 14% 12%;
 
     --muted: 220 14% 94%;
-    --muted-foreground: 220 8% 46%;
+    --muted-foreground: 220 8% 43%; /* was 46% (4.39:1 on the page background); 43% = 4.87:1, WCAG 1.4.3 AA */
 
     --accent: 262 72% 95%;
     --accent-foreground: 262 72% 50%;
@@ -38,6 +38,12 @@
 
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
+    /* Text-safe semantic colours: the base tokens are for fills; these meet WCAG AA (4.5:1) as text on white, the page background and their own 10-15% tints. */
+    --primary-text: 262 72% 50%;
+    --destructive-text: 0 72% 41%;
+    --success-text: 152 69% 26%;
+    --warning-text: 38 92% 28%;
+    --info-text: 217 91% 43%;
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
@@ -89,6 +95,12 @@
 
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
+    /* Text-safe semantic colours: the base tokens are for fills; these meet WCAG AA (4.5:1) as text on white, the page background and their own 10-15% tints. */
+    --primary-text: 262 80% 74%;
+    --destructive-text: 0 72% 69%;
+    --success-text: 152 69% 43%;
+    --warning-text: 38 92% 50%;
+    --info-text: 217 91% 70%;
 
     --border: 222 14% 19%;
     --input: 222 14% 19%;
@@ -149,6 +161,52 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* ------------------------------------------------------------------
+   Responsive layout primitives (shared by every User Portal page).
+   They respond to the width of the CONTAINER they live in, not the window,
+   so a page behaves the same whether the width is lost to a narrow window,
+   browser zoom, a larger default font, or an expanded sidebar.
+------------------------------------------------------------------- */
+
+/* Two-column page body: optional side rail + main column. Stacks until there is real room for both. */
+.rl-split { container-type: inline-size; container-name: rl-split; min-width: 0; }
+.rl-split__grid { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+/* Stacked rail: its panels flow into as many columns as fit. Beside the content they form a single column. */
+.rl-split__rail { display: grid; gap: 1rem; align-items: start; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+.rl-split__rail > .rl-split__rail-head { grid-column: 1 / -1; }
+@container rl-split (min-width: 60rem) {
+  .rl-split__grid--rail { grid-template-columns: clamp(15rem, 22cqw, 19rem) minmax(0, 1fr); }
+  .rl-split__rail { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Auto-fitting card grid (KPI cards etc.): never narrower than --rl-card-min, wraps instead of squeezing. */
+.rl-cards { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--rl-card-min, 11rem)), 1fr)); }
+
+/* Filter toolbar: one intentional grid. Search gets more room; every control keeps a usable minimum width. */
+.rl-filters { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); align-items: center; min-width: 0; }
+.rl-filters > .rl-filters__search { grid-column: span 2; min-width: 0; }
+@media (max-width: 26rem) { .rl-filters > .rl-filters__search { grid-column: 1 / -1; } }
+
+/* Data table that is a real table when its container is wide enough, and a card list when it is not. */
+.rl-table { container-type: inline-size; container-name: rl-table; min-width: 0; }
+.rl-table__wide { display: none; }
+@container rl-table (min-width: 60rem) {
+  .rl-table__wide { display: block; }
+  .rl-table__cards { display: none; }
+}
+/* Keyboard-reachable, visibly focusable horizontal scroller for genuinely two-dimensional content. */
+.rl-scroll-x { overflow-x: auto; overscroll-behavior-x: contain; }
+.rl-scroll-x:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+
+/* WCAG 2.4.11 Focus Not Obscured: a focused control scrolls clear of the sticky header. */
+html { scroll-padding-top: 4.5rem; }
+
+/* Visible keyboard focus for native form controls that suppress the default outline. */
+select:focus-visible, input:focus-visible, textarea:focus-visible, [role="tab"]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }
 
 /* Reduced-motion: disable non-essential animations */
@@ -341,4 +399,10 @@ body > .picker-dialog .picker-frame,
 body > .picker-dialog .picker-dialog-frame {
   width: 100% !important;
   height: 100% !important;
+}
+
+/* Out-of-month day numbers: react-big-calendar's default #999 is 2.7:1 on its background (WCAG 1.4.3). */
+.rbc-off-range,
+.rbc-off-range .rbc-button-link {
+  color: #6b7280;
 }

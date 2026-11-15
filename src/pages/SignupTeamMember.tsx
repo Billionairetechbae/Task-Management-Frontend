@@ -94,7 +94,7 @@ const SignupTeamMember = () => {
           <div className="text-center mb-8">
             <Logo className="h-8 mb-2" />
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Clock className="w-12 h-12 text-warning" />
+              <Clock className="w-12 h-12 text-warning-text" />
             </div>
             <h2 className="text-3xl font-bold mb-2">Application Submitted</h2>
             <p className="text-muted-foreground">Your account is pending executive approval</p>
@@ -103,14 +103,14 @@ const SignupTeamMember = () => {
           <div className="bg-card border border-border rounded-2xl p-8 text-center">
             <div className="space-y-4 text-left max-w-md mx-auto mb-6">
               <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-success-text mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="font-semibold">Profile Created</h4>
                   <p className="text-sm text-muted-foreground">Your team_member profile has been created successfully</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+                <Clock className="w-5 h-5 text-warning-text mt-0.5 flex-shrink-0" />
                 <div>
                   <h4 className="font-semibold">Pending Verification</h4>
                   <p className="text-sm text-muted-foreground">The company executive will review and approve your application</p>
@@ -126,7 +126,7 @@ const SignupTeamMember = () => {
             </div>
 
             <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-warning">
+              <p className="text-sm text-warning-text">
                 <strong>Note:</strong> You will not be able to access the dashboard until your account is verified by the company executive.
               </p>
             </div>
@@ -148,7 +148,7 @@ const SignupTeamMember = () => {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium">
+        <Link to="/" className="inline-flex items-center gap-2 text-foreground hover:text-primary-text mb-8 font-medium">
           <ArrowLeft className="w-5 h-5" />
           Back to Login
         </Link>
@@ -308,13 +308,13 @@ const SignupTeamMember = () => {
                 {formData.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
+                    className="bg-primary/10 text-primary-text px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
                   >
                     {skill}
                     <button
                       type="button"
                       onClick={() => removeSkill(skill)}
-                      className="hover:text-destructive"
+                      className="hover:text-destructive-text"
                     >
                       ×
                     </button>
@@ -332,7 +332,7 @@ const SignupTeamMember = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <Link to="/" className="text-primary hover:underline font-medium">
+            <Link to="/" className="text-primary-text hover:underline font-medium">
               Already have an account? Sign In
             </Link>
           </div>

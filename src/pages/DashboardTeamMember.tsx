@@ -176,7 +176,7 @@ const DashboardTeamMember = () => {
 
       {!user?.isVerified && (
         <div className="mb-6">
-          <Badge variant="outline" className="bg-warning/10 text-warning gap-1">
+          <Badge variant="outline" className="bg-warning/10 text-warning-text gap-1">
             <Clock className="w-3 h-3" />
             Pending Verification
           </Badge>
@@ -197,11 +197,11 @@ const DashboardTeamMember = () => {
           <SectionHeader title="Current Tasks" />
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="text-center p-4 bg-info/10 rounded-lg">
-              <p className="text-2xl font-bold text-info">{inProgress}</p>
+              <p className="text-2xl font-bold text-info-text">{inProgress}</p>
               <p className="text-sm text-muted-foreground">In Progress</p>
             </div>
             <div className="text-center p-4 bg-warning/10 rounded-lg">
-              <p className="text-2xl font-bold text-warning">{pendingCount}</p>
+              <p className="text-2xl font-bold text-warning-text">{pendingCount}</p>
               <p className="text-sm text-muted-foreground">Pending</p>
             </div>
           </div>

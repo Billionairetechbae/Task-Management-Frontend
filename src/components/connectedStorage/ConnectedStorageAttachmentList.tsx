@@ -102,12 +102,12 @@ export function ConnectedStorageAttachmentList({ attachments, onChanged, compact
               <Cloud className="w-4 h-4 shrink-0 text-muted-foreground" aria-hidden />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium" title={attachment.name}>{attachment.name}</div>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                  <Badge variant="outline" className="h-4 px-1 text-[10px]">{PROVIDER_LABEL[attachment.provider] ?? attachment.provider}</Badge>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.6875rem] text-muted-foreground">
+                  <Badge variant="outline" className="h-4 px-1 text-[0.625rem]">{PROVIDER_LABEL[attachment.provider] ?? attachment.provider}</Badge>
                   {attachment.mimeType && <span>{attachment.mimeType}</span>}
                   {attachment.size != null && <span>{formatSize(attachment.size)}</span>}
                   {!compact && attachment.createdAt && <span>Attached {new Date(attachment.createdAt).toLocaleDateString()}</span>}
-                  {stateLabel && <span className="text-destructive" role="status">{stateLabel}</span>}
+                  {stateLabel && <span className="text-destructive-text" role="status">{stateLabel}</span>}
                 </div>
               </div>
               {attachment.canPreview && (

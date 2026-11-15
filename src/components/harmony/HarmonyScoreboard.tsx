@@ -95,7 +95,7 @@ const ScoreCircle = ({ score }: { score: number | null | undefined }) => {
         <p className="text-3xl font-bold bg-gradient-to-br from-primary to-fuchsia-500 bg-clip-text text-transparent">
           {score === null || score === undefined ? "—" : value}
         </p>
-        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">cohesion</p>
+        <p className="text-[0.625rem] uppercase tracking-wider font-bold text-muted-foreground">cohesion</p>
       </div>
     </div>
   );
@@ -113,7 +113,7 @@ const HarmonyScoreboard = ({
       <Card className="rounded-2xl overflow-hidden">
         <CardContent className="flex min-h-[260px] items-center justify-center p-8">
           <div className="text-center animate-fade-in">
-            <RefreshCw className="mx-auto mb-4 h-7 w-7 animate-spin text-primary" />
+            <RefreshCw className="mx-auto mb-4 h-7 w-7 animate-spin text-primary-text" />
             <p className="text-sm text-muted-foreground">Loading team Harmony report...</p>
           </div>
         </CardContent>
@@ -126,7 +126,7 @@ const HarmonyScoreboard = ({
       <Card className="rounded-2xl">
         <CardContent className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center animate-fade-in">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-fuchsia-500/20 flex items-center justify-center mb-4">
-            <Users className="h-7 w-7 text-primary" />
+            <Users className="h-7 w-7 text-primary-text" />
           </div>
           <h3 className="text-xl font-semibold">No team report loaded</h3>
           <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
@@ -157,8 +157,8 @@ const HarmonyScoreboard = ({
 
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-[11px] uppercase tracking-wider font-bold text-primary">Team Harmony</span>
+                <Sparkles className="w-4 h-4 text-primary-text" />
+                <span className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary-text">Team Harmony</span>
               </div>
               <h3 className="text-2xl font-bold tracking-tight">Workspace Cohesion Report</h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -167,10 +167,10 @@ const HarmonyScoreboard = ({
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <Badge variant="secondary" className="gap-1"><Users className="w-3 h-3" />{data.teamSize || 0} members</Badge>
-                <Badge variant="secondary" className="bg-success/15 text-success border-success/30 gap-1">
+                <Badge variant="secondary" className="bg-success/15 text-success-text border-success/30 gap-1">
                   <Award className="w-3 h-3" />{data.completedCount || 0} completed
                 </Badge>
-                <Badge variant="secondary" className="bg-warning/15 text-warning border-warning/30">
+                <Badge variant="secondary" className="bg-warning/15 text-warning-text border-warning/30">
                   {data.missingCount || 0} pending
                 </Badge>
               </div>
@@ -232,7 +232,7 @@ const HarmonyScoreboard = ({
                 <p className="mt-2 text-3xl font-bold">{stat.value}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-card border border-border/60 flex items-center justify-center">
-                <stat.icon className="w-5 h-5 text-primary" />
+                <stat.icon className="w-5 h-5 text-primary-text" />
               </div>
             </CardContent>
           </Card>
@@ -243,7 +243,7 @@ const HarmonyScoreboard = ({
         <Card className="rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
           <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
             <CardTitle className="text-base flex items-center gap-2">
-              <Compass className="w-4 h-4 text-primary" />
+              <Compass className="w-4 h-4 text-primary-text" />
               Archetype Distribution
             </CardTitle>
           </CardHeader>
@@ -256,7 +256,7 @@ const HarmonyScoreboard = ({
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
                   <span className="text-sm font-medium">{item.archetype}</span>
-                  <Badge className="bg-primary/15 text-primary border-primary/30">{item.count}</Badge>
+                  <Badge className="bg-primary/15 text-primary-text border-primary/30">{item.count}</Badge>
                 </div>
               ))
             ) : (
@@ -281,7 +281,7 @@ const HarmonyScoreboard = ({
                   <div key={key}>
                     <div className="mb-2 flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2">
-                        <Icon className={cn("w-3.5 h-3.5", meta?.accent || "text-primary")} />
+                        <Icon className={cn("w-3.5 h-3.5", meta?.accent || "text-primary-text")} />
                         {meta?.label || key}
                       </span>
                       <span className="font-semibold">{value}/5</span>
@@ -416,7 +416,7 @@ const HarmonyScoreboard = ({
       <Card className="rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
         <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
           <CardTitle className="text-base flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" />
+            <Users className="w-4 h-4 text-primary-text" />
             Member Compatibility
           </CardTitle>
         </CardHeader>

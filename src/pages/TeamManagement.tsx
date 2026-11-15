@@ -212,10 +212,10 @@ const TeamManagement = () => {
           {canManageTeam && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Total Members", value: teamMembers.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
-                { label: "Verified", value: verifiedCount, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
-                { label: "Pending", value: pendingCount, icon: Clock, color: "text-warning", bg: "bg-warning/10" },
-                { label: "Removed", value: removedCount, icon: Trash2, color: "text-destructive", bg: "bg-destructive/10" },
+                { label: "Total Members", value: teamMembers.length, icon: Users, color: "text-primary-text", bg: "bg-primary/10" },
+                { label: "Verified", value: verifiedCount, icon: CheckCircle2, color: "text-success-text", bg: "bg-success/10" },
+                { label: "Pending", value: pendingCount, icon: Clock, color: "text-warning-text", bg: "bg-warning/10" },
+                { label: "Removed", value: removedCount, icon: Trash2, color: "text-destructive-text", bg: "bg-destructive/10" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:shadow-sm transition-shadow">
                   <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", stat.bg)}>
@@ -243,11 +243,11 @@ const TeamManagement = () => {
                     onClick={() => setActiveTab(tab.key)}
                     className={cn(
                       "px-4 py-3 text-sm font-medium relative transition-colors",
-                      activeTab === tab.key ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                      activeTab === tab.key ? "text-primary-text" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {tab.label}
-                    <Badge variant="secondary" className="ml-2 text-[10px] h-5">{tab.count}</Badge>
+                    <Badge variant="secondary" className="ml-2 text-[0.625rem] h-5">{tab.count}</Badge>
                     {activeTab === tab.key && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />}
                   </button>
                 ))}
@@ -310,7 +310,7 @@ const TeamManagement = () => {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8">
-                              <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                              <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary-text">
                                 {m.user.firstName?.[0]}{m.user.lastName?.[0]}
                               </AvatarFallback>
                             </Avatar>
@@ -322,13 +322,13 @@ const TeamManagement = () => {
                         </TableCell>
                         <TableCell>
                           {isRemoved(m) ? (
-                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px]">Removed</Badge>
+                            <Badge variant="outline" className="bg-destructive/10 text-destructive-text border-destructive/20 text-[0.625rem]">Removed</Badge>
                           ) : m.isVerified ? (
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[10px]">
+                            <Badge variant="outline" className="bg-success/10 text-success-text border-success/20 text-[0.625rem]">
                               <CheckCircle2 className="w-3 h-3 mr-1" />Verified
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-[10px]">
+                            <Badge variant="outline" className="bg-warning/10 text-warning-text border-warning/20 text-[0.625rem]">
                               <Clock className="w-3 h-3 mr-1" />Pending
                             </Badge>
                           )}
@@ -354,7 +354,7 @@ const TeamManagement = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn("text-[10px]", getSpecBadgeClass(m.user.specialization))}>
+                          <Badge variant="outline" className={cn("text-[0.625rem]", getSpecBadgeClass(m.user.specialization))}>
                             {m.user.specialization || "general"}
                           </Badge>
                         </TableCell>
@@ -394,7 +394,7 @@ const TeamManagement = () => {
                                     </>
                                   )}
                                   {m.isVerified && canAdminTeam && (
-                                    <DropdownMenuItem className="text-destructive" onClick={() => openConfirm("remove", m)}>
+                                    <DropdownMenuItem className="text-destructive-text" onClick={() => openConfirm("remove", m)}>
                                       <Trash2 className="w-3.5 h-3.5 mr-2" /> Remove
                                     </DropdownMenuItem>
                                   )}
@@ -447,7 +447,7 @@ const TeamManagement = () => {
                       <div className={cn("w-2 h-2 rounded-full", evt.type === "removed" ? "bg-destructive" : "bg-success")} />
                       <span className="font-medium">{evt.type === "removed" ? "Removed" : "Restored"}</span>
                       <span className="text-muted-foreground">{evt.userName}</span>
-                      <Badge variant="outline" className="text-[10px]">{evt.role}</Badge>
+                      <Badge variant="outline" className="text-[0.625rem]">{evt.role}</Badge>
                     </div>
                     <span className="text-xs text-muted-foreground">{evt.at}</span>
                   </div>

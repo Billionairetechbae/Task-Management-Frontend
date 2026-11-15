@@ -120,7 +120,7 @@ const AuthGoogleCallback = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary-text" />
           <h2 className="text-xl font-semibold">Signing you in...</h2>
           <p className="text-muted-foreground">Please wait while we complete your authentication</p>
         </div>
@@ -134,7 +134,7 @@ const AuthGoogleCallback = () => {
         <div className="text-center max-w-md space-y-6">
           <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
             <svg
-              className="w-8 h-8 text-destructive"
+              className="w-8 h-8 text-destructive-text"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

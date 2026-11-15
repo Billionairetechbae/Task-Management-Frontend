@@ -10,7 +10,7 @@ export const WebSocketStatus = () => {
   if (!user) return null;
   
   return (
-    <Badge variant="outline" className="gap-2 px-2 py-1 text-[11px]">
+    <Badge variant="outline" className="gap-2 px-2 py-1 text-[0.6875rem]">
       {isConnected ? (
         <>
           <span className="inline-block w-2 h-2 rounded-full bg-green-500" />

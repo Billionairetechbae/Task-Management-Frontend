@@ -63,7 +63,7 @@ export function WorkspaceNotificationDelivery({ companyId }: { companyId: string
           <div className="mt-1 text-lg font-semibold" aria-label={`${label}: ${value}`}>{loading ? "—" : value}</div>
         </div>)}
       </div>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm text-destructive-text">{error}</p>}
       {summary && <div role="status" className="rounded-lg border bg-muted/30 p-3 text-sm">
         <p className="font-medium">Queue processing complete</p>
         <p className="mt-1 text-muted-foreground">Sent {summary.sent} · Failed {summary.failed} · Retrying {summary.retrying} · Expired {summary.expired}</p>

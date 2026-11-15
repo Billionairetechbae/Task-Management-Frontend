@@ -61,7 +61,7 @@ const TaskActivityTimeline = ({ taskId, initialActivities = [], maxVisible = 8 }
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-medium capitalize">{presentation.label}</p>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-[0.625rem]">
                   {new Date(activity.createdAt).toLocaleString()}
                 </Badge>
               </div>

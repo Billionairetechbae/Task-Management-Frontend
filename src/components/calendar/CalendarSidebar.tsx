@@ -95,13 +95,15 @@ export default function CalendarSidebar({
     return (
         <aside
             className={`
-                relative flex h-full flex-col border-r border-gray-200/60 bg-white/80 backdrop-blur-sm transition-all duration-300
+                relative z-20 flex h-full shrink-0 flex-col border-r border-gray-200/60 bg-white/80 backdrop-blur-sm transition-all duration-300
                 ${collapsed ? "w-16" : "w-72"}
             `}
         >
             {/* Collapse Toggle */}
             <button
                 onClick={onToggleCollapse}
+                aria-label={collapsed ? "Expand calendar panel" : "Collapse calendar panel"}
+                aria-expanded={!collapsed}
                 className="absolute -right-3 top-6 z-10 rounded-full border border-gray-200 bg-white p-1 shadow-sm hover:bg-gray-50 transition-all"
             >
                 {collapsed ? (
@@ -115,6 +117,7 @@ export default function CalendarSidebar({
             <div className="border-b border-gray-200/60 p-4">
                 <button
                     onClick={onCreateTask}
+                    aria-label="New Task"
                     className={`
                         flex w-full items-center justify-center gap-2 rounded-xl
                         bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5
@@ -146,6 +149,8 @@ export default function CalendarSidebar({
                             <button
                                 key={item.key}
                                 onClick={() => onViewChange(item.key)}
+                                aria-label={item.label}
+                                aria-pressed={isActive}
                                 className={`
                                     flex w-full items-center gap-3 rounded-xl px-3 py-2.5
                                     text-sm font-medium transition-all

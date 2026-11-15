@@ -130,7 +130,7 @@ const DashboardAdmin = () => {
           className="bg-card border border-border rounded-xl p-6 hover:shadow-md hover:border-primary/20 transition-all"
         >
           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 mb-4">
-            <Users className="w-6 h-6 text-primary" />
+            <Users className="w-6 h-6 text-primary-text" />
           </div>
           <h3 className="font-semibold mb-1">Manage Users</h3>
           <p className="text-sm text-muted-foreground">View, update, and control all platform users</p>
@@ -141,7 +141,7 @@ const DashboardAdmin = () => {
           className="bg-card border border-border rounded-xl p-6 hover:shadow-md hover:border-primary/20 transition-all"
         >
           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-info/10 mb-4">
-            <Building2 className="w-6 h-6 text-info" />
+            <Building2 className="w-6 h-6 text-info-text" />
           </div>
           <h3 className="font-semibold mb-1">View Companies</h3>
           <p className="text-sm text-muted-foreground">Manage companies and verify registrations</p>
@@ -167,7 +167,7 @@ const DashboardAdmin = () => {
           <div className="flex items-center gap-4 mt-4">
             <div>
               <p className="text-xs text-muted-foreground">Pending</p>
-              <p className="text-lg font-bold text-primary">{pendingRequests}</p>
+              <p className="text-lg font-bold text-primary-text">{pendingRequests}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total</p>
@@ -181,7 +181,7 @@ const DashboardAdmin = () => {
           className="bg-card border border-border rounded-xl p-6 hover:shadow-md hover:border-primary/20 transition-all"
         >
           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-warning/10 mb-4">
-            <Briefcase className="w-6 h-6 text-warning" />
+            <Briefcase className="w-6 h-6 text-warning-text" />
           </div>
           <h3 className="font-semibold mb-1">All Tasks</h3>
           <p className="text-sm text-muted-foreground">Monitor tasks across the entire platform</p>
@@ -192,7 +192,7 @@ const DashboardAdmin = () => {
           className="bg-card border border-border rounded-xl p-6 hover:shadow-md hover:border-primary/20 transition-all"
         >
           <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 mb-4">
-            <TrendingUp className="w-6 h-6 text-success" />
+            <TrendingUp className="w-6 h-6 text-success-text" />
           </div>
           <h3 className="font-semibold mb-1">Analytics</h3>
           <p className="text-sm text-muted-foreground">Track growth and platform-wide activity</p>
@@ -226,7 +226,7 @@ const DashboardAdmin = () => {
                 <div key={u.id} className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                      <UserCircle className="w-4 h-4 text-primary" />
+                      <UserCircle className="w-4 h-4 text-primary-text" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">{u.firstName} {u.lastName}</p>
@@ -256,7 +256,7 @@ const DashboardAdmin = () => {
                 <div key={c.id} className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-info/10 rounded-full flex items-center justify-center">
-                      <Building2 className="w-4 h-4 text-info" />
+                      <Building2 className="w-4 h-4 text-info-text" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">{c.name}</p>
@@ -265,7 +265,7 @@ const DashboardAdmin = () => {
                   </div>
                   <Badge
                     variant="outline"
-                    className={c.isActive ? "text-success border-success/20" : "text-muted-foreground"}
+                    className={c.isActive ? "text-success-text border-success/20" : "text-muted-foreground"}
                   >
                     {c.isActive ? "Active" : "Inactive"}
                   </Badge>
