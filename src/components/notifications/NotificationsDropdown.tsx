@@ -150,7 +150,7 @@ export default function NotificationsDropdown() {
           </ScrollArea>
           <DropdownMenuSeparator />
           <div className="p-2">
-            <Button asChild variant="ghost" className="w-full h-8 text-xs text-primary hover:text-primary">
+            <Button asChild variant="ghost" className="w-full h-8 text-xs text-primary-text hover:text-primary-text">
               <Link to="/notifications">View all notifications</Link>
             </Button>
           </div>

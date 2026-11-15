@@ -348,7 +348,7 @@ export default function Drive() {
             <Card className="p-4 border border-border h-full">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold flex items-center gap-2">
-                  <FolderIcon className="h-4 w-4 text-primary" /> Folders
+                  <FolderIcon className="h-4 w-4 text-primary-text" /> Folders
                 </h2>
                 <Badge variant="secondary">{folders.length}</Badge>
               </div>
@@ -402,7 +402,7 @@ export default function Drive() {
                           >
                             <FolderIcon
                               className={`h-4 w-4 shrink-0 ${
-                                active ? "text-primary" : "text-muted-foreground"
+                                active ? "text-primary-text" : "text-muted-foreground"
                               }`}
                             />
                             <div className="min-w-0 flex-1">
@@ -464,8 +464,8 @@ export default function Drive() {
               {isDragging && (
                 <div className="absolute inset-0 z-20 rounded-lg bg-primary/10 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-fade-in">
                   <div className="text-center">
-                    <Upload className="h-12 w-12 mx-auto text-primary mb-2 animate-bounce" />
-                    <p className="font-semibold text-primary">Drop files to upload</p>
+                    <Upload className="h-12 w-12 mx-auto text-primary-text mb-2 animate-bounce" />
+                    <p className="font-semibold text-primary-text">Drop files to upload</p>
                     <p className="text-xs text-muted-foreground mt-1">to "{selectedFolder?.name}"</p>
                   </div>
                 </div>
@@ -649,9 +649,9 @@ export default function Drive() {
                       >
                         <div className="aspect-square bg-muted/40 flex items-center justify-center relative overflow-hidden">
                           {isImage ? (
-                            <Icon className="h-12 w-12 text-primary/70 group-hover:scale-110 transition-transform" />
+                            <Icon className="h-12 w-12 text-primary-text/70 group-hover:scale-110 transition-transform" />
                           ) : (
-                            <Icon className="h-12 w-12 text-primary/70 group-hover:scale-110 transition-transform" />
+                            <Icon className="h-12 w-12 text-primary-text/70 group-hover:scale-110 transition-transform" />
                           )}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                             <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />

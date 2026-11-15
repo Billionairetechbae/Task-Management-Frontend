@@ -39,6 +39,7 @@
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
     /* Text-safe semantic colours: the base tokens are for fills; these meet WCAG AA (4.5:1) as text on white, the page background and their own 10-15% tints. */
+    --primary-text: 262 72% 50%;
     --destructive-text: 0 72% 41%;
     --success-text: 152 69% 26%;
     --warning-text: 38 92% 28%;
@@ -95,6 +96,7 @@
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
     /* Text-safe semantic colours: the base tokens are for fills; these meet WCAG AA (4.5:1) as text on white, the page background and their own 10-15% tints. */
+    --primary-text: 262 80% 74%;
     --destructive-text: 0 72% 69%;
     --success-text: 152 69% 43%;
     --warning-text: 38 92% 50%;

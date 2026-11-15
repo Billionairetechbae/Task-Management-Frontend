@@ -257,8 +257,8 @@ const CompanyProfile = () => {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary">Workspace</span>
+                  <Sparkles className="w-3.5 h-3.5 text-primary-text" />
+                  <span className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary-text">Workspace</span>
                 </div>
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
                   {formData.name || "Company Profile"}
@@ -290,7 +290,7 @@ const CompanyProfile = () => {
                 <div><p className="text-xs text-muted-foreground">Active members</p><p className="font-semibold">{commercial?.activeSeatCount ?? "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Included seats</p><p className="font-semibold">{commercial?.includedSeats ?? 3}</p></div>
                 <div><p className="text-xs text-muted-foreground">Est. monthly charge</p><p className="font-semibold">${commercial?.estimatedMonthlyChargeUsd ?? 0}</p></div>
-                <p className="col-span-full text-xs text-muted-foreground">Estimates only; no payment is taken online. <Link to="/settings/workspace/subscription" className="text-primary underline">View Subscription &amp; Seats</Link></p>
+                <p className="col-span-full text-xs text-muted-foreground">Estimates only; no payment is taken online. <Link to="/settings/workspace/subscription" className="text-primary-text underline">View Subscription &amp; Seats</Link></p>
               </CardContent>
             </Card>
             {/* Basic Information Card */}
@@ -298,7 +298,7 @@ const CompanyProfile = () => {
               <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
                 <CardTitle className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Building className="w-4 h-4 text-primary" />
+                    <Building className="w-4 h-4 text-primary-text" />
                   </div>
                   Company Information
                 </CardTitle>
@@ -610,7 +610,7 @@ const CompanyProfile = () => {
               <CardContent className="space-y-4">
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                   <div className="text-center">
-                    <div className="text-2xl font-mono font-bold text-primary mb-2">
+                    <div className="text-2xl font-mono font-bold text-primary-text mb-2">
                       {activeWorkspace?.company?.companyCode || "Loading..."}
                     </div>
                     <p className="text-sm text-muted-foreground">

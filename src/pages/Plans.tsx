@@ -31,19 +31,19 @@ const Plans = () => {
 
             <div className="space-y-4 mb-8">
               <div className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <Check className="w-5 h-5 text-primary-text mt-0.5 flex-shrink-0" />
                 <span>Task List View with status tracking</span>
               </div>
               <div className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <Check className="w-5 h-5 text-primary-text mt-0.5 flex-shrink-0" />
                 <span>Assign to your internal team members</span>
               </div>
               <div className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <Check className="w-5 h-5 text-primary-text mt-0.5 flex-shrink-0" />
                 <span>Deadline and priority management</span>
               </div>
               <div className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <Check className="w-5 h-5 text-primary-text mt-0.5 flex-shrink-0" />
                 <span>Basic productivity tracking</span>
               </div>
             </div>

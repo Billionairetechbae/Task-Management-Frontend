@@ -447,7 +447,7 @@ const DashboardExecutive = () => {
                 <CollapsibleTrigger asChild>
                   <button className="group flex min-w-0 flex-1 items-center gap-2 text-left">
                     <ChevronDown className="w-4 h-4 transition-transform group-data-[state=closed]:-rotate-90 text-muted-foreground" />
-                    <h2 className="text-base font-semibold tracking-tight">Team Overview</h2>
+                    <h2 className="min-w-0 text-base font-semibold tracking-tight [overflow-wrap:anywhere]">Team Overview</h2>
                   </button>
                 </CollapsibleTrigger>
                 <Button variant="outline" size="sm" asChild>
@@ -475,7 +475,7 @@ const DashboardExecutive = () => {
                       </div>
                       <div className="flex items-center justify-between gap-3 rounded-lg bg-primary/8 px-3 py-2">
                         <p className="text-xs text-muted-foreground">Owners &amp; Admins</p>
-                        <p className="text-base font-semibold text-primary" data-testid="count-owners-admins">{teamStats.membership.owners + teamStats.membership.admins}</p>
+                        <p className="text-base font-semibold text-primary-text" data-testid="count-owners-admins">{teamStats.membership.owners + teamStats.membership.admins}</p>
                       </div>
                     </div>
                     <dl className="space-y-1.5 text-xs">
@@ -507,26 +507,26 @@ const DashboardExecutive = () => {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="mt-3 grid grid-cols-1 gap-1.5">
-                  <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" asChild>
+                  <Button variant="outline" size="sm" className="h-auto min-h-8 w-full justify-start gap-2 whitespace-normal py-1 text-left text-xs [overflow-wrap:anywhere]" asChild>
                     <Link to="/workspace-access">
                       <ShieldCheck className="w-4 h-4" />
                       Workspace Access
                     </Link>
                   </Button>
                   {canCreateTask && (
-                    <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={() => setCreateTaskOpen(true)}>
+                    <Button variant="outline" size="sm" className="h-auto min-h-8 w-full justify-start gap-2 whitespace-normal py-1 text-left text-xs [overflow-wrap:anywhere]" onClick={() => setCreateTaskOpen(true)}>
                       <Plus className="w-4 h-4" />
                       Create Task
                     </Button>
                   )}
                   {workspaceRole !== "member" && (
-                    <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={() => setInviteOpen(true)}>
+                    <Button variant="outline" size="sm" className="h-auto min-h-8 w-full justify-start gap-2 whitespace-normal py-1 text-left text-xs [overflow-wrap:anywhere]" onClick={() => setInviteOpen(true)}>
                       <Mail className="w-4 h-4" />
                       Invite Team Member
                     </Button>
                   )}
                   {canManageTeam && (
-                    <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" asChild>
+                    <Button variant="outline" size="sm" className="h-auto min-h-8 w-full justify-start gap-2 whitespace-normal py-1 text-left text-xs [overflow-wrap:anywhere]" asChild>
                       <Link to="/team-management">
                         <Users className="w-4 h-4" />
                         Manage Team
@@ -534,7 +534,7 @@ const DashboardExecutive = () => {
                     </Button>
                   )}
                   {canAccessCompanySettings && (
-                    <Button variant="outline" size="sm" className="h-8 w-full justify-start gap-2 text-xs" asChild>
+                    <Button variant="outline" size="sm" className="h-auto min-h-8 w-full justify-start gap-2 whitespace-normal py-1 text-left text-xs [overflow-wrap:anywhere]" asChild>
                       <Link to="/company-profile">
                         <User className="w-4 h-4" />
                         Company Settings
@@ -552,7 +552,7 @@ const DashboardExecutive = () => {
             <SectionHeader title="Pending Verifications" actions={<Badge variant="outline" className="bg-warning/10 text-warning-text">{pendingAssistants.length} waiting</Badge>} />
             {teamLoading ? <div className="mt-4"><SkeletonList rows={3} /></div> : <div className="mt-4 space-y-3">
               {pendingAssistants.map((teamMember) => <div key={teamMember.id} className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"><User className="h-5 w-5 text-primary" /></div><div><p className="font-semibold">{teamMember.firstName} {teamMember.lastName}</p><p className="text-sm text-muted-foreground">{teamMember.email}</p><div className="mt-1 flex gap-2">{teamMember.specialization && <Badge variant="outline" className="text-xs">{teamMember.specialization}</Badge>}{teamMember.experience && <Badge variant="outline" className="text-xs">{teamMember.experience} yrs exp</Badge>}</div></div></div>
+                <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"><User className="h-5 w-5 text-primary-text" /></div><div><p className="font-semibold">{teamMember.firstName} {teamMember.lastName}</p><p className="text-sm text-muted-foreground">{teamMember.email}</p><div className="mt-1 flex gap-2">{teamMember.specialization && <Badge variant="outline" className="text-xs">{teamMember.specialization}</Badge>}{teamMember.experience && <Badge variant="outline" className="text-xs">{teamMember.experience} yrs exp</Badge>}</div></div></div>
                 <div className="flex gap-2"><Button size="sm" onClick={() => handleVerifyAssistant(teamMember.id)}><CheckCircle2 className="mr-1 h-4 w-4" />Approve</Button><Button size="sm" variant="outline" onClick={() => handleRejectAssistant(teamMember.id)}>Reject</Button></div>
               </div>)}
             </div>}

@@ -70,7 +70,7 @@ export default function Templates() {
         <div role="tablist" className="mb-4 flex gap-1 border-b">
           {(["task", "project"] as const).map((t) => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium ${tab === t ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}>
+              className={`px-4 py-2 text-sm font-medium ${tab === t ? "border-b-2 border-primary text-primary-text" : "text-muted-foreground"}`}>
               {t === "task" ? "Task Templates" : "Project Templates"}
             </button>
           ))}
@@ -90,7 +90,7 @@ export default function Templates() {
               {visibleRows.map((t) => (
                 <li key={t.id} data-testid="template-card" className="rounded-xl border bg-card p-4 transition-colors hover:border-primary/30">
                   <div className="flex items-start justify-between gap-2">
-                    <div><span className="mb-1 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-primary">{t.type} template</span><button type="button" className="block text-left font-semibold hover:underline" onClick={() => open(t, setPreview)}>{t.name}</button></div>
+                    <div><span className="mb-1 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-primary-text">{t.type} template</span><button type="button" className="block text-left font-semibold hover:underline" onClick={() => open(t, setPreview)}>{t.name}</button></div>
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       {t.summary?.hasRecurrence && <Repeat size={12} className="text-indigo-600" aria-label="Repeats" />}
                       v{t.currentVersion}

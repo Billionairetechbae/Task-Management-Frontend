@@ -35,7 +35,7 @@ const ProjectHeader = ({ project, onEdit, onAddTask, onAddChecklist, onUploadLog
               </div>
             </>
           ) : (
-            <div className="flex flex-col items-center gap-1 text-muted-foreground group-hover:text-primary transition-colors">
+            <div className="flex flex-col items-center gap-1 text-muted-foreground group-hover:text-primary-text transition-colors">
               <FolderOpen className="w-6 h-6" />
               <span className="text-[0.625rem] font-medium">Logo</span>
             </div>

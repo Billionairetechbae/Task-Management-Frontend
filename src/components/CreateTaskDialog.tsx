@@ -334,7 +334,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
                         className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors"
                       >
                         <div className="flex-shrink-0">
-                          <Icon className="w-5 h-5 text-primary" />
+                          <Icon className="w-5 h-5 text-primary-text" />
                         </div>
 
                         <div className="flex-1 min-w-0">

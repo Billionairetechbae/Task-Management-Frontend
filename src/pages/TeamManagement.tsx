@@ -212,7 +212,7 @@ const TeamManagement = () => {
           {canManageTeam && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Total Members", value: teamMembers.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+                { label: "Total Members", value: teamMembers.length, icon: Users, color: "text-primary-text", bg: "bg-primary/10" },
                 { label: "Verified", value: verifiedCount, icon: CheckCircle2, color: "text-success-text", bg: "bg-success/10" },
                 { label: "Pending", value: pendingCount, icon: Clock, color: "text-warning-text", bg: "bg-warning/10" },
                 { label: "Removed", value: removedCount, icon: Trash2, color: "text-destructive-text", bg: "bg-destructive/10" },
@@ -243,7 +243,7 @@ const TeamManagement = () => {
                     onClick={() => setActiveTab(tab.key)}
                     className={cn(
                       "px-4 py-3 text-sm font-medium relative transition-colors",
-                      activeTab === tab.key ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                      activeTab === tab.key ? "text-primary-text" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {tab.label}
@@ -310,7 +310,7 @@ const TeamManagement = () => {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8">
-                              <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                              <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary-text">
                                 {m.user.firstName?.[0]}{m.user.lastName?.[0]}
                               </AvatarFallback>
                             </Avatar>

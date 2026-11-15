@@ -85,7 +85,7 @@ const SignupExecutiveJoin = () => {
       <div className="max-w-2xl mx-auto">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium"
+          className="inline-flex items-center gap-2 text-foreground hover:text-primary-text mb-8 font-medium"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Login
@@ -93,7 +93,7 @@ const SignupExecutiveJoin = () => {
 
         <div className="text-center mb-6">
           <Logo className="h-8 mx-auto mb-2" />
-          <Crown className="w-10 h-10 text-primary mx-auto mb-3" />
+          <Crown className="w-10 h-10 text-primary-text mx-auto mb-3" />
           <h2 className="text-3xl font-bold">Join as Executive</h2>
           <p className="text-muted-foreground">
             Use the company code to join an existing organization

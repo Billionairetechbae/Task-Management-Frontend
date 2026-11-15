@@ -128,7 +128,7 @@ const Checkout = () => {
             <div className="mb-8 pb-8 border-b border-border">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-semibold">Monthly Total:</span>
-                <span className="text-2xl font-bold text-primary">$3000/month</span>
+                <span className="text-2xl font-bold text-primary-text">$3000/month</span>
               </div>
             </div>
 

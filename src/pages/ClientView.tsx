@@ -175,9 +175,9 @@ const ClientView = () => {
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
               {data.resourceType === "project" ? (
-                <FolderKanban className="w-5 h-5 text-primary" />
+                <FolderKanban className="w-5 h-5 text-primary-text" />
               ) : (
-                <ListChecks className="w-5 h-5 text-primary" />
+                <ListChecks className="w-5 h-5 text-primary-text" />
               )}
             </div>
             <div>

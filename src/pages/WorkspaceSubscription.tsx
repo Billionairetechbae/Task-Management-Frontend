@@ -22,7 +22,7 @@ export default function WorkspaceSubscription() {
   const showTerms = overview && (overview.customTerms || !isStandard);
 
   return <DashboardLayout><main className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6 md:px-7">
-    <header className="flex items-start gap-3"><CreditCard className="mt-1 h-5 w-5 text-primary" /><div><h1 className="text-2xl font-semibold tracking-tight">Subscription &amp; Seats</h1><p className="mt-1 text-sm text-muted-foreground">See how many seats your workspace uses and what they are estimated to cost.</p></div></header>
+    <header className="flex items-start gap-3"><CreditCard className="mt-1 h-5 w-5 text-primary-text" /><div><h1 className="text-2xl font-semibold tracking-tight">Subscription &amp; Seats</h1><p className="mt-1 text-sm text-muted-foreground">See how many seats your workspace uses and what they are estimated to cost.</p></div></header>
 
     {isLoading && <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading subscription details…</CardContent></Card>}
     {unavailable && <Card><CardContent role="status" className="p-6 text-sm text-muted-foreground">Subscription details are not available for this workspace right now. If you expected to see them, contact Admiino support.</CardContent></Card>}
@@ -64,8 +64,8 @@ export default function WorkspaceSubscription() {
       </Card>}
 
       <Card><CardContent className="flex flex-col gap-2 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-muted-foreground">Plan changes and payments are handled by the Admiino team. {overview.contactEmail ? <>Contact <a className="text-primary underline" href={`mailto:${overview.contactEmail}`}>{overview.contactEmail}</a> to change your plan or arrange payment.</> : "Contact Admiino support to change your plan or arrange payment."}</p>
-        <a href={GUIDE_BILLING_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline">Learn more in the Guide<ExternalLink className="h-3.5 w-3.5" aria-hidden /></a>
+        <p className="text-muted-foreground">Plan changes and payments are handled by the Admiino team. {overview.contactEmail ? <>Contact <a className="text-primary-text underline" href={`mailto:${overview.contactEmail}`}>{overview.contactEmail}</a> to change your plan or arrange payment.</> : "Contact Admiino support to change your plan or arrange payment."}</p>
+        <a href={GUIDE_BILLING_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary-text underline">Learn more in the Guide<ExternalLink className="h-3.5 w-3.5" aria-hidden /></a>
       </CardContent></Card>
     </>}
   </main></DashboardLayout>;

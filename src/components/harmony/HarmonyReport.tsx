@@ -287,7 +287,7 @@ const HarmonyReport = ({ profile, onRetake }: HarmonyReportProps) => {
         >
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-3 text-base">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary-text">
                 <Star className="h-5 w-5" />
               </span>
               Your Archetype Meaning
@@ -354,7 +354,7 @@ const HarmonyReport = ({ profile, onRetake }: HarmonyReportProps) => {
           const meta = dimensionMeta[key] || {
             label: key,
             gradient: "from-primary/10 via-background to-background",
-            accent: "text-primary",
+            accent: "text-primary-text",
             icon: Sparkles,
           };
           const Icon = meta.icon;

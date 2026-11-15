@@ -137,7 +137,7 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
       <Shell>
         <div className="max-w-3xl mx-auto py-12">
           <Card className="border border-border p-8 text-center">
-            <HardDrive className="mx-auto h-12 w-12 text-primary mb-4" />
+            <HardDrive className="mx-auto h-12 w-12 text-primary-text mb-4" />
             <h1 className="text-2xl font-semibold mb-2">Connect Google Drive</h1>
             <p className="text-sm text-muted-foreground mb-6">
               {connected ? "Your Google account is signed in to Admiino, but Drive access has not been granted yet. Connect Google Drive once to browse and attach files." : "Connect Google Drive to browse your files and attach them to Admiino work."} Google remains the source of truth for these files.
@@ -182,7 +182,7 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
             <Card className="p-4 border border-border h-full">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold flex items-center gap-2">
-                  <FolderIcon className="h-4 w-4 text-primary" /> Folder
+                  <FolderIcon className="h-4 w-4 text-primary-text" /> Folder
                 </h2>
                 <Badge variant="secondary">{folderItems.length}</Badge>
               </div>
@@ -230,7 +230,7 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
                         onClick={() => openFolder(folder)}
                         className="w-full flex items-center gap-2 rounded-lg border border-transparent hover:border-border hover:bg-muted/50 p-3 text-left"
                       >
-                        <FolderIcon className="h-4 w-4 text-primary" />
+                        <FolderIcon className="h-4 w-4 text-primary-text" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">{folder.name}</p>
                         </div>
@@ -331,7 +331,7 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
                           {isImage && file.thumbnailLink ? (
                             <img src={file.thumbnailLink} alt={file.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                           ) : (
-                            <Icon className="h-12 w-12 text-primary/70 group-hover:scale-110 transition-transform" />
+                            <Icon className="h-12 w-12 text-primary-text/70 group-hover:scale-110 transition-transform" />
                           )}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                             <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />

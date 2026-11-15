@@ -107,7 +107,7 @@ export default function KanbanBoard({ tasks, onEdit, onView }: KanbanBoardProps)
                         <Tooltip>
                           <TooltipTrigger>
                             <Avatar className="w-5 h-5">
-                              <AvatarFallback className="text-[0.4375rem] font-bold bg-primary/10 text-primary">
+                              <AvatarFallback className="text-[0.4375rem] font-bold bg-primary/10 text-primary-text">
                                 {task.assignee.firstName?.[0]}{task.assignee.lastName?.[0]}
                               </AvatarFallback>
                             </Avatar>

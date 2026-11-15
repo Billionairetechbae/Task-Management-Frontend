@@ -88,7 +88,7 @@ export const getStatusBadgeClass = (status: string) => {
       return "bg-success/10 text-success-text border-success/20";
     case "in_progress":
     case "active":
-      return "bg-primary/10 text-primary border-primary/20";
+      return "bg-primary/10 text-primary-text border-primary/20";
     case "pending":
     case "planning":
       return "bg-warning/10 text-warning-text border-warning/20";
@@ -345,7 +345,7 @@ export const TaskTable = ({
                     )}
 
                     {task.team && (
-                      <p className="mt-1 truncate text-[0.625rem] font-medium text-primary">
+                      <p className="mt-1 truncate text-[0.625rem] font-medium text-primary-text">
                         Team: {task.team.name}
                       </p>
                     )}
@@ -480,8 +480,8 @@ export const TaskTable = ({
               }
             }}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+              <div className="min-w-[min(100%,12rem)] flex-1">
                 <div className="flex items-center gap-2">
                   <CompanyBadge company={task.company} />
                   <h4 className="truncate text-sm font-semibold">{task.title}</h4>
@@ -504,7 +504,7 @@ export const TaskTable = ({
                 )}
 
                 {task.team && (
-                  <p className="mt-1 truncate text-[0.625rem] font-medium text-primary">
+                  <p className="mt-1 truncate text-[0.625rem] font-medium text-primary-text">
                     Team: {task.team.name}
                   </p>
                 )}
@@ -526,9 +526,9 @@ export const TaskTable = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,7.5rem),1fr))] gap-2 text-xs text-muted-foreground">
               {showAssignee && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-[0.625rem] uppercase tracking-wide">Assignee</p>
                   <p className="truncate">
                     {task.assignee
@@ -539,7 +539,7 @@ export const TaskTable = ({
               )}
 
               {showExecutive && (
-                <div>
+                <div className="min-w-0">
                   <p className="text-[0.625rem] uppercase tracking-wide">Executive</p>
                   <p className="truncate">
                     {task.creator
@@ -548,9 +548,9 @@ export const TaskTable = ({
                   </p>
                 </div>
               )}
-              {customFieldColumns.map((field) => <div key={field.id}><p className="text-[0.625rem] uppercase tracking-wide">{field.name}</p><p className="truncate">{(task as any).customFieldColumns?.[field.id] ?? "—"}</p></div>)}
+              {customFieldColumns.map((field) => <div key={field.id} className="min-w-0"><p className="text-[0.625rem] uppercase tracking-wide">{field.name}</p><p className="truncate">{(task as any).customFieldColumns?.[field.id] ?? "—"}</p></div>)}
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-[0.625rem] uppercase tracking-wide">Priority</p>
                 <div className="mt-1">
                   <Badge
@@ -562,10 +562,10 @@ export const TaskTable = ({
                 </div>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-[0.625rem] uppercase tracking-wide">Deadline</p>
                 <div className="flex items-center gap-1">
-                  <p>{formatTaskDeadline(task.deadline)}</p>
+                  <p className="[overflow-wrap:anywhere]">{formatTaskDeadline(task.deadline)}</p>
                   {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
                 </div>
               </div>
@@ -894,7 +894,7 @@ export const TaskFilters = ({ statusFilter, onStatusChange }: TaskFiltersProps) 
             className={cn(
               "whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-all duration-200",
               statusFilter === s.value
-                ? "border-primary text-primary"
+                ? "border-primary text-primary-text"
                 : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
             )}
           >

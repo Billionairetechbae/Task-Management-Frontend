@@ -121,7 +121,7 @@ const ProjectLogoUploader = ({
             
             {uploading && (
               <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-[2px]">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
               </div>
             )}
           </div>

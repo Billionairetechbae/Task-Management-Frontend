@@ -145,7 +145,7 @@ const Login = () => {
                     }
                   }
                 }}
-                className="underline text-primary font-semibold mt-2"
+                className="underline text-primary-text font-semibold mt-2"
               >
                 Resend verification email
               </button>
@@ -306,7 +306,7 @@ const Login = () => {
               <div className="flex justify-end">
                 <Link
                   to="/forgot-password"
-                  className="text-xs text-primary hover:underline transition-colors duration-150"
+                  className="text-xs text-primary-text hover:underline transition-colors duration-150"
                 >
                   Forgot password?
                 </Link>

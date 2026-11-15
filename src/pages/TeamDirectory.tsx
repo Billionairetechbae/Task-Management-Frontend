@@ -87,7 +87,7 @@ const TeamDirectory = () => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case "owner":
-        return "bg-primary/15 text-primary border-primary/30";
+        return "bg-primary/15 text-primary-text border-primary/30";
       case "admin":
         return "bg-destructive/10 text-destructive-text border-destructive/30";
       case "manager":
@@ -267,7 +267,7 @@ const TeamDirectory = () => {
                         className="w-11 h-11 rounded-full object-cover border border-border shrink-0"
                       />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center text-sm font-bold text-primary border border-primary/20 shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center text-sm font-bold text-primary-text border border-primary/20 shrink-0">
                         {(member.user?.firstName?.[0] || "?") + (member.user?.lastName?.[0] || "")}
                       </div>
                     )}
@@ -394,7 +394,7 @@ const DetailRow = ({
 }) => (
   <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
     <div className="w-7 h-7 rounded-md bg-card border border-border flex items-center justify-center shrink-0">
-      <Icon className="w-3.5 h-3.5 text-primary" />
+      <Icon className="w-3.5 h-3.5 text-primary-text" />
     </div>
     <div className="min-w-0 flex-1">
       <p className="text-[0.625rem] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>

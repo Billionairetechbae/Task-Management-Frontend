@@ -21,13 +21,13 @@ export default function AccountMenu() {
   return <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="ghost" size="icon" aria-label="Open account menu" className="h-9 w-9 rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
-        <Avatar className="h-8 w-8"><AvatarImage src={user?.profilePictureUrl || undefined} alt="" /><AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{initials}</AvatarFallback></Avatar>
+        <Avatar className="h-8 w-8"><AvatarImage src={user?.profilePictureUrl || undefined} alt="" /><AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary-text">{initials}</AvatarFallback></Avatar>
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" sideOffset={8} className="w-[min(19rem,calc(100vw-1rem))] p-1.5">
       <DropdownMenuLabel className="p-2.5 font-normal">
         <div className="flex min-w-0 items-center gap-3">
-          <Avatar className="h-10 w-10 shrink-0"><AvatarImage src={user?.profilePictureUrl || undefined} alt="" /><AvatarFallback className="bg-primary/10 font-semibold text-primary">{initials}</AvatarFallback></Avatar>
+          <Avatar className="h-10 w-10 shrink-0"><AvatarImage src={user?.profilePictureUrl || undefined} alt="" /><AvatarFallback className="bg-primary/10 font-semibold text-primary-text">{initials}</AvatarFallback></Avatar>
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-foreground">{name}</p><p className="truncate text-xs text-muted-foreground">{user?.email || ""}</p>
             <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[0.6875rem] text-muted-foreground"><Building2 className="h-3 w-3 shrink-0" /><span className="truncate">{activeWorkspace?.name || "No active workspace"}</span>{roleLabel && <span className="shrink-0 rounded-full border px-1.5 py-0.5 capitalize">{roleLabel}</span>}</div>
           </div>

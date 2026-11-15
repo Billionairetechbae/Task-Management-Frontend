@@ -61,7 +61,7 @@ const HarmonyAssessment = ({
           <div>
             <Badge
               variant="secondary"
-              className="mb-3 bg-gradient-to-r from-primary/15 to-fuchsia-500/15 text-primary border-primary/20"
+              className="mb-3 bg-gradient-to-r from-primary/15 to-fuchsia-500/15 text-primary-text border-primary/20"
             >
               <Sparkles className="mr-1 h-3 w-3" />
               {currentDimension?.label || "Harmony"}
@@ -98,7 +98,7 @@ const HarmonyAssessment = ({
           className="mx-auto max-w-3xl space-y-6 animate-fade-in"
         >
           <div>
-            <p className="text-sm font-medium text-primary">{currentQuestion.title}</p>
+            <p className="text-sm font-medium text-primary-text">{currentQuestion.title}</p>
             <h4 className="mt-2 text-xl md:text-2xl font-semibold leading-8">
               {currentQuestion.text}
             </h4>
@@ -131,7 +131,7 @@ const HarmonyAssessment = ({
                   </div>
 
                   {selected && (
-                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0 animate-scale-in" />
+                    <CheckCircle2 className="h-5 w-5 text-primary-text shrink-0 animate-scale-in" />
                   )}
                 </Label>
               );

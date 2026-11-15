@@ -148,7 +148,7 @@ const SignupTeamMember = () => {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-foreground hover:text-primary mb-8 font-medium">
+        <Link to="/" className="inline-flex items-center gap-2 text-foreground hover:text-primary-text mb-8 font-medium">
           <ArrowLeft className="w-5 h-5" />
           Back to Login
         </Link>
@@ -308,7 +308,7 @@ const SignupTeamMember = () => {
                 {formData.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
+                    className="bg-primary/10 text-primary-text px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
                   >
                     {skill}
                     <button
@@ -332,7 +332,7 @@ const SignupTeamMember = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <Link to="/" className="text-primary hover:underline font-medium">
+            <Link to="/" className="text-primary-text hover:underline font-medium">
               Already have an account? Sign In
             </Link>
           </div>

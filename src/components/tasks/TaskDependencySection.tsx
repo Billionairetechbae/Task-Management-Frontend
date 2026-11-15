@@ -44,7 +44,7 @@ function Row({ item, canRemove, onRemove, removing, onOpen }: {
   return (
     <li className="flex items-start gap-2 rounded-md border p-2 text-sm">
       <div className="min-w-0 flex-1">
-        <button type="button" onClick={() => onOpen(task)} className="block max-w-full truncate text-left font-medium hover:text-primary hover:underline">{task.title}</button>
+        <button type="button" onClick={() => onOpen(task)} className="block max-w-full truncate text-left font-medium hover:text-primary-text hover:underline">{task.title}</button>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <StatusChip status={task.status} />
           {due && <span>Due {due}</span>}

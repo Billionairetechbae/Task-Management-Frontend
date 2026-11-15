@@ -19,19 +19,19 @@ export const StatsCard = ({ title, value, icon: Icon, description, trend, classN
     <div className="flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
         <p className="mb-1.5 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground [overflow-wrap:anywhere] sm:text-xs">{title}</p>
-        <p className="text-2xl sm:text-3xl font-bold tracking-tight leading-none">{value}</p>
+        <p className="text-2xl sm:text-3xl font-bold tracking-tight leading-none [overflow-wrap:anywhere]">{value}</p>
         {description && <p className="text-[0.6875rem] text-muted-foreground mt-1.5">{description}</p>}
         {trend && (
-          <p className={cn("text-[0.6875rem] font-semibold mt-2 flex items-center gap-1", trend.isPositive ? "text-success-text" : "text-destructive-text")}>
+          <p className={cn("text-[0.6875rem] font-semibold mt-2 flex flex-wrap items-center gap-1 [overflow-wrap:anywhere]", trend.isPositive ? "text-success-text" : "text-destructive-text")}>
             <span>{trend.isPositive ? "↑" : "↓"}</span> {Math.abs(trend.value)}% from last month
           </p>
         )}
       </div>
       <div className={cn(
-        "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-primary/8 transition-all duration-300 group-hover:scale-105 group-hover:bg-primary/12 shrink-0",
+        "w-10 h-10 sm:w-11 sm:h-11 max-[20rem]:hidden rounded-xl flex items-center justify-center bg-primary/8 transition-all duration-300 group-hover:scale-105 group-hover:bg-primary/12 shrink-0",
         iconClassName
       )}>
-        <Icon className="w-5 h-5 text-primary" />
+        <Icon className="w-5 h-5 text-primary-text" />
       </div>
     </div>
   </div>
@@ -120,7 +120,7 @@ export const QuickActionCard = ({ title, description, icon: Icon, href, onClick,
         "w-10 h-10 rounded-xl flex items-center justify-center bg-primary/8 mb-3 transition-all duration-300 group-hover:scale-105 group-hover:bg-primary/12",
         iconClassName
       )}>
-        <Icon className="w-5 h-5 text-primary" />
+        <Icon className="w-5 h-5 text-primary-text" />
       </div>
       <h3 className="font-semibold text-sm mb-0.5">{title}</h3>
       <p className="text-[0.6875rem] text-muted-foreground">{description}</p>

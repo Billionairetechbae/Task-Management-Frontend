@@ -241,7 +241,7 @@ const Settings = () => {
                 value={
                   <button
                     onClick={() => user?.id && copy(user.id, "User ID")}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary-text"
                   >
                     {user?.id ? `${user.id.slice(0, 12)}…` : "—"}
                     <Copy className="h-3 w-3" />
@@ -261,7 +261,7 @@ const Settings = () => {
                 value={
                   <button
                     onClick={() => activeCompanyId && copy(activeCompanyId, "Workspace ID")}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary-text"
                   >
                     {activeCompanyId ? `${activeCompanyId.slice(0, 12)}…` : "—"}
                     <Copy className="h-3 w-3" />
@@ -325,7 +325,7 @@ const Settings = () => {
                         <opt.icon
                           className={cn(
                             "h-5 w-5",
-                            selected ? "text-primary" : "text-muted-foreground"
+                            selected ? "text-primary-text" : "text-muted-foreground"
                           )}
                         />
                         {selected && (
@@ -556,7 +556,7 @@ const Settings = () => {
       <div className="space-y-6 animate-fade-in">
         {/* Page header */}
         <div className="flex items-start gap-3">
-          <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary-text flex items-center justify-center shrink-0">
             <SettingsIcon className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -604,7 +604,7 @@ const Settings = () => {
                         className={cn(
                           "group w-full flex items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200",
                           selected
-                            ? "bg-primary/10 text-primary"
+                            ? "bg-primary/10 text-primary-text"
                             : "text-foreground hover:bg-muted"
                         )}
                       >

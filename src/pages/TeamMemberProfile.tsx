@@ -235,7 +235,7 @@ const TeamMemberProfile = () => {
                 className="w-32 h-32 rounded-full object-cover border mb-4"
               />
             ) : (
-              <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center border text-4xl font-bold text-primary mb-4">
+              <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center border text-4xl font-bold text-primary-text mb-4">
                 {(u?.firstName?.[0] || "").toUpperCase()}
                 {(u?.lastName?.[0] || "").toUpperCase()}
               </div>
@@ -372,7 +372,7 @@ const TeamMemberProfile = () => {
                 {u.skills.map((skill: string) => (
                   <span
                     key={skill}
-                    className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium"
+                    className="bg-primary/10 text-primary-text px-3 py-1 rounded-full text-sm font-medium"
                   >
                     {skill}
                   </span>

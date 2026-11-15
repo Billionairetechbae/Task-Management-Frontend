@@ -122,7 +122,7 @@ export default function ProjectHealth() {
     return (
       <DashboardLayout>
         <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
           <p className="text-sm text-muted-foreground">Loading project health...</p>
         </div>
       </DashboardLayout>
@@ -134,7 +134,7 @@ export default function ProjectHealth() {
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary mb-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary-text mb-3">
               <Activity className="w-3.5 h-3.5" />
               Project Health Intelligence
             </div>

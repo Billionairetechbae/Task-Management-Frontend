@@ -74,7 +74,7 @@ export default function ProjectMiniSidebar({
                   className={cn(
                     "w-9 h-9 rounded-lg flex items-center justify-center transition-all relative group",
                     currentProjectId === p.id 
-                      ? "bg-primary/15 text-primary ring-1 ring-primary/30" 
+                      ? "bg-primary/15 text-primary-text ring-1 ring-primary/30" 
                       : "hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground"
                   )}
                 >

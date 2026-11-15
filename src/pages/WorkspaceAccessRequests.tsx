@@ -308,7 +308,7 @@ export default function WorkspaceAccessRequests() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-4 w-4 text-primary" />
+              <ShieldCheck className="h-4 w-4 text-primary-text" />
               Current access summary
             </CardTitle>
             <CardDescription>
@@ -358,7 +358,7 @@ export default function WorkspaceAccessRequests() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <LockKeyhole className="h-4 w-4 text-primary" />
+                <LockKeyhole className="h-4 w-4 text-primary-text" />
                 Request additional permissions
               </CardTitle>
               <CardDescription>
@@ -456,7 +456,7 @@ export default function WorkspaceAccessRequests() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <UserCheck className="h-4 w-4 text-primary" />
+                <UserCheck className="h-4 w-4 text-primary-text" />
                 Approval queue
               </CardTitle>
               <CardDescription>
@@ -472,7 +472,7 @@ export default function WorkspaceAccessRequests() {
 
         {isJoinApprover && (
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><UserCheck className="h-4 w-4 text-primary" />Workspace join requests</CardTitle><CardDescription>Membership admission has a dedicated review screen with pending requests and decision history.</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><UserCheck className="h-4 w-4 text-primary-text" />Workspace join requests</CardTitle><CardDescription>Membership admission has a dedicated review screen with pending requests and decision history.</CardDescription></CardHeader>
             <CardContent><Button asChild><Link to="/settings/workspace/join-requests">Open Join Requests</Link></Button></CardContent>
           </Card>
         )}
@@ -480,7 +480,7 @@ export default function WorkspaceAccessRequests() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <History className="h-4 w-4 text-primary" />
+              <History className="h-4 w-4 text-primary-text" />
               {isApprover ? "Request history" : "My request history"}
             </CardTitle>
             <CardDescription>
@@ -493,7 +493,7 @@ export default function WorkspaceAccessRequests() {
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <Loader2 className="h-6 w-6 animate-spin text-primary-text" />
               </div>
             ) : historyRequests.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border py-10 text-center">

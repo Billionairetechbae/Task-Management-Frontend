@@ -164,7 +164,7 @@ const WorkspaceAccessRequestsPanel = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <KeyRound className="h-4 w-4 text-primary" />
+                      <KeyRound className="h-4 w-4 text-primary-text" />
                     </div>
 
                     <div className="min-w-0">

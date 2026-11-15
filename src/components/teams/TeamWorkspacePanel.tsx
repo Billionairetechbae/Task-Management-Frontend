@@ -95,7 +95,7 @@ export default function TeamWorkspacePanel({ team }: Props) {
                 <div className="grid grid-cols-3 gap-2">
                   {stats.map(({ label, value, icon: Icon }) => (
                     <div key={label} className="rounded-lg border bg-muted/20 p-3">
-                      <Icon className="mb-2 h-4 w-4 text-primary" />
+                      <Icon className="mb-2 h-4 w-4 text-primary-text" />
                       <p className="text-2xl font-semibold leading-none">{value}</p>
                       <p className="mt-1.5 text-[0.6875rem] leading-tight text-muted-foreground">{label}</p>
                     </div>
@@ -110,7 +110,7 @@ export default function TeamWorkspacePanel({ team }: Props) {
                           <div className="flex min-w-0 items-center gap-2">
                             <Avatar className="h-7 w-7">
                               <AvatarImage src={item.user?.profilePictureUrl || undefined} alt={personName(item.user)} />
-                              <AvatarFallback className="bg-primary/10 text-[0.625rem] font-semibold text-primary">{personInitials(item.user)}</AvatarFallback>
+                              <AvatarFallback className="bg-primary/10 text-[0.625rem] font-semibold text-primary-text">{personInitials(item.user)}</AvatarFallback>
                             </Avatar>
                             <span className="truncate text-sm">{personName(item.user)}</span>
                           </div>
@@ -138,7 +138,7 @@ export default function TeamWorkspacePanel({ team }: Props) {
                       <div key={item.id} className={cn("group flex gap-2.5", item.parentMessageId && "ml-6")}>
                         <Avatar className="h-8 w-8 shrink-0">
                           <AvatarImage src={item.user?.profilePictureUrl || undefined} alt={personName(item.user)} />
-                          <AvatarFallback className="bg-primary/10 text-[0.6875rem] font-semibold text-primary">{personInitials(item.user)}</AvatarFallback>
+                          <AvatarFallback className="bg-primary/10 text-[0.6875rem] font-semibold text-primary-text">{personInitials(item.user)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1 rounded-lg rounded-tl-none border bg-muted/30 px-3 py-2">
                           <div className="flex items-baseline justify-between gap-2">
@@ -149,7 +149,7 @@ export default function TeamWorkspacePanel({ team }: Props) {
                           <button
                             type="button"
                             onClick={() => setReplyTo(item)}
-                            className="mt-1 inline-flex items-center gap-1 text-[0.6875rem] text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
+                            className="mt-1 inline-flex items-center gap-1 text-[0.6875rem] text-muted-foreground opacity-0 transition-opacity hover:text-primary-text group-hover:opacity-100"
                           >
                             <CornerDownRight className="h-3 w-3" /> Reply
                           </button>

@@ -74,7 +74,7 @@ const FilePreviewCard = ({ file, onClick, compact = false, actions, className }:
             }}
           />
         ) : (
-          <Icon className={cn("text-primary/70", compact ? "w-8 h-8" : "w-10 h-10 sm:w-12 sm:h-12")} />
+          <Icon className={cn("text-primary-text/70", compact ? "w-8 h-8" : "w-10 h-10 sm:w-12 sm:h-12")} />
         )}
 
         {isGoogleDrive && (

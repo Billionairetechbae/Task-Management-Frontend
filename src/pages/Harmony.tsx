@@ -341,7 +341,7 @@ const Harmony = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary mb-1">Work Style Intelligence</p>
+                <p className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary-text mb-1">Work Style Intelligence</p>
                 <h2 className="text-3xl font-bold tracking-tight">Harmony</h2>
                 <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                   Understand your natural work style and compare team collaboration patterns across the active workspace.

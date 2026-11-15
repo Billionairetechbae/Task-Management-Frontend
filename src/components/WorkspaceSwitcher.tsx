@@ -91,7 +91,7 @@ const WorkspaceSwitcher = () => {
                 className="flex items-center gap-2 px-2 sm:px-3 h-8 border border-border hover:border-primary/30 bg-background"
               >
                 <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                  <Building2 className="h-3.5 w-3.5 text-primary-text" />
                 </div>
                 <div className="flex flex-col items-start">
                   <span className="text-xs font-medium leading-tight max-w-[100px] truncate sm:max-w-[140px] text-foreground">
@@ -168,7 +168,7 @@ const WorkspaceSwitcher = () => {
                   </span>
                 </div>
                 {isSelected && (
-                  <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                  <Check className="h-4 w-4 text-primary-text flex-shrink-0" />
                 )}
               </DropdownMenuItem>
             );
@@ -180,14 +180,14 @@ const WorkspaceSwitcher = () => {
             </div>
           )}
           {visible.length < matches.length && (
-            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); setVisibleCount((count) => count + 5); }} className="justify-center text-primary cursor-pointer">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); setVisibleCount((count) => count + 5); }} className="justify-center text-primary-text cursor-pointer">
               View more
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => createDialog.open()}
-            className="text-primary cursor-pointer gap-2 py-2.5"
+            className="text-primary-text cursor-pointer gap-2 py-2.5"
           >
             <Plus className="h-4 w-4" />
             Create workspace

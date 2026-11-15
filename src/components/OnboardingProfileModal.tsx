@@ -113,7 +113,7 @@ export default function OnboardingProfileModal({
         <div className="relative overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-6 pt-6 pb-5">
           <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-primary/20 blur-3xl animate-pulse" />
           <div className="relative flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary animate-scale-in">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-text animate-scale-in">
               <ActiveIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -157,7 +157,7 @@ export default function OnboardingProfileModal({
                     className="rounded-xl border border-border/70 bg-muted/30 p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-soft animate-fade-in"
                     style={{ animationDelay: `${i * 80}ms` }}
                   >
-                    <s.icon className="mb-2 h-4 w-4 text-primary" />
+                    <s.icon className="mb-2 h-4 w-4 text-primary-text" />
                     <p className="text-xs font-semibold">{s.title}</p>
                     <p className="text-[0.6875rem] text-muted-foreground leading-snug">{s.hint}</p>
                   </div>
@@ -222,7 +222,7 @@ export default function OnboardingProfileModal({
                       >
                         <opt.icon
                           className={`h-5 w-5 transition-transform duration-300 group-hover:scale-110 ${
-                            active ? "text-primary" : "text-muted-foreground"
+                            active ? "text-primary-text" : "text-muted-foreground"
                           }`}
                         />
                         <span className="text-xs font-medium">{opt.label}</span>
@@ -254,7 +254,7 @@ export default function OnboardingProfileModal({
                         }`}
                       >
                         <opt.icon
-                          className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`}
+                          className={`h-4 w-4 ${active ? "text-primary-text" : "text-muted-foreground"}`}
                         />
                         <span className="text-xs font-medium">{opt.label}</span>
                       </button>

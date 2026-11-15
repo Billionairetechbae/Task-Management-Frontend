@@ -143,7 +143,7 @@ export default function Projects() {
             /* Empty state */
             <Card className="p-12 text-center border-dashed border-2 border-border">
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <FolderKanban className="w-8 h-8 text-primary" />
+                <FolderKanban className="w-8 h-8 text-primary-text" />
               </div>
               <h2 className="text-xl font-bold mb-2">Create Your First Project</h2>
               <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
@@ -169,14 +169,14 @@ export default function Projects() {
                       {p.logoUrl ? (
                         <img src={p.logoUrl} alt={p.name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-xs font-black text-primary uppercase">{p.name.slice(0, 2)}</span>
+                        <span className="text-xs font-black text-primary-text uppercase">{p.name.slice(0, 2)}</span>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{p.name}</h3>
+                      <h3 className="font-semibold text-sm truncate group-hover:text-primary-text transition-colors">{p.name}</h3>
                       <span className={cn(
                         "text-[0.5625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
-                        p.status === "active" ? "bg-primary/10 text-primary" :
+                        p.status === "active" ? "bg-primary/10 text-primary-text" :
                         p.status === "completed" ? "bg-success/10 text-success-text" :
                         "bg-muted text-muted-foreground"
                       )}>
@@ -188,7 +188,7 @@ export default function Projects() {
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
                     {p.description || "No description"}
                   </p>
-                  {p.team && <p className="mb-3 text-xs font-medium text-primary">Team: {p.team.name}</p>}
+                  {p.team && <p className="mb-3 text-xs font-medium text-primary-text">Team: {p.team.name}</p>}
                   <div className="flex items-center gap-3 text-[0.625rem] text-muted-foreground">
                     {p.startDate && (
                       <span className="flex items-center gap-1">
@@ -210,9 +210,9 @@ export default function Projects() {
               >
                 <div className="text-center">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/10 transition-colors">
-                    <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary-text transition-colors" />
                   </div>
-                  <p className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">New Project</p>
+                  <p className="text-xs font-medium text-muted-foreground group-hover:text-primary-text transition-colors">New Project</p>
                 </div>
               </Card>
             </div>

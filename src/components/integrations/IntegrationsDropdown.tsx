@@ -92,7 +92,7 @@ export default function IntegrationsDropdown() {
         <Link
           to="/settings/integrations"
           onClick={() => setOpen(false)}
-          className="block text-center text-sm font-medium text-primary hover:underline py-2"
+          className="block text-center text-sm font-medium text-primary-text hover:underline py-2"
         >
           View all →
         </Link>

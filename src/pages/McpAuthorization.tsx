@@ -70,7 +70,7 @@ export default function McpAuthorization() {
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-xl rounded-2xl">
         <CardHeader>
-          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary-text">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <CardTitle>Authorize an AI assistant</CardTitle>

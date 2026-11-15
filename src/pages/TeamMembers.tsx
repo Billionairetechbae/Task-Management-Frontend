@@ -170,7 +170,7 @@ const TeamMembers = () => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8">
-                            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary-text">
                               {tm.firstName.charAt(0)}{tm.lastName.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
@@ -230,7 +230,7 @@ const TeamMembers = () => {
                   <div key={tm.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-sm transition-shadow group">
                     <div className="flex items-start gap-3 mb-3">
                       <Avatar className="w-11 h-11">
-                        <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
+                        <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary-text">
                           {tm.firstName.charAt(0)}{tm.lastName.charAt(0)}
                         </AvatarFallback>
                       </Avatar>

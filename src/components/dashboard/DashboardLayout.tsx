@@ -696,7 +696,7 @@ const DashboardLayout = ({
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] font-medium transition-all duration-200 w-full text-left",
               isAnyActive
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary-text"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
@@ -785,7 +785,7 @@ const DashboardLayout = ({
           )}
         >
           <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-primary" />
+            <User className="w-4 h-4 text-primary-text" />
           </div>
 
           {sidebarOpen && (
@@ -906,7 +906,7 @@ const DashboardLayout = ({
         >
           <MaintenanceBanner />
           <header ref={headerRef} className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border min-h-14 shrink-0">
-            <div className="flex min-h-14 items-center justify-between gap-2 px-4 py-1.5 sm:gap-3 sm:px-6">
+            <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-4 py-1.5 sm:gap-x-3 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -937,7 +937,7 @@ const DashboardLayout = ({
 
               <GlobalSearch />
 
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
                 {showHeaderSwitcher && (
                   <div className="hidden sm:block">
                     <WorkspaceSwitcher />

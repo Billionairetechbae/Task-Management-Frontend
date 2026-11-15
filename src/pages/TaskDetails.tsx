@@ -2267,7 +2267,7 @@ const TaskDetails = () => {
             <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <MessageSquare className="h-3.5 w-3.5" /> Chat
                     {comments.length > 0 && <Badge variant="outline" className="text-[0.625rem] ml-1 h-4 px-1">{comments.length}</Badge>}
                   </TabsTrigger>
@@ -2276,7 +2276,7 @@ const TaskDetails = () => {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <FilesIcon className="h-3.5 w-3.5" /> Files
                     {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[0.625rem] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
                   </TabsTrigger>
@@ -2285,7 +2285,7 @@ const TaskDetails = () => {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <ActivityIcon className="h-3.5 w-3.5" /> Activity
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2293,7 +2293,7 @@ const TaskDetails = () => {
               </Tooltip>
               {canSeeClientComments && !task.parentTaskId && <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="client" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="client" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <User2 className="h-3.5 w-3.5" /> Client
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2301,7 +2301,7 @@ const TaskDetails = () => {
               </Tooltip>}
               {canTrackTime && <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <Timer className="h-3.5 w-3.5" /> Time
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2310,7 +2310,7 @@ const TaskDetails = () => {
               {!isReadOnly && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                       <Pencil className="h-3.5 w-3.5" /> Edit
                     </TabsTrigger>
                   </TooltipTrigger>
@@ -2456,7 +2456,7 @@ const TaskDetails = () => {
                     onClick={() => setMobilePanel(key as any)}
                     className={cn(
                       "relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[0.625rem] font-medium transition-colors active:scale-[0.97]",
-                      mobilePanel === key ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                      mobilePanel === key ? "bg-primary/10 text-primary-text" : "text-muted-foreground"
                     )}
                   >
                     <Icon className="h-[18px] w-[18px]" />

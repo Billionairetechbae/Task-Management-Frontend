@@ -29,3 +29,12 @@ Branch `feature/portal-responsive-accessibility` (from `staging`). Frontend only
 
 ## Not covered
 Firefox (not installed) and Safari (installed, but automation needs the user to enable Develop → Allow Remote Automation). Only Chrome was exercised.
+
+## Final release gate (dark-theme text tokens and large-text fixes)
+
+- New `--primary-text` token (light `262 72% 50%`, dark `262 80% 74%`, 5.2:1 or better on the dark page, card and tinted surfaces); all `text-primary` usages now use `text-primary-text`. Fill colour `--primary` is unchanged.
+- Profile role/status badges moved from hard-coded yellow/green-600 to the warning/success text tokens.
+- axe-core (wcag2a/aa/21/22aa), 500-task fixture, 1280 and 390 wide: light theme 0 violations on Dashboard, Projects, Board, Calendar, Notifications, Profile. Dark theme: Dashboard 0, Profile 0, Projects 0, Notifications 0; Board and Calendar still have 44 contrast failures from hard-coded light surfaces (outside this change).
+- Large-text fixes found at a 32px browser default font on 320/390px screens: header action cluster wraps instead of colliding, stat cards, rail buttons and task-card grid wrap instead of spilling.
+- Dashboard interaction suite: 158 checks, 0 failures at 1920@100/125/150/200%, 1366, 1024, 768, 390 and 320. 32-route smoke: 128 of 128 clean.
+- Not done: live-backend smoke (no authorized test account; local env points at production), Safari (Remote Automation disabled), Firefox (not installed).

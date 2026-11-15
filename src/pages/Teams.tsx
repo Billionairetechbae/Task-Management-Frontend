@@ -317,10 +317,10 @@ export default function Teams() {
                 aria-current={selectedTeam?.id === team.id ? "page" : undefined}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-lg border-l-2 px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                  selectedTeam?.id === team.id ? "border-primary bg-primary/10 text-primary" : "border-transparent hover:bg-muted",
+                  selectedTeam?.id === team.id ? "border-primary bg-primary/10 text-primary-text" : "border-transparent hover:bg-muted",
                 )}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[0.6875rem] font-bold text-primary">{initials(team.name)}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[0.6875rem] font-bold text-primary-text">{initials(team.name)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{team.name}</span>
                   <span className="block text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} members</span>
@@ -471,7 +471,7 @@ function TeamHome({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 gap-3">
             <Avatar className="h-11 w-11 rounded-xl">
-              <AvatarFallback className="rounded-xl bg-primary/10 text-sm font-bold text-primary">{initials(team.name)}</AvatarFallback>
+              <AvatarFallback className="rounded-xl bg-primary/10 text-sm font-bold text-primary-text">{initials(team.name)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <h2 className="truncate text-xl font-semibold tracking-tight">{team.name}</h2>
@@ -518,7 +518,7 @@ function TeamHome({
               role="tab"
               aria-selected={activeTab === value}
               onClick={() => setActiveTab(value)}
-              className={cn("shrink-0 border-b-2 px-1 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", activeTab === value ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+              className={cn("shrink-0 border-b-2 px-1 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", activeTab === value ? "border-primary text-primary-text" : "border-transparent text-muted-foreground hover:text-foreground")}
             >
               {label}{value === "tasks" && <span className="ml-1.5 text-[0.625rem] text-muted-foreground">{openCount}</span>}
             </button>
@@ -543,7 +543,7 @@ function TeamHome({
 
 function Metric({ label, value, icon: Icon }: { label: string; value: number; icon: typeof CheckSquare }) {
   return <div className="flex min-h-16 items-center gap-2.5 rounded-lg border bg-background px-3 py-2">
-    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span>
+    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary-text"><Icon className="h-4 w-4" /></span>
     <div><p className="text-lg font-semibold leading-none">{value}</p><p className="mt-1 text-[0.625rem] text-muted-foreground">{label}</p></div>
   </div>;
 }
@@ -702,7 +702,7 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3">
         <div><h3 className="text-sm font-semibold">Tasks</h3><p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{filteredTasks.length} of {tasks.length} Team tasks</p>
           <div role="tablist" aria-label="Team task views" className="mt-2 flex flex-wrap gap-1">
-            {TEAM_TASK_VIEWS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} data-testid={`team-view-${key}`} onClick={() => setView(key)} className={cn("rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium", view === key ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted")}>{label}<span className="ml-1 tabular-nums">{counts[key]}</span></button>)}
+            {TEAM_TASK_VIEWS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} data-testid={`team-view-${key}`} onClick={() => setView(key)} className={cn("rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium", view === key ? "border-primary bg-primary/10 text-primary-text" : "text-muted-foreground hover:bg-muted")}>{label}<span className="ml-1 tabular-nums">{counts[key]}</span></button>)}
           </div></div>
         <div className="flex flex-wrap items-center gap-1.5">
           <div className="relative">
@@ -863,7 +863,7 @@ function TeamChat({ team, initialMessages }: { team: Team; initialMessages: Team
   };
   return (
     <section className="flex min-h-[420px] flex-col overflow-hidden rounded-lg border bg-background">
-      <div className="flex items-center justify-between border-b px-4 py-3"><div><h3 className="text-sm font-semibold">Team chat</h3><p className="text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} participants</p></div><MessageSquare className="h-4 w-4 text-primary" /></div>
+      <div className="flex items-center justify-between border-b px-4 py-3"><div><h3 className="text-sm font-semibold">Team chat</h3><p className="text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} participants</p></div><MessageSquare className="h-4 w-4 text-primary-text" /></div>
       <div className="max-h-[calc(100vh-360px)] min-h-[260px] flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length ? messages.map((item) => (
           <article key={item.id} className={cn("flex gap-2.5", item.parentMessageId && "ml-8")}>
@@ -903,7 +903,7 @@ function ActivityTimeline({ items }: { items: TaskActivity[] }) {
       return <li key={item.id} className="flex gap-3 px-4 py-3">
         <Avatar className="h-7 w-7 shrink-0"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.5625rem]">{initials(userName(item.user))}</AvatarFallback></Avatar>
         <div className="min-w-0 flex-1"><p className="text-xs"><span className="font-medium">{userName(item.user)}</span> <span className="text-muted-foreground">{action}</span>{target && <> <span className="font-medium">“{target}”</span></>}</p><time className="mt-0.5 block text-[0.625rem] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div>
-        <Activity className="mt-1 h-3.5 w-3.5 shrink-0 text-primary" />
+        <Activity className="mt-1 h-3.5 w-3.5 shrink-0 text-primary-text" />
       </li>;
     })}</ol> : <div className="px-4 py-12 text-center"><Activity className="mx-auto mb-2 h-7 w-7 text-muted-foreground/40" /><p className="text-sm font-medium">No Team activity yet</p><p className="mt-1 text-xs text-muted-foreground">Task and membership changes will appear here.</p></div>}
   </section>;
@@ -917,7 +917,7 @@ function TeamSettings({ team, canManage, onEdit, onLead, onMembers, onDelete }: 
   </section>;
   return <div className="grid gap-3 lg:max-w-4xl">
     {settingCard("General", <div><p className="text-sm font-medium">{team.name}</p><p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{team.description || "No description provided."}</p></div>, canManage && <Button variant="outline" size="sm" onClick={onEdit}>Edit</Button>)}
-    {settingCard("Leadership", <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /><div><p className="text-sm font-medium">{nameOf(team.leadMember)}</p><p className="text-[0.6875rem] text-muted-foreground">Team Lead</p></div></div>, canManage && <Button variant="outline" size="sm" onClick={onLead}>Change Lead</Button>)}
+    {settingCard("Leadership", <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary-text" /><div><p className="text-sm font-medium">{nameOf(team.leadMember)}</p><p className="text-[0.6875rem] text-muted-foreground">Team Lead</p></div></div>, canManage && <Button variant="outline" size="sm" onClick={onLead}>Change Lead</Button>)}
     {settingCard("Members", <div><p className="text-sm font-medium">{team.memberLinks?.length || 0} members</p><p className="mt-1 text-xs text-muted-foreground">Manage membership and remove inactive participants.</p></div>, canManage && <Button variant="outline" size="sm" onClick={onMembers}>Manage members</Button>)}
     {canManage && settingCard("Danger zone", <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium">Delete this Team</p><p className="mt-1 text-xs text-muted-foreground">Team work will be unassigned. This cannot be undone.</p></div><Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-1.5 h-3.5 w-3.5" />Delete Team</Button></div>)}
   </div>;
@@ -1106,13 +1106,13 @@ function TaskWorkspace({
           </header>
           <div className="space-y-4 p-3 sm:p-4">
             <section className="rounded-md border bg-muted/20 px-3 py-3">
-              <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><FileText className="h-3.5 w-3.5 text-primary" />Execution brief</h3>{canEdit && <Button variant="ghost" size="sm" className="h-7 px-2 text-[0.6875rem]" onClick={openEdit}>Edit</Button>}</div>
+              <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><FileText className="h-3.5 w-3.5 text-primary-text" />Execution brief</h3>{canEdit && <Button variant="ghost" size="sm" className="h-7 px-2 text-[0.6875rem]" onClick={openEdit}>Edit</Button>}</div>
               <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{task.description || "No execution brief provided."}</p>
             </section>
             <section className="overflow-hidden rounded-md border">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3">
                 <div className="min-w-48 flex-1">
-                  <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><CheckSquare className="h-3.5 w-3.5 text-primary" />Sub-tasks <span className="font-normal text-muted-foreground">{completed}/{activeSubtasks.length} completed</span></h3><span className="text-[0.625rem] text-muted-foreground">{activeSubtasks.length ? Math.round(completed / activeSubtasks.length * 100) : 0}%</span></div>
+                  <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><CheckSquare className="h-3.5 w-3.5 text-primary-text" />Sub-tasks <span className="font-normal text-muted-foreground">{completed}/{activeSubtasks.length} completed</span></h3><span className="text-[0.625rem] text-muted-foreground">{activeSubtasks.length ? Math.round(completed / activeSubtasks.length * 100) : 0}%</span></div>
                   <Progress value={activeSubtasks.length ? completed / activeSubtasks.length * 100 : 0} className="mt-2 h-1.5 max-w-[280px]" />
                 </div>
                 <div className="relative w-full max-w-[210px]">
@@ -1275,7 +1275,7 @@ function SubtaskInspector({ task, team, subtask, loading, error, canEdit, canCha
   return (
     <aside className="fixed inset-0 z-40 flex w-full flex-col overflow-y-auto border-l bg-background p-4 shadow-2xl lg:static lg:z-auto lg:w-[400px] lg:shrink-0 lg:p-4" aria-label="Sub-task inspector">
       <header className="flex items-start justify-between gap-3 border-b pb-3">
-        <div className="min-w-0"><p className="text-[0.5625rem] font-semibold uppercase tracking-[.14em] text-primary">Sub-task</p><h2 className="mt-1 break-words text-lg font-semibold">{subtask?.title || (loading ? "Loading sub-task…" : "Sub-task unavailable")}</h2><p className="mt-1 truncate text-[0.625rem] text-muted-foreground">Parent: {task.title} · {team.name}</p></div>
+        <div className="min-w-0"><p className="text-[0.5625rem] font-semibold uppercase tracking-[.14em] text-primary-text">Sub-task</p><h2 className="mt-1 break-words text-lg font-semibold">{subtask?.title || (loading ? "Loading sub-task…" : "Sub-task unavailable")}</h2><p className="mt-1 truncate text-[0.625rem] text-muted-foreground">Parent: {task.title} · {team.name}</p></div>
         <Button variant="ghost" size="icon" aria-label="Close sub-task inspector" onClick={onClose}><X className="h-4 w-4" /></Button>
       </header>
       {loading ? <div className="mt-4 space-y-3"><div className="h-24 animate-pulse rounded-lg bg-muted" /><div className="h-40 animate-pulse rounded-lg bg-muted" /></div> : error || !subtask || String(subtask.parentTaskId || "") !== String(task.id) ? <p className="py-8 text-center text-xs text-muted-foreground">This sub-task is unavailable in this Team context.</p> : <>

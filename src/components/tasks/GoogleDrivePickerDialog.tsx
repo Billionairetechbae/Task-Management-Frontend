@@ -222,7 +222,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
         {/* ── Not-connected / loading state ── */}
         {statusLoading && !isConnected ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-10">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <Loader2 className="w-8 h-8 text-primary-text animate-spin" />
             <p className="text-sm text-muted-foreground">Checking Google Drive status…</p>
           </div>
         ) : !canBrowseDrive ? (
@@ -351,7 +351,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                           className={cn(
                             "h-5 px-1.5 text-[0.625rem] font-medium",
                             i === folderStack.length - 1
-                              ? "bg-primary/10 text-primary"
+                              ? "bg-primary/10 text-primary-text"
                               : "cursor-pointer"
                           )}
                           onClick={() => {
@@ -437,7 +437,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                           ) : folder ? (
                             <FolderIcon className="w-9 h-9 text-[#FBBC04]" />
                           ) : (
-                            <FileTypeIcon className="w-8 h-8 text-primary/70" />
+                            <FileTypeIcon className="w-8 h-8 text-primary-text/70" />
                           )}
                           {selected && (
                             <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow">

@@ -101,7 +101,7 @@ const Signup = () => {
             <div className="relative mx-auto mb-6 h-20 w-20">
               <span className="absolute inset-0 rounded-full bg-primary/10 animate-ping" />
               <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 animate-scale-in">
-                <MailCheck className="h-9 w-9 text-primary" />
+                <MailCheck className="h-9 w-9 text-primary-text" />
               </div>
             </div>
 

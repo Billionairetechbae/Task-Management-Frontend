@@ -642,7 +642,7 @@ export default function ProjectDetails() {
     return (
       <DashboardLayout fullWidth hidePadding>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
         </div>
       </DashboardLayout>
     );
@@ -728,7 +728,7 @@ export default function ProjectDetails() {
 
               <button
                 onClick={() => navigate("/projects?create=true")}
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:text-primary"
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:text-primary-text"
               >
                 <Plus className="w-3 h-3" />
               </button>
@@ -762,7 +762,7 @@ export default function ProjectDetails() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary-text transition-colors" />
                         )}
                       </button>
                     </TooltipTrigger>
@@ -801,7 +801,7 @@ export default function ProjectDetails() {
                         {project.description.length > 120 && (
                           <button
                             onClick={() => setDescExpanded((v) => !v)}
-                            className="text-[0.625rem] font-semibold text-primary hover:underline mt-0.5"
+                            className="text-[0.625rem] font-semibold text-primary-text hover:underline mt-0.5"
                           >
                             {descExpanded ? "Show less" : "See more"}
                           </button>
@@ -833,7 +833,7 @@ export default function ProjectDetails() {
                               <Tooltip key={m.id}>
                                 <TooltipTrigger>
                                   <Avatar className="w-5 h-5 border border-background">
-                                    <AvatarFallback className="text-[0.4375rem] font-bold bg-primary/10 text-primary">
+                                    <AvatarFallback className="text-[0.4375rem] font-bold bg-primary/10 text-primary-text">
                                       {m.firstName?.[0]}
                                       {m.lastName?.[0]}
                                     </AvatarFallback>
@@ -1017,7 +1017,7 @@ export default function ProjectDetails() {
                         <MiniStat
                           label="Tasks"
                           value={taskStats.total}
-                          color="text-primary"
+                          color="text-primary-text"
                         />
                         <MiniStat
                           label="Done"
@@ -1119,7 +1119,7 @@ export default function ProjectDetails() {
                             className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors duration-150 group text-[0.6875rem]"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-[0.5625rem] font-bold text-primary shrink-0">
+                              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-[0.5625rem] font-bold text-primary-text shrink-0">
                                 {m.firstName?.[0]}
                                 {m.lastName?.[0]}
                               </div>
@@ -1131,7 +1131,7 @@ export default function ProjectDetails() {
 
                                 <div className="text-[0.5625rem] text-muted-foreground truncate">
                                   {m.role === "owner" ? (
-                                    <span className="font-semibold text-primary">Owner</span>
+                                    <span className="font-semibold text-primary-text">Owner</span>
                                   ) : (
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
@@ -1524,7 +1524,7 @@ export default function ProjectDetails() {
                                   <Tooltip>
                                     <TooltipTrigger>
                                       <Avatar className="w-4 h-4 shrink-0">
-                                        <AvatarFallback className="text-[0.375rem] font-bold bg-primary/10 text-primary">
+                                        <AvatarFallback className="text-[0.375rem] font-bold bg-primary/10 text-primary-text">
                                           {task.assignee.firstName?.[0]}
                                           {task.assignee.lastName?.[0]}
                                         </AvatarFallback>
@@ -1764,7 +1764,7 @@ export default function ProjectDetails() {
                 <div className="px-3 pb-3 space-y-3">
                   {project?.id && <CustomFieldValueDisplay entityType="project" entityId={project.id} />}
                   <div className="grid grid-cols-4 gap-2">
-                    <MiniStat label="Tasks" value={taskStats.total} color="text-primary" />
+                    <MiniStat label="Tasks" value={taskStats.total} color="text-primary-text" />
                     <MiniStat label="Done" value={taskStats.completed} color="text-success-text" />
                     <MiniStat label="Active" value={taskStats.inProgress} color="text-info-text" />
                     <MiniStat label="Pending" value={taskStats.pending} color="text-warning-text" />
@@ -1923,13 +1923,13 @@ export default function ProjectDetails() {
                     {members.map((m) => (
                       <div key={m.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-muted/20">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[0.625rem] font-bold text-primary shrink-0">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[0.625rem] font-bold text-primary-text shrink-0">
                             {m.firstName?.[0]}{m.lastName?.[0]}
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-medium truncate">{m.firstName} {m.lastName}</p>
                             {m.role === "owner" ? (
-                              <p className="text-[0.625rem] font-semibold text-primary truncate">Owner</p>
+                              <p className="text-[0.625rem] font-semibold text-primary-text truncate">Owner</p>
                             ) : (
                               <p className="text-[0.625rem] text-muted-foreground truncate capitalize">{m.role}</p>
                             )}
@@ -2009,7 +2009,7 @@ export default function ProjectDetails() {
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-primary" />
+                    <Lock className="w-4 h-4 text-primary-text" />
                     Request Project Task Access
                   </DialogTitle>
 
