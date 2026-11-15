@@ -962,8 +962,8 @@ const DashboardLayout = ({
           <main
             className={cn(
               "flex-1 min-w-0",
-              !hidePadding && "p-4 sm:p-6",
-              "rl-fab-clearance",
+              // pb-24: leave room under the last row for the floating Support launcher.
+              !hidePadding && "p-4 pb-24 sm:p-6 sm:pb-24",
               !fullWidth && "max-w-[1400px] mx-auto w-full"
             )}
           >

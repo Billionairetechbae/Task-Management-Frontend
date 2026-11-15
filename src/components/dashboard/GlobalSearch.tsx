@@ -78,6 +78,8 @@ export default function GlobalSearch() {
   const navigateResult = (result: Result) => { navigate(result.href); setOpen(false); setQuery(""); setBackendGroups({}); };
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") { setOpen(false); inputRef.current?.blur(); }
+    // Tabbing away must not leave the results panel (and its full-screen close layer) covering the page.
+    if (event.key === "Tab") setOpen(false);
     if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((index) => Math.min(index + 1, Math.max(0, results.length - 1))); }
     if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((index) => Math.max(0, index - 1)); }
     if (event.key === "Enter" && results[activeIndex]) { event.preventDefault(); navigateResult(results[activeIndex]); }
@@ -87,7 +89,7 @@ export default function GlobalSearch() {
 
   return <div className="relative flex min-w-0 flex-1 items-center justify-center lg:mx-5">
     <div className="relative hidden w-full max-w-[900px] lg:block">
-      <div className="relative"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input ref={inputRef} value={query} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); setOpen(true); }} onKeyDown={onKeyDown} aria-label="Search Admiino" aria-expanded={open} aria-controls="global-search-results" placeholder="Search tasks, projects, people or jump to…" className="h-10 rounded-xl border-border/80 bg-muted/30 pl-10 pr-16 shadow-sm transition-all focus-visible:bg-background focus-visible:shadow-md" /><kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border bg-background px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">⌘ K</kbd></div>
+      <div className="relative"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input ref={inputRef} value={query} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); setOpen(true); }} onKeyDown={onKeyDown} role="combobox" aria-autocomplete="list" aria-label="Search Admiino" aria-expanded={open} aria-controls="global-search-results" placeholder="Search tasks, projects, people or jump to…" className="h-10 rounded-xl border-border/80 bg-muted/30 pl-10 pr-16 shadow-sm transition-all focus-visible:bg-background focus-visible:shadow-md" /><kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border bg-background px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">⌘ K</kbd></div>
       {open && <>
         <button type="button" aria-label="Close search results" className="fixed inset-0 z-30 cursor-default" onClick={() => setOpen(false)} />
         <SearchSurface groups={visibleGroups} results={results} activeIndex={activeIndex} onSelect={navigateResult} onHover={setActiveIndex} loading={showLoading} query={normalizedQuery} hasWorkspace={!!activeCompanyId} searchError={searchError} />

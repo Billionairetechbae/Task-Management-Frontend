@@ -22,7 +22,7 @@
     --secondary-foreground: 222 14% 12%;
 
     --muted: 220 14% 94%;
-    --muted-foreground: 220 8% 46%;
+    --muted-foreground: 220 8% 43%; /* was 46% (4.39:1 on the page background); 43% = 4.87:1, WCAG 1.4.3 AA */
 
     --accent: 262 72% 95%;
     --accent-foreground: 262 72% 50%;
@@ -190,9 +190,6 @@
 
 /* WCAG 2.4.11 Focus Not Obscured: when a control is focused, the browser scrolls it clear of the sticky header and the floating launcher. */
 html { scroll-padding-top: 4.5rem; scroll-padding-bottom: 6rem; }
-
-/* Keep the last rows / pagination clear of the floating Support launcher. */
-.rl-fab-clearance { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem); }
 
 /* Visible keyboard focus for native form controls that suppress the default outline. */
 select:focus-visible, input:focus-visible, textarea:focus-visible, [role="tab"]:focus-visible {

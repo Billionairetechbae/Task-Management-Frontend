@@ -327,7 +327,7 @@ const AllTasks = () => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filter by status">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -346,7 +346,7 @@ const AllTasks = () => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filter by priority">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -365,7 +365,7 @@ const AllTasks = () => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filter by workspace">
                   <SelectValue placeholder="Workspace" />
                 </SelectTrigger>
                 <SelectContent>
@@ -430,7 +430,7 @@ const AllTasks = () => {
 
                 {companyId !== "all" && (
                   <Select value={teamId} onValueChange={(value) => { setTeamId(value); setPage(1); }}>
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger aria-label="Filter by team" className="w-[150px]">
                       <SelectValue placeholder="All Teams" />
                     </SelectTrigger>
                     <SelectContent>
@@ -473,7 +473,7 @@ const AllTasks = () => {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-24">
+                  <SelectTrigger aria-label="Rows per page" className="w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

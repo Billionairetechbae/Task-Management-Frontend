@@ -51,7 +51,7 @@ export default function NotificationsDropdown() {
         <Tooltip>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-8 w-8">
+              <Button variant="ghost" size="icon" className="relative h-8 w-8" aria-label={displayedUnread > 0 ? `Notifications, ${displayedUnread} unread` : "Notifications"}>
                 <Bell className="h-4 w-4" />
                 {displayedUnread > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[0.5625rem] font-medium px-1 animate-scale-in">

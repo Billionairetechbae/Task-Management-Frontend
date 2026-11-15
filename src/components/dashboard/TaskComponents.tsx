@@ -568,7 +568,7 @@ export const TaskTable = ({
             <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button aria-label="View" 
                   variant="ghost" 
                   size="icon" 
                   className="h-8 w-8" 
@@ -696,7 +696,7 @@ export const CompactTaskTable = ({
           <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200" onClick={(e) => e.stopPropagation()}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
+                <Button aria-label="View" 
                 variant="ghost" 
                 size="icon" 
                 className="h-7 w-7" 
@@ -721,7 +721,7 @@ export const CompactTaskTable = ({
             {onEdit && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
+                  <Button aria-label="Edit"
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
@@ -778,7 +778,7 @@ export const Pagination = ({
         <div className="flex flex-wrap items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
+              <Button aria-label="First"
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
@@ -793,7 +793,7 @@ export const Pagination = ({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
+              <Button aria-label="Previous"
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
@@ -830,7 +830,7 @@ export const Pagination = ({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
+              <Button aria-label="Next"
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
@@ -845,7 +845,7 @@ export const Pagination = ({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
+              <Button aria-label="Last"
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"

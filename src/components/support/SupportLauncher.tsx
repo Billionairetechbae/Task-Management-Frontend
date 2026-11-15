@@ -19,6 +19,24 @@ const STATUS_LABEL: Record<string, string> = { received: "Received", in_review: 
 const STATUS_STYLE: Record<string, string> = { received: "bg-blue-500/10 text-blue-700", in_review: "bg-violet-500/10 text-violet-700", waiting_on_user: "bg-amber-500/10 text-amber-700", in_progress: "bg-primary/10 text-primary", resolved: "bg-emerald-500/10 text-emerald-700", closed: "bg-muted text-muted-foreground" };
 
 export default function SupportLauncher() {
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  // WCAG 2.4.11 Focus Not Obscured: this launcher floats over page content, so when keyboard focus lands on a control that
+  // sits underneath it, scroll the page just far enough to bring that control clear of the launcher.
+  useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      const launcher = launcherRef.current;
+      const target = event.target;
+      if (!launcher || !(target instanceof HTMLElement) || launcher.contains(target) || target.closest("[role=dialog],[role=alertdialog]")) return;
+      requestAnimationFrame(() => {
+        const fab = launcher.getBoundingClientRect();
+        const box = target.getBoundingClientRect();
+        const overlaps = box.right > fab.left && box.left < fab.right && box.bottom > fab.top && box.top < fab.bottom;
+        if (overlaps) window.scrollBy({ top: box.bottom - fab.top + 8 });
+      });
+    };
+    document.addEventListener("focusin", onFocusIn);
+    return () => document.removeEventListener("focusin", onFocusIn);
+  }, []);
   const { user } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
@@ -131,7 +149,7 @@ export default function SupportLauncher() {
   const back = () => { if (view === "ticket") setView("requests"); else setView("home"); };
 
   return <>
-    <TooltipProvider delayDuration={250}><Tooltip><TooltipTrigger asChild><Button type="button" aria-label="Open Admiino AI & Support" onClick={() => { setOpen(true); if (view === "home") setView("home"); }} className="fixed bottom-5 right-5 z-40 h-12 gap-2 rounded-full px-4 shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5"><MessageSquareText className="h-5 w-5" /><span className="hidden 2xl:inline">Support</span>{unreadCount > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[0.625rem] font-semibold text-destructive-foreground">{unreadCount}</span>}</Button></TooltipTrigger><TooltipContent side="left">Admiino AI &amp; Support</TooltipContent></Tooltip></TooltipProvider>
+    <TooltipProvider delayDuration={250}><Tooltip><TooltipTrigger asChild><Button ref={launcherRef} type="button" aria-label="Open Admiino AI & Support" onClick={() => { setOpen(true); if (view === "home") setView("home"); }} className="fixed bottom-5 right-5 z-40 h-12 gap-2 rounded-full px-4 shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5"><MessageSquareText className="h-5 w-5" /><span className="hidden 2xl:inline">Support</span>{unreadCount > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[0.625rem] font-semibold text-destructive-foreground">{unreadCount}</span>}</Button></TooltipTrigger><TooltipContent side="left">Admiino AI &amp; Support</TooltipContent></Tooltip></TooltipProvider>
     <Sheet open={open} onOpenChange={setOpen}><SheetContent side="right" className="flex h-[100dvh] w-full flex-col gap-0 p-0 sm:max-w-[min(30rem,100vw)]">
       <SheetHeader className="border-b px-5 py-4 pr-12 text-left"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></div><div><SheetTitle>Admiino AI</SheetTitle><SheetDescription>How can I help?</SheetDescription></div></div><p className="mt-3 text-sm text-muted-foreground">Ask about Admiino, troubleshoot a problem, or contact our support team.</p></SheetHeader>
       {view !== "home" && <div className="flex items-center gap-2 border-b px-4 py-2"><Button variant="ghost" size="sm" onClick={back} aria-label="Back to support"><ArrowLeft className="mr-1 h-4 w-4" />Back</Button><span className="truncate text-xs text-muted-foreground">{view === "chat" ? "Ask Admiino AI" : view === "escalate" ? "Contact Support" : view === "requests" ? "My support requests" : ticket?.ticketNumber}</span></div>}

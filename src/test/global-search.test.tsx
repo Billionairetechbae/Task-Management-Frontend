@@ -27,7 +27,7 @@ describe("global search", () => {
       files: [{ id: "file-1", title: "report.pdf", subtitle: "Attached to Prepare report", href: "/task-details/task-1?tab=files" }],
     } } });
     renderSearch();
-    const input = screen.getByRole("textbox", { name: "Search Admiino" });
+    const input = screen.getByRole("combobox", { name: "Search Admiino" });
     fireEvent.change(input, { target: { value: "report" } });
     await screen.findAllByRole("option", { name: /Prepare report/ });
     expect(mocks.globalSearch).toHaveBeenCalledWith("report", "workspace-1", expect.any(AbortSignal));
@@ -39,15 +39,15 @@ describe("global search", () => {
   it("opens from Cmd/Ctrl+K and closes on Escape", async () => {
     renderSearch();
     fireEvent.keyDown(window, { key: "k", metaKey: true });
-    expect(screen.getAllByRole("textbox", { name: "Search Admiino" })[0]).toHaveAttribute("aria-expanded", "true");
-    fireEvent.keyDown(screen.getAllByRole("textbox", { name: "Search Admiino" })[0], { key: "Escape" });
+    expect(screen.getAllByRole("combobox", { name: "Search Admiino" })[0]).toHaveAttribute("aria-expanded", "true");
+    fireEvent.keyDown(screen.getAllByRole("combobox", { name: "Search Admiino" })[0], { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("listbox", { name: "Search results" })).not.toBeInTheDocument());
   });
 
   it.each(["phase", "PHASE", "3D", "local"])("matches a real-looking partial task query case-insensitively: %s", async (query) => {
     mocks.globalSearch.mockResolvedValue({ data: { groups: { Tasks: [{ id: "phase-task", title: "Phase 3D Local Task", subtitle: "Pending", href: "/task-details/phase-task" }] } } });
     renderSearch();
-    fireEvent.change(screen.getByRole("textbox", { name: "Search Admiino" }), { target: { value: query } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Search Admiino" }), { target: { value: query } });
     expect(await screen.findAllByRole("option", { name: /Phase 3D Local Task/ })).not.toHaveLength(0);
   });
 
@@ -59,7 +59,7 @@ describe("global search", () => {
   ])("provides guarded navigation for %s", async (query, title, href) => {
     mocks.globalSearch.mockResolvedValue({ data: { groups: {} } });
     renderSearch();
-    const input = screen.getByRole("textbox", { name: "Search Admiino" });
+    const input = screen.getByRole("combobox", { name: "Search Admiino" });
     fireEvent.change(input, { target: { value: query } });
     fireEvent.click((await screen.findAllByRole("option", { name: new RegExp(title, "i") }))[0]);
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent(href.split("?")[0]));
@@ -71,7 +71,7 @@ describe("global search", () => {
       ? new Promise((resolve) => { resolveOld = resolve; })
       : Promise.resolve({ data: { groups: { Tasks: [{ id: "new", title: "Local New Task", subtitle: "Task", href: "/task-details/new" }] } } }));
     renderSearch();
-    const input = screen.getByRole("textbox", { name: "Search Admiino" });
+    const input = screen.getByRole("combobox", { name: "Search Admiino" });
     fireEvent.change(input, { target: { value: "phase" } });
     await waitFor(() => expect(mocks.globalSearch).toHaveBeenCalledWith("phase", "workspace-1", expect.any(AbortSignal)));
     fireEvent.change(input, { target: { value: "local" } });

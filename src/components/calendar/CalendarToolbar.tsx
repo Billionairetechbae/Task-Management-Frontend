@@ -95,6 +95,8 @@ const CalendarToolbar: React.FC<Props> = ({
                             <button
                                 key={v.key}
                                 onClick={() => setView(v.key)}
+                                aria-label={v.label}
+                                aria-pressed={isActive}
                                 className={`
                                     flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-md transition-all
                                     ${isActive
@@ -131,6 +133,7 @@ const CalendarToolbar: React.FC<Props> = ({
                 {/* Create Task Button */}
                 <button
                     onClick={onCreateTask}
+                    aria-label="New Task"
                     className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-md active:scale-95 sm:px-4"
                 >
                     <Plus size={18} />

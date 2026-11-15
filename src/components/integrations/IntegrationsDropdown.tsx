@@ -36,7 +36,7 @@ export default function IntegrationsDropdown() {
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+            <Button variant="ghost" size="icon" className="h-8 w-8 relative" aria-label="Integrations">
               <Plug className="h-4 w-4" />
               {connectedCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500" />
