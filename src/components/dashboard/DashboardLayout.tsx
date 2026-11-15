@@ -57,7 +57,7 @@ import NotificationsDropdown from "@/components/notifications/NotificationsDropd
 import { WebSocketStatus } from "@/components/WebSocketStatus";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { readPreferences } from "@/hooks/use-local-preferences";
-import { useViewportWidth, SM_BREAKPOINT, MD_BREAKPOINT } from "@/hooks/use-viewport-width";
+import { useViewportWidth, SM_BREAKPOINT, LG_BREAKPOINT } from "@/hooks/use-viewport-width";
 
 interface NavItem {
   label: string;
@@ -106,11 +106,21 @@ const DashboardLayout = ({
 
   // Exactly ONE workspace selector is mounted by this layout at any time (previously the desktop sidebar, the
   // always-mounted off-screen mobile drawer copy and the header all rendered one, and all opened together):
-  //   >= md : the desktop sidebar owns it while expanded; the header owns it when the sidebar is collapsed
-  //   <  md : the open mobile drawer owns it; otherwise the header does (from sm up)
+  //   >= lg : the desktop sidebar owns it while expanded; the header owns it when the sidebar is collapsed
+  //   <  lg : the open mobile drawer owns it; otherwise the header does (from sm up)
   const viewportWidth = useViewportWidth();
-  const isDesktop = viewportWidth >= MD_BREAKPOINT;
+  // The permanent sidebar needs room beside the content. Below lg (tablets, narrow windows, and high browser zoom, which shrinks the CSS
+  // viewport) navigation lives in the drawer so the page keeps its full width.
+  const isDesktop = viewportWidth >= LG_BREAKPOINT;
   const showHeaderSwitcher = viewportWidth >= SM_BREAKPOINT && !mobileOpen && (!isDesktop || !sidebarOpen);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setMobileOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+  useEffect(() => { if (isDesktop) setMobileOpen(false); }, [isDesktop]);
 
   // Collapse automatically when navigating into settings, restore when leaving.
   const prevPathRef = useRef(location.pathname);
@@ -718,7 +728,9 @@ const DashboardLayout = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden md:flex h-7 w-7 text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                className="hidden lg:flex h-8 w-8 text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                aria-expanded={sidebarOpen}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
               >
                 <ChevronLeft
@@ -828,34 +840,44 @@ const DashboardLayout = ({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className={cn("min-h-screen bg-background flex w-full", location.pathname === "/dashboard" && "lg:h-screen lg:min-h-0 lg:overflow-hidden")}>
+      <div
+        className="min-h-screen bg-background flex w-full"
+        style={{ "--sidebar-w": sidebarOpen ? "min(15rem, 30vw)" : "3.5rem" } as React.CSSProperties}
+      >
         <aside
           className={cn(
-            "hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out fixed inset-y-0 left-0 z-30",
-            sidebarOpen ? "w-[240px]" : "w-[56px]"
+            "hidden lg:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out fixed inset-y-0 left-0 z-30 w-[var(--sidebar-w)]"
           )}
+          aria-label="Primary"
         >
           {isDesktop && renderSidebarContent()}
         </aside>
 
         {mobileOpen && (
           <div
-            className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-40 lg:hidden"
+            aria-hidden="true"
             onClick={() => setMobileOpen(false)}
           />
         )}
 
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-[280px] bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-out md:hidden",
+            "fixed inset-y-0 left-0 z-50 w-[min(20rem,88vw)] bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-out lg:hidden",
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           )}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+          aria-hidden={!mobileOpen}
+          {...(mobileOpen ? {} : ({ inert: "" } as Record<string, string>))}
         >
           <div className="absolute top-3 right-3">
             <Button
               variant="ghost"
               size="icon"
-              className="text-sidebar-foreground hover:bg-sidebar-accent h-8 w-8"
+              className="text-sidebar-foreground hover:bg-sidebar-accent h-9 w-9"
+              aria-label="Close navigation menu"
               onClick={() => setMobileOpen(false)}
             >
               <X className="h-5 w-5" />
@@ -867,20 +889,21 @@ const DashboardLayout = ({
 
         <div
           className={cn(
-            "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-out",
-            sidebarOpen ? "md:ml-[240px]" : "md:ml-[56px]"
+            "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-out lg:ml-[var(--sidebar-w)]"
           )}
         >
           <MaintenanceBanner />
-          <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border h-14 shrink-0">
-            <div className="flex items-center justify-between px-4 sm:px-6 h-full">
-              <div className="flex items-center gap-3">
+          <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border min-h-14 shrink-0">
+            <div className="flex min-h-14 items-center justify-between gap-2 px-4 py-1.5 sm:gap-3 sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="md:hidden h-8 w-8"
+                      className="lg:hidden h-10 w-10 shrink-0"
+                      aria-label="Open navigation menu"
+                      aria-expanded={mobileOpen}
                       onClick={() => setMobileOpen(true)}
                     >
                       <Menu className="h-5 w-5" />
@@ -889,8 +912,8 @@ const DashboardLayout = ({
                   <TooltipContent>Menu</TooltipContent>
                 </Tooltip>
 
-                <div className="hidden sm:block">
-                  <h1 className="text-sm font-semibold capitalize text-foreground tracking-tight">
+                <div className="hidden min-w-0 sm:block">
+                  <h1 className="truncate text-sm font-semibold capitalize text-foreground tracking-tight">
                     {location.pathname
                       .split("/")
                       .pop()
@@ -902,7 +925,7 @@ const DashboardLayout = ({
 
               <GlobalSearch />
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1.5">
                 {showHeaderSwitcher && (
                   <div className="hidden sm:block">
                     <WorkspaceSwitcher />
@@ -927,8 +950,8 @@ const DashboardLayout = ({
           <main
             className={cn(
               "flex-1 min-w-0",
-              location.pathname === "/dashboard" && "lg:min-h-0 lg:overflow-hidden",
               !hidePadding && "p-4 sm:p-6",
+              "rl-fab-clearance",
               !fullWidth && "max-w-[1400px] mx-auto w-full"
             )}
           >

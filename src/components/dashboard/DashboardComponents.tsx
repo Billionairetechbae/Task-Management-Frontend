@@ -18,7 +18,7 @@ export const StatsCard = ({ title, value, icon: Icon, description, trend, classN
   )}>
     <div className="flex items-start justify-between">
       <div className="flex-1 min-w-0">
-        <p className="text-[0.6875rem] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">{title}</p>
+        <p className="mb-1.5 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground [overflow-wrap:anywhere] sm:text-xs">{title}</p>
         <p className="text-2xl sm:text-3xl font-bold tracking-tight leading-none">{value}</p>
         {description && <p className="text-[0.6875rem] text-muted-foreground mt-1.5">{description}</p>}
         {trend && (
@@ -44,12 +44,12 @@ interface PageHeaderProps {
 }
 
 export const PageHeader = ({ title, description, actions }: PageHeaderProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-    <div className="min-w-0">
-      <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
+  <div className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 sm:mb-8">
+    <div className="min-w-0 flex-1 basis-[min(100%,18rem)]">
+      <h1 className="text-xl sm:text-2xl font-bold tracking-tight [overflow-wrap:anywhere]">{title}</h1>
       {description && <p className="text-muted-foreground mt-1 text-sm">{description}</p>}
     </div>
-    {actions && <div className="flex items-center gap-2 sm:gap-3 shrink-0">{actions}</div>}
+    {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">{actions}</div>}
   </div>
 );
 
