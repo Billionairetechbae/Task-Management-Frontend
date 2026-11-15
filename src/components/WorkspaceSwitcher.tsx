@@ -98,7 +98,7 @@ const WorkspaceSwitcher = () => {
                     {label}
                   </span>
                   {subtitle && (
-                    <span className="text-[10px] text-muted-foreground leading-tight">
+                    <span className="text-[0.625rem] text-muted-foreground leading-tight">
                       {subtitle}
                     </span>
                   )}
@@ -157,13 +157,13 @@ const WorkspaceSwitcher = () => {
                 )}>
                   {logoUrl && failedLogoUrls[workspace.id] !== logoUrl
                     ? <img src={logoUrl} alt="" className="h-full w-full rounded-md object-cover" onError={() => setFailedLogoUrls((previous) => ({ ...previous, [workspace.id]: logoUrl }))} />
-                    : <span aria-hidden="true" className="text-[9px] font-semibold">{(workspace.name || "WS").trim().slice(0, 2).toUpperCase()}</span>}
+                    : <span aria-hidden="true" className="text-[0.5625rem] font-semibold">{(workspace.name || "WS").trim().slice(0, 2).toUpperCase()}</span>}
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className={cn("text-sm block truncate", isSelected && "font-semibold")}>
                     {workspace.name || "Workspace"}
                   </span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wide">
                     {workspace.role}
                   </span>
                 </div>

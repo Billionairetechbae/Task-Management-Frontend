@@ -189,7 +189,7 @@ export const InlineStatusSelect = ({
 
   if (!canChange) {
     return (
-      <Badge className={cn("text-[10px]", getStatusBadgeClass(task.status))}>
+      <Badge className={cn("text-[0.625rem]", getStatusBadgeClass(task.status))}>
         {getStatusDisplay(task.status)}
       </Badge>
     );
@@ -226,9 +226,9 @@ export const InlineStatusSelect = ({
     <Select value={value} onValueChange={handleChange} disabled={saving}>
       <SelectTrigger
         className={cn(
-          "h-7 px-2 text-[10px] font-medium border w-full min-w-0 max-w-[124px]",
+          "h-7 px-2 text-[0.625rem] font-medium border w-full min-w-0 max-w-[124px]",
           getStatusBadgeClass(value),
-          size === "xs" && "h-6 text-[10px] max-w-[112px]"
+          size === "xs" && "h-6 text-[0.625rem] max-w-[112px]"
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -270,30 +270,30 @@ export const TaskTable = ({
         <table className="w-full table-fixed border-collapse">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left">
-              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[24%]">
+              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[24%]">
                 Task
               </th>
               {showAssignee && (
-                <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
+                <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
                   Assignee
                 </th>
               )}
               {showExecutive && (
-                <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
+                <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
                   Executive
                 </th>
               )}
-              {customFieldColumns.map((field) => <th key={field.id} className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{field.name}</th>)}
-              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[9%]">
+              {customFieldColumns.map((field) => <th key={field.id} className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">{field.name}</th>)}
+              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[9%]">
                 Priority
               </th>
-              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[11%]">
+              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[11%]">
                 Deadline
               </th>
-              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[15%]">
+              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[15%]">
                 Status
               </th>
-              <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-[10%] text-right">
+              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[10%] text-right">
                 Actions
               </th>
             </tr>
@@ -316,14 +316,14 @@ export const TaskTable = ({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <CompanyBadge company={task.company} />
-                      <p className="truncate text-[13px] font-medium">{task.title}</p>
+                      <p className="truncate text-[0.8125rem] font-medium">{task.title}</p>
                       <BlockedBadge task={task} />
                       <RepeatBadge task={task} />
                       {isTaskReadOnlyForUser(task, user?.id) && (
                         <Badge
                           variant="outline"
                           title="You can view this task but not modify it"
-                          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground border-border bg-muted/40"
+                          className="shrink-0 inline-flex items-center gap-1 text-[0.5625rem] font-medium text-muted-foreground border-border bg-muted/40"
                         >
                           <Lock className="h-2.5 w-2.5" /> Read only
                         </Badge>
@@ -331,18 +331,18 @@ export const TaskTable = ({
                     </div>
 
                     {task.description && (
-                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      <p className="mt-0.5 truncate text-[0.6875rem] text-muted-foreground">
                         {task.description}
                       </p>
                     )}
 
                     {task.team && (
-                      <p className="mt-1 truncate text-[10px] font-medium text-primary">
+                      <p className="mt-1 truncate text-[0.625rem] font-medium text-primary">
                         Team: {task.team.name}
                       </p>
                     )}
 
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[0.625rem] text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <ListTodo className="h-3 w-3" />
                         {getTaskSubtaskCount(task)}
@@ -356,7 +356,7 @@ export const TaskTable = ({
                 </td>
 
                 {showAssignee && (
-                  <td className="px-4 py-3 text-[12px] text-muted-foreground">
+                  <td className="px-4 py-3 text-[0.75rem] text-muted-foreground">
                     <div className="truncate">
                       {task.assignee ? (
                         `${task.assignee.firstName} ${task.assignee.lastName}`
@@ -368,7 +368,7 @@ export const TaskTable = ({
                 )}
 
                 {showExecutive && (
-                  <td className="px-4 py-3 text-[12px] text-muted-foreground">
+                  <td className="px-4 py-3 text-[0.75rem] text-muted-foreground">
                     <div className="truncate">
                       {task.creator ? `${task.creator.firstName} ${task.creator.lastName}` : "—"}
                     </div>
@@ -377,12 +377,12 @@ export const TaskTable = ({
                 {customFieldColumns.map((field) => <td key={field.id} className="px-3 py-3 text-xs text-muted-foreground"><span className="block truncate">{(task as any).customFieldColumns?.[field.id] ?? "—"}</span></td>)}
 
                 <td className="px-4 py-3">
-                  <Badge className={cn("text-[10px]", getPriorityBadgeClass(task.priority))}>
+                  <Badge className={cn("text-[0.625rem]", getPriorityBadgeClass(task.priority))}>
                     {getPriorityDisplay(task.priority)}
                   </Badge>
                 </td>
 
-                <td className="px-4 py-3 text-[12px] text-muted-foreground">
+                <td className="px-4 py-3 text-[0.75rem] text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <span>{formatTaskDeadline(task.deadline)}</span>
                     {task.calendarSynced ? (
@@ -481,7 +481,7 @@ export const TaskTable = ({
                     <Badge
                       variant="outline"
                       title="You can view this task but not modify it"
-                      className="shrink-0 inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground border-border bg-muted/40"
+                      className="shrink-0 inline-flex items-center gap-1 text-[0.5625rem] font-medium text-muted-foreground border-border bg-muted/40"
                     >
                       <Lock className="h-2.5 w-2.5" /> Read only
                     </Badge>
@@ -489,18 +489,18 @@ export const TaskTable = ({
                 </div>
 
                 {task.description && (
-                  <p className="mt-1 line-clamp-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 line-clamp-1 text-[0.6875rem] text-muted-foreground">
                     {task.description}
                   </p>
                 )}
 
                 {task.team && (
-                  <p className="mt-1 truncate text-[10px] font-medium text-primary">
+                  <p className="mt-1 truncate text-[0.625rem] font-medium text-primary">
                     Team: {task.team.name}
                   </p>
                 )}
 
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[0.625rem] text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <ListTodo className="h-3 w-3" />
                     {getTaskSubtaskCount(task)}
@@ -520,7 +520,7 @@ export const TaskTable = ({
             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
               {showAssignee && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-wide">Assignee</p>
+                  <p className="text-[0.625rem] uppercase tracking-wide">Assignee</p>
                   <p className="truncate">
                     {task.assignee
                       ? `${task.assignee.firstName} ${task.assignee.lastName}`
@@ -531,7 +531,7 @@ export const TaskTable = ({
 
               {showExecutive && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-wide">Executive</p>
+                  <p className="text-[0.625rem] uppercase tracking-wide">Executive</p>
                   <p className="truncate">
                     {task.creator
                       ? `${task.creator.firstName} ${task.creator.lastName}`
@@ -539,14 +539,14 @@ export const TaskTable = ({
                   </p>
                 </div>
               )}
-              {customFieldColumns.map((field) => <div key={field.id}><p className="text-[10px] uppercase tracking-wide">{field.name}</p><p className="truncate">{(task as any).customFieldColumns?.[field.id] ?? "—"}</p></div>)}
+              {customFieldColumns.map((field) => <div key={field.id}><p className="text-[0.625rem] uppercase tracking-wide">{field.name}</p><p className="truncate">{(task as any).customFieldColumns?.[field.id] ?? "—"}</p></div>)}
 
               <div>
-                <p className="text-[10px] uppercase tracking-wide">Priority</p>
+                <p className="text-[0.625rem] uppercase tracking-wide">Priority</p>
                 <div className="mt-1">
                   <Badge
                     variant="outline"
-                    className={cn("text-[10px]", getPriorityBadgeClass(task.priority))}
+                    className={cn("text-[0.625rem]", getPriorityBadgeClass(task.priority))}
                   >
                     {getPriorityDisplay(task.priority)}
                   </Badge>
@@ -554,7 +554,7 @@ export const TaskTable = ({
               </div>
 
               <div>
-                <p className="text-[10px] uppercase tracking-wide">Deadline</p>
+                <p className="text-[0.625rem] uppercase tracking-wide">Deadline</p>
                 <div className="flex items-center gap-1">
                   <p>{formatTaskDeadline(task.deadline)}</p>
                   {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
@@ -661,27 +661,27 @@ export const CompactTaskTable = ({
                   )}
                 />
               </TooltipTrigger>
-              <TooltipContent side="top" className="text-[10px]">
+              <TooltipContent side="top" className="text-[0.625rem]">
                 {getStatusDisplay(task.status)}
               </TooltipContent>
             </Tooltip>
 
             <div className="min-w-0">
-              <p className="truncate text-[12px] font-semibold leading-tight text-foreground">
+              <p className="truncate text-[0.75rem] font-semibold leading-tight text-foreground">
                 {task.title}
               </p>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <Badge
                   variant="outline"
                   className={cn(
-                    "h-4 px-1 text-[8px] font-bold uppercase",
+                    "h-4 px-1 text-[0.5rem] font-bold uppercase",
                     getPriorityBadgeClass(task.priority)
                   )}
                 >
                   {task.priority}
                 </Badge>
                 {task.deadline && (
-                  <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                  <span className="text-[0.625rem] text-muted-foreground inline-flex items-center gap-1">
                     Due {formatTaskDeadline(task.deadline)}
                     {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
                   </span>
@@ -710,7 +710,7 @@ export const CompactTaskTable = ({
                 <Eye className="h-3.5 w-3.5" />
               </Button>
               </TooltipTrigger>
-              <TooltipContent side="top" className="text-[10px]">
+              <TooltipContent side="top" className="text-[0.625rem]">
                 View
               </TooltipContent>
             </Tooltip>
@@ -730,7 +730,7 @@ export const CompactTaskTable = ({
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="text-[10px]">
+                <TooltipContent side="top" className="text-[0.625rem]">
                   Edit
                 </TooltipContent>
               </Tooltip>

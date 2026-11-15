@@ -191,9 +191,9 @@ const ResourceAccessRequests = () => {
                     </p>
                   )}
                   <p className="text-sm font-medium">{r.resourceTitle || "Shared resource"}</p>
-                  <p className="text-[11px] text-muted-foreground">{r.status === "approved" ? `Approved ${r.decidedAt ? new Date(r.decidedAt).toLocaleString() : ""}` : `Requested ${new Date(r.createdAt).toLocaleString()}`} · <span className="capitalize">{r.accessLevel}</span>{r.status === "pending" && " requested"}</p>
+                  <p className="text-[0.6875rem] text-muted-foreground">{r.status === "approved" ? `Approved ${r.decidedAt ? new Date(r.decidedAt).toLocaleString() : ""}` : `Requested ${new Date(r.createdAt).toLocaleString()}`} · <span className="capitalize">{r.accessLevel}</span>{r.status === "pending" && " requested"}</p>
                   {isReviewer && r.status === "approved" && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">Permission level</span><LevelSelect value={r.accessLevel} disabled={decidingId === r.id} onChange={(level) => level !== r.accessLevel && changeLevel(r.id, level)} /></div>}
-                  {r.status === "approved" && r.decidedBy && <p className="text-[11px] text-muted-foreground">Approved by {r.decidedBy.firstName} {r.decidedBy.lastName}</p>}
+                  {r.status === "approved" && r.decidedBy && <p className="text-[0.6875rem] text-muted-foreground">Approved by {r.decidedBy.firstName} {r.decidedBy.lastName}</p>}
                   {isReviewer && r.status === "pending" && (
                     <div className="flex gap-2 pt-1 items-center flex-wrap">
                       <LevelSelect value={grantLevels[r.id] || r.accessLevel} maxLevel={r.accessLevel} disabled={decidingId === r.id} onChange={(level) => setGrantLevels((m) => ({ ...m, [r.id]: level }))} />

@@ -78,7 +78,7 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
     return (
       <form onSubmit={handleSubmit} className="space-y-4 animate-fade-in">
         <div className="space-y-1">
-          <Label htmlFor="name" className="text-[10px] uppercase font-bold text-muted-foreground">Project Name</Label>
+          <Label htmlFor="name" className="text-[0.625rem] uppercase font-bold text-muted-foreground">Project Name</Label>
           <Input
             id="name"
             value={formData.name}
@@ -89,7 +89,7 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="description" className="text-[10px] uppercase font-bold text-muted-foreground">Description</Label>
+          <Label htmlFor="description" className="text-[0.625rem] uppercase font-bold text-muted-foreground">Description</Label>
           <Textarea
             id="description"
             value={formData.description}
@@ -101,7 +101,7 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
 
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <Label htmlFor="startDate" className="text-[10px] uppercase font-bold text-muted-foreground">Start</Label>
+            <Label htmlFor="startDate" className="text-[0.625rem] uppercase font-bold text-muted-foreground">Start</Label>
             <Input
               id="startDate"
               type="date"
@@ -111,7 +111,7 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="endDate" className="text-[10px] uppercase font-bold text-muted-foreground">End</Label>
+            <Label htmlFor="endDate" className="text-[0.625rem] uppercase font-bold text-muted-foreground">End</Label>
             <Input
               id="endDate"
               type="date"
@@ -123,7 +123,7 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="status" className="text-[10px] uppercase font-bold text-muted-foreground">Status</Label>
+          <Label htmlFor="status" className="text-[0.625rem] uppercase font-bold text-muted-foreground">Status</Label>
           <select
             id="status"
             value={formData.status}

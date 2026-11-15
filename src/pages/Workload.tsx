@@ -92,7 +92,7 @@ export default function Workload() {
           <SummaryCard title="Unassigned" value={data.summary.unassignedTasks} icon={<ListChecks className="h-4 w-4" />} tone={data.summary.unassignedTasks ? "warning" : undefined} />
           <SummaryCard title="Overdue Tasks" value={data.summary.overdueTasks} icon={<Clock3 className="h-4 w-4" />} tone={data.summary.overdueTasks ? "danger" : undefined} />
         </section>
-        <div className="flex items-center gap-3"><span className="shrink-0 text-xs font-medium text-muted-foreground">Distribution</span><WorkloadDistribution values={{ light: data.summary.light, balanced: data.summary.balanced, heavy: data.summary.heavy, overloaded: data.summary.overloaded }} /><div className="hidden shrink-0 gap-3 text-[11px] text-muted-foreground sm:flex">{(["light", "balanced", "heavy", "overloaded"] as WorkloadLevel[]).map((level) => <span key={level}>{levelLabel[level]} {data.summary[level]}</span>)}</div></div>
+        <div className="flex items-center gap-3"><span className="shrink-0 text-xs font-medium text-muted-foreground">Distribution</span><WorkloadDistribution values={{ light: data.summary.light, balanced: data.summary.balanced, heavy: data.summary.heavy, overloaded: data.summary.overloaded }} /><div className="hidden shrink-0 gap-3 text-[0.6875rem] text-muted-foreground sm:flex">{(["light", "balanced", "heavy", "overloaded"] as WorkloadLevel[]).map((level) => <span key={level}>{levelLabel[level]} {data.summary[level]}</span>)}</div></div>
 
         <Card className="overflow-hidden">
           <div className="border-b p-4">
@@ -154,7 +154,7 @@ function WorkloadDetail({ selected, onClose, onOpenTask, onOpenTeam, tasks }: { 
             {tasks.map((task) => <button key={task.id} onClick={() => onOpenTask(task)} className="flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left hover:bg-muted/40">
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">{task.title}</span>
-                <span className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                <span className="mt-1 flex flex-wrap gap-2 text-[0.6875rem] text-muted-foreground">
                   <span>{task.status.replaceAll("_", " ")}</span><span>{task.priority}</span>
                   {task.deadline && <span><CalendarClock className="mr-1 inline h-3 w-3" />{dateText(task.deadline)}</span>}
                   {task.projectId && <span><BriefcaseBusiness className="mr-1 inline h-3 w-3" />Project</span>}

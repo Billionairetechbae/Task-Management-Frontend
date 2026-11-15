@@ -20,7 +20,7 @@ const dueLabel = (deadline?: string | null) => (deadline ? new Intl.DateTimeForm
 
 function StatusChip({ status }: { status: string }) {
   const style = getStatusStyle(status);
-  return <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${style.chip}`}>{style.label}</span>;
+  return <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium ${style.chip}`}>{style.label}</span>;
 }
 
 function Row({ item, canRemove, onRemove, removing, onOpen }: {

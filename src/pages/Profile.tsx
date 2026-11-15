@@ -176,7 +176,7 @@ const WorkspaceCard = ({
             {ws.company?.name || ws.company?.companyCode || "Workspace"}
           </p>
           {isActive && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[0.625rem] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
               <CheckCircle2 className="w-3 h-3" /> Active
             </span>
           )}
@@ -193,7 +193,7 @@ const WorkspaceCard = ({
           </span>
 
           <span className={cn(
-            "inline-flex items-center gap-1 text-[10px] border rounded-full px-2 py-0.5",
+            "inline-flex items-center gap-1 text-[0.625rem] border rounded-full px-2 py-0.5",
             ws.status === "active"
               ? "bg-green-500/10 text-green-600 border-green-300/50"
               : "bg-muted text-muted-foreground border-border"
@@ -548,7 +548,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
                         {activeWs && (
                           <div className="flex items-center gap-2 pt-1">
                             <Separator className="flex-1" />
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Other workspaces</span>
+                            <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wider">Other workspaces</span>
                             <Separator className="flex-1" />
                           </div>
                         )}

@@ -79,7 +79,7 @@ export default function IntegrationsDropdown() {
                 >
                   <IntegrationLogo integration={i} size={28} />
                   <span className="text-sm font-medium flex-1 truncate">{i.name}</span>
-                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${style.className}`}>
+                  <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 ${style.className}`}>
                     {style.label}
                   </Badge>
                 </Link>

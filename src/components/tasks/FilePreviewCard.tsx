@@ -80,7 +80,7 @@ const FilePreviewCard = ({ file, onClick, compact = false, actions, className }:
         {isGoogleDrive && (
           <div className="absolute top-1 left-1 z-10">
             <Badge
-              className="h-5 px-1.5 text-[9px] font-bold bg-[#4285F4] hover:bg-[#4285F4] text-white border-none shadow"
+              className="h-5 px-1.5 text-[0.5625rem] font-bold bg-[#4285F4] hover:bg-[#4285F4] text-white border-none shadow"
               title="Google Drive file"
             >
               Drive
@@ -91,15 +91,15 @@ const FilePreviewCard = ({ file, onClick, compact = false, actions, className }:
 
       {/* Meta */}
       <div className="p-2">
-        <p className={cn("font-medium truncate", compact ? "text-[11px]" : "text-xs")}>
+        <p className={cn("font-medium truncate", compact ? "text-[0.6875rem]" : "text-xs")}>
           {file.name}
         </p>
         <div className="flex items-center justify-between mt-0.5 gap-1">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+          <span className="text-[0.625rem] uppercase tracking-wide text-muted-foreground truncate">
             {(file.type || "file").split("/").pop()}
           </span>
           {file.sizeLabel && (
-            <span className="text-[10px] text-muted-foreground shrink-0">{file.sizeLabel}</span>
+            <span className="text-[0.625rem] text-muted-foreground shrink-0">{file.sizeLabel}</span>
           )}
         </div>
       </div>

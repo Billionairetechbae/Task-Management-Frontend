@@ -489,7 +489,7 @@ const DashboardExecutive = () => {
                         <div className="flex items-center justify-between rounded-md border border-warning/30 bg-warning/5 px-3 py-1.5"><dt className="text-muted-foreground"><Link to="/settings/workspace/join-requests" className="underline-offset-2 hover:underline">Pending join requests</Link></dt><dd className="font-semibold text-warning" data-testid="count-pending-join-requests">{teamStats.membership.pendingJoinRequests}</dd></div>
                       )}
                     </dl>
-                    <p className="text-[10px] leading-snug text-muted-foreground">Active workspace members only.</p>
+                    <p className="text-[0.625rem] leading-snug text-muted-foreground">Active workspace members only.</p>
                   </div>
                 ) : (
                   <p className={cn("mt-4 text-sm", dashboardQuery.isError ? "text-destructive" : "text-muted-foreground")} role="status">
@@ -645,7 +645,7 @@ const DashboardExecutive = () => {
               </div>
               {taskView === "list" && totalPages > 1 && (
                 <div className="flex items-center justify-end gap-1 shrink-0">
-                  <span className="text-[11px] text-muted-foreground mr-1">
+                  <span className="text-[0.6875rem] text-muted-foreground mr-1">
                     {startIndex + 1}–{Math.min(endIndex, totalItems)} / {totalItems}
                   </span>
                   <Button
@@ -657,7 +657,7 @@ const DashboardExecutive = () => {
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="text-[11px] font-semibold px-2">
+                  <span className="text-[0.6875rem] font-semibold px-2">
                     {currentPage}/{totalPages}
                   </span>
                   <Button
@@ -782,7 +782,7 @@ const DashboardExecutive = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 gap-1 px-2 text-[11px]"
+                      className="h-8 gap-1 px-2 text-[0.6875rem]"
                       aria-label="Show Overview"
                       onClick={() => updateSideRailOpen(true)}
                     >

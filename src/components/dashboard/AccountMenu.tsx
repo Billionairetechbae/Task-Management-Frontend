@@ -29,19 +29,19 @@ export default function AccountMenu() {
         <div className="flex min-w-0 items-center gap-3">
           <Avatar className="h-10 w-10 shrink-0"><AvatarImage src={user?.profilePictureUrl || undefined} alt="" /><AvatarFallback className="bg-primary/10 font-semibold text-primary">{initials}</AvatarFallback></Avatar>
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-foreground">{name}</p><p className="truncate text-xs text-muted-foreground">{user?.email || ""}</p>
-            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground"><Building2 className="h-3 w-3 shrink-0" /><span className="truncate">{activeWorkspace?.name || "No active workspace"}</span>{roleLabel && <span className="shrink-0 rounded-full border px-1.5 py-0.5 capitalize">{roleLabel}</span>}</div>
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[0.6875rem] text-muted-foreground"><Building2 className="h-3 w-3 shrink-0" /><span className="truncate">{activeWorkspace?.name || "No active workspace"}</span>{roleLabel && <span className="shrink-0 rounded-full border px-1.5 py-0.5 capitalize">{roleLabel}</span>}</div>
           </div>
         </div>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Account</DropdownMenuLabel>
+      <DropdownMenuLabel className="px-2.5 py-1.5 text-[0.625rem] uppercase tracking-wider text-muted-foreground">Account</DropdownMenuLabel>
       <DropdownMenuItem asChild><Link to="/profile"><UserRound className="mr-2 h-4 w-4" />Account Profile</Link></DropdownMenuItem>
       <DropdownMenuItem asChild><Link to="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link></DropdownMenuItem>
       <DropdownMenuItem asChild><Link to="/notifications"><Bell className="mr-2 h-4 w-4" />Notifications</Link></DropdownMenuItem>
       <DropdownMenuItem asChild><Link to="/settings/integrations"><Plug className="mr-2 h-4 w-4" />Integrations</Link></DropdownMenuItem>
       {workspaceAdmin && <>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Workspace</DropdownMenuLabel>
+        <DropdownMenuLabel className="px-2.5 py-1.5 text-[0.625rem] uppercase tracking-wider text-muted-foreground">Workspace</DropdownMenuLabel>
         <DropdownMenuItem asChild><Link to="/company-profile"><Building2 className="mr-2 h-4 w-4" />Workspace Settings</Link></DropdownMenuItem>
         {showSubscription && <DropdownMenuItem asChild><Link to={SUBSCRIPTION_PATH}><CreditCard className="mr-2 h-4 w-4" />Subscription &amp; Seats</Link></DropdownMenuItem>}
         <DropdownMenuItem asChild><Link to="/settings/workspace/customization"><SlidersHorizontal className="mr-2 h-4 w-4" />Workspace Customization</Link></DropdownMenuItem>

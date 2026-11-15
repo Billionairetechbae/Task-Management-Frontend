@@ -247,7 +247,7 @@ const TeamManagement = () => {
                     )}
                   >
                     {tab.label}
-                    <Badge variant="secondary" className="ml-2 text-[10px] h-5">{tab.count}</Badge>
+                    <Badge variant="secondary" className="ml-2 text-[0.625rem] h-5">{tab.count}</Badge>
                     {activeTab === tab.key && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />}
                   </button>
                 ))}
@@ -322,13 +322,13 @@ const TeamManagement = () => {
                         </TableCell>
                         <TableCell>
                           {isRemoved(m) ? (
-                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px]">Removed</Badge>
+                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[0.625rem]">Removed</Badge>
                           ) : m.isVerified ? (
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[10px]">
+                            <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[0.625rem]">
                               <CheckCircle2 className="w-3 h-3 mr-1" />Verified
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-[10px]">
+                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-[0.625rem]">
                               <Clock className="w-3 h-3 mr-1" />Pending
                             </Badge>
                           )}
@@ -354,7 +354,7 @@ const TeamManagement = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn("text-[10px]", getSpecBadgeClass(m.user.specialization))}>
+                          <Badge variant="outline" className={cn("text-[0.625rem]", getSpecBadgeClass(m.user.specialization))}>
                             {m.user.specialization || "general"}
                           </Badge>
                         </TableCell>
@@ -447,7 +447,7 @@ const TeamManagement = () => {
                       <div className={cn("w-2 h-2 rounded-full", evt.type === "removed" ? "bg-destructive" : "bg-success")} />
                       <span className="font-medium">{evt.type === "removed" ? "Removed" : "Restored"}</span>
                       <span className="text-muted-foreground">{evt.userName}</span>
-                      <Badge variant="outline" className="text-[10px]">{evt.role}</Badge>
+                      <Badge variant="outline" className="text-[0.625rem]">{evt.role}</Badge>
                     </div>
                     <span className="text-xs text-muted-foreground">{evt.at}</span>
                   </div>

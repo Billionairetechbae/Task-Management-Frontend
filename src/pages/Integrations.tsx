@@ -541,7 +541,7 @@ const IntegrationCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold truncate">{integration.name}</h3>
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${style.className}`}>
+            <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 ${style.className}`}>
               {style.label}
             </Badge>
           </div>
@@ -579,7 +579,7 @@ const IntegrationCard = ({
           <Badge
             key={c.name}
             variant="secondary"
-            className={`text-[10px] font-normal ${c.enabled ? "" : "opacity-60"}`}
+            className={`text-[0.625rem] font-normal ${c.enabled ? "" : "opacity-60"}`}
           >
             {c.name}
           </Badge>

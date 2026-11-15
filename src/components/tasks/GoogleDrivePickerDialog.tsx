@@ -290,10 +290,10 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
 
             {/* ── Divider label ── */}
             <div className="px-5 pt-3 pb-1 shrink-0">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground">
                 Recent files
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                 Files already accessible to Admiino
               </p>
             </div>
@@ -338,7 +338,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                   <span className="inline-flex items-center gap-1 flex-wrap">
                     <Badge
                       variant="secondary"
-                      className="cursor-pointer h-5 px-1.5 text-[10px] font-medium"
+                      className="cursor-pointer h-5 px-1.5 text-[0.625rem] font-medium"
                       onClick={() => { setFolderStack([]); drive.setFolderId(undefined); }}
                     >
                       My Drive
@@ -349,7 +349,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                         <Badge
                           variant="secondary"
                           className={cn(
-                            "h-5 px-1.5 text-[10px] font-medium",
+                            "h-5 px-1.5 text-[0.625rem] font-medium",
                             i === folderStack.length - 1
                               ? "bg-primary/10 text-primary"
                               : "cursor-pointer"
@@ -367,7 +367,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                     ))}
                   </span>
                 </div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-[0.625rem] text-muted-foreground">
                   {drive.loading && !drive.files.length
                     ? "Loading…"
                     : `${sorted.length} item${sorted.length === 1 ? "" : "s"}`}
@@ -445,7 +445,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                             </div>
                           )}
                           {folder && (
-                            <Badge className="absolute bottom-1 left-1 h-4 px-1 text-[9px] bg-muted text-foreground/70 border-none">
+                            <Badge className="absolute bottom-1 left-1 h-4 px-1 text-[0.5625rem] bg-muted text-foreground/70 border-none">
                               Folder
                             </Badge>
                           )}
@@ -454,7 +454,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                           {f.name}
                         </p>
                         <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
+                          <span className="text-[0.5625rem] uppercase tracking-wide text-muted-foreground truncate">
                             {folder ? "Folder" : (f.mimeType || "").split("/").pop() || "file"}
                           </span>
                           {f.webViewLink && (

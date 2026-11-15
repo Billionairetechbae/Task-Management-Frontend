@@ -354,7 +354,7 @@ function ProjectHealthCard({
             <p className={cn("text-3xl font-bold leading-none", scoreBarClass(item.healthScore))}>
               {item.healthScore}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Health score</p>
+            <p className="text-[0.6875rem] text-muted-foreground mt-1">Health score</p>
           </div>
 
           <div className="flex-1">
@@ -419,7 +419,7 @@ function ProjectHealthCard({
                 >
                   <div className="min-w-0">
                     <p className="text-xs font-medium truncate">{task.title}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[0.625rem] text-muted-foreground">
                       {formatStatusLabel(task.status)}
                       {task.assignee ? ` • ${getAssigneeName(task.assignee)}` : " • Unassigned"}
                     </p>
@@ -457,7 +457,7 @@ function MiniMetric({
   return (
     <div className="rounded-lg border border-border bg-background p-2">
       <p className={cn("text-base font-bold", danger && "text-destructive")}>{value}</p>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="text-[0.625rem] text-muted-foreground">{label}</p>
     </div>
   );
 }

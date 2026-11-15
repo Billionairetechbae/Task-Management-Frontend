@@ -587,7 +587,7 @@ const DashboardLayout = ({
         to={item.href}
         onClick={() => setMobileOpen(false)}
         className={cn(
-          "group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative overflow-hidden",
+          "group flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] font-medium transition-all duration-200 relative overflow-hidden",
           isSubItem && "ml-6",
           active
             ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
@@ -607,7 +607,7 @@ const DashboardLayout = ({
         {sidebarOpen && <span className="truncate">{item.label}</span>}
 
         {sidebarOpen && item.badge && item.badge > 0 && (
-          <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-semibold">
+          <span className="ml-auto bg-destructive text-destructive-foreground text-[0.625rem] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-semibold">
             {item.badge}
           </span>
         )}
@@ -643,7 +643,7 @@ const DashboardLayout = ({
                 to={firstItem.href}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "group flex items-center justify-center px-2 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative overflow-hidden",
+                  "group flex items-center justify-center px-2 py-2 rounded-lg text-[0.8125rem] font-medium transition-all duration-200 relative overflow-hidden",
                   isAnyActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -672,7 +672,7 @@ const DashboardLayout = ({
         <CollapsibleTrigger asChild>
           <button
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 w-full text-left",
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] font-medium transition-all duration-200 w-full text-left",
               isAnyActive
                 ? "bg-primary/10 text-primary"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -766,10 +766,10 @@ const DashboardLayout = ({
 
           {sidebarOpen && (
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-[13px] text-sidebar-accent-foreground truncate">
+              <p className="font-medium text-[0.8125rem] text-sidebar-accent-foreground truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-[11px] text-sidebar-muted truncate">
+              <p className="text-[0.6875rem] text-sidebar-muted truncate">
                 {getRoleLabel()}
               </p>
             </div>
@@ -788,7 +788,7 @@ const DashboardLayout = ({
                 to="/settings"
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   !sidebarOpen && "justify-center px-2"
                 )}
               >
@@ -809,7 +809,7 @@ const DashboardLayout = ({
                   setMobileOpen(false);
                 }}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 text-destructive hover:bg-destructive/10 w-full",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] transition-all duration-200 text-destructive hover:bg-destructive/10 w-full",
                   !sidebarOpen && "justify-center px-2"
                 )}
               >

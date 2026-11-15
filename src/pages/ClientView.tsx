@@ -272,7 +272,7 @@ function renderProject(project: ClientViewPayload extends { resourceType: "proje
             ].map(([label, value]) => (
               <div key={label as string} className="rounded-lg border p-3 text-center bg-card">
                 <p className="text-xl font-bold">{value ?? 0}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <p className="text-[0.6875rem] uppercase tracking-wide text-muted-foreground">
                   {label}
                 </p>
               </div>
@@ -392,17 +392,17 @@ function renderTask(task: any) {
                   <span className="text-sm font-medium truncate">{s.title}</span>
                   <div className="flex items-center gap-2 shrink-0">
                     {s.priority && (
-                      <Badge variant="secondary" className="capitalize text-[10px]">
+                      <Badge variant="secondary" className="capitalize text-[0.625rem]">
                         {formatStatus(s.priority)}
                       </Badge>
                     )}
                     {s.status && (
-                      <Badge variant="outline" className="capitalize text-[10px]">
+                      <Badge variant="outline" className="capitalize text-[0.625rem]">
                         {formatStatus(s.status)}
                       </Badge>
                     )}
                     {s.deadline && (
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-[0.6875rem] text-muted-foreground">
                         {formatDate(s.deadline)}
                       </span>
                     )}

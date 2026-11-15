@@ -97,7 +97,7 @@ const SectionCard = ({
   <Card className="rounded-2xl border-border/70 shadow-sm">
     <CardHeader className="pb-4">
       <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
-      {description && <CardDescription className="text-[13px]">{description}</CardDescription>}
+      {description && <CardDescription className="text-[0.8125rem]">{description}</CardDescription>}
     </CardHeader>
     <CardContent className="space-y-1 pb-5">{children}</CardContent>
     {footer && <div className="px-6 pb-5">{footer}</div>}
@@ -578,7 +578,7 @@ const Settings = () => {
                     key={t.id}
                     onClick={() => setActive(t.id)}
                     className={cn(
-                      "flex items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-medium transition-all",
+                      "flex items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[0.8125rem] font-medium transition-all",
                       active === t.id
                         ? "border-primary bg-primary text-primary-foreground shadow-sm"
                         : "border-border bg-card text-muted-foreground hover:text-foreground"
@@ -619,10 +619,10 @@ const Settings = () => {
                           <t.icon className="h-3.5 w-3.5" />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[13px] font-semibold truncate">
+                          <span className="block text-[0.8125rem] font-semibold truncate">
                             {t.label}
                           </span>
-                          <span className="block text-[11px] text-muted-foreground truncate">
+                          <span className="block text-[0.6875rem] text-muted-foreground truncate">
                             {t.description}
                           </span>
                         </span>

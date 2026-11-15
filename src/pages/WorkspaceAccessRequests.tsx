@@ -239,7 +239,7 @@ export default function WorkspaceAccessRequests() {
           </p>
         )}
 
-        <p className="mt-2 text-[11px] text-muted-foreground">
+        <p className="mt-2 text-[0.6875rem] text-muted-foreground">
           {request.createdAt
             ? new Date(request.createdAt).toLocaleString()
             : "No date"}
@@ -332,7 +332,7 @@ export default function WorkspaceAccessRequests() {
                   >
                     <div>
                       <p className="text-sm font-medium">{permission.title}</p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-[0.6875rem] text-muted-foreground">
                         {allowed ? "Allowed" : "Restricted"}
                       </p>
                     </div>

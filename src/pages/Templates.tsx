@@ -90,7 +90,7 @@ export default function Templates() {
               {visibleRows.map((t) => (
                 <li key={t.id} data-testid="template-card" className="rounded-xl border bg-card p-4 transition-colors hover:border-primary/30">
                   <div className="flex items-start justify-between gap-2">
-                    <div><span className="mb-1 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">{t.type} template</span><button type="button" className="block text-left font-semibold hover:underline" onClick={() => open(t, setPreview)}>{t.name}</button></div>
+                    <div><span className="mb-1 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-primary">{t.type} template</span><button type="button" className="block text-left font-semibold hover:underline" onClick={() => open(t, setPreview)}>{t.name}</button></div>
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       {t.summary?.hasRecurrence && <Repeat size={12} className="text-indigo-600" aria-label="Repeats" />}
                       v{t.currentVersion}
@@ -98,7 +98,7 @@ export default function Templates() {
                     </span>
                   </div>
                   {t.description && <p className="mt-1 text-xs text-muted-foreground">{t.description}</p>}
-                  {t.category && <p className="mt-1 text-[11px] text-muted-foreground">Category: {t.category}</p>}
+                  {t.category && <p className="mt-1 text-[0.6875rem] text-muted-foreground">Category: {t.category}</p>}
                   {t.summary && <p className="mt-2 text-xs text-muted-foreground">{t.summary.taskCount} task(s){t.summary.subtaskCount ? `, ${t.summary.subtaskCount} subtask(s)` : ""}{t.summary.dependencyCount ? `, ${t.summary.dependencyCount} dependency link(s)` : ""}</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {t.status === "active" && <Button size="sm" onClick={() => setUsing(t)} className="gap-1"><Play className="h-3 w-3" /> Use template</Button>}

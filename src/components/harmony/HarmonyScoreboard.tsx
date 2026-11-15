@@ -95,7 +95,7 @@ const ScoreCircle = ({ score }: { score: number | null | undefined }) => {
         <p className="text-3xl font-bold bg-gradient-to-br from-primary to-fuchsia-500 bg-clip-text text-transparent">
           {score === null || score === undefined ? "—" : value}
         </p>
-        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">cohesion</p>
+        <p className="text-[0.625rem] uppercase tracking-wider font-bold text-muted-foreground">cohesion</p>
       </div>
     </div>
   );
@@ -158,7 +158,7 @@ const HarmonyScoreboard = ({
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-[11px] uppercase tracking-wider font-bold text-primary">Team Harmony</span>
+                <span className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary">Team Harmony</span>
               </div>
               <h3 className="text-2xl font-bold tracking-tight">Workspace Cohesion Report</h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">

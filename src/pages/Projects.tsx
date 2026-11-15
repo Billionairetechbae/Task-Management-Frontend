@@ -175,7 +175,7 @@ export default function Projects() {
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{p.name}</h3>
                       <span className={cn(
-                        "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+                        "text-[0.5625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
                         p.status === "active" ? "bg-primary/10 text-primary" :
                         p.status === "completed" ? "bg-success/10 text-success" :
                         "bg-muted text-muted-foreground"
@@ -189,7 +189,7 @@ export default function Projects() {
                     {p.description || "No description"}
                   </p>
                   {p.team && <p className="mb-3 text-xs font-medium text-primary">Team: {p.team.name}</p>}
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-3 text-[0.625rem] text-muted-foreground">
                     {p.startDate && (
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />

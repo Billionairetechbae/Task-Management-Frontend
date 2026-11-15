@@ -362,7 +362,7 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
                         </div>
                         <div className="p-2.5">
                           <p className="text-xs font-medium truncate" title={file.name}>{file.name}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{formatBytes(Number(file.size) || 0)}</p>
+                          <p className="text-[0.625rem] text-muted-foreground mt-0.5">{formatBytes(Number(file.size) || 0)}</p>
                         </div>
                       </div>
                     );

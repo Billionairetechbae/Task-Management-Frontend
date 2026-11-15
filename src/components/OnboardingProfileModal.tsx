@@ -132,7 +132,7 @@ export default function OnboardingProfileModal({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="mt-2 flex items-center justify-between text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
               <span>
                 Step {step + 1} of {total}
               </span>
@@ -159,7 +159,7 @@ export default function OnboardingProfileModal({
                   >
                     <s.icon className="mb-2 h-4 w-4 text-primary" />
                     <p className="text-xs font-semibold">{s.title}</p>
-                    <p className="text-[11px] text-muted-foreground leading-snug">{s.hint}</p>
+                    <p className="text-[0.6875rem] text-muted-foreground leading-snug">{s.hint}</p>
                   </div>
                 ))}
               </div>

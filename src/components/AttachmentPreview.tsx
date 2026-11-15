@@ -64,7 +64,7 @@ const AttachmentPreview = ({
             </div>
             <div className="min-w-0">
               <h2 className="font-semibold text-sm sm:text-base truncate">{name}</h2>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+              <p className="text-[0.625rem] uppercase tracking-wide text-muted-foreground truncate">
                 {type || "file"}
               </p>
             </div>

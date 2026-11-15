@@ -181,7 +181,7 @@ const WorkspaceAccessRequestsPanel = ({
 
                   <div className="mt-3 grid gap-2 md:grid-cols-[220px_1fr]">
                     <div className="rounded-lg bg-muted/40 p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
                         Permission
                       </p>
                       <p className="mt-1 text-sm font-medium">{label}</p>
@@ -189,7 +189,7 @@ const WorkspaceAccessRequestsPanel = ({
 
                     {request.reason && (
                       <div className="rounded-lg bg-muted/40 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
                           Reason
                         </p>
                         <p className="mt-1 text-sm leading-5 text-muted-foreground">

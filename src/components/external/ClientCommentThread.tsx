@@ -44,7 +44,7 @@ const ClientCommentThread = ({ comments, onSubmit, readOnlyNotice, placeholder =
             <li key={c.id} className={`rounded-lg border p-3 ${c.authorKind === "internal" ? "bg-primary/5" : "bg-card"}`}>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground break-all">{c.authorName}</span>
-                <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                <Badge variant="outline" className="text-[0.625rem] h-4 px-1.5">
                   {c.authorKind === "internal" ? c.authorOrganization || "Team" : "Client"}
                 </Badge>
                 <time dateTime={c.createdAt}>{new Date(c.createdAt).toLocaleString()}</time>

@@ -244,7 +244,7 @@ const ChecklistCard = ({
         </div>
 
         <div className="mt-2 space-y-1.5">
-          <div className="flex justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="flex justify-between text-[0.625rem] font-medium text-muted-foreground uppercase tracking-wider">
             <span>Progress</span>
             <span>{Math.round(progress)}%</span>
           </div>

@@ -74,15 +74,15 @@ export default function KanbanBoard({ tasks, onEdit, onView }: KanbanBoardProps)
               {/* Column header */}
               <div className="flex items-center gap-2 mb-2 px-1">
                 <div className={cn("w-2 h-2 rounded-full shrink-0", col.color)} />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{col.label}</span>
-                <Badge variant="outline" className="text-[9px] px-1 h-4 ml-auto">{items.length}</Badge>
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">{col.label}</span>
+                <Badge variant="outline" className="text-[0.5625rem] px-1 h-4 ml-auto">{items.length}</Badge>
               </div>
 
               {/* Cards */}
               <div className="space-y-2 min-h-[80px] bg-muted/20 rounded-lg p-1.5">
                 {items.length === 0 && (
                   <div className="text-center py-6">
-                    <p className="text-[10px] text-muted-foreground/50 italic">No tasks</p>
+                    <p className="text-[0.625rem] text-muted-foreground/50 italic">No tasks</p>
                   </div>
                 )}
                 {items.map(task => (
@@ -91,13 +91,13 @@ export default function KanbanBoard({ tasks, onEdit, onView }: KanbanBoardProps)
                     className="bg-card border border-border rounded-lg p-2.5 hover:shadow-elevated hover:border-primary/15 transition-all duration-200 cursor-pointer group"
                     onClick={() => handleView(task.id)}
                   >
-                    <p className="text-[12px] font-medium leading-tight mb-1.5 line-clamp-2">{task.title}</p>
+                    <p className="text-[0.75rem] font-medium leading-tight mb-1.5 line-clamp-2">{task.title}</p>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge variant="outline" className={cn("text-[8px] px-1 h-3.5", getPriorityBadgeClass(task.priority))}>
+                      <Badge variant="outline" className={cn("text-[0.5rem] px-1 h-3.5", getPriorityBadgeClass(task.priority))}>
                         {getPriorityDisplay(task.priority)}
                       </Badge>
                       {task.deadline && (
-                        <span className="text-[9px] text-muted-foreground">
+                        <span className="text-[0.5625rem] text-muted-foreground">
                           {format(new Date(task.deadline), "MMM d")}
                         </span>
                       )}
@@ -107,12 +107,12 @@ export default function KanbanBoard({ tasks, onEdit, onView }: KanbanBoardProps)
                         <Tooltip>
                           <TooltipTrigger>
                             <Avatar className="w-5 h-5">
-                              <AvatarFallback className="text-[7px] font-bold bg-primary/10 text-primary">
+                              <AvatarFallback className="text-[0.4375rem] font-bold bg-primary/10 text-primary">
                                 {task.assignee.firstName?.[0]}{task.assignee.lastName?.[0]}
                               </AvatarFallback>
                             </Avatar>
                           </TooltipTrigger>
-                          <TooltipContent className="text-[10px]">{task.assignee.firstName} {task.assignee.lastName}</TooltipContent>
+                          <TooltipContent className="text-[0.625rem]">{task.assignee.firstName} {task.assignee.lastName}</TooltipContent>
                         </Tooltip>
                       ) : <div />}
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -122,7 +122,7 @@ export default function KanbanBoard({ tasks, onEdit, onView }: KanbanBoardProps)
                               <Eye className="w-3 h-3" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent className="text-[10px]">View</TooltipContent>
+                          <TooltipContent className="text-[0.625rem]">View</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -130,7 +130,7 @@ export default function KanbanBoard({ tasks, onEdit, onView }: KanbanBoardProps)
                               <Pencil className="w-3 h-3" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent className="text-[10px]">Edit</TooltipContent>
+                          <TooltipContent className="text-[0.625rem]">Edit</TooltipContent>
                         </Tooltip>
                       </div>
                     </div>

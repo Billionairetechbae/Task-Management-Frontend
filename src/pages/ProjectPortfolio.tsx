@@ -190,7 +190,7 @@ function DeadlineLabel({ row }: { row: ProjectHealthProject }) {
   const deadline = portfolioDeadline(row);
   if (!deadline) return <span className="text-muted-foreground">—</span>;
   const overdue = portfolioIsOverdue(row);
-  return <span className={cn("inline-flex items-center gap-1", overdue && "font-medium text-destructive")}><Clock3 className="h-3.5 w-3.5" />{dateLabel(deadline)}{overdue && <span className="text-[10px] uppercase">Overdue</span>}</span>;
+  return <span className={cn("inline-flex items-center gap-1", overdue && "font-medium text-destructive")}><Clock3 className="h-3.5 w-3.5" />{dateLabel(deadline)}{overdue && <span className="text-[0.625rem] uppercase">Overdue</span>}</span>;
 }
 
 function PortfolioProjectCard({ row, onOpen }: { row: ProjectHealthProject; onOpen: () => void }) {

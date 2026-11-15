@@ -42,7 +42,7 @@ export function AssigneeMultiSelect({ members, value, onChange, meId, loading = 
               {members.map((m) => {
                 const isSelected = value.includes(m.userId);
                 return <CommandItem key={m.userId} value={`${memberName(m)} ${m.user?.email || ""} ${m.userId}`} onSelect={() => toggle(m.userId)} aria-label={memberLabel(m, meId)} aria-selected={isSelected} className="gap-2">
-                  <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">{memberInitials(m)}</span>
+                  <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[0.625rem] font-semibold">{memberInitials(m)}</span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{m.userId === meId ? "Me — " : ""}{memberName(m)}</span><span className="block max-w-full truncate text-xs text-muted-foreground" title={m.user?.email}>{m.user?.email}</span></span>
                   {isSelected && <Check className="h-4 w-4 shrink-0" aria-hidden />}
                 </CommandItem>;

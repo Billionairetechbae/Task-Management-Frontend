@@ -505,7 +505,7 @@ export default function TaskEditDrawer({
                 <Badge
                   variant="outline"
                   title="You can view this task but not modify it"
-                  className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground border-border bg-muted/40"
+                  className="shrink-0 inline-flex items-center gap-1 text-[0.625rem] font-medium text-muted-foreground border-border bg-muted/40"
                 >
                   <Lock className="h-3 w-3" /> Read only
                 </Badge>
@@ -759,7 +759,7 @@ export default function TaskEditDrawer({
                               </p>
                               {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
                               {task?.assigneeId === u.id && (
-                                <p className="text-[11px] text-muted-foreground mt-1">
+                                <p className="text-[0.6875rem] text-muted-foreground mt-1">
                                   Primary assignee
                                 </p>
                               )}

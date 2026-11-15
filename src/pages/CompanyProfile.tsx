@@ -258,7 +258,7 @@ const CompanyProfile = () => {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[11px] uppercase tracking-wider font-bold text-primary">Workspace</span>
+                  <span className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary">Workspace</span>
                 </div>
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
                   {formData.name || "Company Profile"}

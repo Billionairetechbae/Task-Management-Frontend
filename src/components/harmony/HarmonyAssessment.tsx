@@ -88,7 +88,7 @@ const HarmonyAssessment = ({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-muted-foreground text-right">{progress}% complete</p>
+          <p className="mt-1.5 text-[0.6875rem] text-muted-foreground text-right">{progress}% complete</p>
         </div>
       </CardHeader>
 

@@ -278,7 +278,7 @@ const TeamDirectory = () => {
                       </p>
                       <Badge
                         variant="outline"
-                        className={cn("mt-0.5 text-[10px] px-1.5 py-0 h-4", getRoleColor(member.role || ""))}
+                        className={cn("mt-0.5 text-[0.625rem] px-1.5 py-0 h-4", getRoleColor(member.role || ""))}
                       >
                         {getRoleLabel(member.role || "")}
                       </Badge>
@@ -286,7 +286,7 @@ const TeamDirectory = () => {
                   </div>
 
                   {member.user?.email && (
-                    <p className="mt-2 text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                    <p className="mt-2 text-[0.6875rem] text-muted-foreground truncate flex items-center gap-1">
                       <Mail className="w-3 h-3 shrink-0" />
                       {member.user.email}
                     </p>
@@ -311,7 +311,7 @@ const TeamDirectory = () => {
                 >
                   <X className="w-4 h-4" />
                 </Button>
-                <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
+                <p className="text-[0.6875rem] uppercase tracking-wider font-bold text-muted-foreground">
                   Member Profile
                 </p>
               </div>
@@ -397,7 +397,7 @@ const DetailRow = ({
       <Icon className="w-3.5 h-3.5 text-primary" />
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
+      <p className="text-[0.625rem] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
       <p className="text-xs font-medium text-foreground break-words">{value}</p>
     </div>
   </div>

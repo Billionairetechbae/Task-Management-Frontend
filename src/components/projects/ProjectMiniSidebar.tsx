@@ -84,7 +84,7 @@ export default function ProjectMiniSidebar({
                   {p.logoUrl ? (
                     <img src={p.logoUrl} alt={p.name} className="w-5 h-5 rounded object-cover" />
                   ) : (
-                    <span className="text-[10px] font-black uppercase leading-none">
+                    <span className="text-[0.625rem] font-black uppercase leading-none">
                       {p.name.slice(0, 2)}
                     </span>
                   )}

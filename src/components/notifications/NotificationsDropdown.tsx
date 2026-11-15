@@ -54,7 +54,7 @@ export default function NotificationsDropdown() {
               <Button variant="ghost" size="icon" className="relative h-8 w-8">
                 <Bell className="h-4 w-4" />
                 {displayedUnread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-medium px-1 animate-scale-in">
+                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[0.5625rem] font-medium px-1 animate-scale-in">
                     {displayedUnread > 99 ? "99+" : displayedUnread}
                   </span>
                 )}
@@ -67,7 +67,7 @@ export default function NotificationsDropdown() {
           <div className="p-3 flex items-center justify-between">
             <DropdownMenuLabel className="p-0 text-sm">Notifications</DropdownMenuLabel>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-[10px] h-5">{unreadCount} unread</Badge>
+              <Badge variant="outline" className="text-[0.625rem] h-5">{unreadCount} unread</Badge>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => markAllRead()} disabled={unreadCount === 0}>
@@ -118,7 +118,7 @@ export default function NotificationsDropdown() {
                         <div className="min-w-0">
                           <p className="font-medium leading-tight text-sm truncate">{n.title}</p>
                           <p className="text-muted-foreground mt-0.5 text-xs line-clamp-2">{n.message}</p>
-                          <p className="text-[10px] text-muted-foreground/70 mt-1">
+                          <p className="text-[0.625rem] text-muted-foreground/70 mt-1">
                             {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                           </p>
                         </div>

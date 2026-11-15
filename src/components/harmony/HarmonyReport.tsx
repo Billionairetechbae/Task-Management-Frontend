@@ -382,7 +382,7 @@ const HarmonyReport = ({ profile, onRetake }: HarmonyReportProps) => {
 
                   <div className="text-right">
                     <p className={`text-2xl font-bold ${meta.accent}`}>{item.score}</p>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">out of 5</p>
+                    <p className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">out of 5</p>
                   </div>
                 </div>
 
@@ -393,7 +393,7 @@ const HarmonyReport = ({ profile, onRetake }: HarmonyReportProps) => {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">{pct}%</p>
+                  <p className="mt-1.5 text-[0.6875rem] text-muted-foreground">{pct}%</p>
                 </div>
               </CardContent>
             </Card>

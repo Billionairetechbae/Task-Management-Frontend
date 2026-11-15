@@ -407,7 +407,7 @@ export default function Drive() {
                             />
                             <div className="min-w-0 flex-1">
                               <div className="font-medium truncate text-sm">{f.name}</div>
-                              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                              <div className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">
                                 {f.scope}
                               </div>
                             </div>
@@ -552,7 +552,7 @@ export default function Drive() {
                         <Icon className="h-3.5 w-3.5" />
                         <span>{opt.label}</span>
                         <span
-                          className={`ml-0.5 px-1.5 rounded-full text-[10px] ${
+                          className={`ml-0.5 px-1.5 rounded-full text-[0.625rem] ${
                             active ? "bg-primary-foreground/20" : "bg-muted"
                           }`}
                         >
@@ -581,7 +581,7 @@ export default function Drive() {
                     </div>
                     {uploadProgress.map((p, i) => (
                       <div key={i} className="space-y-1">
-                        <div className="flex items-center justify-between text-[11px] gap-2">
+                        <div className="flex items-center justify-between text-[0.6875rem] gap-2">
                           <span className="truncate flex-1">{p.name}</span>
                           <span className="text-muted-foreground shrink-0">
                             {formatBytes(p.size)}
@@ -672,7 +672,7 @@ export default function Drive() {
                           <p className="text-xs font-medium truncate" title={file.fileName}>
                             {file.fileName}
                           </p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                             {formatBytes(file.fileSize || 0)}
                           </p>
                         </div>
