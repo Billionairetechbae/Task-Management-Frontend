@@ -73,8 +73,10 @@ export const getStatusDisplay = (status: string) => {
     completed: "Completed",
     delayed: "Delayed",
     cancelled: "Cancelled",
+    in_review: "In Review",
   };
-  return m[status] || status;
+  // Unknown statuses are shown readably rather than as a raw key.
+  return m[status] || String(status ?? "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
 export const getPriorityDisplay = (priority: string) =>
@@ -83,17 +85,17 @@ export const getPriorityDisplay = (priority: string) =>
 export const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case "completed":
-      return "bg-success/10 text-success border-success/20";
+      return "bg-success/10 text-success-text border-success/20";
     case "in_progress":
     case "active":
       return "bg-primary/10 text-primary border-primary/20";
     case "pending":
     case "planning":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-warning/10 text-warning-text border-warning/20";
     case "delayed":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive-text border-destructive/20";
     case "on_hold":
-      return "bg-info/10 text-info border-info/20";
+      return "bg-info/10 text-info-text border-info/20";
     case "cancelled":
       return "bg-muted text-muted-foreground";
     default:
@@ -105,11 +107,11 @@ export const getPriorityBadgeClass = (priority: string) => {
   switch (priority) {
     case "high":
     case "urgent":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive-text border-destructive/20";
     case "medium":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-warning/10 text-warning-text border-warning/20";
     case "low":
-      return "bg-info/10 text-info border-info/20";
+      return "bg-info/10 text-info-text border-info/20";
     default:
       return "bg-secondary text-secondary-foreground";
   }
@@ -242,6 +244,10 @@ export const InlineStatusSelect = ({
             {o.label}
           </SelectItem>
         ))}
+        {/* A status this control cannot set (e.g. in review) must still be displayed, not render a blank trigger. */}
+        {value && !STATUS_OPTIONS.some((o) => o.value === value) && (
+          <SelectItem value={value} disabled className="text-xs">{getStatusDisplay(value)}</SelectItem>
+        )}
       </SelectContent>
     </Select>
   );
@@ -447,7 +453,7 @@ export const TaskTable = ({
                         icon={Trash2}
                         label="Delete"
                         onClick={() => onDelete(task)}
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive-text hover:text-destructive-text"
                         disabled={isTaskReadOnlyForUser(task, user?.id) || (canDelete ? !canDelete(task) : false)}
                         disabledReason="You don't have permission to delete this task"
                       />
@@ -613,7 +619,7 @@ export const TaskTable = ({
                   icon={Trash2}
                   label="Delete"
                   onClick={() => onDelete(task)}
-                  className="text-destructive hover:text-destructive"
+                  className="text-destructive-text hover:text-destructive-text"
                   disabled={isTaskReadOnlyForUser(task, user?.id) || (canDelete ? !canDelete(task) : false)}
                   disabledReason="You don't have permission to delete this task"
                 />

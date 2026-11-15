@@ -563,8 +563,8 @@
   "vp": "f200",
   "spill": 0,
   "firstSpill": "",
-  "covered": 1,
-  "firstCovered": "<-DIV",
+  "covered": 0,
+  "firstCovered": "",
   "crashed": false,
   "offenders": 0,
   "first": "",
@@ -917,8 +917,8 @@
   "covered": 0,
   "firstCovered": "",
   "crashed": false,
-  "offenders": 0,
-  "first": "",
+  "offenders": 38,
+  "first": "DIV.space-y-5@701",
   "clippedText": 0,
   "pageerr": 0
  },
@@ -930,8 +930,8 @@
   "covered": 0,
   "firstCovered": "",
   "crashed": false,
-  "offenders": 0,
-  "first": "",
+  "offenders": 30,
+  "first": "DIV.space-y-5@1348",
   "clippedText": 0,
   "pageerr": 0
  },
@@ -1202,11 +1202,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/customization",
@@ -1215,11 +1215,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/customization",
@@ -1228,11 +1228,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/customization",
@@ -1241,11 +1241,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/automations",
@@ -1358,11 +1358,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/subscription",
@@ -1371,11 +1371,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/subscription",
@@ -1384,11 +1384,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/subscription",
@@ -1397,11 +1397,11 @@
   "firstSpill": "",
   "covered": 0,
   "firstCovered": "",
-  "crashed": true,
+  "crashed": false,
   "offenders": 0,
   "first": "",
   "clippedText": 0,
-  "pageerr": 2
+  "pageerr": 0
  },
  {
   "route": "/settings/workspace/activity",

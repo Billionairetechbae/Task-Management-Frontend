@@ -90,8 +90,8 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
 
 const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => (
   <div className="flex items-center justify-between gap-3 py-2.5 border-b border-border/50 last:border-0">
-    <span className="text-sm text-muted-foreground">{label}</span>
-    <span className="text-sm font-medium text-foreground text-right">{value}</span>
+    <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
+    <span className="min-w-0 text-sm font-medium text-foreground text-right [overflow-wrap:anywhere]">{value}</span>
   </div>
 );
 
@@ -404,7 +404,7 @@ const Profile = ({ embedded = false }: { embedded?: boolean }) => {
         </Card>
 
         {/* ── Two-column layout on md+ ── */}
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
 
           {/* LEFT ── Contact & about */}
           <div className="space-y-5">

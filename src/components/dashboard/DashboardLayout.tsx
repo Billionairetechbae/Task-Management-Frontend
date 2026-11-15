@@ -833,7 +833,7 @@ const DashboardLayout = ({
                   setMobileOpen(false);
                 }}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] transition-all duration-200 text-destructive hover:bg-destructive/10 w-full",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] transition-all duration-200 text-destructive-text hover:bg-destructive/10 w-full",
                   !sidebarOpen && "justify-center px-2"
                 )}
               >
@@ -952,6 +952,8 @@ const DashboardLayout = ({
 
                 <IntegrationsDropdown />
 
+                <SupportLauncher placement="inline" />
+
                 <NotificationsDropdown />
 
                 <AccountMenu />
@@ -962,8 +964,7 @@ const DashboardLayout = ({
           <main
             className={cn(
               "flex-1 min-w-0",
-              // pb-24: leave room under the last row for the floating Support launcher.
-              !hidePadding && "p-4 pb-24 sm:p-6 sm:pb-24",
+              !hidePadding && "p-4 sm:p-6",
               !fullWidth && "max-w-[1400px] mx-auto w-full"
             )}
           >
@@ -971,7 +972,6 @@ const DashboardLayout = ({
           </main>
         </div>
       </div>
-      <SupportLauncher />
     </TooltipProvider>
   );
 };

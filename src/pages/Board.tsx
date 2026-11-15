@@ -176,7 +176,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
           <select aria-label="Filter board by team" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All teams</option>{teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
         </>}
       </header>}
-      {isError && <p role="alert" className="m-4 text-sm text-destructive">Could not load board tasks. Please try again.</p>}
+      {isError && <p role="alert" className="m-4 text-sm text-destructive-text">Could not load board tasks. Please try again.</p>}
       <section
         aria-label="Task board"
         data-testid="board-grid"
@@ -188,11 +188,11 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
             key={status}
             aria-label={`${STATUS_LABELS[status]} column`}
             data-testid={`board-panel-${status}`}
-            className={`flex h-full w-[min(86vw,290px)] min-w-[260px] max-w-[290px] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm ${accent.bar} ${accent.panel}`}
+            className={`flex h-full w-[min(86vw,18rem)] min-w-[min(16rem,86vw)] max-w-[18rem] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm ${accent.bar} ${accent.panel}`}
           >
-            <header className="flex shrink-0 items-center justify-between border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
-              <span className="flex items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
-              <span aria-label={`${!embedded && (hasNextPage || isFetchingNextPage) ? "loading" : columns[status].length} tasks`} className={`min-w-[1.75rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{!embedded && (hasNextPage || isFetchingNextPage) ? "…" : columns[status].length}</span>
+            <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
+              <span className="flex min-w-0 items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
+              <span aria-label={`${!embedded && (hasNextPage || isFetchingNextPage) ? "loading" : columns[status].length} tasks`} className={`min-w-[1.75rem] shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{!embedded && (hasNextPage || isFetchingNextPage) ? "…" : columns[status].length}</span>
             </header>
             <div data-testid={`board-scroll-${status}`} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-2.5">
               {isLoading ? <p className="p-2 text-sm text-muted-foreground">Loading…</p> : columns[status].length === 0 ? <p className="rounded-lg border border-dashed bg-white/60 p-4 text-center text-sm text-muted-foreground">No tasks</p> : columns[status].map((task) => {
