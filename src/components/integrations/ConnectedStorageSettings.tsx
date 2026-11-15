@@ -132,14 +132,14 @@ export function ConnectedStorageSettings() {
               <span className="font-medium">Dropbox</span>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" aria-label="Loading" /> : <Badge variant={view.tone}>{view.label}</Badge>}
             </div>
-            {loadFailed && <p className="text-sm text-destructive mt-1">Could not load the Dropbox connection.</p>}
+            {loadFailed && <p className="text-sm text-destructive-text mt-1">Could not load the Dropbox connection.</p>}
             {isCurrent && manage && (connection?.account?.name || connection?.account?.email) && (
               <p className="text-sm text-muted-foreground mt-1 truncate" data-testid="dropbox-account">
                 {[connection.account?.name, connection.account?.email].filter(Boolean).join(" · ")}
               </p>
             )}
             {connection?.status === "reauth_required" && (
-              <p className="text-sm mt-1 flex items-center gap-1"><ShieldAlert className="w-4 h-4 text-destructive" />Dropbox access has expired or was revoked and needs to be reconnected.</p>
+              <p className="text-sm mt-1 flex items-center gap-1"><ShieldAlert className="w-4 h-4 text-destructive-text" />Dropbox access has expired or was revoked and needs to be reconnected.</p>
             )}
             {!manage && !loading && (
               <p className="text-sm text-muted-foreground mt-1">

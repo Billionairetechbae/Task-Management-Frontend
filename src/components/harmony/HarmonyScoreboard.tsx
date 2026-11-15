@@ -167,10 +167,10 @@ const HarmonyScoreboard = ({
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <Badge variant="secondary" className="gap-1"><Users className="w-3 h-3" />{data.teamSize || 0} members</Badge>
-                <Badge variant="secondary" className="bg-success/15 text-success border-success/30 gap-1">
+                <Badge variant="secondary" className="bg-success/15 text-success-text border-success/30 gap-1">
                   <Award className="w-3 h-3" />{data.completedCount || 0} completed
                 </Badge>
-                <Badge variant="secondary" className="bg-warning/15 text-warning border-warning/30">
+                <Badge variant="secondary" className="bg-warning/15 text-warning-text border-warning/30">
                   {data.missingCount || 0} pending
                 </Badge>
               </div>

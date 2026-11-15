@@ -26,7 +26,7 @@ export default function WorkspaceSubscription() {
 
     {isLoading && <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading subscription details…</CardContent></Card>}
     {unavailable && <Card><CardContent role="status" className="p-6 text-sm text-muted-foreground">Subscription details are not available for this workspace right now. If you expected to see them, contact Admiino support.</CardContent></Card>}
-    {isError && !unavailable && <Card><CardContent role="alert" className="p-6 text-sm text-destructive">Subscription details could not be loaded. Refresh the page or try again shortly.</CardContent></Card>}
+    {isError && !unavailable && <Card><CardContent role="alert" className="p-6 text-sm text-destructive-text">Subscription details could not be loaded. Refresh the page or try again shortly.</CardContent></Card>}
 
     {overview && u && <>
       <Card>

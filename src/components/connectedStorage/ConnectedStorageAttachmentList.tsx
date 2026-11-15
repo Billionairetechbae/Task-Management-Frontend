@@ -107,7 +107,7 @@ export function ConnectedStorageAttachmentList({ attachments, onChanged, compact
                   {attachment.mimeType && <span>{attachment.mimeType}</span>}
                   {attachment.size != null && <span>{formatSize(attachment.size)}</span>}
                   {!compact && attachment.createdAt && <span>Attached {new Date(attachment.createdAt).toLocaleDateString()}</span>}
-                  {stateLabel && <span className="text-destructive" role="status">{stateLabel}</span>}
+                  {stateLabel && <span className="text-destructive-text" role="status">{stateLabel}</span>}
                 </div>
               </div>
               {attachment.canPreview && (

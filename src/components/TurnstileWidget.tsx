@@ -123,7 +123,7 @@ const TurnstileWidget = forwardRef<TurnstileHandle, Props>(({ onToken, className
       <div className="flex flex-col items-center gap-2">
         <div ref={containerRef} data-testid="turnstile-widget" />
         {failed && (
-          <div role="alert" className="text-center text-sm text-destructive" data-testid="turnstile-error">
+          <div role="alert" className="text-center text-sm text-destructive-text" data-testid="turnstile-error">
             <p>{TURNSTILE_ERROR_MESSAGE}</p>
             <button type="button" onClick={start} className="mt-1 underline underline-offset-2 hover:no-underline" data-testid="turnstile-retry">
               Try again

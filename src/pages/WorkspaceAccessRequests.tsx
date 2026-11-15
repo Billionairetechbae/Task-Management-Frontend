@@ -68,9 +68,9 @@ const permissionLabel = (key: string) =>
     .join(" ");
 
 const statusBadgeClass = (status: string) => {
-  if (status === "approved") return "bg-success/10 text-success border-success/20";
-  if (status === "denied") return "bg-destructive/10 text-destructive border-destructive/20";
-  return "bg-warning/10 text-warning border-warning/20";
+  if (status === "approved") return "bg-success/10 text-success-text border-success/20";
+  if (status === "denied") return "bg-destructive/10 text-destructive-text border-destructive/20";
+  return "bg-warning/10 text-warning-text border-warning/20";
 };
 
 const getRequesterName = (request: WorkspaceAccessRequest) => {
@@ -341,7 +341,7 @@ export default function WorkspaceAccessRequests() {
                       variant="outline"
                       className={
                         allowed
-                          ? "bg-success/10 text-success border-success/20"
+                          ? "bg-success/10 text-success-text border-success/20"
                           : "bg-muted text-muted-foreground"
                       }
                     >
@@ -390,7 +390,7 @@ export default function WorkspaceAccessRequests() {
                           {alreadyAllowed && (
                             <Badge
                               variant="outline"
-                              className="bg-success/10 text-success border-success/20"
+                              className="bg-success/10 text-success-text border-success/20"
                             >
                               Already allowed
                             </Badge>
@@ -399,7 +399,7 @@ export default function WorkspaceAccessRequests() {
                           {!alreadyAllowed && alreadyPending && (
                             <Badge
                               variant="outline"
-                              className="bg-warning/10 text-warning border-warning/20"
+                              className="bg-warning/10 text-warning-text border-warning/20"
                             >
                               Pending
                             </Badge>

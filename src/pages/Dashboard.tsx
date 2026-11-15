@@ -48,11 +48,11 @@ const getStatusBadgeClass = (status: string) => {
     case "In Progress":
       return "bg-primary/10 text-primary border-primary/20";
     case "Pending":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-warning/10 text-warning-text border-warning/20";
     case "Past Due":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive-text border-destructive/20";
     case "Completed":
-      return "bg-success/10 text-success border-success/20";
+      return "bg-success/10 text-success-text border-success/20";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -61,11 +61,11 @@ const getStatusBadgeClass = (status: string) => {
 const getPriorityBadgeClass = (priority: string) => {
   switch (priority) {
     case "High":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive-text border-destructive/20";
     case "Medium":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-warning/10 text-warning-text border-warning/20";
     case "Low":
-      return "bg-info/10 text-info border-info/20";
+      return "bg-info/10 text-info-text border-info/20";
     default:
       return "bg-muted text-muted-foreground";
   }

@@ -58,7 +58,7 @@ const AIHub = () => {
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-muted-foreground">Active Tasks</h3>
               <div className="w-10 h-10 bg-info/10 rounded-xl flex items-center justify-center">
-                <Clock className="w-5 h-5 text-info" />
+                <Clock className="w-5 h-5 text-info-text" />
               </div>
             </div>
             <p className="text-4xl font-bold">35</p>
@@ -68,7 +68,7 @@ const AIHub = () => {
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-muted-foreground">Completed This Week</h3>
               <div className="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-success" />
+                <CheckCircle className="w-5 h-5 text-success-text" />
               </div>
             </div>
             <p className="text-4xl font-bold">87</p>

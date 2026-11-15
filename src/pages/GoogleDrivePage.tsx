@@ -352,7 +352,7 @@ export default function GoogleDrivePage({ embedded = false }: { embedded?: boole
                                 e.stopPropagation();
                                 handleDeleteFile(file);
                               }}
-                              className="p-2 rounded-md bg-background/90 text-muted-foreground hover:text-destructive"
+                              className="p-2 rounded-md bg-background/90 text-muted-foreground hover:text-destructive-text"
                               title="Delete"
                               disabled={deleting}
                             >

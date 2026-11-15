@@ -418,7 +418,7 @@ const Harmony = () => {
               <>
                 <HarmonyReport profile={profile} onRetake={startAssessment} />
 
-                {aiError && <p className="text-sm text-destructive">{aiError}</p>}
+                {aiError && <p className="text-sm text-destructive-text">{aiError}</p>}
 
                 {/* AI summary render */}
                 {aiSummary?.executiveSummary && (
@@ -565,7 +565,7 @@ const Harmony = () => {
               )}
 
               {teamAiError && (
-                <p className="text-sm text-destructive mb-4">{teamAiError}</p>
+                <p className="text-sm text-destructive-text mb-4">{teamAiError}</p>
               )}
 
               {teamAiLoading ? (

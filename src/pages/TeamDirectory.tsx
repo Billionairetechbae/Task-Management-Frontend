@@ -89,11 +89,11 @@ const TeamDirectory = () => {
       case "owner":
         return "bg-primary/15 text-primary border-primary/30";
       case "admin":
-        return "bg-destructive/10 text-destructive border-destructive/30";
+        return "bg-destructive/10 text-destructive-text border-destructive/30";
       case "manager":
-        return "bg-info/15 text-info border-info/30";
+        return "bg-info/15 text-info-text border-info/30";
       case "member":
-        return "bg-success/15 text-success border-success/30";
+        return "bg-success/15 text-success-text border-success/30";
       default:
         return "bg-muted text-muted-foreground";
     }
@@ -153,7 +153,7 @@ const TeamDirectory = () => {
     return (
       <DashboardLayout>
         <div className="text-center py-24 animate-fade-in">
-          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive/60" />
+          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive-text/60" />
           <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
             You don't have permission to view workspace members. Contact your workspace administrator if you need access.
@@ -179,7 +179,7 @@ const TeamDirectory = () => {
               <span className="font-semibold text-foreground">{counts.workspaceMembers}</span> workspace members · {counts.owners + counts.admins} owners &amp; admins · {counts.managers} managers · {counts.members} members
             </p>
           )}
-          {loadFailed && <p className="mt-1 text-xs text-destructive" role="alert">The member list could not be loaded.</p>}
+          {loadFailed && <p className="mt-1 text-xs text-destructive-text" role="alert">The member list could not be loaded.</p>}
         </div>
       </div>
 

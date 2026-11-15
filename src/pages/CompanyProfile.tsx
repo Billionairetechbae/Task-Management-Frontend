@@ -499,7 +499,7 @@ const CompanyProfile = () => {
                       <div className="flex items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="bg-success/10 text-success border-success/20"
+                          className="bg-success/10 text-success-text border-success/20"
                         >
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           Manual Approval
@@ -661,7 +661,7 @@ const CompanyProfile = () => {
                   <span className="text-sm font-medium">Company Status</span>
                   <Badge
                     variant="outline"
-                    className="bg-success/10 text-success border-success/20"
+                    className="bg-success/10 text-success-text border-success/20"
                   >
                     Active
                   </Badge>

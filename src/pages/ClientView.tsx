@@ -118,7 +118,7 @@ const ClientView = () => {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-3">
-            <AlertCircle className="w-10 h-10 mx-auto text-destructive" />
+            <AlertCircle className="w-10 h-10 mx-auto text-destructive-text" />
             <h2 className="text-lg font-semibold">Link unavailable</h2>
             <p className="text-sm text-muted-foreground">
               {error || "This share link is invalid, expired, or has been revoked."}

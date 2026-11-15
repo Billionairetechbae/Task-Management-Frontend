@@ -270,7 +270,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                 </p>
               </div>
               {pickerError && (
-                <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/5 rounded-md px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-destructive-text bg-destructive/5 rounded-md px-3 py-2">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                   <span className="flex-1">{pickerError}</span>
                   {/reconnect|connect/i.test(pickerError) && (
@@ -496,7 +496,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
               )}
 
               {drive.error && (
-                <div className="mt-4 text-center text-xs text-destructive">
+                <div className="mt-4 text-center text-xs text-destructive-text">
                   Could not load recent Drive files. Please try again.
                 </div>
               )}

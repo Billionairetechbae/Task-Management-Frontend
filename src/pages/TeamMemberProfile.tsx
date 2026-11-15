@@ -216,7 +216,7 @@ const TeamMemberProfile = () => {
       </header>
 
       <main className="w-full px-6 py-10">
-        {(memberError || profileError) && <div role="alert" className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{memberError || profileError} <Button variant="outline" size="sm" className="ml-3" onClick={() => void loadMember()}>Retry</Button></div>}
+        {(memberError || profileError) && <div role="alert" className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive-text">{memberError || profileError} <Button variant="outline" size="sm" className="ml-3" onClick={() => void loadMember()}>Retry</Button></div>}
         {/* Back Button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/team-directory">
@@ -253,7 +253,7 @@ const TeamMemberProfile = () => {
               {isRemoved ? (
                 <Badge
                   variant="outline"
-                  className="border-destructive/50 text-destructive"
+                  className="border-destructive/50 text-destructive-text"
                 >
                   Removed / Inactive
                 </Badge>

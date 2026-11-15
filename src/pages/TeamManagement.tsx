@@ -213,9 +213,9 @@ const TeamManagement = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: "Total Members", value: teamMembers.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
-                { label: "Verified", value: verifiedCount, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
-                { label: "Pending", value: pendingCount, icon: Clock, color: "text-warning", bg: "bg-warning/10" },
-                { label: "Removed", value: removedCount, icon: Trash2, color: "text-destructive", bg: "bg-destructive/10" },
+                { label: "Verified", value: verifiedCount, icon: CheckCircle2, color: "text-success-text", bg: "bg-success/10" },
+                { label: "Pending", value: pendingCount, icon: Clock, color: "text-warning-text", bg: "bg-warning/10" },
+                { label: "Removed", value: removedCount, icon: Trash2, color: "text-destructive-text", bg: "bg-destructive/10" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:shadow-sm transition-shadow">
                   <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", stat.bg)}>
@@ -322,13 +322,13 @@ const TeamManagement = () => {
                         </TableCell>
                         <TableCell>
                           {isRemoved(m) ? (
-                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[0.625rem]">Removed</Badge>
+                            <Badge variant="outline" className="bg-destructive/10 text-destructive-text border-destructive/20 text-[0.625rem]">Removed</Badge>
                           ) : m.isVerified ? (
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[0.625rem]">
+                            <Badge variant="outline" className="bg-success/10 text-success-text border-success/20 text-[0.625rem]">
                               <CheckCircle2 className="w-3 h-3 mr-1" />Verified
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-[0.625rem]">
+                            <Badge variant="outline" className="bg-warning/10 text-warning-text border-warning/20 text-[0.625rem]">
                               <Clock className="w-3 h-3 mr-1" />Pending
                             </Badge>
                           )}
@@ -394,7 +394,7 @@ const TeamManagement = () => {
                                     </>
                                   )}
                                   {m.isVerified && canAdminTeam && (
-                                    <DropdownMenuItem className="text-destructive" onClick={() => openConfirm("remove", m)}>
+                                    <DropdownMenuItem className="text-destructive-text" onClick={() => openConfirm("remove", m)}>
                                       <Trash2 className="w-3.5 h-3.5 mr-2" /> Remove
                                     </DropdownMenuItem>
                                   )}

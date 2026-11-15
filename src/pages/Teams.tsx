@@ -497,7 +497,7 @@ function TeamHome({
                   <DropdownMenuItem onSelect={onEdit}>Edit Team</DropdownMenuItem>
                   <DropdownMenuItem onSelect={onMembers}>Manage members</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onDelete}><Trash2 className="mr-2 h-4 w-4" />Delete Team</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive-text focus:text-destructive-text" onSelect={onDelete}><Trash2 className="mr-2 h-4 w-4" />Delete Team</DropdownMenuItem>
                 </>}
                 {!canManage && <DropdownMenuItem disabled>Team actions are managed by workspace admins</DropdownMenuItem>}
               </DropdownMenuContent>
@@ -746,7 +746,7 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
               <span className="pointer-events-none relative z-[1] min-w-0 pr-2"><span className="block truncate text-xs font-medium">{task.title}</span><span className="mt-0.5 block truncate text-[0.625rem] text-muted-foreground">{task.description || team.name}</span></span>
               <span className="relative z-[1] pointer-events-none"><Badge variant="outline" className="h-5 text-[0.5625rem]">{statusLabel(task.status)}</Badge></span>
               <span className="relative z-[1] pointer-events-none text-[0.625rem] text-muted-foreground">{priorityLabel(task.priority)}</span>
-              <span className={cn("relative z-[1] pointer-events-none text-[0.625rem]", isOverdue(task) && "font-medium text-destructive")}>{formattedDate(task.deadline)}</span>
+              <span className={cn("relative z-[1] pointer-events-none text-[0.625rem]", isOverdue(task) && "font-medium text-destructive-text")}>{formattedDate(task.deadline)}</span>
               <span className="relative z-[1] pointer-events-none flex items-center gap-1.5 text-[0.625rem] text-muted-foreground">{progress === null ? "—" : <><Progress value={progress} className="h-1.5 w-12" />{done}/{total}</>}</span>
               <span className="relative z-[1] pointer-events-none text-[0.625rem] text-muted-foreground">{formattedDate(task.updatedAt || task.createdAt)}</span>
               <div className="relative z-10">
@@ -759,7 +759,7 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
                       : <DropdownMenuItem disabled={!task.id || !canUpdateTask} onSelect={() => void markComplete(task)}><Check className="mr-2 h-3.5 w-3.5" />Mark complete</DropdownMenuItem>}
                     <DropdownMenuItem onSelect={() => task.id && navigate(taskWorkbenchPath(task.id))}><FileText className="mr-2 h-3.5 w-3.5" />Open in Task Workbench</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {canManage && <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteTask(task)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete</DropdownMenuItem>}
+                    {canManage && <DropdownMenuItem className="text-destructive-text focus:text-destructive-text" onSelect={() => setDeleteTask(task)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -1089,7 +1089,7 @@ function TaskWorkspace({
                   <DropdownMenuItem onSelect={() => navigate(taskWorkbenchPath(task.id!))}><ExternalLink className="mr-2 h-3.5 w-3.5" />Open in Task Workbench</DropdownMenuItem>
                   <DropdownMenuItem disabled={saving || task.status === "completed"} onSelect={markComplete}><Check className="mr-2 h-3.5 w-3.5" />Mark complete</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteOpen(true)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete task</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive-text focus:text-destructive-text" onSelect={() => setDeleteOpen(true)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete task</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1290,7 +1290,7 @@ function SubtaskInspector({ task, team, subtask, loading, error, canEdit, canCha
           <TabsContent value="notes" className="mt-3 flex min-h-0 flex-1 flex-col">
             <div className="min-h-28 flex-1 space-y-3 overflow-y-auto">
               {commentsLoading && <p className="text-xs text-muted-foreground">Loading notes…</p>}
-              {commentsError && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">{commentsError}</div>}
+              {commentsError && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive-text">{commentsError}</div>}
               {!commentsLoading && !commentsError && comments.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">No notes yet. Add context for the Team here.</p>}
               {comments.map((comment) => <div key={comment.id} className="flex gap-2"><Avatar className="h-7 w-7 shrink-0"><AvatarImage src={comment.user?.profilePictureUrl} /><AvatarFallback className="text-[0.5625rem]">{initials(userName(comment.user))}</AvatarFallback></Avatar><div className="min-w-0 flex-1 rounded-md bg-muted/50 px-2.5 py-2"><div className="flex items-center justify-between gap-2"><span className="truncate text-[0.625rem] font-medium">{userName(comment.user)}</span><time className="shrink-0 text-[0.5625rem] text-muted-foreground">{formattedDateTime(comment.createdAt)}</time></div><p className="mt-1 whitespace-pre-wrap break-words text-xs">{comment.content}</p></div></div>)}
             </div>
@@ -1298,7 +1298,7 @@ function SubtaskInspector({ task, team, subtask, loading, error, canEdit, canCha
           </TabsContent>
           <TabsContent value="files" className="mt-3">
             <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">{subtask.attachments?.length || 0} attachments</p>{canEdit && <label className="inline-flex cursor-pointer items-center"><input type="file" multiple className="sr-only" aria-label="Upload files" onChange={(event) => void uploadFiles(event)} disabled={uploading} /><Button asChild size="sm" variant="outline" className="h-7 text-[0.6875rem]"><span><Paperclip className="mr-1.5 h-3 w-3" />{uploading ? "Uploading…" : "Upload"}</span></Button></label>}</div>
-            {subtask.attachments?.length ? <div className="mt-3 divide-y rounded-md border">{subtask.attachments.map((file) => <div key={file.id} className="flex items-center gap-2 px-2.5 py-2"><FileText className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate text-xs">{file.fileName}</span><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[0.625rem]" onClick={() => void downloadFile(file)} disabled={deletingAttachment === file.id}>{deletingAttachment === file.id ? "Working…" : "Download"}</Button>{canEdit && <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" aria-label={`Remove ${file.fileName}`} onClick={() => void removeFile(file.id)} disabled={deletingAttachment === file.id}><Trash2 className="h-3.5 w-3.5" /></Button>}</div>)}</div> : <p className="py-10 text-center text-xs text-muted-foreground">No files attached to this sub-task.</p>}
+            {subtask.attachments?.length ? <div className="mt-3 divide-y rounded-md border">{subtask.attachments.map((file) => <div key={file.id} className="flex items-center gap-2 px-2.5 py-2"><FileText className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate text-xs">{file.fileName}</span><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[0.625rem]" onClick={() => void downloadFile(file)} disabled={deletingAttachment === file.id}>{deletingAttachment === file.id ? "Working…" : "Download"}</Button>{canEdit && <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive-text" aria-label={`Remove ${file.fileName}`} onClick={() => void removeFile(file.id)} disabled={deletingAttachment === file.id}><Trash2 className="h-3.5 w-3.5" /></Button>}</div>)}</div> : <p className="py-10 text-center text-xs text-muted-foreground">No files attached to this sub-task.</p>}
           </TabsContent>
           <TabsContent value="activity" className="mt-3">
             {subtask.activities?.length ? <ol className="space-y-3">{[...subtask.activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item) => <li key={item.id} className="flex gap-2.5"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" /><div><p className="text-xs"><span className="font-medium">{userName(item.user)}</span> <span className="text-muted-foreground">{item.actionType.replace(/_/g, " ")}</span></p><time className="text-[0.625rem] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div></li>)}</ol> : <p className="py-10 text-center text-xs text-muted-foreground">No activity for this sub-task yet.</p>}

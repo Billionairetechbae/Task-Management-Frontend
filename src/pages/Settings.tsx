@@ -637,7 +637,7 @@ const Settings = () => {
                   variant="ghost"
                   size="sm"
                   onClick={logout}
-                  className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  className="w-full justify-start text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
                 >
                   <LogOut className="h-4 w-4 mr-2" /> Sign out
                 </Button>

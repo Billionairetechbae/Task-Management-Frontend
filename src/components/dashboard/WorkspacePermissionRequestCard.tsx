@@ -183,7 +183,7 @@ const WorkspacePermissionRequestCard = ({
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold">{item.title}</p>
                         {isPending && (
-                          <Badge variant="outline" className="bg-warning/10 text-warning">
+                          <Badge variant="outline" className="bg-warning/10 text-warning-text">
                             Pending
                           </Badge>
                         )}

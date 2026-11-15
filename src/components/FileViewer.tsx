@@ -171,7 +171,7 @@ const FileViewer = ({ file, onClose }: FileViewerProps) => {
                 </div>
               )}
               {textError && (
-                <div className="text-destructive text-sm">Failed to load: {textError}</div>
+                <div className="text-destructive-text text-sm">Failed to load: {textError}</div>
               )}
               {!loadingText && !textError && textContent !== null && (
                 <pre className="text-xs sm:text-sm bg-card border border-border rounded-lg p-4 whitespace-pre-wrap break-words font-mono">

@@ -58,7 +58,7 @@ const ClientCommentThread = ({ comments, onSubmit, readOnlyNotice, placeholder =
       {onSubmit ? (
         <div className="flex flex-col gap-2">
           <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={placeholder} rows={3} maxLength={5000} aria-label="Comment" />
-          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-xs text-destructive-text">{error}</p>}
           <div className="flex justify-end">
             <Button size="sm" onClick={submit} disabled={sending || !draft.trim()} className="gap-1.5">
               {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}

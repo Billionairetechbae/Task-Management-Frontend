@@ -84,7 +84,7 @@ const executiveTourSteps: TourStep[] = [
   {
     title: "You're All Set! 🚀",
     description: "You're ready to start delegating tasks and boosting productivity. The sidebar navigation will always be there to help you move between sections.",
-    icon: <Sparkles className="w-12 h-12 text-success" />,
+    icon: <Sparkles className="w-12 h-12 text-success-text" />,
     tip: "Press 'B' anytime to toggle the sidebar on/off.",
   },
 ];
@@ -123,7 +123,7 @@ const assistantTourSteps: TourStep[] = [
   {
     title: "You're All Set! 🚀",
     description: "You're ready to start tackling tasks and contributing to your team. The sidebar will help you navigate around quickly.",
-    icon: <Sparkles className="w-12 h-12 text-success" />,
+    icon: <Sparkles className="w-12 h-12 text-success-text" />,
     tip: "Press 'B' anytime to toggle the sidebar on/off.",
   },
 ];
@@ -156,7 +156,7 @@ const managerTourSteps: TourStep[] = [
   {
     title: "You're All Set! 🚀",
     description: "You're ready to lead your team to success. Use the sidebar to navigate between different sections.",
-    icon: <Sparkles className="w-12 h-12 text-success" />,
+    icon: <Sparkles className="w-12 h-12 text-success-text" />,
     tip: "Press 'B' anytime to toggle the sidebar on/off.",
   },
 ];
@@ -195,7 +195,7 @@ const adminTourSteps: TourStep[] = [
   {
     title: "You're All Set! 🚀",
     description: "You have all the tools to manage the platform effectively. Use the sidebar to access any admin function.",
-    icon: <Sparkles className="w-12 h-12 text-success" />,
+    icon: <Sparkles className="w-12 h-12 text-success-text" />,
     tip: "Check system logs regularly for any issues.",
   },
 ];

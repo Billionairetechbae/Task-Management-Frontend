@@ -84,7 +84,7 @@ export default function McpAuthorization() {
               <Loader2 className="h-4 w-4 animate-spin" /> Checking authorization request…
             </div>
           ) : error && !request ? (
-            <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>
+            <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive-text">{error}</p>
           ) : request ? (
             <>
               <div className="rounded-xl border p-4">
@@ -149,7 +149,7 @@ export default function McpAuthorization() {
                 )}
               </fieldset>
 
-              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+              {error && <p role="alert" className="text-sm text-destructive-text">{error}</p>}
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" disabled={submitting} onClick={() => void finishAuthorization(false)}>

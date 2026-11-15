@@ -22,7 +22,7 @@ export const StatsCard = ({ title, value, icon: Icon, description, trend, classN
         <p className="text-2xl sm:text-3xl font-bold tracking-tight leading-none">{value}</p>
         {description && <p className="text-[0.6875rem] text-muted-foreground mt-1.5">{description}</p>}
         {trend && (
-          <p className={cn("text-[0.6875rem] font-semibold mt-2 flex items-center gap-1", trend.isPositive ? "text-success" : "text-destructive")}>
+          <p className={cn("text-[0.6875rem] font-semibold mt-2 flex items-center gap-1", trend.isPositive ? "text-success-text" : "text-destructive-text")}>
             <span>{trend.isPositive ? "↑" : "↓"}</span> {Math.abs(trend.value)}% from last month
           </p>
         )}

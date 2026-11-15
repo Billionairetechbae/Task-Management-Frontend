@@ -62,6 +62,6 @@ export function AssigneeMultiSelect({ members, value, onChange, meId, loading = 
         <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => onChange([])}>Clear all</Button>
       </>}
     </div>
-    {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-xs text-destructive-text">{error}</p>}
   </div>;
 }

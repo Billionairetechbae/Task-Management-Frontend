@@ -1022,17 +1022,17 @@ export default function ProjectDetails() {
                         <MiniStat
                           label="Done"
                           value={taskStats.completed}
-                          color="text-success"
+                          color="text-success-text"
                         />
                         <MiniStat
                           label="Active"
                           value={taskStats.inProgress}
-                          color="text-info"
+                          color="text-info-text"
                         />
                         <MiniStat
                           label="Pending"
                           value={taskStats.pending}
-                          color="text-warning"
+                          color="text-warning-text"
                         />
                       </div>
 
@@ -1162,7 +1162,7 @@ export default function ProjectDetails() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
+                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 text-destructive-text transition-opacity"
                                     onClick={() => removeMember(m.userId || m.id)}
                                   >
                                     <X className="w-3 h-3" />
@@ -1200,7 +1200,7 @@ export default function ProjectDetails() {
                                 className="flex items-center justify-between py-1 px-2 rounded-lg bg-warning/5 text-[0.625rem]"
                               >
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <Mail className="w-3 h-3 text-warning shrink-0" />
+                                  <Mail className="w-3 h-3 text-warning-text shrink-0" />
                                   <span className="truncate">{inv.email}</span>
                                 </div>
 
@@ -1225,7 +1225,7 @@ export default function ProjectDetails() {
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-5 w-5 text-destructive"
+                                        className="h-5 w-5 text-destructive-text"
                                         onClick={() => revokeInvite(inv.id)}
                                       >
                                         <XCircle className="w-2.5 h-2.5" />
@@ -1765,9 +1765,9 @@ export default function ProjectDetails() {
                   {project?.id && <CustomFieldValueDisplay entityType="project" entityId={project.id} />}
                   <div className="grid grid-cols-4 gap-2">
                     <MiniStat label="Tasks" value={taskStats.total} color="text-primary" />
-                    <MiniStat label="Done" value={taskStats.completed} color="text-success" />
-                    <MiniStat label="Active" value={taskStats.inProgress} color="text-info" />
-                    <MiniStat label="Pending" value={taskStats.pending} color="text-warning" />
+                    <MiniStat label="Done" value={taskStats.completed} color="text-success-text" />
+                    <MiniStat label="Active" value={taskStats.inProgress} color="text-info-text" />
+                    <MiniStat label="Pending" value={taskStats.pending} color="text-warning-text" />
                   </div>
                   {taskStats.total > 0 && (
                     <div className="space-y-1">
@@ -1936,7 +1936,7 @@ export default function ProjectDetails() {
                           </div>
                         </div>
                         {m.role !== "owner" && (
-                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeMember(m.userId || m.id)}>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive-text" onClick={() => removeMember(m.userId || m.id)}>
                             <X className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -2262,7 +2262,7 @@ function ChecklistPanel({
 
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              className="text-destructive text-xs"
+              className="text-destructive-text text-xs"
               onClick={() => onDeleteChecklist(checklist.id)}
             >
               <Trash2 className="w-3 h-3 mr-1.5" />
@@ -2298,7 +2298,7 @@ function ChecklistPanel({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive transition-opacity"
+                    className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive-text transition-opacity"
                     onClick={() => onDeleteItem(checklist.id, item.id)}
                   >
                     <Trash2 className="w-2.5 h-2.5" />

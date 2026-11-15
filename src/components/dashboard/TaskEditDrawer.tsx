@@ -539,7 +539,7 @@ export default function TaskEditDrawer({
                   </TabsTrigger>
                 )}
                 {canModify ? (
-                  <TabsTrigger value="danger" className="text-xs text-destructive">
+                  <TabsTrigger value="danger" className="text-xs text-destructive-text">
                     Danger
                   </TabsTrigger>
                 ) : (
@@ -781,7 +781,7 @@ export default function TaskEditDrawer({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-destructive"
+                                className="h-8 w-8 text-destructive-text"
                                 onClick={() => setAssigneeToRemove(u)}
                                 disabled={saving}
                                 title="Remove"
@@ -883,7 +883,7 @@ export default function TaskEditDrawer({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-destructive"
+                                className="h-7 w-7 text-destructive-text"
                                 onClick={() => setAttachmentToRemove(att)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -953,7 +953,7 @@ export default function TaskEditDrawer({
               {canModify && (
                 <TabsContent value="danger" className="space-y-4">
                   <div className="border border-destructive/30 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-destructive">
+                    <div className="flex items-center gap-2 text-destructive-text">
                       <AlertTriangle className="h-5 w-5" />
                       <h3 className="font-semibold">Danger Zone</h3>
                     </div>

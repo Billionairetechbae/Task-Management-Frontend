@@ -418,7 +418,7 @@ export default function Drive() {
                               handleDeleteFolder(f);
                             }}
                             disabled={loading || tabDisabled}
-                            className="p-2 mr-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
+                            className="p-2 mr-1 text-muted-foreground hover:text-destructive-text opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
                             title="Delete folder"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -662,7 +662,7 @@ export default function Drive() {
                               handleDeleteFile(file);
                             }}
                             disabled={tabDisabled}
-                            className="absolute top-2 right-2 p-1.5 rounded-md bg-background/90 backdrop-blur text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
+                            className="absolute top-2 right-2 p-1.5 rounded-md bg-background/90 backdrop-blur text-muted-foreground hover:text-destructive-text opacity-0 group-hover:opacity-100 transition disabled:opacity-30"
                             title="Delete file"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

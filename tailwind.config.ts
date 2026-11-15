@@ -42,6 +42,10 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        "destructive-text": "hsl(var(--destructive-text))",
+        "success-text": "hsl(var(--success-text))",
+        "warning-text": "hsl(var(--warning-text))",
+        "info-text": "hsl(var(--info-text))",
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

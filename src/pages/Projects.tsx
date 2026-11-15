@@ -177,13 +177,13 @@ export default function Projects() {
                       <span className={cn(
                         "text-[0.5625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
                         p.status === "active" ? "bg-primary/10 text-primary" :
-                        p.status === "completed" ? "bg-success/10 text-success" :
+                        p.status === "completed" ? "bg-success/10 text-success-text" :
                         "bg-muted text-muted-foreground"
                       )}>
                         {p.status}
                       </span>
                     </div>
-                    {canDeleteProjects ? <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`Delete ${p.name}`} onClick={(event) => { event.stopPropagation(); setProjectToDelete(p); }}><Trash2 className="h-4 w-4" /></Button> : <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                    {canDeleteProjects ? <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive-text" aria-label={`Delete ${p.name}`} onClick={(event) => { event.stopPropagation(); setProjectToDelete(p); }}><Trash2 className="h-4 w-4" /></Button> : <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
                     {p.description || "No description"}

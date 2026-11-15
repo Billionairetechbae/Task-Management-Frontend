@@ -467,7 +467,7 @@ const DashboardExecutive = () => {
                       </div>
                       <div className="flex items-center justify-between gap-3 rounded-lg bg-success/8 px-3 py-2">
                         <p className="text-xs text-muted-foreground">Members</p>
-                        <p className="text-base font-semibold text-success" data-testid="count-members">{teamStats.membership.members}</p>
+                        <p className="text-base font-semibold text-success-text" data-testid="count-members">{teamStats.membership.members}</p>
                       </div>
                       <div className="flex items-center justify-between gap-3 rounded-lg bg-info/8 px-3 py-2">
                         <p className="text-xs text-muted-foreground">Managers</p>
@@ -479,15 +479,15 @@ const DashboardExecutive = () => {
                       </div>
                     </div>
                     <dl className="space-y-1.5 text-xs">
-                      {teamStats.membership.pendingInvitations > 0 && <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-1.5"><dt className="text-muted-foreground">Pending invitations</dt><dd className="font-semibold text-warning" data-testid="count-pending-invitations">{teamStats.membership.pendingInvitations}</dd></div>}
+                      {teamStats.membership.pendingInvitations > 0 && <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-1.5"><dt className="text-muted-foreground">Pending invitations</dt><dd className="font-semibold text-warning-text" data-testid="count-pending-invitations">{teamStats.membership.pendingInvitations}</dd></div>}
                       {teamStats.membership.pendingJoinRequests !== null && teamStats.membership.pendingJoinRequests > 0 && (
-                        <div className="flex items-center justify-between gap-3 rounded-md border border-warning/30 bg-warning/5 px-3 py-1.5"><dt className="text-muted-foreground"><Link to="/settings/workspace/join-requests" className="underline-offset-2 hover:underline">Pending join requests</Link></dt><dd className="font-semibold text-warning" data-testid="count-pending-join-requests">{teamStats.membership.pendingJoinRequests}</dd></div>
+                        <div className="flex items-center justify-between gap-3 rounded-md border border-warning/30 bg-warning/5 px-3 py-1.5"><dt className="text-muted-foreground"><Link to="/settings/workspace/join-requests" className="underline-offset-2 hover:underline">Pending join requests</Link></dt><dd className="font-semibold text-warning-text" data-testid="count-pending-join-requests">{teamStats.membership.pendingJoinRequests}</dd></div>
                       )}
                     </dl>
                     <p className="text-[0.625rem] leading-snug text-muted-foreground">Active workspace members only.</p>
                   </div>
                 ) : (
-                  <p className={cn("mt-4 text-sm", dashboardQuery.isError ? "text-destructive" : "text-muted-foreground")} role="status">
+                  <p className={cn("mt-4 text-sm", dashboardQuery.isError ? "text-destructive-text" : "text-muted-foreground")} role="status">
                     {dashboardQuery.isPending && !dashboardQuery.data ? "Loading member counts…" : dashboardQuery.isError ? "Member counts could not be loaded." : "Member counts are temporarily unavailable."}
                   </p>
                 )}
@@ -549,7 +549,7 @@ const DashboardExecutive = () => {
 
         const pendingVerifications = canViewTeamAdminSections && teamStats.pendingVerifications > 0 ? (
           <ContentCard className="mt-5">
-            <SectionHeader title="Pending Verifications" actions={<Badge variant="outline" className="bg-warning/10 text-warning">{pendingAssistants.length} waiting</Badge>} />
+            <SectionHeader title="Pending Verifications" actions={<Badge variant="outline" className="bg-warning/10 text-warning-text">{pendingAssistants.length} waiting</Badge>} />
             {teamLoading ? <div className="mt-4"><SkeletonList rows={3} /></div> : <div className="mt-4 space-y-3">
               {pendingAssistants.map((teamMember) => <div key={teamMember.id} className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"><User className="h-5 w-5 text-primary" /></div><div><p className="font-semibold">{teamMember.firstName} {teamMember.lastName}</p><p className="text-sm text-muted-foreground">{teamMember.email}</p><div className="mt-1 flex gap-2">{teamMember.specialization && <Badge variant="outline" className="text-xs">{teamMember.specialization}</Badge>}{teamMember.experience && <Badge variant="outline" className="text-xs">{teamMember.experience} yrs exp</Badge>}</div></div></div>

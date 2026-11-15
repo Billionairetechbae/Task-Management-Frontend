@@ -53,7 +53,7 @@ export default function AccountMenu() {
         <DropdownMenuItem asChild><a href={`${adminUrl}/admin`}><ShieldCheck className="mr-2 h-4 w-4" />Admin Portal</a></DropdownMenuItem>
       </>}
       <DropdownMenuSeparator />
-      <DropdownMenuItem onSelect={() => logout()} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><LogOut className="mr-2 h-4 w-4" />Sign out</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => logout()} className="text-destructive-text focus:bg-destructive/10 focus:text-destructive-text"><LogOut className="mr-2 h-4 w-4" />Sign out</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>;
 }

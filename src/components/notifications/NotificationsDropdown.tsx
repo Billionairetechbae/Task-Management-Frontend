@@ -135,7 +135,7 @@ export default function NotificationsDropdown() {
                           )}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => remove(n.id)}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive-text hover:text-destructive-text" onClick={() => remove(n.id)}>
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             </TooltipTrigger>

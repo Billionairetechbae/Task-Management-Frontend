@@ -34,7 +34,7 @@ const Checkout = () => {
             <form className="space-y-6">
               <div>
                 <Label htmlFor="email" className="text-sm font-medium">
-                  Billing Email <span className="text-destructive">*</span>
+                  Billing Email <span className="text-destructive-text">*</span>
                 </Label>
                 <Input
                   id="email"
@@ -46,7 +46,7 @@ const Checkout = () => {
 
               <div>
                 <Label htmlFor="cardNumber" className="text-sm font-medium">
-                  Card Number <span className="text-destructive">*</span>
+                  Card Number <span className="text-destructive-text">*</span>
                 </Label>
                 <Input
                   id="cardNumber"
@@ -58,7 +58,7 @@ const Checkout = () => {
 
               <div>
                 <Label htmlFor="cardName" className="text-sm font-medium">
-                  Cardholder Name <span className="text-destructive">*</span>
+                  Cardholder Name <span className="text-destructive-text">*</span>
                 </Label>
                 <Input id="cardName" type="text" placeholder="John Smith" className="mt-2" />
               </div>
@@ -66,22 +66,22 @@ const Checkout = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="expiry" className="text-sm font-medium">
-                    Expiry Date <span className="text-destructive">*</span>
+                    Expiry Date <span className="text-destructive-text">*</span>
                   </Label>
                   <Input id="expiry" type="text" placeholder="MM/YY" className="mt-2" />
                 </div>
                 <div>
                   <Label htmlFor="cvv" className="text-sm font-medium">
-                    CVV <span className="text-destructive">*</span>
+                    CVV <span className="text-destructive-text">*</span>
                   </Label>
                   <Input id="cvv" type="text" placeholder="123" className="mt-2" />
                 </div>
               </div>
 
               <div className="bg-info/10 border border-info/20 rounded-lg p-4 flex gap-3">
-                <Shield className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
+                <Shield className="w-5 h-5 text-info-text flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm text-info font-medium">
+                  <p className="text-sm text-info-text font-medium">
                     <span className="font-bold">Secure Payment:</span> Your payment information is
                     encrypted and secure. We never store your card details.
                   </p>
@@ -108,7 +108,7 @@ const Checkout = () => {
               <div className="flex-1">
                 <h4 className="font-bold">Sarah Chen</h4>
                 <p className="text-muted-foreground text-sm">Chief of Staff</p>
-                <span className="inline-block mt-1 text-xs bg-success/10 text-success px-2 py-1 rounded-full font-medium">
+                <span className="inline-block mt-1 text-xs bg-success/10 text-success-text px-2 py-1 rounded-full font-medium">
                   Available
                 </span>
               </div>
@@ -136,23 +136,23 @@ const Checkout = () => {
               <h4 className="font-semibold mb-4">What's Included:</h4>
               <div className="space-y-3">
                 <div className="flex items-start gap-2">
-                  <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-success-text flex-shrink-0 mt-0.5" />
                   <span className="text-sm">Dedicated executive team_member</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-success-text flex-shrink-0 mt-0.5" />
                   <span className="text-sm">Priority task management</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-success-text flex-shrink-0 mt-0.5" />
                   <span className="text-sm">24/7 communication access</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-success-text flex-shrink-0 mt-0.5" />
                   <span className="text-sm">Full-service task execution</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-success-text flex-shrink-0 mt-0.5" />
                   <span className="text-sm">Cancel anytime</span>
                 </div>
               </div>

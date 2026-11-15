@@ -174,7 +174,7 @@ const WorkspaceAccessRequestsPanel = ({
                       </p>
                     </div>
 
-                    <Badge variant="outline" className="bg-warning/10 text-warning">
+                    <Badge variant="outline" className="bg-warning/10 text-warning-text">
                       Pending
                     </Badge>
                   </div>

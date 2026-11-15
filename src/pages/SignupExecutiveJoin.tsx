@@ -67,7 +67,7 @@ const SignupExecutiveJoin = () => {
       <div className="min-h-screen py-10 px-4 bg-background flex justify-center">
         <div className="max-w-lg text-center">
           <Logo className="h-10 mx-auto mb-4" />
-          <CheckCircle2 className="w-14 h-14 text-success mx-auto mb-4" />
+          <CheckCircle2 className="w-14 h-14 text-success-text mx-auto mb-4" />
           <h2 className="text-3xl font-bold mb-2">Welcome Executive!</h2>
           <p className="text-muted-foreground mb-6">
             You have successfully joined the company.

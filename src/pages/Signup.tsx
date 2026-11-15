@@ -204,7 +204,7 @@ const Signup = () => {
             {error && (
               <div
                 role="alert"
-                className="mb-5 flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive animate-fade-in"
+                className="mb-5 flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive-text animate-fade-in"
               >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="leading-relaxed">{error}</span>

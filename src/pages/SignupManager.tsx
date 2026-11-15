@@ -100,7 +100,7 @@ const SignupManager = () => {
         <div className="max-w-lg w-full text-center">
           <Logo className="h-10 mb-4 mx-auto" />
 
-          <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-4" />
+          <CheckCircle2 className="w-16 h-16 text-success-text mx-auto mb-4" />
 
           <h2 className="text-3xl font-bold mb-2">
             Manager Account Created

@@ -36,10 +36,10 @@ let sessionTaskScope: "my" | "all" | null = null;
 
 const STATUS_PILLS: { value: string; label: string; className: string }[] = [
   { value: "all", label: "All", className: "" },
-  { value: "pending", label: "Pending", className: "bg-warning/10 text-warning border-warning/20" },
+  { value: "pending", label: "Pending", className: "bg-warning/10 text-warning-text border-warning/20" },
   { value: "in_progress", label: "In Progress", className: "bg-primary/10 text-primary border-primary/20" },
-  { value: "completed", label: "Completed", className: "bg-success/10 text-success border-success/20" },
-  { value: "delayed", label: "Delayed", className: "bg-destructive/10 text-destructive border-destructive/20" },
+  { value: "completed", label: "Completed", className: "bg-success/10 text-success-text border-success/20" },
+  { value: "delayed", label: "Delayed", className: "bg-destructive/10 text-destructive-text border-destructive/20" },
   { value: "cancelled", label: "Cancelled", className: "bg-muted text-muted-foreground" },
 ];
 
@@ -491,7 +491,7 @@ const AllTasks = () => {
           <LoadingState message="Fetching all tasks..." />
         ) : isError ? (
           <ContentCard className="py-12 text-center">
-            <p className="mb-2 font-medium text-destructive">Failed to load tasks</p>
+            <p className="mb-2 font-medium text-destructive-text">Failed to load tasks</p>
             <p className="text-sm text-muted-foreground">
               Please try again later or contact support.
             </p>

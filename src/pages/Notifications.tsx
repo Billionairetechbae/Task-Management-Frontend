@@ -79,7 +79,7 @@ export default function NotificationsPage() {
                           Mark read
                         </Button>
                       )}
-                      <Button variant="outline" size="sm" className="text-destructive" onClick={() => remove(n.id)}>
+                      <Button variant="outline" size="sm" className="text-destructive-text" onClick={() => remove(n.id)}>
                         <Trash2 className="w-4 h-4 mr-1" />
                         Delete
                       </Button>

@@ -177,7 +177,7 @@ export function ConnectedStoragePickerDialog({ open, onOpenChange, connectionId,
             <div className="flex items-center justify-center h-[240px] text-muted-foreground" role="status"><Loader2 className="w-5 h-5 animate-spin mr-2" />Loading…</div>
           ) : error && ordered.length === 0 ? (
             <div className="p-6 text-center space-y-3" role="alert" data-testid={`picker-error-${error.kind}`}>
-              <AlertTriangle className="w-6 h-6 mx-auto text-destructive" />
+              <AlertTriangle className="w-6 h-6 mx-auto text-destructive-text" />
               <p className="text-sm">{error.message}</p>
               {error.kind !== "reconnect" && error.kind !== "forbidden" && (
                 <Button variant="outline" size="sm" onClick={() => void load()}>{error.kind === "expired" ? "Reload" : "Try again"}</Button>

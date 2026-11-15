@@ -174,7 +174,7 @@ const Login = () => {
           <div className="mb-6">
             <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-10 h-10 text-destructive"
+                className="w-10 h-10 text-destructive-text"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

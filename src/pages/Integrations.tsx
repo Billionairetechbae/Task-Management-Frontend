@@ -594,7 +594,7 @@ const IntegrationCard = ({
             <Button
               size="sm"
               variant="ghost"
-              className="text-destructive hover:text-destructive"
+              className="text-destructive-text hover:text-destructive-text"
               onClick={onDisconnect}
               disabled={integration.id === "google" ? googleState.disconnectLoading : false}
             >

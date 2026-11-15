@@ -1115,9 +1115,9 @@ const TaskDetails = () => {
     if (status === "cancelled") return { text: "Cancelled", tone: "text-muted-foreground" };
     const ms = new Date(deadline).getTime() - Date.now();
     const d = Math.ceil(ms / 86400000);
-    if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive" };
-    if (d === 0) return { text: "Due today", tone: "text-warning" };
-    return { text: `${d} day${d === 1 ? "" : "s"} left`, tone: "text-warning" };
+    if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive-text" };
+    if (d === 0) return { text: "Due today", tone: "text-warning-text" };
+    return { text: `${d} day${d === 1 ? "" : "s"} left`, tone: "text-warning-text" };
   };
 
   const TaskListPanel = (
@@ -2116,7 +2116,7 @@ const TaskDetails = () => {
                           <Button
                             variant="secondary"
                             size="icon"
-                            className="h-6 w-6 text-destructive"
+                            className="h-6 w-6 text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                             title="Remove"
                           >
@@ -2144,7 +2144,7 @@ const TaskDetails = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center text-destructive hover:text-destructive"
+                            className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center text-destructive-text hover:text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                           >
                             <Trash2 className="w-3 h-3" /> Remove
@@ -2197,7 +2197,7 @@ const TaskDetails = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[0.6875rem] w-7 shrink-0 justify-center text-destructive hover:text-destructive"
+                            className="h-7 text-[0.6875rem] w-7 shrink-0 justify-center text-destructive-text hover:text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                             title="Remove"
                           >

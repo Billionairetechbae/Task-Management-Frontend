@@ -155,7 +155,7 @@ const ExternalShareDialog = ({ open, onOpenChange, resourceType, resourceId, res
                     <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" disabled={busyId === s.id} onClick={() => act(s.id, () => api.resendExternalShare(s.id), "Invitation resent")}>
                       <RefreshCw className="h-3 w-3" /> Resend
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-destructive" disabled={busyId === s.id} onClick={() => act(s.id, () => api.revokeExternalShare(s.id), "Access revoked")}>
+                    <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-destructive-text" disabled={busyId === s.id} onClick={() => act(s.id, () => api.revokeExternalShare(s.id), "Access revoked")}>
                       <Ban className="h-3 w-3" /> Revoke
                     </Button>
                     <span className="text-[0.6875rem] text-muted-foreground ml-auto">

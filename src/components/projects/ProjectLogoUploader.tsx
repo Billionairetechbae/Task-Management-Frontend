@@ -149,7 +149,7 @@ const ProjectLogoUploader = ({
             {currentLogoUrl && (
               <Button
                 variant="outline"
-                className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="w-full gap-2 text-destructive-text hover:text-destructive-text hover:bg-destructive/10"
                 disabled={uploading || deleting || !canEditLogo}
                 onClick={handleDelete}
                 title={!canEditLogo ? "You don't have permission to delete the project logo" : ""}

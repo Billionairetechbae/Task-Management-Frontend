@@ -95,7 +95,7 @@ const TeamMembers = () => {
     return (
       <DashboardLayout>
         <div className="text-center py-24 animate-fade-in">
-          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive/60" />
+          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive-text/60" />
           <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
             You don't have permission to view workspace members. Contact your workspace administrator if you need access.
@@ -193,7 +193,7 @@ const TeamMembers = () => {
                         <span className="text-sm font-semibold">${tm.hourlyRate}/hr</span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={cn("text-[0.625rem]", tm.isAvailable ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20")}>
+                        <Badge variant="outline" className={cn("text-[0.625rem]", tm.isAvailable ? "bg-success/10 text-success-text border-success/20" : "bg-destructive/10 text-destructive-text border-destructive/20")}>
                           {tm.isAvailable ? "Available" : "Busy"}
                         </Badge>
                       </TableCell>
@@ -244,7 +244,7 @@ const TeamMembers = () => {
                           <span className="text-[0.625rem] text-muted-foreground ml-0.5">({tm.rating.toFixed(1)})</span>
                         </div>
                       </div>
-                      <Badge variant="outline" className={cn("text-[0.625rem] shrink-0", tm.isAvailable ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20")}>
+                      <Badge variant="outline" className={cn("text-[0.625rem] shrink-0", tm.isAvailable ? "bg-success/10 text-success-text border-success/20" : "bg-destructive/10 text-destructive-text border-destructive/20")}>
                         {tm.isAvailable ? "Available" : "Busy"}
                       </Badge>
                     </div>

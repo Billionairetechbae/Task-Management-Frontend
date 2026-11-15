@@ -530,7 +530,7 @@ const ExecutiveAssistanceRequests = () => {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleCancelRequest(request.id)}
-                                    className="h-9 px-3 text-destructive hover:text-destructive"
+                                    className="h-9 px-3 text-destructive-text hover:text-destructive-text"
                                   >
                                     <XCircle className="w-4 h-4 mr-1.5" />
                                     Cancel
