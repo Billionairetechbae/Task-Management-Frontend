@@ -47,10 +47,10 @@ const CalendarToolbar: React.FC<Props> = ({
     return (
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4 border-b border-gray-200/60 bg-white/80 backdrop-blur-sm">
             {/* Left Section */}
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
                 <WorkspaceSwitcher />
 
-                <div className="h-6 w-px bg-gray-300" />
+                <div className="hidden h-6 w-px bg-gray-300 sm:block" />
 
                 <button
                     onClick={onToday}
@@ -76,7 +76,7 @@ const CalendarToolbar: React.FC<Props> = ({
                     </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                     <CalendarDays size={20} className="text-blue-600" />
                     <h2 className="max-w-[13rem] truncate text-sm font-semibold text-gray-900 sm:max-w-none sm:text-lg whitespace-nowrap">
                         {heading}
@@ -85,7 +85,7 @@ const CalendarToolbar: React.FC<Props> = ({
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 {/* View Toggle */}
                 <div className="flex overflow-hidden rounded-lg border border-gray-300/60 shadow-sm bg-white p-0.5">
                     {viewOptions.map(v => {

@@ -166,7 +166,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
     return String(a.deadline || "9999").localeCompare(String(b.deadline || "9999")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   })])), [tasks]);
 
-  const content = <main className={embedded ? "flex h-[calc(100dvh-22rem)] min-h-[25rem] w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70" : "flex h-[calc(100dvh-3.5rem)] min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70"}>
+  const content = <main className={embedded ? "flex h-[calc(100dvh-22rem)] min-h-[25rem] w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70" : "flex h-[calc(100dvh-var(--app-header-h,3.5rem))] min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70"}>
       {!embedded && <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
         <WorkspaceSwitcher />
         <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold">Board</h1><p className="text-sm text-muted-foreground">Active workspace tasks by status</p></div>

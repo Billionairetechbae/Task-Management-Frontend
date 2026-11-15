@@ -101,8 +101,8 @@ export default function Projects() {
       <TooltipProvider delayDuration={150}>
         <div className="w-full py-8 px-4 animate-fade-in">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
               {showSkeleton ? (
                 <Skeleton className="h-3 w-48 mt-2" />
@@ -113,7 +113,7 @@ export default function Projects() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
             {governance.capabilities?.projectCreationRestricted && <span role="status" className="text-xs text-muted-foreground">Project creation is restricted to workspace owners and admins.</span>}
             <Button variant="outline" onClick={() => setTemplateFlowOpen(true)} disabled={!canCreateProject} className="gap-2">New from template</Button>
             <Tooltip>

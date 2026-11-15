@@ -16,7 +16,7 @@ export const StatsCard = ({ title, value, icon: Icon, description, trend, classN
     "bg-card border border-border rounded-xl p-4 sm:p-5 transition-all duration-300 hover:shadow-elevated hover:border-primary/15 group",
     className
   )}>
-    <div className="flex items-start justify-between">
+    <div className="flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
         <p className="mb-1.5 text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground [overflow-wrap:anywhere] sm:text-xs">{title}</p>
         <p className="text-2xl sm:text-3xl font-bold tracking-tight leading-none">{value}</p>

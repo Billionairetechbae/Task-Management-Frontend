@@ -30,9 +30,9 @@ export default function NotificationsPage() {
   return (
     <DashboardLayout>
       <div className="w-full space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h1 className="text-2xl font-bold">Notifications</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{unreadCount} unread</Badge>
             <Button variant="secondary" onClick={() => setShowUnreadOnly((v) => !v)}>
               {showUnreadOnly ? "Show All" : "Show Unread"}

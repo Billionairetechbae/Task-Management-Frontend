@@ -2444,7 +2444,7 @@ const TaskDetails = () => {
 
       <DashboardLayout hidePadding>
         {isMobile ? (
-          <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
+          <div className="flex h-[calc(100dvh-var(--app-header-h,3.5rem))] flex-col overflow-hidden">
             <div className="flex-1 min-h-0 overflow-hidden">{DetailsPanel}</div>
 
             {/* Bottom action bar — respects browser safe area */}
@@ -2472,7 +2472,7 @@ const TaskDetails = () => {
             </nav>
           </div>
         ) : (
-          <div className="flex h-[calc(100dvh-3.5rem)] relative">
+          <div className="flex h-[calc(100dvh-var(--app-header-h,3.5rem))] relative">
             {/* Collapsed task-list rail */}
             {!listPanelOpen && (
               <div className="w-11 shrink-0 border-r bg-background flex flex-col items-center gap-2 py-3">
