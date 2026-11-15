@@ -57,7 +57,7 @@ import NotificationsDropdown from "@/components/notifications/NotificationsDropd
 import { WebSocketStatus } from "@/components/WebSocketStatus";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { readPreferences } from "@/hooks/use-local-preferences";
-import { useViewportWidth, SM_BREAKPOINT, LG_BREAKPOINT } from "@/hooks/use-viewport-width";
+import { useViewportWidth, remToPx, SM_REM, LG_REM } from "@/hooks/use-viewport-width";
 
 interface NavItem {
   label: string;
@@ -103,6 +103,18 @@ const DashboardLayout = ({
     return !sidebarCollapsedByDefault;
   });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  // Publish the real (text-size dependent) header height so full-height pages can size to the space that is actually left.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const publish = () => document.documentElement.style.setProperty("--app-header-h", `${el.offsetHeight}px`);
+    publish();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Exactly ONE workspace selector is mounted by this layout at any time (previously the desktop sidebar, the
   // always-mounted off-screen mobile drawer copy and the header all rendered one, and all opened together):
@@ -111,8 +123,8 @@ const DashboardLayout = ({
   const viewportWidth = useViewportWidth();
   // The permanent sidebar needs room beside the content. Below lg (tablets, narrow windows, and high browser zoom, which shrinks the CSS
   // viewport) navigation lives in the drawer so the page keeps its full width.
-  const isDesktop = viewportWidth >= LG_BREAKPOINT;
-  const showHeaderSwitcher = viewportWidth >= SM_BREAKPOINT && !mobileOpen && (!isDesktop || !sidebarOpen);
+  const isDesktop = viewportWidth >= remToPx(LG_REM);
+  const showHeaderSwitcher = viewportWidth >= remToPx(SM_REM) && !mobileOpen && (!isDesktop || !sidebarOpen);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -893,7 +905,7 @@ const DashboardLayout = ({
           )}
         >
           <MaintenanceBanner />
-          <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border min-h-14 shrink-0">
+          <header ref={headerRef} className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border min-h-14 shrink-0">
             <div className="flex min-h-14 items-center justify-between gap-2 px-4 py-1.5 sm:gap-3 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <Tooltip>

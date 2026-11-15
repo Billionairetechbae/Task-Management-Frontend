@@ -1,4 +1,5 @@
 import * as React from "react";
+import { rootFontPx } from "@/hooks/use-viewport-width";
 
 const MOBILE_MAX = 767; // < 768 => mobile
 const TABLET_MAX = 1279; // 768..1279 => tablet, >= 1280 => desktop
@@ -6,8 +7,10 @@ const TABLET_MAX = 1279; // 768..1279 => tablet, >= 1280 => desktop
 export type Breakpoint = "mobile" | "tablet" | "desktop";
 
 function resolve(width: number): Breakpoint {
-  if (width <= MOBILE_MAX) return "mobile";
-  if (width <= TABLET_MAX) return "tablet";
+  // Compare in rem (width / root font px) so a larger browser font size reaches the narrower layouts sooner.
+  const rem = width / rootFontPx();
+  if (rem <= MOBILE_MAX / 16) return "mobile";
+  if (rem <= TABLET_MAX / 16) return "tablet";
   return "desktop";
 }
 

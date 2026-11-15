@@ -17,6 +17,7 @@ import {
   ProjectInvite,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { viewportAtLeastRem } from "@/hooks/use-viewport-width";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -137,11 +138,11 @@ export default function ProjectDetails() {
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean>(
-    typeof window !== "undefined" ? window.innerWidth >= 1024 : true
+    typeof window !== "undefined" ? viewportAtLeastRem(64) : true
   );
 
   useEffect(() => {
-    const mql = window.matchMedia("(min-width: 1024px)");
+    const mql = window.matchMedia("(min-width: 64rem)");
     const onChange = () => setIsDesktopLayout(mql.matches);
     onChange();
     mql.addEventListener("change", onChange);
