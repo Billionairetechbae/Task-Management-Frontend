@@ -138,7 +138,8 @@ const ActionButton = ({
         <Button
           variant={variant}
           size="icon"
-          className={cn("h-7 w-7 transition-all duration-200", extraClass)}
+          className={cn("h-8 w-8 shrink-0 transition-all duration-200", extraClass)}
+          aria-label={label}
           onClick={(e) => {
             e.stopPropagation();
             onClick?.();
@@ -226,10 +227,11 @@ export const InlineStatusSelect = ({
     <Select value={value} onValueChange={handleChange} disabled={saving}>
       <SelectTrigger
         className={cn(
-          "h-7 px-2 text-[0.625rem] font-medium border w-full min-w-0 max-w-[124px]",
+          "h-auto min-h-7 px-2 py-1 text-[0.625rem] font-medium border w-full min-w-[6.5rem] max-w-[9rem]",
           getStatusBadgeClass(value),
-          size === "xs" && "h-6 text-[0.625rem] max-w-[112px]"
+          size === "xs" && "min-h-6 text-[0.625rem] max-w-[8rem]"
         )}
+        aria-label={`Status: ${getStatusDisplay(value)}`}
         onClick={(e) => e.stopPropagation()}
       >
         <SelectValue />
@@ -264,36 +266,36 @@ export const TaskTable = ({
   const { user } = useAuth();
   return (
   <TooltipProvider delayDuration={100}>
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
-      {/* Desktop table */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full table-fixed border-collapse">
+    <div className="rl-table overflow-hidden rounded-xl border border-border bg-card">
+      {/* Table: shown when the table's own container is wide enough (container query), otherwise the card list below. */}
+      <div className="rl-table__wide rl-scroll-x" role="region" aria-label="Tasks table" tabIndex={0}>
+        <table className="w-full min-w-[60rem] table-fixed border-collapse">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left">
-              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[24%]">
+              <th scope="col" className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">
                 Task
               </th>
               {showAssignee && (
-                <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
+                <th scope="col" className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[8.5rem]">
                   Assignee
                 </th>
               )}
               {showExecutive && (
-                <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[12%]">
+                <th scope="col" className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[8.5rem]">
                   Executive
                 </th>
               )}
-              {customFieldColumns.map((field) => <th key={field.id} className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">{field.name}</th>)}
-              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[9%]">
+              {customFieldColumns.map((field) => <th scope="col" key={field.id} className="w-[8rem] px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">{field.name}</th>)}
+              <th scope="col" className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[6rem]">
                 Priority
               </th>
-              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[11%]">
+              <th scope="col" className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[7.5rem]">
                 Deadline
               </th>
-              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[15%]">
+              <th scope="col" className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[9rem]">
                 Status
               </th>
-              <th className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[10%] text-right">
+              <th scope="col" className="px-3 py-3 text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground w-[9.5rem] text-right">
                 Actions
               </th>
             </tr>
@@ -316,7 +318,7 @@ export const TaskTable = ({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <CompanyBadge company={task.company} />
-                      <p className="truncate text-[0.8125rem] font-medium">{task.title}</p>
+                      <p className="min-w-0 flex-1 break-words text-[0.8125rem] font-medium line-clamp-2" title={task.title || undefined}>{task.title}</p>
                       <BlockedBadge task={task} />
                       <RepeatBadge task={task} />
                       {isTaskReadOnlyForUser(task, user?.id) && (
@@ -402,7 +404,8 @@ export const TaskTable = ({
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-7 w-7" 
+                          className="h-8 w-8 shrink-0" 
+                          aria-label="View"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -458,7 +461,7 @@ export const TaskTable = ({
       </div>
 
       {/* Mobile cards */}
-      <div className="divide-y divide-border lg:hidden">
+      <div className="rl-table__cards divide-y divide-border">
         {tasks.map((task) => (
           <div
             key={task.id}

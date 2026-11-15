@@ -22,7 +22,6 @@ import {
   Columns3,
   LayoutList,
   Search,
-  SlidersHorizontal,
   FolderKanban,
   CalendarDays,
   ArrowUpDown,
@@ -33,11 +32,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
@@ -62,6 +56,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { cn } from "@/lib/utils";
+import { CardGrid, FilterBar, FilterSearch, FilterSelect, SplitLayout } from "@/components/layout/responsive";
 import { JoinRequestsPreview } from "@/components/workspaces/JoinRequestsPreview";
 import {
   useDashboardData,
@@ -410,7 +405,7 @@ const DashboardExecutive = () => {
         }
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="dashboard-stats">
+      <CardGrid className="mb-4" min="9.5rem" data-testid="dashboard-stats">
         <StatsCard
           title={personalView ? "My Tasks" : "Total Tasks"}
           value={dashboardStatsUnavailable ? "—" : loading ? "…" : shownStats.totalTasks}
@@ -442,15 +437,15 @@ const DashboardExecutive = () => {
           iconClassName="bg-destructive/10"
           className="p-3 sm:p-3.5"
         />
-      </div>
+      </CardGrid>
 
       {(() => {
         const teamOverview = (
           <Collapsible defaultOpen>
             <ContentCard>
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <CollapsibleTrigger asChild>
-                  <button className="flex items-center gap-2 text-left flex-1 group">
+                  <button className="group flex min-w-0 flex-1 items-center gap-2 text-left">
                     <ChevronDown className="w-4 h-4 transition-transform group-data-[state=closed]:-rotate-90 text-muted-foreground" />
                     <h2 className="text-base font-semibold tracking-tight">Team Overview</h2>
                   </button>
@@ -458,7 +453,7 @@ const DashboardExecutive = () => {
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/team-directory" className="gap-2">
                     <Users className="w-4 h-4" />
-                    <span className="hidden sm:inline">View All</span>
+                    <span>View All</span>
                   </Link>
                 </Button>
               </div>
@@ -466,27 +461,27 @@ const DashboardExecutive = () => {
                 {teamStats.membership ? (
                   <div data-testid="team-overview" className="mt-3 space-y-2">
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between rounded-lg bg-muted/45 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/45 px-3 py-2">
                         <p className="text-xs text-muted-foreground">Workspace Members</p>
                         <p className="text-base font-semibold" data-testid="count-workspace-members">{teamStats.membership.workspaceMembers}</p>
                       </div>
-                      <div className="flex items-center justify-between rounded-lg bg-success/8 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3 rounded-lg bg-success/8 px-3 py-2">
                         <p className="text-xs text-muted-foreground">Members</p>
                         <p className="text-base font-semibold text-success" data-testid="count-members">{teamStats.membership.members}</p>
                       </div>
-                      <div className="flex items-center justify-between rounded-lg bg-info/8 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3 rounded-lg bg-info/8 px-3 py-2">
                         <p className="text-xs text-muted-foreground">Managers</p>
                         <p className="text-base font-semibold" data-testid="count-managers">{teamStats.membership.managers}</p>
                       </div>
-                      <div className="flex items-center justify-between rounded-lg bg-primary/8 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3 rounded-lg bg-primary/8 px-3 py-2">
                         <p className="text-xs text-muted-foreground">Owners &amp; Admins</p>
                         <p className="text-base font-semibold text-primary" data-testid="count-owners-admins">{teamStats.membership.owners + teamStats.membership.admins}</p>
                       </div>
                     </div>
                     <dl className="space-y-1.5 text-xs">
-                      {teamStats.membership.pendingInvitations > 0 && <div className="flex items-center justify-between rounded-md border px-3 py-1.5"><dt className="text-muted-foreground">Pending invitations</dt><dd className="font-semibold text-warning" data-testid="count-pending-invitations">{teamStats.membership.pendingInvitations}</dd></div>}
+                      {teamStats.membership.pendingInvitations > 0 && <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-1.5"><dt className="text-muted-foreground">Pending invitations</dt><dd className="font-semibold text-warning" data-testid="count-pending-invitations">{teamStats.membership.pendingInvitations}</dd></div>}
                       {teamStats.membership.pendingJoinRequests !== null && teamStats.membership.pendingJoinRequests > 0 && (
-                        <div className="flex items-center justify-between rounded-md border border-warning/30 bg-warning/5 px-3 py-1.5"><dt className="text-muted-foreground"><Link to="/settings/workspace/join-requests" className="underline-offset-2 hover:underline">Pending join requests</Link></dt><dd className="font-semibold text-warning" data-testid="count-pending-join-requests">{teamStats.membership.pendingJoinRequests}</dd></div>
+                        <div className="flex items-center justify-between gap-3 rounded-md border border-warning/30 bg-warning/5 px-3 py-1.5"><dt className="text-muted-foreground"><Link to="/settings/workspace/join-requests" className="underline-offset-2 hover:underline">Pending join requests</Link></dt><dd className="font-semibold text-warning" data-testid="count-pending-join-requests">{teamStats.membership.pendingJoinRequests}</dd></div>
                       )}
                     </dl>
                     <p className="text-[0.625rem] leading-snug text-muted-foreground">Active workspace members only.</p>
@@ -564,19 +559,20 @@ const DashboardExecutive = () => {
           </ContentCard>
         ) : null;
 
-        const pendingJoinRequests = canManageTeam && (teamStats.membership?.pendingJoinRequests || 0) > 0 ? <div className="mt-4"><JoinRequestsPreview compact /></div> : null;
+        const pendingJoinRequests = canManageTeam && (teamStats.membership?.pendingJoinRequests || 0) > 0 ? <JoinRequestsPreview compact /> : null;
 
         const tasksSection = (
           <div className="space-y-3">
-            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between" data-testid="dashboard-task-toolbar">
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                <div className="flex min-w-0 items-center gap-2 pr-1">
-                  <h2 className="text-sm font-semibold">Tasks</h2>
-                  <span className="max-w-full truncate text-xs text-muted-foreground" aria-live="polite">
-                    {totalItems} {taskPopulationComplete ? (personalView ? "created by or assigned to you" : "total tasks") : "tasks loaded…"}
-                  </span>
-                </div>
-                {showTaskScopeToggle && (
+            <div className="space-y-2" data-testid="dashboard-task-toolbar">
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                  <div className="flex min-w-0 items-baseline gap-2">
+                    <h2 className="text-base font-semibold">Tasks</h2>
+                    <span className="text-xs text-muted-foreground" aria-live="polite">
+                      {totalItems} {taskPopulationComplete ? (personalView ? "created by or assigned to you" : "total tasks") : "tasks loaded…"}
+                    </span>
+                  </div>
+                  {showTaskScopeToggle && (
                   <div
                     role="tablist"
                     aria-label="Task scope"
@@ -612,65 +608,66 @@ const DashboardExecutive = () => {
                     </button>
                   </div>
                 )}
-                <div data-testid="dashboard-task-filters" className="flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-border/80 bg-card p-1.5 shadow-soft sm:w-auto sm:flex-1">
-                  <div className="relative basis-full sm:min-w-[180px] sm:flex-1">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <input aria-label="Search tasks" value={taskSearch} onChange={(event) => { setTaskSearch(event.target.value); setCurrentPage(1); }} placeholder="Search tasks" className="h-9 w-full rounded-lg border-0 bg-muted/40 pl-8 pr-2 text-xs outline-none ring-0 placeholder:text-muted-foreground/70 focus:bg-background focus:ring-2 focus:ring-primary/15" />
-                  </div>
-                  <select aria-label="Filter by project" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[132px]">
-                    <option value="">All projects</option>{filterOptions.projects.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                  </select>
-                  <select aria-label="Filter by team" value={teamFilter} onChange={(event) => { setTeamFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[120px]">
-                    <option value="">All teams</option>{filterOptions.teams.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                  </select>
-                  <select aria-label="Filter by assignee" value={assigneeFilter} onChange={(event) => { setAssigneeFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[132px]">
-                    <option value="">All assignees</option>{filterOptions.assignees.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                  </select>
-                  <select aria-label="Filter by priority" value={priorityFilter} onChange={(event) => { setPriorityFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[112px]">
-                    <option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
-                  </select>
-                  <select aria-label="Filter by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-0 basis-[calc(50%-0.375rem)] flex-none rounded-lg border-0 bg-muted/40 px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/15 sm:basis-auto sm:flex-none sm:max-w-[120px]">
-                    <option value="">All statuses</option><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="in_review">In Review</option><option value="completed">Completed</option><option value="delayed">Delayed</option><option value="cancelled">Cancelled</option>
-                  </select>
-                  <button type="button" aria-label="Filter options" className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted sm:flex"><SlidersHorizontal className="h-3.5 w-3.5" /></button>
-                </div>
-                <div role="tablist" aria-label="Task view" className="inline-flex shrink-0 items-center rounded-lg border border-border bg-muted/50 p-0.5">
+                  <div role="tablist" aria-label="Task view" className="inline-flex shrink-0 items-center rounded-lg border border-border bg-muted/50 p-0.5">
                   <button type="button" role="tab" aria-selected={taskView === "list"} onClick={() => setTaskView("list")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><LayoutList className="mr-1 inline h-3.5 w-3.5" />List</button>
                   <button type="button" role="tab" aria-selected={taskView === "board"} onClick={() => setTaskView("board")} className={cn("rounded-md px-2.5 py-1 text-xs font-medium", taskView === "board" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}><Columns3 className="mr-1 inline h-3.5 w-3.5" />Board</button>
                 </div>
-                {canCreateTask && <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="h-9 shrink-0 gap-1.5">
-                  <Plus className="h-4 w-4" />
-                  New Task
-                </Button>}
-              </div>
-              {taskView === "list" && totalPages > 1 && (
-                <div className="flex items-center justify-end gap-1 shrink-0">
-                  <span className="text-[0.6875rem] text-muted-foreground mr-1">
-                    {startIndex + 1}–{Math.min(endIndex, totalItems)} / {totalItems}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </Button>
-                  <span className="text-[0.6875rem] font-semibold px-2">
-                    {currentPage}/{totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
                 </div>
-              )}
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  {taskView === "list" && totalPages > 1 && (
+                    <nav className="flex items-center gap-1" aria-label="Task pages">
+                      <span className="mr-1 text-xs text-muted-foreground">
+                        {startIndex + 1}–{Math.min(endIndex, totalItems)} / {totalItems}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        aria-label="Previous page"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="px-1 text-xs font-semibold" aria-current="page">
+                        {currentPage}/{totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        aria-label="Next page"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </nav>
+                  )}
+                  {canCreateTask && <Button onClick={() => setCreateTaskOpen(true)} size="sm" className="h-9 shrink-0 gap-1.5">
+                    <Plus className="h-4 w-4" />
+                    New Task
+                  </Button>}
+                </div>
+              </div>
+              <FilterBar data-testid="dashboard-task-filters" aria-label="Task filters">
+                <FilterSearch label="Search tasks" value={taskSearch} onChange={(event) => { setTaskSearch(event.target.value); setCurrentPage(1); }} placeholder="Search tasks" />
+                <FilterSelect label="Filter by project" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setCurrentPage(1); }}>
+                  <option value="">All projects</option>{filterOptions.projects.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </FilterSelect>
+                <FilterSelect label="Filter by team" value={teamFilter} onChange={(event) => { setTeamFilter(event.target.value); setCurrentPage(1); }}>
+                  <option value="">All teams</option>{filterOptions.teams.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </FilterSelect>
+                <FilterSelect label="Filter by assignee" value={assigneeFilter} onChange={(event) => { setAssigneeFilter(event.target.value); setCurrentPage(1); }}>
+                  <option value="">All assignees</option>{filterOptions.assignees.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </FilterSelect>
+                <FilterSelect label="Filter by priority" value={priorityFilter} onChange={(event) => { setPriorityFilter(event.target.value); setCurrentPage(1); }}>
+                  <option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+                </FilterSelect>
+                <FilterSelect label="Filter by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1); }}>
+                  <option value="">All statuses</option><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="in_review">In Review</option><option value="completed">Completed</option><option value="delayed">Delayed</option><option value="cancelled">Cancelled</option>
+                </FilterSelect>
+              </FilterBar>
             </div>
 
             {hasTaskViewFilter && (
@@ -742,91 +739,45 @@ const DashboardExecutive = () => {
           return <div className="space-y-4">{tasksSection}</div>;
         }
 
+        // One tree for every width. SplitLayout puts the overview rail beside the tasks only when its own container has the
+        // room, and stacks it above them otherwise (narrow window, tablet, high browser zoom, large text).
         return (
-          <>
-            {/* Mobile / tablet stacked — overview + quick actions collapsible */}
-            <div className="space-y-4 lg:hidden">
-              <div className="flex items-center justify-between gap-2">
+          <SplitLayout
+            rail={sideRailOpen ? (
+              <>
+                <div className="rl-split__rail-head flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5"
+                    aria-expanded="true"
+                    onClick={() => updateSideRailOpen(false)}
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Hide overview
+                  </Button>
+                </div>
+                {teamOverview}
+                {quickActions}
+                {pendingJoinRequests}
+              </>
+            ) : undefined}
+          >
+            {!sideRailOpen && (
+              <div className="mb-3">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => updateSideRailOpen(!sideRailOpen)}
+                  className="gap-1.5"
+                  aria-expanded="false"
+                  onClick={() => updateSideRailOpen(true)}
                 >
-                  {sideRailOpen ? (
-                    <>
-                      <ChevronUp className="h-3.5 w-3.5" /> Hide
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3.5 w-3.5" /> Show Overview
-                    </>
-                  )}
+                  <ChevronRight className="h-4 w-4" />
+                  Show Overview
                 </Button>
               </div>
-              {sideRailOpen && (
-                <div className="space-y-4 animate-fade-in">
-                  {teamOverview}
-                  {quickActions}
-                  {pendingJoinRequests}
-                </div>
-              )}
-              {tasksSection}
-            </div>
-
-            {/* Desktop resizable with collapsible side column */}
-            <div className="hidden lg:block">
-              <div className="flex h-[calc(100dvh-16rem)] min-h-[22rem] gap-1">
-                {!sideRailOpen && (
-                  <div className="shrink-0 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 gap-1 px-2 text-[0.6875rem]"
-                      aria-label="Show Overview"
-                      onClick={() => updateSideRailOpen(true)}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                      Show Overview
-                    </Button>
-                  </div>
-                )}
-                <ResizablePanelGroup
-                  direction="horizontal"
-                  className="h-full min-w-0 flex-1 rounded-xl"
-                >
-                  {sideRailOpen && (
-                    <>
-                      <ResizablePanel id="side" order={1} defaultSize={21} minSize={18} maxSize={27} className="min-w-0">
-                        <div className="pr-2 space-y-3 h-full overflow-y-auto">
-                          <div className="flex justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1.5 text-xs"
-                              onClick={() => updateSideRailOpen(false)}
-                            >
-                              <ChevronLeft className="h-3.5 w-3.5" /> Collapse
-                            </Button>
-                          </div>
-                          {teamOverview}
-                          {quickActions}
-                          {pendingJoinRequests}
-                        </div>
-                      </ResizablePanel>
-                      <ResizableHandle withHandle className="bg-transparent mx-1" />
-                    </>
-                  )}
-                  <ResizablePanel id="main" order={2} defaultSize={sideRailOpen ? 79 : 100} minSize={73} className="min-w-0">
-                    <div className={cn("h-full min-w-0 overflow-x-hidden overflow-y-auto", sideRailOpen && "pl-3")}>
-                      {tasksSection}
-                    </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
-              </div>
-            </div>
-
-          </>
+            )}
+            {tasksSection}
+          </SplitLayout>
         );
       })()}
 
