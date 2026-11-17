@@ -29,7 +29,7 @@ const card = (title: string) => screen.getByText(title).closest("div")!.parentEl
 const render_ = () => render(<MemoryRouter><DashboardManager /></MemoryRouter>);
 
 describe("Manager Dashboard data", () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.company = "w1"; });
+  beforeEach(() => { localStorage.setItem("admiino:preferences", JSON.stringify({ dashboardDefaultView: "list" })); vi.clearAllMocks(); mocks.company = "w1"; });
 
   it("shows real member counts from the actual API contract (data.members) and real task metrics", async () => {
     mocks.api.getTasks.mockResolvedValue(tasksOk([task("a", "completed"), task("b", "in_progress"), task("c", "pending")]));

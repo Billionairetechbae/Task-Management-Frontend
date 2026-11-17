@@ -31,6 +31,7 @@ const mine = [t("Done A", "completed"), t("Done B", "completed"), t("Project Ric
 
 describe("Dashboard personal task population", () => {
   beforeEach(() => {
+    localStorage.setItem("admiino:preferences", JSON.stringify({ dashboardDefaultView: "list" }));
     state.role = "member"; state.isError = false; state.canViewAll = true;
     state.data = {
       tasks: mine, myTasks: mine,
@@ -43,6 +44,12 @@ describe("Dashboard personal task population", () => {
       const pageTasks = tasks.slice((page - 1) * limit, page * limit);
       return { status: "success", results: pageTasks.length, total: tasks.length, data: { tasks: pageTasks } };
     });
+  });
+  it("defaults to Board when no Dashboard view preference exists", async () => {
+    localStorage.removeItem("admiino:preferences");
+    renderPage();
+    expect(await screen.findByTestId("dashboard-board")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Board" })).toHaveAttribute("aria-selected", "true");
   });
   const renderPage = () => render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>

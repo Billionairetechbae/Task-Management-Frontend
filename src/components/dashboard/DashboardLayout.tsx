@@ -18,33 +18,9 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  FolderOpen,
-  LayoutDashboard,
-  Users,
-  ClipboardList,
-  Building2,
-  CalendarDays,
-  Settings,
-  Trash2,
-  User,
-  LogOut,
-  Menu,
-  X,
-  ChevronLeft,
-  ChevronDown,
-  Bot,
-  Crown,
-  Activity,
-  ListChecks,
-  Folder,
-  FolderKanban,
-  ShieldCheck,
-  Plug,
-  Columns3,
-  LayoutTemplate,
-  Workflow,
-  Clock3,
-  CreditCard,
+  LayoutDashboard, Users, ClipboardList, CalendarDays, Settings, User,
+  Menu, X, ChevronLeft, ChevronDown, ListChecks, Folder, FolderKanban,
+  Crown, Activity, LayoutTemplate,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 import GlobalSearch from "@/components/dashboard/GlobalSearch";
@@ -89,7 +65,7 @@ const DashboardLayout = ({
   fullWidth = true,
   hidePadding = false,
 }: DashboardLayoutProps) => {
-  const { user, logout, workspaceRole } = useAuth();
+  const { user, workspaceRole } = useAuth();
   const location = useLocation();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
@@ -149,411 +125,30 @@ const DashboardLayout = ({
   }, [location.pathname]);
 
   const getNavItems = (): NavItemOrGroup[] => {
-    if (workspaceRole === "owner" || workspaceRole === "admin") {
-      return [
-        {
-          label: "Dashboard",
-          href: "/dashboard",
-          icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workspace Insights",
-          href: "/workspace-insights",
-          icon: <Activity className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workload",
-          href: "/workload",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Projects",
-          items: [
-            {
-              label: "All Projects",
-              href: "/projects",
-              icon: <FolderKanban className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Portfolio",
-              href: "/projects/portfolio",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Templates",
-              href: "/templates",
-              icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Create Project",
-              href: "/projects?create=true",
-              icon: <FolderKanban className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Project Health",
-              href: "/project-health",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Tasks",
-          items: [
-            {
-              label: "All Tasks",
-              href: "/tasks/all",
-              icon: <ListChecks className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Task Workbench",
-              href: "/tasks/workbench",
-              icon: <ClipboardList className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Board",
-              href: "/board",
-              icon: <Columns3 className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Drive",
-          href: "/drive",
-          icon: <Folder className="w-[18px] h-[18px]" />,
-        },
-        { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Calendar",
-          href: "/calendar",
-          icon: <CalendarDays className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Integrations",
-          href: "/settings/integrations",
-          icon: <Plug className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Access & Permissions",
-          items: [
-            {
-              label: "Client Access",
-              href: "/resource-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Shared with Me",
-              href: "/shared-with-me",
-              icon: <FolderOpen className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Workspace Access",
-              href: "/workspace-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Governance",
-              href: "/settings/workspace/governance",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            { label: "Activity Log", href: "/settings/workspace/activity", icon: <Activity className="w-[18px] h-[18px]" /> },
-          ],
-        },
-        {
-          label: "Team",
-          items: [
-            {
-              label: "Hire Talent",
-              href: "/assistance-requests",
-              icon: <Users className="w-[18px] h-[18px]" />,
-            },
-            ...(canPerformRoleOperation("view_workspace_members") ? [
-              {
-                label: "Teams",
-                href: "/teams",
-                icon: <Crown className="w-[18px] h-[18px]" />,
-              },
-              {
-                label: "Team Directory",
-                href: "/team-directory",
-                icon: <Users className="w-[18px] h-[18px]" />,
-              },
-              {
-                label: "Team Management",
-                href: "/team-management",
-                icon: <Crown className="w-[18px] h-[18px]" />,
-              },
-            ] : []),
-          ],
-        },
-        {
-          label: "Harmony",
-          href: "/harmony",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Customization",
-          href: "/settings/workspace/customization",
-          icon: <Columns3 className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Subscription & Seats",
-          href: "/settings/workspace/subscription",
-          icon: <CreditCard className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Company Profile",
-          href: "/company-profile",
-          icon: <Building2 className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "AI Hub",
-          href: "/ai-hub",
-          icon: <Bot className="w-[18px] h-[18px]" />,
-        },
-      ];
-    }
-
-    if (workspaceRole === "manager") {
-      return [
-        {
-          label: "Dashboard",
-          href: "/dashboard",
-          icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workspace Insights",
-          href: "/workspace-insights",
-          icon: <Activity className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workload",
-          href: "/workload",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Projects",
-          items: [
-            {
-              label: "All Projects",
-              href: "/projects",
-              icon: <FolderKanban className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Portfolio",
-              href: "/projects/portfolio",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Templates",
-              href: "/templates",
-              icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Project Health",
-              href: "/project-health",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Tasks",
-          items: [
-            {
-              label: "All Tasks",
-              href: "/tasks/all",
-              icon: <ListChecks className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Task Workbench",
-              href: "/tasks/workbench",
-              icon: <ClipboardList className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Drive",
-          href: "/drive",
-          icon: <Folder className="w-[18px] h-[18px]" />,
-        },
-        { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Calendar",
-          href: "/calendar",
-          icon: <CalendarDays className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Integrations",
-          href: "/settings/integrations",
-          icon: <Plug className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Access & Permissions",
-          items: [
-            {
-              label: "Client Access",
-              href: "/resource-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Shared with Me",
-              href: "/shared-with-me",
-              icon: <FolderOpen className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Workspace Access",
-              href: "/workspace-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        ...(canPerformRoleOperation("view_workspace_members") ? [{
-          label: "Team",
-          items: [
-            {
-              label: "Teams",
-              href: "/teams",
-              icon: <Crown className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Team Directory",
-              href: "/team-directory",
-              icon: <Users className="w-[18px] h-[18px]" />,
-            },
-          ],
-        }] : []),
-        {
-          label: "Harmony",
-          href: "/harmony",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        { label: "Customization", href: "/settings/workspace/customization", icon: <Columns3 className="w-[18px] h-[18px]" /> },
-        { label: "Automations", href: "/settings/workspace/automations", icon: <Workflow className="w-[18px] h-[18px]" /> },
-        { label: "Subscription & Seats", href: "/settings/workspace/subscription", icon: <CreditCard className="w-[18px] h-[18px]" /> },
-        { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
-      ];
-    }
-
+    const canViewMembers = canPerformRoleOperation("view_workspace_members");
+    const canHireTalent = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
     return [
-      {
-        label: "Dashboard",
-        href: "/dashboard",
-        icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Workspace Insights",
-        href: "/workspace-insights",
-        icon: <Activity className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Workload",
-        href: "/workload",
-        icon: <Users className="w-[18px] h-[18px]" />,
-      },
-      { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
-      {
-        label: "Projects",
-        items: [
-          {
-            label: "All Projects",
-            href: "/projects",
-            icon: <FolderKanban className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Portfolio",
-            href: "/projects/portfolio",
-            icon: <Activity className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Templates",
-            href: "/templates",
-            icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
-          },
-        ],
-      },
-      {
-        label: "Tasks",
-        items: [
-          {
-            label: "All Tasks",
-            href: "/tasks/all",
-            icon: <ListChecks className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "My Tasks",
-            href: "/tasks/my",
-            icon: <ClipboardList className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Task Workbench",
-            href: "/tasks/workbench",
-            icon: <ClipboardList className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Board",
-            href: "/board",
-            icon: <Columns3 className="w-[18px] h-[18px]" />,
-          },
-        ],
-      },
-      {
-        label: "Drive",
-        href: "/drive",
-        icon: <Folder className="w-[18px] h-[18px]" />,
-      },
-      { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
-      {
-        label: "Calendar",
-        href: "/calendar",
-        icon: <CalendarDays className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Integrations",
-        href: "/settings/integrations",
-        icon: <Plug className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Access",
-        items: [
-          {
-            label: "Workspace Access",
-            href: "/workspace-access",
-            icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "My Access Requests",
-            href: "/resource-access",
-            icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Shared with Me",
-            href: "/shared-with-me",
-            icon: <FolderOpen className="w-[18px] h-[18px]" />,
-          },
-        ],
-      },
-      ...(canPerformRoleOperation("view_workspace_members") ? [{
-        label: "Team",
-        items: [
-          {
-            label: "Teams",
-            href: "/teams",
-            icon: <Crown className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Team Directory",
-            href: "/team-directory",
-            icon: <Users className="w-[18px] h-[18px]" />,
-          },
-        ],
-      }] : []),
-      {
-        label: "Harmony",
-        href: "/harmony",
-        icon: <Users className="w-[18px] h-[18px]" />,
-      },
-      { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
+      { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
+      { label: "Tasks", items: [
+        { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-[18px] h-[18px]" /> },
+        { label: "Task Workbench", href: "/tasks/workbench", icon: <ClipboardList className="w-[18px] h-[18px]" /> },
+      ] },
+      { label: "Projects", items: [
+        { label: "All Projects", href: "/projects", icon: <FolderKanban className="w-[18px] h-[18px]" /> },
+        { label: "Portfolio", href: "/projects/portfolio", icon: <Activity className="w-[18px] h-[18px]" /> },
+        { label: "Templates", href: "/templates", icon: <LayoutTemplate className="w-[18px] h-[18px]" /> },
+      ] },
+      { label: "Calendar", href: "/calendar", icon: <CalendarDays className="w-[18px] h-[18px]" /> },
+      ...(canViewMembers || canHireTalent ? [{ label: "Team", items: [
+        ...(canViewMembers ? [
+          { label: "Teams", href: "/teams", icon: <Crown className="w-[18px] h-[18px]" /> },
+          { label: "Team Directory", href: "/team-directory", icon: <Users className="w-[18px] h-[18px]" /> },
+        ] : []),
+        ...(canHireTalent ? [{ label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-[18px] h-[18px]" /> }] : []),
+      ] }] : []),
+      { label: "Harmony", href: "/harmony", icon: <Users className="w-[18px] h-[18px]" /> },
+      { label: "Drive", href: "/drive", icon: <Folder className="w-[18px] h-[18px]" /> },
+      { label: "Settings", href: "/settings", icon: <Settings className="w-[18px] h-[18px]" /> },
     ];
   };
 
@@ -562,6 +157,10 @@ const DashboardLayout = ({
   const isActive = (href: string) => {
     if (href === "/dashboard") {
       return location.pathname === "/dashboard";
+    }
+
+    if (href === "/settings") {
+      return location.pathname === "/settings" || location.pathname.startsWith("/settings/");
     }
 
     if (href === "/templates") {
@@ -825,26 +424,6 @@ const DashboardLayout = ({
             )}
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => {
-                  logout();
-                  setMobileOpen(false);
-                }}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] transition-all duration-200 text-destructive-text hover:bg-destructive/10 w-full",
-                  !sidebarOpen && "justify-center px-2"
-                )}
-              >
-                <LogOut className="w-4 h-4" />
-                {sidebarOpen && <span>Logout</span>}
-              </button>
-            </TooltipTrigger>
-            {!sidebarOpen && (
-              <TooltipContent side="right">Logout</TooltipContent>
-            )}
-          </Tooltip>
         </div>
       </div>
     </div>
