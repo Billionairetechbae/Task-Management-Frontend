@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type Density = "comfortable" | "compact";
+export type DashboardView = "board" | "list";
 
 export interface LocalPreferences {
   /* appearance */
@@ -9,6 +10,7 @@ export interface LocalPreferences {
   /* navigation */
   defaultLandingPage: string;
   sidebarCollapsedByDefault: boolean;
+  dashboardDefaultView: DashboardView;
   /* behaviour */
   confirmBeforeDelete: boolean;
   tablePageSize: number;
@@ -24,6 +26,7 @@ export const DEFAULT_PREFERENCES: LocalPreferences = {
   reduceMotion: false,
   defaultLandingPage: "/dashboard",
   sidebarCollapsedByDefault: false,
+  dashboardDefaultView: "board",
   confirmBeforeDelete: true,
   tablePageSize: 6,
   desktopNotifications: false,

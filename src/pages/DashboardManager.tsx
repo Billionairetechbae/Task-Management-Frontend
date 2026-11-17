@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { readPreferences } from "@/hooks/use-local-preferences";
 
 const DashboardManager = () => {
   const { user, activeCompanyId } = useAuth();
@@ -52,7 +53,7 @@ const DashboardManager = () => {
   const [membersError, setMembersError] = useState<string | null>(null);
   const loadSequence = useRef(0);
   const [statusFilter, setStatusFilter] = useState("");
-  const [taskView, setTaskView] = useState<"list" | "board">("list");
+  const [taskView, setTaskView] = useState<"list" | "board">(() => readPreferences().dashboardDefaultView);
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);

@@ -8,7 +8,7 @@ vi.mock("@/pages/DashboardManager", () => ({ default: () => <div>Manager dashboa
 vi.mock("@/pages/DashboardExecutive", () => ({ default: () => <div>Workspace dashboard</div> }));
 
 describe("Phase 4 dashboard routing", () => {
-  beforeEach(() => { authMock.workspaceRole = "manager"; });
+  beforeEach(() => { localStorage.setItem("admiino:preferences", JSON.stringify({ dashboardDefaultView: "list" })); authMock.workspaceRole = "manager"; });
 
   it("uses the manager dashboard for managers", () => {
     render(<DashboardRoleRouter />);

@@ -56,6 +56,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import InviteUserDialog from "@/components/InviteUserDialog";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { cn } from "@/lib/utils";
+import { readPreferences } from "@/hooks/use-local-preferences";
 import { CardGrid, FilterBar, FilterSearch, FilterSelect, SplitLayout } from "@/components/layout/responsive";
 import { JoinRequestsPreview } from "@/components/workspaces/JoinRequestsPreview";
 import {
@@ -89,7 +90,7 @@ const DashboardExecutive = () => {
   const [teamFilter, setTeamFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
-  const [taskView, setTaskView] = useState<"list" | "board">("list");
+  const [taskView, setTaskView] = useState<"list" | "board">(() => readPreferences().dashboardDefaultView);
   const [sideColumnOpen, setSideColumnOpen] = useState(true);
   const preferredSideColumnOpen = useRef(true);
   const [boardSideColumnOpen, setBoardSideColumnOpen] = useState(false);
