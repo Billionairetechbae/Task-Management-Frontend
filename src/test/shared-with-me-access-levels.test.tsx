@@ -88,12 +88,13 @@ describe("Shared with Me access-level UI", () => {
   });
 });
 
-describe("Shared with Me sidebar", () => {
+describe("Shared with Me relocation", () => {
   const layout = readFileSync("src/components/dashboard/DashboardLayout.tsx", "utf8");
-  it("is listed once per nav variant, under the access groups", () => {
-    expect(layout.match(/href: "\/shared-with-me"/g)).toHaveLength(3);
+  it("is not exposed as a primary sidebar destination", () => {
+    expect(layout.match(/href: "\/shared-with-me"/g)).toBeNull();
   });
-  it("is active on the list and detail routes", () => {
-    expect(layout).toContain('location.pathname.startsWith("/shared-with-me/")');
+  it("remains available through Settings and its deep-link route", () => {
+    expect(readFileSync("src/pages/Settings.tsx", "utf8")).toContain('["Shared With Me", "/shared-with-me"');
+    expect(readFileSync("src/App.tsx", "utf8")).toContain('path="/shared-with-me"');
   });
 });
