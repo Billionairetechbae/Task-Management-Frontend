@@ -205,14 +205,32 @@ const TaskDetails = () => {
   const [updating, setUpdating] = useState(false);
   const previewBlob = usePreviewBlobUrl();
   const [preview, setPreview] = useState<{
-    url: string;
-    blob: Blob;
+    url?: string;
+    blob?: Blob;
     type: string;
     name: string;
     attachmentId?: string;
     alreadyInDocs?: boolean;
+    loading?: boolean;
+    error?: string | null;
   } | null>(null);
   const [addingToDocs, setAddingToDocs] = useState(false);
+
+  const previewRequestRef = useRef(0);
+  const openTaskAttachmentPreview = useCallback(async (taskId: string, attachmentId: string, name: string, type: string, alreadyInDocs = true) => {
+    const requestId = ++previewRequestRef.current;
+    setPreview({ name: name || "Attachment", type: type || "application/octet-stream", alreadyInDocs, loading: true, error: null });
+    try {
+      const { blob, fileName, contentType } = await api.previewTaskAttachment(taskId, attachmentId);
+      if (requestId !== previewRequestRef.current) return; // closed or superseded while loading
+      const url = previewBlob.create(blob);
+      setPreview({ blob, url, type: contentType || blob.type || type, name: fileName || name || "download", attachmentId, alreadyInDocs, loading: false, error: null });
+    } catch (error: any) {
+      if (requestId !== previewRequestRef.current) return;
+      const code = error?.statusCode ?? error?.status;
+      setPreview((current) => current ? { ...current, loading: false, error: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : "This file could not be previewed. Please try again." } : current);
+    }
+  }, [api, previewBlob]);
   
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
@@ -1850,15 +1868,7 @@ const TaskDetails = () => {
                                     window.open(displayUrl, "_blank", "noopener,noreferrer");
                                   } else if (f.id && id) {
                                     // Phase 2: backend streams bytes — create ephemeral object URL for preview
-                                    api.downloadTaskAttachment(id, f.id)
-                                      .then(({ blob, fileName: serverName }) => {
-                                        const objectUrl = previewBlob.create(blob);
-                                        setPreview({ blob, url: objectUrl, type: blob.type || displayType, name: serverName || displayName || "download", attachmentId: f.id, alreadyInDocs: true });
-                                      })
-                                      .catch((err: any) => {
-                                        const code = err?.statusCode ?? err?.status;
-                                        toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
-                                      });
+                                    void openTaskAttachmentPreview(id, f.id, displayName, displayType, true);
                                   } else if (displayUrl) {
                                     window.open(displayUrl, "_blank", "noopener,noreferrer");
                                   }
@@ -1887,8 +1897,7 @@ const TaskDetails = () => {
                       {comment.attachments.map((attachment) => (
                         <Button key={attachment.id} variant="outline" size="sm" className="h-7 max-w-full text-xs" onClick={async () => {
                           try {
-                            const file = await api.downloadTaskAttachment(comment.taskId, attachment.id);
-                            triggerBlobDownload(file.blob, file.fileName || attachment.fileName);
+                            void openTaskAttachmentPreview(comment.taskId, attachment.id, attachment.fileName, attachment.fileType || attachment.mimeType || "", false);
                           } catch (error: any) {
                             toast({ title: "Download failed", description: error.message, variant: "destructive" });
                           }
@@ -2062,15 +2071,7 @@ const TaskDetails = () => {
                         window.open(attachmentUrl, "_blank", "noopener,noreferrer");
                       } else if (file?.id && id) {
                         // Phase 2: backend streams bytes — create ephemeral object URL for preview
-                        api.downloadTaskAttachment(id, file.id)
-                          .then(({ blob, fileName: serverName }) => {
-                            const objectUrl = previewBlob.create(blob);
-                            setPreview({ blob, url: objectUrl, type: blob.type || mimeType, name: serverName || fileName || "download", attachmentId: file?.id, alreadyInDocs: true });
-                          })
-                          .catch((err: any) => {
-                            const code = err?.statusCode ?? err?.status;
-                            toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
-                          });
+                        void openTaskAttachmentPreview(id, file.id, fileName, mimeType, true);
                       } else if (attachmentUrl) {
                         window.open(attachmentUrl, "_blank", "noopener,noreferrer");
                       }
@@ -2159,15 +2160,7 @@ const TaskDetails = () => {
                           className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center"
                           onClick={() => {
                             if (!file?.id || !id) return;
-                            api.downloadTaskAttachment(id, file.id)
-                              .then(({ blob, fileName: serverName }) => {
-                                const objectUrl = previewBlob.create(blob);
-                                setPreview({ blob, url: objectUrl, type: blob.type || mimeType, name: serverName || fileName || "download", attachmentId: file?.id, alreadyInDocs: true });
-                              })
-                              .catch((err: any) => {
-                                const code = err?.statusCode ?? err?.status;
-                                toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
-                              });
+                            void openTaskAttachmentPreview(id, file.id, fileName, mimeType, true);
                           }}
                           disabled={!file?.id}
                         >
@@ -2347,8 +2340,11 @@ const TaskDetails = () => {
           blob={preview.blob}
           type={preview.type}
           name={preview.name}
+          loading={preview.loading}
+          error={preview.error}
           onClose={() => {
             // Phase 2: revoke ephemeral object URL created from Blob to free browser memory
+            previewRequestRef.current += 1;
             previewBlob.clear();
             setPreview(null);
           }}
@@ -2357,7 +2353,7 @@ const TaskDetails = () => {
           onAddToTaskDocs={
             preview.alreadyInDocs
               ? undefined
-              : () => handleAddToTaskDocsFromUrl(preview.url, preview.name, preview.type)
+              : preview.url ? () => handleAddToTaskDocsFromUrl(preview.url!, preview.name, preview.type) : undefined
           }
         />
       )}
