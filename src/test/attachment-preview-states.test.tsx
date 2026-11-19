@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/OfficeDocumentPreview", () => ({ default: () => null }));
@@ -15,6 +15,12 @@ describe("AttachmentPreview states", () => {
   it("shows a clear error", () => {
     render(<AttachmentPreview {...base} error="You don't have access to this file." />);
     expect(screen.getByRole("alert")).toHaveTextContent("You don't have access");
+  });
+  it("offers an explicit retry after a preview error", () => {
+    const onRetry = vi.fn();
+    render(<AttachmentPreview {...base} error="The file could not be previewed." onRetry={onRetry} />);
+    fireEvent.click(screen.getByRole("button", { name: /retry preview/i }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
   it("renders PDF inline via iframe without navigating or downloading", () => {
     render(<AttachmentPreview {...base} url="blob:http://x/1" />);
