@@ -1,6 +1,6 @@
 import OfficeDocumentPreview from "@/components/OfficeDocumentPreview";
 import { getOfficePreviewKind } from "@/lib/officePreview";
-import { X, Download, ExternalLink, Plus, Check } from "lucide-react";
+import { X, Download, ExternalLink, Plus, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getFileIcon } from "@/utils/fileIcons";
 
@@ -17,6 +17,7 @@ interface AttachmentPreviewProps {
   addingToTaskDocs?: boolean;
   loading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
 }
 
 const isOffice = (type: string, name: string) => {
@@ -43,6 +44,7 @@ const AttachmentPreview = ({
   addingToTaskDocs,
   loading = false,
   error = null,
+  onRetry,
 }: AttachmentPreviewProps) => {
   const t = (type || "").toLowerCase();
   const isImage = t.startsWith("image") || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name);
@@ -141,7 +143,12 @@ const AttachmentPreview = ({
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-auto bg-muted/20 flex items-center justify-center">
           {loading && <div className="flex flex-col items-center gap-3 p-12 text-sm text-muted-foreground" role="status"><span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />Loading preview…</div>}
-          {!loading && error && <div className="p-8 text-center text-sm text-destructive-text" role="alert">{error}</div>}
+          {!loading && error && (
+            <div className="p-8 text-center text-sm text-destructive-text" role="alert">
+              <p>{error}</p>
+              {onRetry && <Button type="button" variant="outline" size="sm" className="mt-3 gap-2" onClick={onRetry}><RefreshCw className="h-3.5 w-3.5" />Retry preview</Button>}
+            </div>
+          )}
           {!loading && !error && isImage && url && (
             <img src={url} alt={name} className="max-h-full max-w-full object-contain" />
           )}

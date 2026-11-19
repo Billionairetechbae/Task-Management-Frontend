@@ -52,7 +52,9 @@ describe("comment delivery policy", () => {
   it("user-facing failure text distinguishes offline, outage and other errors and says the comment was kept", () => {
     expect(describeCommentFailure(Object.assign(new Error("x"), { name: "NetworkError" }))).toMatch(/offline.*kept/i);
     expect(describeCommentFailure(Object.assign(new Error("x"), { name: "ApiError", statusCode: 503 }))).toMatch(/temporarily unavailable.*kept/i);
-    expect(describeCommentFailure(Object.assign(new Error("Read-only access"), { name: "ApiError", statusCode: 403 }))).toBe("Read-only access");
+    expect(describeCommentFailure(Object.assign(new Error("Unauthorized"), { name: "ApiError", statusCode: 401 }))).toMatch(/session has expired.*draft has been kept/i);
+    expect(describeCommentFailure(Object.assign(new Error("Access denied"), { name: "ApiError", statusCode: 403 }))).toMatch(/permission.*draft has been kept/i);
+    expect(describeCommentFailure(Object.assign(new Error("Read-only access"), { name: "ApiError", statusCode: 403 }))).toMatch(/permission.*draft has been kept/i);
   });
 
   it("resending the SAME text after a failed attempt reuses its client id (the failed attempt may have been saved); anything else gets a fresh id", () => {

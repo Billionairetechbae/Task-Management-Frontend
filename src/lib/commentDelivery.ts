@@ -32,6 +32,8 @@ export function describeCommentFailure(error: unknown): string {
   const e = error as { statusCode?: number; name?: string; body?: { code?: string }; message?: string } | null;
   if (e?.name === "NetworkError") return "You appear to be offline. Your comment was not sent and has been kept so you can try again.";
   if (e?.statusCode === 503 || e?.body?.code === "DATABASE_UNAVAILABLE") return "The service is temporarily unavailable. Your comment was not sent and has been kept so you can try again.";
+  if (e?.statusCode === 401) return "Your session has expired. Sign in again; your draft has been kept.";
+  if (e?.statusCode === 403 || e?.body?.code === "ACCESS_DENIED") return "You no longer have permission to post on this task. Your draft has been kept.";
   return e?.message || "Your comment was not sent and has been kept so you can try again.";
 }
 
