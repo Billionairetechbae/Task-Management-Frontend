@@ -3113,6 +3113,16 @@ class ApiClient {
     );
   }
 
+  async previewTaskAttachment(
+    taskId: string,
+    attachmentId: string
+  ): Promise<{ blob: Blob; fileName: string; contentType: string }> {
+    return this._fetchBlob(
+      `/tasks/${taskId}/attachments/${attachmentId}/preview`,
+      this.getAuthHeaders()
+    );
+  }
+
   /**
    * Phase 2 — Authenticated server-side proxy download for workspace Drive files.
    *
