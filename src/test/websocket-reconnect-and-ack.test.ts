@@ -182,7 +182,7 @@ describe("server capability detection (frontend deployed before/after the backen
 });
 
 describe("multi-tab server behaviour: refused/revoked rooms and connection cap", () => {
-  beforeEach(() => { FakeSocket.instances = []; vi.useFakeTimers(); vi.stubGlobal("WebSocket", FakeSocket); vi.spyOn(Math, "random").mockReturnValue(0); });
+  beforeEach(() => { FakeSocket.instances = []; vi.useFakeTimers(); vi.stubGlobal("WebSocket", FakeSocket); vi.mocked(toast).mockClear(); vi.spyOn(Math, "random").mockReturnValue(0); });
   afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
   it("the too-many-connections close (4429) is final: no reconnect storm", async () => {
@@ -202,5 +202,26 @@ describe("multi-tab server behaviour: refused/revoked rooms and connection cap",
     last().serverClose(1006);
     await vi.advanceTimersByTimeAsync(31000); last().open();
     expect(last().sent.filter((m) => m.type === "join_task").map((m) => m.taskId).sort()).toEqual(["kept", "later"]);
+  });
+
+  it("task-scoped access errors reach the task UI without a duplicate global toast", async () => {
+    const service = new WebSocketService();
+    const errors: any[] = [];
+    service.on("error", (message) => errors.push(message));
+    const connected = service.connect("tok"); last().open(); await connected;
+    last().serverSend({ type: "error", taskId: "task-1", message: "Access denied" });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({ taskId: "task-1", message: "Access denied" });
+    expect(toast).not.toHaveBeenCalled();
+
+    last().serverSend({ type: "error", message: "Access denied" }); // legacy server's unscoped typing-room race
+    expect(toast).not.toHaveBeenCalled();
+    last().serverSend({ type: "error", message: "Connection issue" });
+    expect(toast).toHaveBeenCalledTimes(1);
+    last().serverSend({ type: "error", message: "Connection issue" });
+    expect(toast).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(5001);
+    last().serverSend({ type: "error", message: "Connection issue" });
+    expect(toast).toHaveBeenCalledTimes(2);
   });
 });

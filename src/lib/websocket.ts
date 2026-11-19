@@ -49,6 +49,7 @@ export class WebSocketService {
   private authFailed = false;
   private statusListeners = new Set<(connected: boolean) => void>();
   private pendingAcks = new Map<string, { resolve: (comment: any) => void; reject: (error: CommentSendError) => void; timer: ReturnType<typeof setTimeout> }>();
+  private lastErrorToast: { key: string; at: number } | null = null;
 
   constructor() {
     // Auto-reconnect on close
@@ -400,11 +401,18 @@ export class WebSocketService {
 
       case 'error':
         console.error('❌ WebSocket server error:', message.error);
-        toast({
-          title: 'Chat error',
-          description: message.message || 'Connection issue',
-          variant: 'destructive',
-        });
+        if (!message.taskId && message.message !== 'Access denied') {
+          const key = `${message.code || ''}:${message.message || 'Connection issue'}`;
+          const now = Date.now();
+          if (!this.lastErrorToast || this.lastErrorToast.key !== key || now - this.lastErrorToast.at >= 5000) {
+            this.lastErrorToast = { key, at: now };
+            toast({
+              title: 'Chat error',
+              description: message.message || 'Connection issue',
+              variant: 'destructive',
+            });
+          }
+        }
         break;
     }
 

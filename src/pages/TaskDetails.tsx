@@ -1,4 +1,5 @@
 import { deliverComment, describeCommentFailure, messageIdForAttempt, type FailedAttempt } from "@/lib/commentDelivery";
+import { canSendTaskComment, shouldSendTypingStart, validateCommentFiles } from "@/lib/commentComposer";
 import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
 import { classifyTaskLoadError } from "@/lib/taskLoadError";
 import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
@@ -40,7 +41,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Task, TaskComment, TaskAccess } from "@/lib/api";
+import { api, Task, TaskComment } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -49,6 +50,7 @@ import { useBreakpoint } from "@/hooks/use-breakpoint";
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
 import FilePreviewCard from "@/components/tasks/FilePreviewCard";
+import { PendingTaskCommentAttachment, TaskCommentAttachment } from "@/components/tasks/TaskCommentAttachment";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
@@ -122,11 +124,20 @@ const TaskDetails = () => {
   const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
-  const [taskAccess, setTaskAccess] = useState<TaskAccess | null>(null);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
   const [replyToComment, setReplyToComment] = useState<CorrectedTaskComment | null>(null);
   const [pendingCommentFiles, setPendingCommentFiles] = useState<File[]>([]);
+  const [commentSendError, setCommentSendError] = useState<string | null>(null);
+  const [chatAccessError, setChatAccessError] = useState<string | null>(null);
+  const [chatConnectionNotice, setChatConnectionNotice] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingActiveRef = useRef(false);
+  const sendingCommentRef = useRef(false);
+  const currentTaskIdRef = useRef(id);
+  currentTaskIdRef.current = id;
+  const optimisticCommentRef = useRef<Map<string, any>>(new Map());
+  const failedAttemptRef = useRef<FailedAttempt | null>(null);
   // Dropbox files chosen in the composer. They become visible attachments only after the comment is posted successfully.
   const [pendingConnectedStorage, setPendingConnectedStorage] = useState<Array<{ connectionId: string; item: ConnectedStorageItem }>>([]);
   
@@ -140,51 +151,61 @@ const TaskDetails = () => {
     queryKey: ["task-details", id, activeCompanyId], // workspace last: prefix invalidations by id still match, but a switch never reuses another workspace's cache
     queryFn: async () => {
       if (!id) throw new Error("No task id");
-      try {
-        const response = await api.getTaskById(id);
-        return response.data;
-      } catch (err: any) {
-        if (classifyTaskLoadError(err).kind === "forbidden") {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to view this task.",
-            variant: "destructive"
-          });
-        }
-        throw err;
-      }
+      const response = await api.getTaskById(id);
+      return response.data;
     },
     enabled: !!id,
     refetchOnWindowFocus: false,
     retry: false,
   });
 
+  const taskReady = !!id && taskQuery.isSuccess && String(taskQuery.data?.task?.id || "") === id;
+  const currentTaskAccess = taskReady ? taskQuery.data?.access ?? null : null;
+  const canCollaborate = taskReady && (
+    currentTaskAccess?.canCollaborate === true ||
+    (currentTaskAccess?.readOnly !== true && currentTaskAccess?.canEdit === true)
+  );
+
+  useEffect(() => {
+    if (taskReady && canCollaborate) setChatAccessError(null);
+  }, [taskReady, canCollaborate, currentTaskAccess]);
+
   const commentsQuery = useQuery({
-    queryKey: ["task-comments", id],
+    queryKey: ["task-comments", id, activeCompanyId, user?.id],
     queryFn: async () => {
       if (!id) throw new Error("No task id");
       const response = await api.getTaskComments(id, { limit: 50 });
       return (response.comments || []).filter(Boolean).map(fixCommentProfilePicture);
     },
-    enabled: !!id,
+    enabled: taskReady,
     refetchOnWindowFocus: false,
     retry: false,
   });
+
+  useEffect(() => {
+    setNewComment("");
+    setComments([]);
+    setReplyToComment(null);
+    setPendingCommentFiles([]);
+    setPendingConnectedStorage([]);
+    setCommentSendError(null);
+    setChatAccessError(null);
+    setChatConnectionNotice(null);
+    failedAttemptRef.current = null;
+    typingActiveRef.current = false;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+  }, [id, activeCompanyId, user?.id]);
 
   // Sync state with query data
   useEffect(() => {
     if (taskQuery.data) {
       setTask(taskQuery.data.task ?? null);
-      setTaskAccess(taskQuery.data.access ?? null);
     }
   }, [taskQuery.data]);
 
   // The backend access object is the final authority: treat the task as
   // read-only whenever editing is not explicitly permitted.
-  const isReadOnly = taskAccess
-    ? taskAccess.readOnly === true || taskAccess.canEdit === false
-    : false;
-  const canCollaborate = taskAccess?.canCollaborate === true || !isReadOnly;
+  const isReadOnly = !taskReady || currentTaskAccess?.readOnly === true || currentTaskAccess?.canEdit === false;
   const mobileActionTabs = [
     { key: "list" as const, label: "Tasks", Icon: ListChecks, count: 0 },
     { key: "chat" as const, label: "Chat", Icon: MessageSquare, count: comments.length },
@@ -209,6 +230,7 @@ const TaskDetails = () => {
     blob?: Blob;
     type: string;
     name: string;
+    taskId?: string;
     attachmentId?: string;
     alreadyInDocs?: boolean;
     loading?: boolean;
@@ -219,12 +241,12 @@ const TaskDetails = () => {
   const previewRequestRef = useRef(0);
   const openTaskAttachmentPreview = useCallback(async (taskId: string, attachmentId: string, name: string, type: string, alreadyInDocs = true) => {
     const requestId = ++previewRequestRef.current;
-    setPreview({ name: name || "Attachment", type: type || "application/octet-stream", alreadyInDocs, loading: true, error: null });
+    setPreview({ name: name || "Attachment", type: type || "application/octet-stream", taskId, alreadyInDocs, loading: true, error: null });
     try {
       const { blob, fileName, contentType } = await api.previewTaskAttachment(taskId, attachmentId);
       if (requestId !== previewRequestRef.current) return; // closed or superseded while loading
       const url = previewBlob.create(blob);
-      setPreview({ blob, url, type: contentType || blob.type || type, name: fileName || name || "download", attachmentId, alreadyInDocs, loading: false, error: null });
+      setPreview({ blob, url, type: contentType || blob.type || type, name: fileName || name || "download", taskId, attachmentId, alreadyInDocs, loading: false, error: null });
     } catch (error: any) {
       if (requestId !== previewRequestRef.current) return;
       const code = error?.statusCode ?? error?.status;
@@ -347,13 +369,9 @@ const TaskDetails = () => {
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const { uploadToGoogleDrive, uploadLoading } = useGoogleDriveFiles({ enabled: false });
   const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "";
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const optimisticCommentRef = useRef<Map<string, any>>(new Map());
-  const failedAttemptRef = useRef<FailedAttempt | null>(null);
-
   // WebSocket setup
   useEffect(() => {
-    if (!id || !isConnected) return;
+    if (!id || !isConnected || !taskReady) return;
 
     // Join task room
     joinTaskRoom(id);
@@ -470,16 +488,11 @@ const TaskDetails = () => {
       
       if (message.type === 'comment_error') {
         if (message.messageId) return; // correlated with a send in progress: that flow restores the draft and reports the failure
-        toast({
-          title: "Failed to send comment",
-          description: message.message || "Please try again",
-          variant: "destructive",
-        });
+        setCommentSendError(message.message || "The comment was not sent. Your draft is still here.");
         
         // Remove any pending optimistic comments
-        const messageId = Object.keys(optimisticCommentRef.current).find(
-          key => optimisticCommentRef.current.get(key)?.content === message.comment?.content
-        );
+        const messageId = [...optimisticCommentRef.current.entries()]
+          .find(([, comment]) => comment?.content === message.comment?.content)?.[0];
         
         if (messageId) {
           setComments(prev => prev.filter(comment => 
@@ -488,12 +501,8 @@ const TaskDetails = () => {
           ));
           optimisticCommentRef.current.delete(messageId);
         }
-      } else {
-        toast({
-          title: "Chat Error",
-          description: message.message || "Connection issue",
-          variant: "destructive",
-        });
+      } else if (message.taskId === id) {
+        setChatConnectionNotice("Live chat is temporarily unavailable. Send will try the authenticated HTTP connection.");
       }
     };
 
@@ -507,9 +516,13 @@ const TaskDetails = () => {
     on('typing_indicator', handleTypingIndicator);
     on('connection_established', handleConnectionEstablished);
     on('error', handleError);
+    on('comment_error', handleError);
 
     // Cleanup on unmount
     return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typingActiveRef.current && id && isConnected) sendTypingIndicator(id, false);
+      typingActiveRef.current = false;
       if (id) {
         leaveTaskRoom(id);
       }
@@ -522,8 +535,9 @@ const TaskDetails = () => {
       off('typing_indicator', handleTypingIndicator);
       off('connection_established', handleConnectionEstablished);
       off('error', handleError);
+      off('comment_error', handleError);
     };
-  }, [id, isConnected, user?.id]);
+  }, [id, isConnected, taskReady, user?.id]);
 
   // Helper function to fix profile picture field in comments
   const fixCommentProfilePicture = (comment: any): CorrectedTaskComment => {
@@ -588,7 +602,7 @@ const TaskDetails = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isChat = false) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0 || !id || isReadOnly) return;
 
@@ -603,16 +617,6 @@ const TaskDetails = () => {
         description: `${files.length} file(s) uploaded successfully`,
       });
 
-      if (isChat) {
-        // Post a comment about the uploaded file(s)
-        const fileNames = files.map(f => f.name).join(", ");
-        const content = `📎 Uploaded ${files.length} file(s): ${fileNames}`;
-        
-        // Use the existing handleSendComment logic but with pre-filled content
-        setNewComment(content);
-        // We'll trigger send immediately after this state update in a timeout or just call send logic
-        setTimeout(() => handleSendComment(content), 100);
-      }
     } catch (error: any) {
       toast({
         title: "Upload failed",
@@ -628,7 +632,20 @@ const TaskDetails = () => {
   const handleCommentFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setPendingCommentFiles((current) => [...current, ...files].slice(0, 10));
+    const result = validateCommentFiles(pendingCommentFiles, files);
+    if (result.rejected.length) {
+      const first = result.rejected[0];
+      toast({
+        title: "Some attachments were not added",
+        description: `${first.file.name}: ${first.reason}${result.rejected.length > 1 ? ` ${result.rejected.length - 1} more were rejected.` : ""}`,
+        variant: "destructive",
+      });
+    }
+    if (result.accepted.length) {
+      setPendingCommentFiles((current) => [...current, ...result.accepted]);
+      failedAttemptRef.current = null;
+      setCommentSendError(null);
+    }
     e.target.value = "";
   };
 
@@ -749,13 +766,24 @@ const TaskDetails = () => {
   };
 
   const handleSendComment = async (overrideContent?: string) => {
-    const content = (overrideContent || newComment).trim();
-    if (!id || !content || sendingComment || !canCollaborate) return;
+    const taskId = id;
+    const content = (overrideContent ?? newComment).trim();
+    const files = pendingCommentFiles;
+    const connectedStorageAttachments = pendingConnectedStorage;
+    const parentCommentId = replyToComment?.id || null;
+    if (
+      !taskId ||
+      !taskReady ||
+      !canCollaborate ||
+      sendingCommentRef.current ||
+      !canSendTaskComment(content, files.length + connectedStorageAttachments.length)
+    ) return;
     
     // messageId will be determined by WebSocket send (preferred) or local fallback
-    let messageId = messageIdForAttempt(failedAttemptRef.current, id, content, Boolean(replyToComment));
+    const messageId = messageIdForAttempt(failedAttemptRef.current, taskId, content, Boolean(parentCommentId));
     
     try {
+      sendingCommentRef.current = true;
       setSendingComment(true);
       
       // Create optimistic comment with correct profile picture field
@@ -772,7 +800,7 @@ const TaskDetails = () => {
         .filter(Boolean) as string[];
       const optimisticComment: CorrectedTaskComment = {
         id: `optimistic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        taskId: id,
+        taskId,
         userId: user?.id || '',
         content: content,
         isSystemMessage: false,
@@ -781,7 +809,7 @@ const TaskDetails = () => {
           isOptimistic: true,
           sending: true
         },
-        parentCommentId: replyToComment?.id || null,
+        parentCommentId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         user: {
@@ -812,11 +840,11 @@ const TaskDetails = () => {
       const simpleComment = !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0 && pendingConnectedStorage.length === 0;
       await deliverComment({
         clientMessageId: messageId,
-        viaSocket: isConnected && simpleComment && supportsCommentAck() ? () => { joinTaskRoom(id); return sendCommentWithAck(id, content, messageId); } : null,
-        viaHttp: () => sendCommentViaHttp(content, messageId),
+        viaSocket: isConnected && simpleComment && supportsCommentAck() ? () => { joinTaskRoom(taskId); return sendCommentWithAck(taskId, content, messageId); } : null,
+        viaHttp: () => sendCommentViaHttp(taskId, content, messageId, files, connectedStorageAttachments, parentCommentId),
       }).then(({ comment, via }) => {
         failedAttemptRef.current = null;
-        if (via === 'websocket') {
+        if (via === 'websocket' && currentTaskIdRef.current === taskId) {
           removeOptimisticComment(messageId);
           const fixed = fixCommentProfilePicture(comment);
           setComments(prev => (prev.some(c => c.id === fixed.id) ? prev : [...prev, fixed]));
@@ -824,54 +852,71 @@ const TaskDetails = () => {
         }
       });
 
-      setNewComment("");
-      setReplyToComment(null);
-      setPendingCommentFiles([]);
-      setPendingConnectedStorage([]);
+      if (currentTaskIdRef.current === taskId) {
+        setNewComment("");
+        setReplyToComment(null);
+        setPendingCommentFiles([]);
+        setPendingConnectedStorage([]);
+        setCommentSendError(null);
+        setChatConnectionNotice(null);
+      }
       
       // Clear typing indicator
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
-      if (isConnected) {
-        sendTypingIndicator(id, false);
+      if (typingActiveRef.current && isConnected) {
+        sendTypingIndicator(taskId, false);
+        typingActiveRef.current = false;
       }
       
     } catch (error: any) {
       // Never present an undelivered comment as sent: drop the optimistic copy and put the text back in the composer.
-      toast({
-        title: "Comment not sent",
-        description: describeCommentFailure(error),
-        variant: "destructive",
-      });
       removeOptimisticComment(messageId);
-      failedAttemptRef.current = { taskId: id!, content, id: messageId }; // a resend of the same text reuses this id
-      setNewComment((current) => (current.trim() ? current : content));
+      if (currentTaskIdRef.current === taskId) {
+        failedAttemptRef.current = { taskId, content, id: messageId }; // a resend of this unchanged draft reuses its id
+        if (error?.statusCode === 403 || error?.body?.code === "ACCESS_DENIED") {
+          setChatAccessError(describeCommentFailure(error));
+          setChatConnectionNotice(null);
+          setCommentSendError(null);
+        } else {
+          setCommentSendError(describeCommentFailure(error));
+        }
+        setNewComment((current) => (current.trim() ? current : content));
+      }
     } finally {
+      sendingCommentRef.current = false;
       setSendingComment(false);
     }
   };
 
   // Helper function to send comment via HTTP API
-  const sendCommentViaHttp = async (content: string, messageId: string) => {
-    try {
-      const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
-      const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
-      const response = await api.addTaskComment(id!, content, { clientMessageId: messageId, parentCommentId: replyToComment?.id || null, mentionedUserIds, files: pendingCommentFiles, connectedStorageAttachments: pendingConnectedStorage.map(({ connectionId, item }) => ({ connectionId, providerItemId: item.providerItemId })) });
-      
-      // Fix the profile picture in the response
+  const sendCommentViaHttp = async (
+    taskId: string,
+    content: string,
+    messageId: string,
+    files: File[],
+    connectedStorageAttachments: Array<{ connectionId: string; item: ConnectedStorageItem }>,
+    parentCommentId: string | null,
+  ): Promise<TaskComment> => {
+    const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
+    const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
+    const response = await api.addTaskComment(taskId, content, {
+      clientMessageId: messageId,
+      parentCommentId,
+      mentionedUserIds,
+      files,
+      connectedStorageAttachments: connectedStorageAttachments.map(({ connectionId, item }) => ({ connectionId, providerItemId: item.providerItemId })),
+    });
+
+    if (currentTaskIdRef.current === taskId) {
       const fixedComment = fixCommentProfilePicture(response.comment);
-      
-      // Remove optimistic comment
       removeOptimisticComment(messageId);
-      
-      // Add real comment (a duplicate response or the socket echo may already have added it)
-      setComments(prev => (prev.some(c => c.id === fixedComment.id) ? prev : [...prev, fixedComment]));
-      
+      setComments((prev) => (prev.some((comment) => comment.id === fixedComment.id) ? prev : [...prev, fixedComment]));
       scrollToBottom();
-    } catch (error: any) {
-      throw error;
     }
+    return response.comment;
   };
 
   // Helper function to remove optimistic comment
@@ -891,10 +936,16 @@ const TaskDetails = () => {
   };
 
   const handleTyping = useCallback(() => {
-    if (!id || !isConnected) return;
-
-    // Send typing indicator
-    sendTypingIndicator(id, true);
+    if (!id) return;
+    if (shouldSendTypingStart({
+      isConnected,
+      canCollaborate,
+      taskReady,
+      alreadyTyping: typingActiveRef.current,
+    })) {
+      sendTypingIndicator(id, true);
+      typingActiveRef.current = true;
+    }
 
     // Clear previous timeout
     if (typingTimeoutRef.current) {
@@ -903,9 +954,13 @@ const TaskDetails = () => {
 
     // Set timeout to stop typing indicator after 2 seconds
     typingTimeoutRef.current = setTimeout(() => {
-      sendTypingIndicator(id, false);
+      if (typingActiveRef.current) {
+        sendTypingIndicator(id, false);
+        typingActiveRef.current = false;
+      }
+      typingTimeoutRef.current = null;
     }, 2000);
-  }, [id, isConnected, sendTypingIndicator]);
+  }, [id, isConnected, canCollaborate, taskReady, sendTypingIndicator]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -946,7 +1001,7 @@ const TaskDetails = () => {
     return (
       <span className="ml-2 inline-flex items-center opacity-70">
         {isOptimistic ? (
-          <Check className="w-3 h-3" />
+          <Clock className="w-3 h-3 animate-spin" aria-label="Sending" />
         ) : (
           <CheckCheck className="w-3 h-3" />
         )}
@@ -1625,7 +1680,7 @@ const TaskDetails = () => {
                 <p className="text-sm text-muted-foreground italic">No description provided.</p>
               )}
             </section>
-            {task.id && taskAccess?.canView && <CustomFieldValueDisplay entityType="task" entityId={task.id} />}
+            {task.id && currentTaskAccess?.canView && <CustomFieldValueDisplay entityType="task" entityId={task.id} />}
 
             {/* Stats Cards - MOVED OUTSIDE Overview */}
             <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1705,7 +1760,7 @@ const TaskDetails = () => {
                 parentTeamId={task.teamId}
                 canEdit={canEditSubtasks && canCreateSubtasksByPolicy && !isReadOnly}
                 canCreate={canEditSubtasks && canCreateSubtasksByPolicy && !isReadOnly}
-                canUpdate={(subtask) => taskAccess?.canCollaborate === true && subtask.assigneeId === user?.id}
+                canUpdate={(subtask) => currentTaskAccess?.canCollaborate === true && subtask.assigneeId === user?.id}
                 onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
               />
             </section>
@@ -1829,7 +1884,7 @@ const TaskDetails = () => {
                         ? comment.id.startsWith('optimistic-') ? "bg-primary/70 text-primary-foreground" : "bg-primary text-primary-foreground"
                         : "bg-muted"
                   )}>
-                    <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
+                    {!!comment.content?.trim() && <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>}
                     {comment.content.includes("📎 Uploaded") && (() => {
                       const names = parseUploadedFilenames(comment.content);
                       const matched = names.map((n) => findAttachmentByName(n)).filter(Boolean) as NonNullable<Task["attachments"]>;
@@ -1893,17 +1948,27 @@ const TaskDetails = () => {
                     {renderDeliveryMark(comment)}
                   </div>
                   {comment.attachments && comment.attachments.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {comment.attachments.map((attachment) => (
-                        <Button key={attachment.id} variant="outline" size="sm" className="h-7 max-w-full text-xs" onClick={async () => {
-                          try {
-                            void openTaskAttachmentPreview(comment.taskId, attachment.id, attachment.fileName, attachment.fileType || attachment.mimeType || "", false);
-                          } catch (error: any) {
-                            toast({ title: "Download failed", description: error.message, variant: "destructive" });
-                          }
-                        }}>
-                          {attachment.fileName}
-                        </Button>
+                        <TaskCommentAttachment
+                          key={attachment.id}
+                          taskId={comment.taskId || id || ""}
+                          attachment={attachment}
+                          onPreview={() => void openTaskAttachmentPreview(comment.taskId || id || "", attachment.id, attachment.fileName, attachment.fileType || attachment.mimeType || "", false)}
+                          onDownload={async () => {
+                            try {
+                              const result = await api.downloadTaskAttachment(comment.taskId || id || "", attachment.id);
+                              triggerBlobDownload(result.blob, result.fileName || attachment.fileName);
+                            } catch (error: any) {
+                              const code = error?.statusCode ?? error?.status;
+                              toast({
+                                title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Download failed",
+                                description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : error?.message || "Please try again.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        />
                       ))}
                     </div>
                   )}
@@ -1940,7 +2005,12 @@ const TaskDetails = () => {
             placeholder={!canCollaborate ? "You can't comment on this task" : "Type a message..."}
             rows={2}
             value={newComment}
-            onChange={(e) => { setNewComment(e.target.value); handleTyping(); }}
+            onChange={(e) => {
+              setNewComment(e.target.value);
+              failedAttemptRef.current = null;
+              setCommentSendError(null);
+              handleTyping();
+            }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
             className="flex-1 resize-none text-sm"
             disabled={sendingComment || !canCollaborate}
@@ -1958,29 +2028,72 @@ const TaskDetails = () => {
                 targetType="comment"
                 taskId={id}
                 disabled={sendingComment}
-                onSelect={(item, connectionId) => setPendingConnectedStorage((current) => (current.some((entry) => entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId) ? current : [...current, { connectionId, item }]))}
+                onSelect={(item, connectionId) => {
+                  setPendingConnectedStorage((current) => (current.some((entry) => entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId) ? current : [...current, { connectionId, item }]));
+                  failedAttemptRef.current = null;
+                  setCommentSendError(null);
+                }}
               /> : undefined}
             />
-            <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || !canCollaborate}>
+            <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!canSendTaskComment(newComment, pendingCommentFiles.length + pendingConnectedStorage.length) || sendingComment || !canCollaborate}>
               {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
           </div>
         </div>
+        {taskReady && !canCollaborate && (
+          <p role="alert" className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+            You can view this task, but you don't have permission to post comments or attachments.
+          </p>
+        )}
+        {chatAccessError && (
+          <p role="alert" className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+            {chatAccessError} Your draft has been kept.
+          </p>
+        )}
+        {chatConnectionNotice && !chatAccessError && (
+          <p role="status" className="mt-2 rounded-md border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
+            {chatConnectionNotice}
+          </p>
+        )}
+        {commentSendError && (
+          <div role="alert" className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+            <span>{commentSendError}</span>
+            <Button type="button" size="sm" variant="outline" className="h-7" disabled={sendingComment || !canCollaborate} onClick={() => void handleSendComment()}>
+              Retry send
+            </Button>
+          </div>
+        )}
+        {sendingComment && pendingCommentFiles.length > 0 && (
+          <div className="mt-2 space-y-1" role="status" aria-live="polite">
+            <p className="text-xs text-muted-foreground">Uploading {pendingCommentFiles.length} attachment{pendingCommentFiles.length === 1 ? "" : "s"}…</p>
+            <div role="progressbar" aria-valuetext="Uploading attachments" className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+            </div>
+          </div>
+        )}
         {pendingConnectedStorage.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1" data-testid="pending-connected-storage">
             {pendingConnectedStorage.map(({ connectionId, item }) => (
-              <button key={`${connectionId}:${item.providerItemId}`} type="button" className="rounded border px-2 py-1 text-[0.6875rem]" aria-label={`Remove ${item.name} from this comment`} onClick={() => setPendingConnectedStorage((current) => current.filter((entry) => !(entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId)))}>
+              <button key={`${connectionId}:${item.providerItemId}`} type="button" className="rounded border px-2 py-1 text-[0.6875rem]" aria-label={`Remove ${item.name} from this comment`} onClick={() => {
+                setPendingConnectedStorage((current) => current.filter((entry) => !(entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId)));
+                failedAttemptRef.current = null;
+              }}>
                 Dropbox: {item.name} ×
               </button>
             ))}
           </div>
         )}
         {pendingCommentFiles.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="pending-comment-files">
             {pendingCommentFiles.map((file, index) => (
-              <button key={`${file.name}-${index}`} type="button" className="rounded border px-2 py-1 text-[0.6875rem]" onClick={() => setPendingCommentFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}>
-                {file.name} ×
-              </button>
+              <PendingTaskCommentAttachment
+                key={`${file.name}-${file.size}-${index}`}
+                file={file}
+                onRemove={() => {
+                  setPendingCommentFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
+                  failedAttemptRef.current = null;
+                }}
+              />
             ))}
           </div>
         )}
@@ -2342,6 +2455,7 @@ const TaskDetails = () => {
           name={preview.name}
           loading={preview.loading}
           error={preview.error}
+          onRetry={preview.attachmentId ? () => void openTaskAttachmentPreview(preview.taskId || id || "", preview.attachmentId!, preview.name, preview.type, preview.alreadyInDocs) : undefined}
           onClose={() => {
             // Phase 2: revoke ephemeral object URL created from Blob to free browser memory
             previewRequestRef.current += 1;
