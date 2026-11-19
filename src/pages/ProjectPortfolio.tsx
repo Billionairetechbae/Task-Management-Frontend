@@ -17,10 +17,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 
 const healthStyles: Record<ProjectHealthStatus, string> = {
-  healthy: "border-success/25 bg-success/10 text-success",
-  watchlist: "border-warning/25 bg-warning/10 text-warning",
+  healthy: "border-success/25 bg-success/10 text-success-text",
+  watchlist: "border-warning/25 bg-warning/10 text-warning-text",
   at_risk: "border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-300",
-  critical: "border-destructive/25 bg-destructive/10 text-destructive",
+  critical: "border-destructive/25 bg-destructive/10 text-destructive-text",
 };
 
 function label(value?: string | null) {
@@ -103,7 +103,7 @@ export default function ProjectPortfolio() {
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Project Portfolio</h1>
               <Tooltip>
                 <TooltipTrigger asChild><button type="button" aria-label="About Project Portfolio" className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><CircleHelp className="h-4 w-4" /></button></TooltipTrigger>
-                <TooltipContent className="max-w-sm"><p>Project Portfolio gives managers a workspace-wide view of project health, progress, deadlines, ownership and workload signals so they can quickly spot work that needs attention.</p><a className="mt-2 inline-block font-medium text-primary underline" href="https://www.admiino.com/guide/projects" target="_blank" rel="noreferrer">Learn more about Projects</a></TooltipContent>
+                <TooltipContent className="max-w-sm"><p>Project Portfolio gives managers a workspace-wide view of project health, progress, deadlines, ownership and workload signals so they can quickly spot work that needs attention.</p><a className="mt-2 inline-block font-medium text-primary-text underline" href="https://www.admiino.com/guide/projects" target="_blank" rel="noreferrer">Learn more about Projects</a></TooltipContent>
               </Tooltip>
             </div>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">A workspace-level view of delivery status, workload signals and projects that may need a closer look.</p>
@@ -152,14 +152,14 @@ export default function ProjectPortfolio() {
                   <thead className="sticky top-0 z-10 bg-muted/70 text-xs uppercase tracking-wide text-muted-foreground"><tr>{["Project", "Owner", "Team", "Status", "Health", "Progress", "Open", "Overdue", "Deadline", "Last activity", ""].map((heading, index) => <th key={`${heading}-${index}`} className="whitespace-nowrap px-3 py-3 font-medium first:pl-5 last:pr-5">{heading}</th>)}</tr></thead>
                   <tbody className="divide-y">
                     {visibleProjects.map((row) => <tr key={row.project.id} className="transition-colors hover:bg-muted/30">
-                      <td className="max-w-64 px-3 py-3 pl-5"><button onClick={() => openProject(row)} className="block max-w-full truncate text-left font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{row.project.name}</button>{row.project.description && <p className="mt-0.5 max-w-60 truncate text-xs text-muted-foreground">{row.project.description}</p>}</td>
+                      <td className="max-w-64 px-3 py-3 pl-5"><button onClick={() => openProject(row)} className="block max-w-full truncate text-left font-semibold text-foreground hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{row.project.name}</button>{row.project.description && <p className="mt-0.5 max-w-60 truncate text-xs text-muted-foreground">{row.project.description}</p>}</td>
                       <td className="whitespace-nowrap px-3 py-3">{fullName(row.project.owner)}</td>
                       <td className="whitespace-nowrap px-3 py-3">{row.project.team?.name || "No team"}</td>
                       <td className="whitespace-nowrap px-3 py-3"><span className="rounded-full bg-muted px-2 py-1 text-xs">{label(row.project.status)}</span></td>
                       <td className="whitespace-nowrap px-3 py-3"><HealthChip row={row} /></td>
                       <td className="px-3 py-3"><ProgressCell row={row} /></td>
                       <td className="px-3 py-3 tabular-nums">{row.metrics.openTasks}</td>
-                      <td className="px-3 py-3 tabular-nums"><span className={row.metrics.overdueTasks ? "font-semibold text-destructive" : "text-muted-foreground"}>{row.metrics.overdueTasks}</span></td>
+                      <td className="px-3 py-3 tabular-nums"><span className={row.metrics.overdueTasks ? "font-semibold text-destructive-text" : "text-muted-foreground"}>{row.metrics.overdueTasks}</span></td>
                       <td className="whitespace-nowrap px-3 py-3"><DeadlineLabel row={row} /></td>
                       <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{row.lastActivity && isValid(new Date(row.lastActivity)) ? formatDistanceToNowStrict(new Date(row.lastActivity), { addSuffix: true }) : "—"}</td>
                       <td className="px-3 py-3 pr-5"><Button variant="ghost" size="sm" onClick={() => openProject(row)} aria-label={`Open ${row.project.name}`}><ExternalLink className="h-4 w-4" /></Button></td>
@@ -181,7 +181,7 @@ export default function ProjectPortfolio() {
 
 function SummaryCard({ label: title, value, icon, tone }: { label: string; value: number; icon: React.ReactNode; tone?: "success" | "warning" | "danger" }) {
   return <Card className="p-3.5">
-    <div className="flex items-center justify-between gap-2"><p className="text-xs text-muted-foreground">{title}</p><span className={cn(tone === "success" && "text-success", tone === "warning" && "text-warning", tone === "danger" && "text-destructive", !tone && "text-muted-foreground")}>{icon}</span></div>
+    <div className="flex items-center justify-between gap-2"><p className="text-xs text-muted-foreground">{title}</p><span className={cn(tone === "success" && "text-success-text", tone === "warning" && "text-warning-text", tone === "danger" && "text-destructive-text", !tone && "text-muted-foreground")}>{icon}</span></div>
     <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
   </Card>;
 }
@@ -190,15 +190,15 @@ function DeadlineLabel({ row }: { row: ProjectHealthProject }) {
   const deadline = portfolioDeadline(row);
   if (!deadline) return <span className="text-muted-foreground">—</span>;
   const overdue = portfolioIsOverdue(row);
-  return <span className={cn("inline-flex items-center gap-1", overdue && "font-medium text-destructive")}><Clock3 className="h-3.5 w-3.5" />{dateLabel(deadline)}{overdue && <span className="text-[10px] uppercase">Overdue</span>}</span>;
+  return <span className={cn("inline-flex items-center gap-1", overdue && "font-medium text-destructive-text")}><Clock3 className="h-3.5 w-3.5" />{dateLabel(deadline)}{overdue && <span className="text-[0.625rem] uppercase">Overdue</span>}</span>;
 }
 
 function PortfolioProjectCard({ row, onOpen }: { row: ProjectHealthProject; onOpen: () => void }) {
   return <Card className="p-4">
-    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><button onClick={onOpen} className="truncate text-left font-semibold hover:text-primary">{row.project.name}</button><p className="mt-1 truncate text-xs text-muted-foreground">{row.project.team?.name || "No team"} · {fullName(row.project.owner)}</p></div><HealthChip row={row} /></div>
+    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><button onClick={onOpen} className="truncate text-left font-semibold hover:text-primary-text">{row.project.name}</button><p className="mt-1 truncate text-xs text-muted-foreground">{row.project.team?.name || "No team"} · {fullName(row.project.owner)}</p></div><HealthChip row={row} /></div>
     {row.project.description && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{row.project.description}</p>}
     <div className="mt-4"><ProgressCell row={row} /></div>
-    <div className="mt-4 grid grid-cols-2 gap-y-3 text-xs"><div><span className="block text-muted-foreground">Status</span><span className="mt-0.5 inline-block rounded-full bg-muted px-2 py-0.5">{label(row.project.status)}</span></div><div><span className="block text-muted-foreground">Deadline</span><span className="mt-0.5 block"><DeadlineLabel row={row} /></span></div><div><span className="block text-muted-foreground">Overdue tasks</span><span className={cn("mt-0.5 block font-medium", row.metrics.overdueTasks > 0 && "text-destructive")}>{row.metrics.overdueTasks}</span></div><div><span className="block text-muted-foreground">Open tasks</span><span className="mt-0.5 block font-medium">{row.metrics.openTasks}</span></div></div>
+    <div className="mt-4 grid grid-cols-2 gap-y-3 text-xs"><div><span className="block text-muted-foreground">Status</span><span className="mt-0.5 inline-block rounded-full bg-muted px-2 py-0.5">{label(row.project.status)}</span></div><div><span className="block text-muted-foreground">Deadline</span><span className="mt-0.5 block"><DeadlineLabel row={row} /></span></div><div><span className="block text-muted-foreground">Overdue tasks</span><span className={cn("mt-0.5 block font-medium", row.metrics.overdueTasks > 0 && "text-destructive-text")}>{row.metrics.overdueTasks}</span></div><div><span className="block text-muted-foreground">Open tasks</span><span className="mt-0.5 block font-medium">{row.metrics.openTasks}</span></div></div>
     <Button variant="outline" size="sm" className="mt-4 w-full" onClick={onOpen}><Users className="mr-2 h-4 w-4" />Open Project</Button>
   </Card>;
 }

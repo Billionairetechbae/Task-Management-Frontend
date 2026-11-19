@@ -58,7 +58,7 @@ export default function ProjectInvite() {
           <Button variant="outline" onClick={() => handle("reject")} disabled={busy || !token}>Reject</Button>
         </div>
         <div className="text-center mt-6">
-          <Link to="/" className="text-xs text-primary hover:underline">Go to Login</Link>
+          <Link to="/" className="text-xs text-primary-text hover:underline">Go to Login</Link>
         </div>
       </Card>
     </div>

@@ -10,7 +10,7 @@ const Unauthorized = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="text-center max-w-md">
         <div className="mb-6">
-          <AlertTriangle className="w-20 h-20 text-destructive mx-auto mb-4" />
+          <AlertTriangle className="w-20 h-20 text-destructive-text mx-auto mb-4" />
           <h1 className="text-4xl font-bold mb-2">Unauthorized Access</h1>
           <p className="text-muted-foreground text-lg">
             You don't have permission to access this page.

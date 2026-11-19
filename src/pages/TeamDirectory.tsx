@@ -87,13 +87,13 @@ const TeamDirectory = () => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case "owner":
-        return "bg-primary/15 text-primary border-primary/30";
+        return "bg-primary/15 text-primary-text border-primary/30";
       case "admin":
-        return "bg-destructive/10 text-destructive border-destructive/30";
+        return "bg-destructive/10 text-destructive-text border-destructive/30";
       case "manager":
-        return "bg-info/15 text-info border-info/30";
+        return "bg-info/15 text-info-text border-info/30";
       case "member":
-        return "bg-success/15 text-success border-success/30";
+        return "bg-success/15 text-success-text border-success/30";
       default:
         return "bg-muted text-muted-foreground";
     }
@@ -153,7 +153,7 @@ const TeamDirectory = () => {
     return (
       <DashboardLayout>
         <div className="text-center py-24 animate-fade-in">
-          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive/60" />
+          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive-text/60" />
           <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
             You don't have permission to view workspace members. Contact your workspace administrator if you need access.
@@ -179,7 +179,7 @@ const TeamDirectory = () => {
               <span className="font-semibold text-foreground">{counts.workspaceMembers}</span> workspace members · {counts.owners + counts.admins} owners &amp; admins · {counts.managers} managers · {counts.members} members
             </p>
           )}
-          {loadFailed && <p className="mt-1 text-xs text-destructive" role="alert">The member list could not be loaded.</p>}
+          {loadFailed && <p className="mt-1 text-xs text-destructive-text" role="alert">The member list could not be loaded.</p>}
         </div>
       </div>
 
@@ -267,7 +267,7 @@ const TeamDirectory = () => {
                         className="w-11 h-11 rounded-full object-cover border border-border shrink-0"
                       />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center text-sm font-bold text-primary border border-primary/20 shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center text-sm font-bold text-primary-text border border-primary/20 shrink-0">
                         {(member.user?.firstName?.[0] || "?") + (member.user?.lastName?.[0] || "")}
                       </div>
                     )}
@@ -278,7 +278,7 @@ const TeamDirectory = () => {
                       </p>
                       <Badge
                         variant="outline"
-                        className={cn("mt-0.5 text-[10px] px-1.5 py-0 h-4", getRoleColor(member.role || ""))}
+                        className={cn("mt-0.5 text-[0.625rem] px-1.5 py-0 h-4", getRoleColor(member.role || ""))}
                       >
                         {getRoleLabel(member.role || "")}
                       </Badge>
@@ -286,7 +286,7 @@ const TeamDirectory = () => {
                   </div>
 
                   {member.user?.email && (
-                    <p className="mt-2 text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                    <p className="mt-2 text-[0.6875rem] text-muted-foreground truncate flex items-center gap-1">
                       <Mail className="w-3 h-3 shrink-0" />
                       {member.user.email}
                     </p>
@@ -311,7 +311,7 @@ const TeamDirectory = () => {
                 >
                   <X className="w-4 h-4" />
                 </Button>
-                <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
+                <p className="text-[0.6875rem] uppercase tracking-wider font-bold text-muted-foreground">
                   Member Profile
                 </p>
               </div>
@@ -394,10 +394,10 @@ const DetailRow = ({
 }) => (
   <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
     <div className="w-7 h-7 rounded-md bg-card border border-border flex items-center justify-center shrink-0">
-      <Icon className="w-3.5 h-3.5 text-primary" />
+      <Icon className="w-3.5 h-3.5 text-primary-text" />
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
+      <p className="text-[0.625rem] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
       <p className="text-xs font-medium text-foreground break-words">{value}</p>
     </div>
   </div>

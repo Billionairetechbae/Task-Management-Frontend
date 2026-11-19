@@ -6,7 +6,7 @@ const HarmonyGenerating = () => {
     <Card className="rounded-2xl">
       <CardContent className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center">
         <div className="mb-5 rounded-full bg-primary/10 p-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary-text" />
         </div>
 
         <h3 className="text-2xl font-bold">Building your Harmony profile</h3>

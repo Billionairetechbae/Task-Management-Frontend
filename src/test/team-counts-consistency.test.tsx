@@ -64,6 +64,7 @@ describe("shared membership definition", () => {
 
 describe("Dashboard Team Overview", () => {
   beforeEach(() => {
+    localStorage.setItem("admiino:preferences", JSON.stringify({ dashboardDefaultView: "list" }));
     state.role = "owner";
     state.dashboard = { data: { tasks: [], myTasks: [], taskStats: stats, myStats: stats, teamStats: teamStats(summary()) }, isPending: false, isError: false };
     state.api.getAllTasksCrossWorkspace.mockReset().mockResolvedValue({ status: "success", results: 0, total: 0, data: { tasks: [] } });

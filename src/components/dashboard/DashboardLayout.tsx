@@ -18,33 +18,9 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  FolderOpen,
-  LayoutDashboard,
-  Users,
-  ClipboardList,
-  Building2,
-  CalendarDays,
-  Settings,
-  Trash2,
-  User,
-  LogOut,
-  Menu,
-  X,
-  ChevronLeft,
-  ChevronDown,
-  Bot,
-  Crown,
-  Activity,
-  ListChecks,
-  Folder,
-  FolderKanban,
-  ShieldCheck,
-  Plug,
-  Columns3,
-  LayoutTemplate,
-  Workflow,
-  Clock3,
-  CreditCard,
+  LayoutDashboard, Users, ClipboardList, CalendarDays, Settings, User,
+  Menu, X, ChevronLeft, ChevronDown, ListChecks, Folder, FolderKanban,
+  Crown, Activity, LayoutTemplate,
 } from "lucide-react";
 import IntegrationsDropdown from "@/components/integrations/IntegrationsDropdown";
 import GlobalSearch from "@/components/dashboard/GlobalSearch";
@@ -57,7 +33,7 @@ import NotificationsDropdown from "@/components/notifications/NotificationsDropd
 import { WebSocketStatus } from "@/components/WebSocketStatus";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
 import { readPreferences } from "@/hooks/use-local-preferences";
-import { useViewportWidth, SM_BREAKPOINT, MD_BREAKPOINT } from "@/hooks/use-viewport-width";
+import { useViewportWidth, remToPx, SM_REM, LG_REM } from "@/hooks/use-viewport-width";
 
 interface NavItem {
   label: string;
@@ -89,7 +65,7 @@ const DashboardLayout = ({
   fullWidth = true,
   hidePadding = false,
 }: DashboardLayoutProps) => {
-  const { user, logout, workspaceRole } = useAuth();
+  const { user, workspaceRole } = useAuth();
   const location = useLocation();
   const { canPerformRoleOperation } = useWorkspaceSettings();
 
@@ -103,14 +79,36 @@ const DashboardLayout = ({
     return !sidebarCollapsedByDefault;
   });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  // Publish the real (text-size dependent) header height so full-height pages can size to the space that is actually left.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const publish = () => document.documentElement.style.setProperty("--app-header-h", `${el.offsetHeight}px`);
+    publish();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Exactly ONE workspace selector is mounted by this layout at any time (previously the desktop sidebar, the
   // always-mounted off-screen mobile drawer copy and the header all rendered one, and all opened together):
-  //   >= md : the desktop sidebar owns it while expanded; the header owns it when the sidebar is collapsed
-  //   <  md : the open mobile drawer owns it; otherwise the header does (from sm up)
+  //   >= lg : the desktop sidebar owns it while expanded; the header owns it when the sidebar is collapsed
+  //   <  lg : the open mobile drawer owns it; otherwise the header does (from sm up)
   const viewportWidth = useViewportWidth();
-  const isDesktop = viewportWidth >= MD_BREAKPOINT;
-  const showHeaderSwitcher = viewportWidth >= SM_BREAKPOINT && !mobileOpen && (!isDesktop || !sidebarOpen);
+  // The permanent sidebar needs room beside the content. Below lg (tablets, narrow windows, and high browser zoom, which shrinks the CSS
+  // viewport) navigation lives in the drawer so the page keeps its full width.
+  const isDesktop = viewportWidth >= remToPx(LG_REM);
+  const showHeaderSwitcher = viewportWidth >= remToPx(SM_REM) && !mobileOpen && (!isDesktop || !sidebarOpen);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setMobileOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+  useEffect(() => { if (isDesktop) setMobileOpen(false); }, [isDesktop]);
 
   // Collapse automatically when navigating into settings, restore when leaving.
   const prevPathRef = useRef(location.pathname);
@@ -127,411 +125,30 @@ const DashboardLayout = ({
   }, [location.pathname]);
 
   const getNavItems = (): NavItemOrGroup[] => {
-    if (workspaceRole === "owner" || workspaceRole === "admin") {
-      return [
-        {
-          label: "Dashboard",
-          href: "/dashboard",
-          icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workspace Insights",
-          href: "/workspace-insights",
-          icon: <Activity className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workload",
-          href: "/workload",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Projects",
-          items: [
-            {
-              label: "All Projects",
-              href: "/projects",
-              icon: <FolderKanban className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Portfolio",
-              href: "/projects/portfolio",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Templates",
-              href: "/templates",
-              icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Create Project",
-              href: "/projects?create=true",
-              icon: <FolderKanban className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Project Health",
-              href: "/project-health",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Tasks",
-          items: [
-            {
-              label: "All Tasks",
-              href: "/tasks/all",
-              icon: <ListChecks className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Task Workbench",
-              href: "/tasks/workbench",
-              icon: <ClipboardList className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Board",
-              href: "/board",
-              icon: <Columns3 className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Drive",
-          href: "/drive",
-          icon: <Folder className="w-[18px] h-[18px]" />,
-        },
-        { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Calendar",
-          href: "/calendar",
-          icon: <CalendarDays className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Integrations",
-          href: "/settings/integrations",
-          icon: <Plug className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Access & Permissions",
-          items: [
-            {
-              label: "Client Access",
-              href: "/resource-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Shared with Me",
-              href: "/shared-with-me",
-              icon: <FolderOpen className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Workspace Access",
-              href: "/workspace-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Governance",
-              href: "/settings/workspace/governance",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            { label: "Activity Log", href: "/settings/workspace/activity", icon: <Activity className="w-[18px] h-[18px]" /> },
-          ],
-        },
-        {
-          label: "Team",
-          items: [
-            {
-              label: "Hire Talent",
-              href: "/assistance-requests",
-              icon: <Users className="w-[18px] h-[18px]" />,
-            },
-            ...(canPerformRoleOperation("view_workspace_members") ? [
-              {
-                label: "Teams",
-                href: "/teams",
-                icon: <Crown className="w-[18px] h-[18px]" />,
-              },
-              {
-                label: "Team Directory",
-                href: "/team-directory",
-                icon: <Users className="w-[18px] h-[18px]" />,
-              },
-              {
-                label: "Team Management",
-                href: "/team-management",
-                icon: <Crown className="w-[18px] h-[18px]" />,
-              },
-            ] : []),
-          ],
-        },
-        {
-          label: "Harmony",
-          href: "/harmony",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Customization",
-          href: "/settings/workspace/customization",
-          icon: <Columns3 className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Subscription & Seats",
-          href: "/settings/workspace/subscription",
-          icon: <CreditCard className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Company Profile",
-          href: "/company-profile",
-          icon: <Building2 className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "AI Hub",
-          href: "/ai-hub",
-          icon: <Bot className="w-[18px] h-[18px]" />,
-        },
-      ];
-    }
-
-    if (workspaceRole === "manager") {
-      return [
-        {
-          label: "Dashboard",
-          href: "/dashboard",
-          icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workspace Insights",
-          href: "/workspace-insights",
-          icon: <Activity className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Workload",
-          href: "/workload",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Projects",
-          items: [
-            {
-              label: "All Projects",
-              href: "/projects",
-              icon: <FolderKanban className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Portfolio",
-              href: "/projects/portfolio",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Templates",
-              href: "/templates",
-              icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Project Health",
-              href: "/project-health",
-              icon: <Activity className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Tasks",
-          items: [
-            {
-              label: "All Tasks",
-              href: "/tasks/all",
-              icon: <ListChecks className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Task Workbench",
-              href: "/tasks/workbench",
-              icon: <ClipboardList className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        {
-          label: "Drive",
-          href: "/drive",
-          icon: <Folder className="w-[18px] h-[18px]" />,
-        },
-        { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
-        {
-          label: "Calendar",
-          href: "/calendar",
-          icon: <CalendarDays className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Integrations",
-          href: "/settings/integrations",
-          icon: <Plug className="w-[18px] h-[18px]" />,
-        },
-        {
-          label: "Access & Permissions",
-          items: [
-            {
-              label: "Client Access",
-              href: "/resource-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Shared with Me",
-              href: "/shared-with-me",
-              icon: <FolderOpen className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Workspace Access",
-              href: "/workspace-access",
-              icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-            },
-          ],
-        },
-        ...(canPerformRoleOperation("view_workspace_members") ? [{
-          label: "Team",
-          items: [
-            {
-              label: "Teams",
-              href: "/teams",
-              icon: <Crown className="w-[18px] h-[18px]" />,
-            },
-            {
-              label: "Team Directory",
-              href: "/team-directory",
-              icon: <Users className="w-[18px] h-[18px]" />,
-            },
-          ],
-        }] : []),
-        {
-          label: "Harmony",
-          href: "/harmony",
-          icon: <Users className="w-[18px] h-[18px]" />,
-        },
-        { label: "Customization", href: "/settings/workspace/customization", icon: <Columns3 className="w-[18px] h-[18px]" /> },
-        { label: "Automations", href: "/settings/workspace/automations", icon: <Workflow className="w-[18px] h-[18px]" /> },
-        { label: "Subscription & Seats", href: "/settings/workspace/subscription", icon: <CreditCard className="w-[18px] h-[18px]" /> },
-        { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
-      ];
-    }
-
+    const canViewMembers = canPerformRoleOperation("view_workspace_members");
+    const canHireTalent = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
     return [
-      {
-        label: "Dashboard",
-        href: "/dashboard",
-        icon: <LayoutDashboard className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Workspace Insights",
-        href: "/workspace-insights",
-        icon: <Activity className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Workload",
-        href: "/workload",
-        icon: <Users className="w-[18px] h-[18px]" />,
-      },
-      { label: "Time Tracking", href: "/time", icon: <Clock3 className="w-[18px] h-[18px]" /> },
-      {
-        label: "Projects",
-        items: [
-          {
-            label: "All Projects",
-            href: "/projects",
-            icon: <FolderKanban className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Portfolio",
-            href: "/projects/portfolio",
-            icon: <Activity className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Templates",
-            href: "/templates",
-            icon: <LayoutTemplate className="w-[18px] h-[18px]" />,
-          },
-        ],
-      },
-      {
-        label: "Tasks",
-        items: [
-          {
-            label: "All Tasks",
-            href: "/tasks/all",
-            icon: <ListChecks className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "My Tasks",
-            href: "/tasks/my",
-            icon: <ClipboardList className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Task Workbench",
-            href: "/tasks/workbench",
-            icon: <ClipboardList className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Board",
-            href: "/board",
-            icon: <Columns3 className="w-[18px] h-[18px]" />,
-          },
-        ],
-      },
-      {
-        label: "Drive",
-        href: "/drive",
-        icon: <Folder className="w-[18px] h-[18px]" />,
-      },
-      { label: "Trash", href: "/trash", icon: <Trash2 className="w-[18px] h-[18px]" /> },
-      {
-        label: "Calendar",
-        href: "/calendar",
-        icon: <CalendarDays className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Integrations",
-        href: "/settings/integrations",
-        icon: <Plug className="w-[18px] h-[18px]" />,
-      },
-      {
-        label: "Access",
-        items: [
-          {
-            label: "Workspace Access",
-            href: "/workspace-access",
-            icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "My Access Requests",
-            href: "/resource-access",
-            icon: <ShieldCheck className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Shared with Me",
-            href: "/shared-with-me",
-            icon: <FolderOpen className="w-[18px] h-[18px]" />,
-          },
-        ],
-      },
-      ...(canPerformRoleOperation("view_workspace_members") ? [{
-        label: "Team",
-        items: [
-          {
-            label: "Teams",
-            href: "/teams",
-            icon: <Crown className="w-[18px] h-[18px]" />,
-          },
-          {
-            label: "Team Directory",
-            href: "/team-directory",
-            icon: <Users className="w-[18px] h-[18px]" />,
-          },
-        ],
-      }] : []),
-      {
-        label: "Harmony",
-        href: "/harmony",
-        icon: <Users className="w-[18px] h-[18px]" />,
-      },
-      { label: "Workspace Settings", href: "/company-profile", icon: <Building2 className="w-[18px] h-[18px]" /> },
+      { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
+      { label: "Tasks", items: [
+        { label: "All Tasks", href: "/tasks/all", icon: <ListChecks className="w-[18px] h-[18px]" /> },
+        { label: "Task Workbench", href: "/tasks/workbench", icon: <ClipboardList className="w-[18px] h-[18px]" /> },
+      ] },
+      { label: "Projects", items: [
+        { label: "All Projects", href: "/projects", icon: <FolderKanban className="w-[18px] h-[18px]" /> },
+        { label: "Portfolio", href: "/projects/portfolio", icon: <Activity className="w-[18px] h-[18px]" /> },
+        { label: "Templates", href: "/templates", icon: <LayoutTemplate className="w-[18px] h-[18px]" /> },
+      ] },
+      { label: "Calendar", href: "/calendar", icon: <CalendarDays className="w-[18px] h-[18px]" /> },
+      ...(canViewMembers || canHireTalent ? [{ label: "Team", items: [
+        ...(canViewMembers ? [
+          { label: "Teams", href: "/teams", icon: <Crown className="w-[18px] h-[18px]" /> },
+          { label: "Team Directory", href: "/team-directory", icon: <Users className="w-[18px] h-[18px]" /> },
+        ] : []),
+        ...(canHireTalent ? [{ label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-[18px] h-[18px]" /> }] : []),
+      ] }] : []),
+      { label: "Harmony", href: "/harmony", icon: <Users className="w-[18px] h-[18px]" /> },
+      { label: "Drive", href: "/drive", icon: <Folder className="w-[18px] h-[18px]" /> },
+      { label: "Settings", href: "/settings", icon: <Settings className="w-[18px] h-[18px]" /> },
     ];
   };
 
@@ -540,6 +157,10 @@ const DashboardLayout = ({
   const isActive = (href: string) => {
     if (href === "/dashboard") {
       return location.pathname === "/dashboard";
+    }
+
+    if (href === "/settings") {
+      return location.pathname === "/settings" || location.pathname.startsWith("/settings/");
     }
 
     if (href === "/templates") {
@@ -587,7 +208,7 @@ const DashboardLayout = ({
         to={item.href}
         onClick={() => setMobileOpen(false)}
         className={cn(
-          "group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative overflow-hidden",
+          "group flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] font-medium transition-all duration-200 relative overflow-hidden",
           isSubItem && "ml-6",
           active
             ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
@@ -607,7 +228,7 @@ const DashboardLayout = ({
         {sidebarOpen && <span className="truncate">{item.label}</span>}
 
         {sidebarOpen && item.badge && item.badge > 0 && (
-          <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-semibold">
+          <span className="ml-auto bg-destructive text-destructive-foreground text-[0.625rem] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-semibold">
             {item.badge}
           </span>
         )}
@@ -643,7 +264,7 @@ const DashboardLayout = ({
                 to={firstItem.href}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "group flex items-center justify-center px-2 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative overflow-hidden",
+                  "group flex items-center justify-center px-2 py-2 rounded-lg text-[0.8125rem] font-medium transition-all duration-200 relative overflow-hidden",
                   isAnyActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -672,9 +293,9 @@ const DashboardLayout = ({
         <CollapsibleTrigger asChild>
           <button
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 w-full text-left",
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] font-medium transition-all duration-200 w-full text-left",
               isAnyActive
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary-text"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
@@ -718,7 +339,9 @@ const DashboardLayout = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden md:flex h-7 w-7 text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                className="hidden lg:flex h-8 w-8 text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                aria-expanded={sidebarOpen}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
               >
                 <ChevronLeft
@@ -761,15 +384,15 @@ const DashboardLayout = ({
           )}
         >
           <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-primary" />
+            <User className="w-4 h-4 text-primary-text" />
           </div>
 
           {sidebarOpen && (
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-[13px] text-sidebar-accent-foreground truncate">
+              <p className="font-medium text-[0.8125rem] text-sidebar-accent-foreground truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-[11px] text-sidebar-muted truncate">
+              <p className="text-[0.6875rem] text-sidebar-muted truncate">
                 {getRoleLabel()}
               </p>
             </div>
@@ -788,7 +411,7 @@ const DashboardLayout = ({
                 to="/settings"
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[0.8125rem] transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   !sidebarOpen && "justify-center px-2"
                 )}
               >
@@ -801,26 +424,6 @@ const DashboardLayout = ({
             )}
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => {
-                  logout();
-                  setMobileOpen(false);
-                }}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 text-destructive hover:bg-destructive/10 w-full",
-                  !sidebarOpen && "justify-center px-2"
-                )}
-              >
-                <LogOut className="w-4 h-4" />
-                {sidebarOpen && <span>Logout</span>}
-              </button>
-            </TooltipTrigger>
-            {!sidebarOpen && (
-              <TooltipContent side="right">Logout</TooltipContent>
-            )}
-          </Tooltip>
         </div>
       </div>
     </div>
@@ -828,34 +431,44 @@ const DashboardLayout = ({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className={cn("min-h-screen bg-background flex w-full", location.pathname === "/dashboard" && "lg:h-screen lg:min-h-0 lg:overflow-hidden")}>
+      <div
+        className="min-h-screen bg-background flex w-full"
+        style={{ "--sidebar-w": sidebarOpen ? "min(15rem, 30vw)" : "3.5rem" } as React.CSSProperties}
+      >
         <aside
           className={cn(
-            "hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out fixed inset-y-0 left-0 z-30",
-            sidebarOpen ? "w-[240px]" : "w-[56px]"
+            "hidden lg:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out fixed inset-y-0 left-0 z-30 w-[var(--sidebar-w)]"
           )}
+          aria-label="Primary"
         >
           {isDesktop && renderSidebarContent()}
         </aside>
 
         {mobileOpen && (
           <div
-            className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-40 lg:hidden"
+            aria-hidden="true"
             onClick={() => setMobileOpen(false)}
           />
         )}
 
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-[280px] bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-out md:hidden",
+            "fixed inset-y-0 left-0 z-50 w-[min(20rem,88vw)] bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-out lg:hidden",
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           )}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+          aria-hidden={!mobileOpen}
+          {...(mobileOpen ? {} : ({ inert: "" } as Record<string, string>))}
         >
           <div className="absolute top-3 right-3">
             <Button
               variant="ghost"
               size="icon"
-              className="text-sidebar-foreground hover:bg-sidebar-accent h-8 w-8"
+              className="text-sidebar-foreground hover:bg-sidebar-accent h-9 w-9"
+              aria-label="Close navigation menu"
               onClick={() => setMobileOpen(false)}
             >
               <X className="h-5 w-5" />
@@ -867,20 +480,21 @@ const DashboardLayout = ({
 
         <div
           className={cn(
-            "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-out",
-            sidebarOpen ? "md:ml-[240px]" : "md:ml-[56px]"
+            "flex-1 flex flex-col min-w-0 transition-all duration-300 ease-out lg:ml-[var(--sidebar-w)]"
           )}
         >
           <MaintenanceBanner />
-          <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border h-14 shrink-0">
-            <div className="flex items-center justify-between px-4 sm:px-6 h-full">
-              <div className="flex items-center gap-3">
+          <header ref={headerRef} className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border min-h-14 shrink-0">
+            <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-4 py-1.5 sm:gap-x-3 sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="md:hidden h-8 w-8"
+                      className="lg:hidden h-10 w-10 shrink-0"
+                      aria-label="Open navigation menu"
+                      aria-expanded={mobileOpen}
                       onClick={() => setMobileOpen(true)}
                     >
                       <Menu className="h-5 w-5" />
@@ -889,8 +503,8 @@ const DashboardLayout = ({
                   <TooltipContent>Menu</TooltipContent>
                 </Tooltip>
 
-                <div className="hidden sm:block">
-                  <h1 className="text-sm font-semibold capitalize text-foreground tracking-tight">
+                <div className="hidden min-w-0 sm:block">
+                  <h1 className="truncate text-sm font-semibold capitalize text-foreground tracking-tight">
                     {location.pathname
                       .split("/")
                       .pop()
@@ -902,7 +516,7 @@ const DashboardLayout = ({
 
               <GlobalSearch />
 
-              <div className="flex items-center gap-1.5">
+              <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
                 {showHeaderSwitcher && (
                   <div className="hidden sm:block">
                     <WorkspaceSwitcher />
@@ -917,6 +531,8 @@ const DashboardLayout = ({
 
                 <IntegrationsDropdown />
 
+                <SupportLauncher placement="inline" />
+
                 <NotificationsDropdown />
 
                 <AccountMenu />
@@ -927,7 +543,6 @@ const DashboardLayout = ({
           <main
             className={cn(
               "flex-1 min-w-0",
-              location.pathname === "/dashboard" && "lg:min-h-0 lg:overflow-hidden",
               !hidePadding && "p-4 sm:p-6",
               !fullWidth && "max-w-[1400px] mx-auto w-full"
             )}
@@ -936,7 +551,6 @@ const DashboardLayout = ({
           </main>
         </div>
       </div>
-      <SupportLauncher />
     </TooltipProvider>
   );
 };

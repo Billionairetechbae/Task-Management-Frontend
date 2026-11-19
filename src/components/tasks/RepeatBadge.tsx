@@ -14,7 +14,7 @@ export default function RepeatBadge({ task, className = "" }: Props) {
       data-testid="repeat-badge"
       title={label}
       aria-label={label}
-      className={`inline-flex items-center gap-1 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-700 ring-1 ring-indigo-100 ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-indigo-700 ring-1 ring-indigo-100 ${className}`}
     >
       <Repeat size={11} aria-hidden="true" />
       {task.recurrenceSequence ? `#${task.recurrenceSequence}` : "Repeats"}

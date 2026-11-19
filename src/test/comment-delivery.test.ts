@@ -27,7 +27,10 @@ describe("comment delivery policy", () => {
 
   it("no open socket goes straight to HTTP", async () => {
     const http = vi.fn().mockResolvedValue({ id: "c" });
-    expect((await deliverComment({ clientMessageId: "msg-4", viaSocket: null, viaHttp: http })).via).toBe("http");
+    expect(await deliverComment({ clientMessageId: "msg-4", viaSocket: null, viaHttp: http })).toEqual({
+      comment: { id: "c" },
+      via: "http",
+    });
   });
 
   it("when both paths fail the promise rejects: the caller must keep the text and must NOT report success", async () => {

@@ -5,6 +5,9 @@ export default {
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
+    // Breakpoints in rem (identical to Tailwind's defaults at the standard 16px) so layout switches follow the user's
+    // browser font-size setting: a larger default font reaches the "narrow layout" at a proportionally larger window width.
+    screens: { sm: "40rem", md: "48rem", lg: "64rem", xl: "80rem", "2xl": "96rem" },
     container: {
       center: true,
       padding: "2rem",
@@ -39,6 +42,11 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        "primary-text": "hsl(var(--primary-text))",
+        "destructive-text": "hsl(var(--destructive-text))",
+        "success-text": "hsl(var(--success-text))",
+        "warning-text": "hsl(var(--warning-text))",
+        "info-text": "hsl(var(--info-text))",
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

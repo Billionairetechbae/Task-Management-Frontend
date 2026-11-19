@@ -164,7 +164,7 @@ const WorkspaceAccessRequestsPanel = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <KeyRound className="h-4 w-4 text-primary" />
+                      <KeyRound className="h-4 w-4 text-primary-text" />
                     </div>
 
                     <div className="min-w-0">
@@ -174,14 +174,14 @@ const WorkspaceAccessRequestsPanel = ({
                       </p>
                     </div>
 
-                    <Badge variant="outline" className="bg-warning/10 text-warning">
+                    <Badge variant="outline" className="bg-warning/10 text-warning-text">
                       Pending
                     </Badge>
                   </div>
 
                   <div className="mt-3 grid gap-2 md:grid-cols-[220px_1fr]">
                     <div className="rounded-lg bg-muted/40 p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
                         Permission
                       </p>
                       <p className="mt-1 text-sm font-medium">{label}</p>
@@ -189,7 +189,7 @@ const WorkspaceAccessRequestsPanel = ({
 
                     {request.reason && (
                       <div className="rounded-lg bg-muted/40 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
                           Reason
                         </p>
                         <p className="mt-1 text-sm leading-5 text-muted-foreground">

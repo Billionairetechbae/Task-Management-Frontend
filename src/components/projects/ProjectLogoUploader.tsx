@@ -121,7 +121,7 @@ const ProjectLogoUploader = ({
             
             {uploading && (
               <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-[2px]">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
               </div>
             )}
           </div>
@@ -149,7 +149,7 @@ const ProjectLogoUploader = ({
             {currentLogoUrl && (
               <Button
                 variant="outline"
-                className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="w-full gap-2 text-destructive-text hover:text-destructive-text hover:bg-destructive/10"
                 disabled={uploading || deleting || !canEditLogo}
                 onClick={handleDelete}
                 title={!canEditLogo ? "You don't have permission to delete the project logo" : ""}
@@ -167,7 +167,7 @@ const ProjectLogoUploader = ({
             )}
           </div>
           
-          <p className="text-[11px] text-muted-foreground text-center">
+          <p className="text-[0.6875rem] text-muted-foreground text-center">
             Recommended: Square image, max 2MB (JPG, PNG)
           </p>
         </div>

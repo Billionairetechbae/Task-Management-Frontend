@@ -101,8 +101,8 @@ export default function Projects() {
       <TooltipProvider delayDuration={150}>
         <div className="w-full py-8 px-4 animate-fade-in">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
               {showSkeleton ? (
                 <Skeleton className="h-3 w-48 mt-2" />
@@ -113,7 +113,7 @@ export default function Projects() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
             {governance.capabilities?.projectCreationRestricted && <span role="status" className="text-xs text-muted-foreground">Project creation is restricted to workspace owners and admins.</span>}
             <Button variant="outline" onClick={() => setTemplateFlowOpen(true)} disabled={!canCreateProject} className="gap-2">New from template</Button>
             <Tooltip>
@@ -143,7 +143,7 @@ export default function Projects() {
             /* Empty state */
             <Card className="p-12 text-center border-dashed border-2 border-border">
               <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <FolderKanban className="w-8 h-8 text-primary" />
+                <FolderKanban className="w-8 h-8 text-primary-text" />
               </div>
               <h2 className="text-xl font-bold mb-2">Create Your First Project</h2>
               <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
@@ -169,27 +169,27 @@ export default function Projects() {
                       {p.logoUrl ? (
                         <img src={p.logoUrl} alt={p.name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-xs font-black text-primary uppercase">{p.name.slice(0, 2)}</span>
+                        <span className="text-xs font-black text-primary-text uppercase">{p.name.slice(0, 2)}</span>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{p.name}</h3>
+                      <h3 className="font-semibold text-sm truncate group-hover:text-primary-text transition-colors">{p.name}</h3>
                       <span className={cn(
-                        "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
-                        p.status === "active" ? "bg-primary/10 text-primary" :
-                        p.status === "completed" ? "bg-success/10 text-success" :
+                        "text-[0.5625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+                        p.status === "active" ? "bg-primary/10 text-primary-text" :
+                        p.status === "completed" ? "bg-success/10 text-success-text" :
                         "bg-muted text-muted-foreground"
                       )}>
                         {p.status}
                       </span>
                     </div>
-                    {canDeleteProjects ? <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label={`Delete ${p.name}`} onClick={(event) => { event.stopPropagation(); setProjectToDelete(p); }}><Trash2 className="h-4 w-4" /></Button> : <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                    {canDeleteProjects ? <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive-text" aria-label={`Delete ${p.name}`} onClick={(event) => { event.stopPropagation(); setProjectToDelete(p); }}><Trash2 className="h-4 w-4" /></Button> : <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
                     {p.description || "No description"}
                   </p>
-                  {p.team && <p className="mb-3 text-xs font-medium text-primary">Team: {p.team.name}</p>}
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                  {p.team && <p className="mb-3 text-xs font-medium text-primary-text">Team: {p.team.name}</p>}
+                  <div className="flex items-center gap-3 text-[0.625rem] text-muted-foreground">
                     {p.startDate && (
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -210,9 +210,9 @@ export default function Projects() {
               >
                 <div className="text-center">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/10 transition-colors">
-                    <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary-text transition-colors" />
                   </div>
-                  <p className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">New Project</p>
+                  <p className="text-xs font-medium text-muted-foreground group-hover:text-primary-text transition-colors">New Project</p>
                 </div>
               </Card>
             </div>

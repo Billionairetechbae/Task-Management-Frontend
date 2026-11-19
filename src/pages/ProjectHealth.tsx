@@ -34,23 +34,23 @@ import { cn } from "@/lib/utils";
 function statusClass(status: ProjectHealthStatus) {
   switch (status) {
     case "healthy":
-      return "bg-success/10 text-success border-success/20";
+      return "bg-success/10 text-success-text border-success/20";
     case "watchlist":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-warning/10 text-warning-text border-warning/20";
     case "at_risk":
       return "bg-orange-500/10 text-orange-600 border-orange-500/20";
     case "critical":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive-text border-destructive/20";
     default:
       return "bg-muted text-muted-foreground border-border";
   }
 }
 
 function scoreBarClass(score: number) {
-  if (score >= 80) return "text-success";
-  if (score >= 65) return "text-warning";
+  if (score >= 80) return "text-success-text";
+  if (score >= 65) return "text-warning-text";
   if (score >= 45) return "text-orange-600";
-  return "text-destructive";
+  return "text-destructive-text";
 }
 
 function formatStatusLabel(status: string) {
@@ -122,7 +122,7 @@ export default function ProjectHealth() {
     return (
       <DashboardLayout>
         <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
           <p className="text-sm text-muted-foreground">Loading project health...</p>
         </div>
       </DashboardLayout>
@@ -134,7 +134,7 @@ export default function ProjectHealth() {
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary mb-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary-text mb-3">
               <Activity className="w-3.5 h-3.5" />
               Project Health Intelligence
             </div>
@@ -182,14 +182,14 @@ export default function ProjectHealth() {
             label="Healthy"
             value={summary?.counts?.healthy || 0}
             icon={<CheckCircle2 className="w-5 h-5" />}
-            className="text-success"
+            className="text-success-text"
           />
 
           <HealthStatCard
             label="Watchlist"
             value={summary?.counts?.watchlist || 0}
             icon={<Clock className="w-5 h-5" />}
-            className="text-warning"
+            className="text-warning-text"
           />
 
           <HealthStatCard
@@ -203,7 +203,7 @@ export default function ProjectHealth() {
             label="Critical"
             value={summary?.counts?.critical || 0}
             icon={<ShieldAlert className="w-5 h-5" />}
-            className="text-destructive"
+            className="text-destructive-text"
           />
         </div>
 
@@ -211,7 +211,7 @@ export default function ProjectHealth() {
           <Card className="border-destructive/20 bg-destructive/[0.03]">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-destructive" />
+                <ShieldAlert className="w-4 h-4 text-destructive-text" />
                 Projects needing attention
               </CardTitle>
               <CardDescription>
@@ -354,7 +354,7 @@ function ProjectHealthCard({
             <p className={cn("text-3xl font-bold leading-none", scoreBarClass(item.healthScore))}>
               {item.healthScore}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Health score</p>
+            <p className="text-[0.6875rem] text-muted-foreground mt-1">Health score</p>
           </div>
 
           <div className="flex-1">
@@ -393,7 +393,7 @@ function ProjectHealthCard({
             <div className="space-y-1.5">
               {item.riskReasons.slice(0, 3).map((risk, index) => (
                 <div key={`${risk}-${index}`} className="flex gap-2 text-xs text-muted-foreground">
-                  <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-warning-text shrink-0 mt-0.5" />
                   <span>{risk}</span>
                 </div>
               ))}
@@ -419,14 +419,14 @@ function ProjectHealthCard({
                 >
                   <div className="min-w-0">
                     <p className="text-xs font-medium truncate">{task.title}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[0.625rem] text-muted-foreground">
                       {formatStatusLabel(task.status)}
                       {task.assignee ? ` • ${getAssigneeName(task.assignee)}` : " • Unassigned"}
                     </p>
                   </div>
 
                   {task.isOverdue && (
-                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                    <Badge variant="outline" className="bg-destructive/10 text-destructive-text border-destructive/20">
                       Overdue
                     </Badge>
                   )}
@@ -456,8 +456,8 @@ function MiniMetric({
 }) {
   return (
     <div className="rounded-lg border border-border bg-background p-2">
-      <p className={cn("text-base font-bold", danger && "text-destructive")}>{value}</p>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className={cn("text-base font-bold", danger && "text-destructive-text")}>{value}</p>
+      <p className="text-[0.625rem] text-muted-foreground">{label}</p>
     </div>
   );
 }

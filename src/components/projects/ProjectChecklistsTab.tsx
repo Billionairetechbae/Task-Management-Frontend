@@ -238,13 +238,13 @@ const ChecklistCard = ({
             </Tooltip>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>Rename</DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive-text" onClick={onDelete}>Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
         <div className="mt-2 space-y-1.5">
-          <div className="flex justify-between text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="flex justify-between text-[0.625rem] font-medium text-muted-foreground uppercase tracking-wider">
             <span>Progress</span>
             <span>{Math.round(progress)}%</span>
           </div>
@@ -269,7 +269,7 @@ const ChecklistCard = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 opacity-0 group-item-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 opacity-0 group-item-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive-text"
                 onClick={() => handleDeleteItem(item.id)}
               >
                 <Trash2 className="w-3 h-3" />

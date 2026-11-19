@@ -66,11 +66,11 @@ const AttachmentPreview = ({
         <div className="flex items-center justify-between gap-3 p-3 sm:p-4 border-b">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Icon className="w-5 h-5 text-primary" />
+              <Icon className="w-5 h-5 text-primary-text" />
             </div>
             <div className="min-w-0">
               <h2 className="font-semibold text-sm sm:text-base truncate">{name}</h2>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+              <p className="text-[0.625rem] uppercase tracking-wide text-muted-foreground truncate">
                 {type || "file"}
               </p>
             </div>

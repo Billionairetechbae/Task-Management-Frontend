@@ -341,7 +341,7 @@ const Harmony = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wider font-bold text-primary mb-1">Work Style Intelligence</p>
+                <p className="text-[0.6875rem] uppercase tracking-wider font-bold text-primary-text mb-1">Work Style Intelligence</p>
                 <h2 className="text-3xl font-bold tracking-tight">Harmony</h2>
                 <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                   Understand your natural work style and compare team collaboration patterns across the active workspace.
@@ -351,7 +351,7 @@ const Harmony = () => {
 
             {profile?.archetype && (
               <div className="rounded-xl border border-primary/30 bg-card/80 backdrop-blur px-4 py-3 shadow-sm">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Your archetype</p>
+                <p className="text-[0.625rem] uppercase tracking-wider font-bold text-muted-foreground">Your archetype</p>
                 <p className="mt-0.5 text-lg font-bold bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
                   {profile.archetype}
                 </p>
@@ -418,7 +418,7 @@ const Harmony = () => {
               <>
                 <HarmonyReport profile={profile} onRetake={startAssessment} />
 
-                {aiError && <p className="text-sm text-destructive">{aiError}</p>}
+                {aiError && <p className="text-sm text-destructive-text">{aiError}</p>}
 
                 {/* AI summary render */}
                 {aiSummary?.executiveSummary && (
@@ -565,7 +565,7 @@ const Harmony = () => {
               )}
 
               {teamAiError && (
-                <p className="text-sm text-destructive mb-4">{teamAiError}</p>
+                <p className="text-sm text-destructive-text mb-4">{teamAiError}</p>
               )}
 
               {teamAiLoading ? (

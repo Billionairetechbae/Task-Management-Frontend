@@ -166,6 +166,10 @@ const TaskDetails = () => {
     (currentTaskAccess?.readOnly !== true && currentTaskAccess?.canEdit === true)
   );
 
+  useEffect(() => {
+    if (taskReady && canCollaborate) setChatAccessError(null);
+  }, [taskReady, canCollaborate, currentTaskAccess]);
+
   const commentsQuery = useQuery({
     queryKey: ["task-comments", id, activeCompanyId, user?.id],
     queryFn: async () => {
@@ -498,11 +502,7 @@ const TaskDetails = () => {
           optimisticCommentRef.current.delete(messageId);
         }
       } else if (message.taskId === id) {
-        if (message.code === "ACCESS_DENIED" || message.message === "Access denied") {
-          setChatAccessError("You don't have permission to send messages on this task.");
-        } else {
-          setChatConnectionNotice("Live chat is temporarily unavailable. Send will try the authenticated HTTP connection.");
-        }
+        setChatConnectionNotice("Live chat is temporarily unavailable. Send will try the authenticated HTTP connection.");
       }
     };
 
@@ -858,6 +858,7 @@ const TaskDetails = () => {
         setPendingCommentFiles([]);
         setPendingConnectedStorage([]);
         setCommentSendError(null);
+        setChatConnectionNotice(null);
       }
       
       // Clear typing indicator
@@ -898,7 +899,7 @@ const TaskDetails = () => {
     files: File[],
     connectedStorageAttachments: Array<{ connectionId: string; item: ConnectedStorageItem }>,
     parentCommentId: string | null,
-  ) => {
+  ): Promise<TaskComment> => {
     const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
     const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
     const response = await api.addTaskComment(taskId, content, {
@@ -915,6 +916,7 @@ const TaskDetails = () => {
       setComments((prev) => (prev.some((comment) => comment.id === fixedComment.id) ? prev : [...prev, fixedComment]));
       scrollToBottom();
     }
+    return response.comment;
   };
 
   // Helper function to remove optimistic comment
@@ -1186,9 +1188,9 @@ const TaskDetails = () => {
     if (status === "cancelled") return { text: "Cancelled", tone: "text-muted-foreground" };
     const ms = new Date(deadline).getTime() - Date.now();
     const d = Math.ceil(ms / 86400000);
-    if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive" };
-    if (d === 0) return { text: "Due today", tone: "text-warning" };
-    return { text: `${d} day${d === 1 ? "" : "s"} left`, tone: "text-warning" };
+    if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive-text" };
+    if (d === 0) return { text: "Due today", tone: "text-warning-text" };
+    return { text: `${d} day${d === 1 ? "" : "s"} left`, tone: "text-warning-text" };
   };
 
   const TaskListPanel = (
@@ -1313,11 +1315,11 @@ const TaskDetails = () => {
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{t.description}</p>
                     )}
                     <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                      <Badge className={cn("text-[10px] px-1.5 py-0", STATUS_COLORS[t.status as keyof typeof STATUS_COLORS])}>
+                      <Badge className={cn("text-[0.625rem] px-1.5 py-0", STATUS_COLORS[t.status as keyof typeof STATUS_COLORS])}>
                         {STATUS_LABEL[t.status as keyof typeof STATUS_LABEL] || t.status}
                       </Badge>
                       {t.deadline && (
-                        <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                        <span className="text-[0.625rem] text-muted-foreground inline-flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {new Date(t.deadline).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                         </span>
@@ -1325,14 +1327,14 @@ const TaskDetails = () => {
                       {t.assignee && (
                         <Avatar className="h-4 w-4 ml-auto">
                           <AvatarImage src={(t.assignee as any)?.profilePictureUrl} />
-                          <AvatarFallback className="text-[8px]">
+                          <AvatarFallback className="text-[0.5rem]">
                             {getInitials(t.assignee?.firstName || '', t.assignee?.lastName || '')}
                           </AvatarFallback>
                         </Avatar>
                       )}
                     </div>
                     {dl && isSelected && (
-                      <p className={cn("text-[10px] mt-1 font-medium", dl.tone)}>{dl.text}</p>
+                      <p className={cn("text-[0.625rem] mt-1 font-medium", dl.tone)}>{dl.text}</p>
                     )}
                   </div>
                 </div>
@@ -1410,15 +1412,15 @@ const TaskDetails = () => {
                       {task.title || "Untitled Task"}
                     </h1>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                      <Badge className={cn("text-[10px] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
-                      <Badge className={cn("text-[10px] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                      <Badge className={cn("text-[0.625rem] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
+                      <Badge className={cn("text-[0.625rem] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
                       {task.teamId && !task.parentTaskId && (
-                        <Badge variant="outline" className="text-[10px] sm:text-xs">Assigned to Team{task.team?.name ? ` · ${task.team.name}` : ""}</Badge>
+                        <Badge variant="outline" className="text-[0.625rem] sm:text-xs">Assigned to Team{task.team?.name ? ` · ${task.team.name}` : ""}</Badge>
                       )}
                       {isReadOnly && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] sm:text-xs gap-1 text-muted-foreground border-border bg-muted/40"
+                          className="text-[0.625rem] sm:text-xs gap-1 text-muted-foreground border-border bg-muted/40"
                           title="You can view this task but not modify it"
                         >
                           <Lock className="h-3 w-3" /> Read only
@@ -1444,7 +1446,7 @@ const TaskDetails = () => {
                 )}
                 <TooltipProvider delayDuration={150}>
                   <div className="hidden lg:flex items-center gap-1.5 pr-1 border-r mr-1">
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
+                    <span className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">Status</span>
                     <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating || isReadOnly}>
                       <SelectTrigger className="h-8 w-[130px] text-xs">
                         <SelectValue />
@@ -1594,9 +1596,9 @@ const TaskDetails = () => {
                 </div>
                 <p className="font-semibold text-sm mt-1">{task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</p>
                 {task.calendarSynced ? (
-                  <p className="text-[11px] mt-1 text-muted-foreground flex items-center gap-2">📅 Synced to Google Calendar</p>
+                  <p className="text-[0.6875rem] mt-1 text-muted-foreground flex items-center gap-2">📅 Synced to Google Calendar</p>
                 ) : null}
-                {dl && <p className={cn("text-[11px] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
+                {dl && <p className={cn("text-[0.6875rem] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1605,7 +1607,7 @@ const TaskDetails = () => {
                 <div className="mt-1 flex items-center gap-2">
                   {task.assignee ? (
                     <>
-                      <Avatar className="h-6 w-6"><AvatarImage src={(task.assignee as any)?.profilePictureUrl} /><AvatarFallback className="text-[10px]">{getInitials(task.assignee?.firstName || '', task.assignee?.lastName || '')}</AvatarFallback></Avatar>
+                      <Avatar className="h-6 w-6"><AvatarImage src={(task.assignee as any)?.profilePictureUrl} /><AvatarFallback className="text-[0.625rem]">{getInitials(task.assignee?.firstName || '', task.assignee?.lastName || '')}</AvatarFallback></Avatar>
                       <p className="font-semibold text-sm truncate">{task.assignee?.firstName || ''} {task.assignee?.lastName || ''}</p>
                     </>
                   ) : (
@@ -1618,13 +1620,13 @@ const TaskDetails = () => {
                   <Building2 className="h-3.5 w-3.5" /> Workspace
                 </div>
                 <p className="font-semibold text-sm mt-1 truncate">{task.company?.name || "—"}</p>
-                {task.category && <p className="text-[11px] text-muted-foreground truncate">{task.category}</p>}
+                {task.category && <p className="text-[0.6875rem] text-muted-foreground truncate">{task.category}</p>}
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <div className="text-xs text-muted-foreground">Team</div>
                 <p className="font-semibold text-sm mt-1 truncate">{task.team?.name || "No team"}</p>
                 {task.team?.leadMember?.user && (
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p className="text-[0.6875rem] text-muted-foreground truncate">
                     Lead: {task.team.leadMember.user.firstName} {task.team.leadMember.user.lastName}
                   </p>
                 )}
@@ -1635,7 +1637,7 @@ const TaskDetails = () => {
                 </div>
                 <p className="font-semibold text-sm mt-1">{(task as any).createdAt ? new Date((task as any).createdAt).toLocaleDateString() : "—"}</p>
                 {task.creator && (
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p className="text-[0.6875rem] text-muted-foreground truncate">
                     by {task.creator?.firstName || ''} {task.creator?.lastName || ''}
                   </p>
                 )}
@@ -1683,24 +1685,24 @@ const TaskDetails = () => {
             {/* Stats Cards - MOVED OUTSIDE Overview */}
             <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Subtasks</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Subtasks</p>
                 <p className="font-bold text-lg">{completedSub}/{subtaskCount || 0}</p>
-                <p className="text-[10px] text-muted-foreground">{progressPct}% completed</p>
+                <p className="text-[0.625rem] text-muted-foreground">{progressPct}% completed</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Attachments</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Attachments</p>
                 <p className="font-bold text-lg">{task.attachments?.length || 0}</p>
-                <p className="text-[10px] text-muted-foreground">Files</p>
+                <p className="text-[0.625rem] text-muted-foreground">Files</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Comments</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Comments</p>
                 <p className="font-bold text-lg">{comments.length}</p>
-                <p className="text-[10px] text-muted-foreground">Total</p>
+                <p className="text-[0.625rem] text-muted-foreground">Total</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Watchers</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Watchers</p>
                 <p className="font-bold text-lg">{getTaskWatcherCount(task)}</p>
-                <p className="text-[10px] text-muted-foreground">Following</p>
+                <p className="text-[0.625rem] text-muted-foreground">Following</p>
               </div>
             </section>
 
@@ -1930,7 +1932,7 @@ const TaskDetails = () => {
                                   <Button
                                     size="sm"
                                     variant="secondary"
-                                    className="h-6 px-2 text-[10px] gap-1"
+                                    className="h-6 px-2 text-[0.625rem] gap-1"
                                     disabled
                                     title="Already in task documents"
                                   >
@@ -2033,7 +2035,7 @@ const TaskDetails = () => {
                 }}
               /> : undefined}
             />
-            <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!canSendTaskComment(newComment, pendingCommentFiles.length + pendingConnectedStorage.length) || sendingComment || !canCollaborate || !!chatAccessError}>
+            <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!canSendTaskComment(newComment, pendingCommentFiles.length + pendingConnectedStorage.length) || sendingComment || !canCollaborate}>
               {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
           </div>
@@ -2072,7 +2074,7 @@ const TaskDetails = () => {
         {pendingConnectedStorage.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1" data-testid="pending-connected-storage">
             {pendingConnectedStorage.map(({ connectionId, item }) => (
-              <button key={`${connectionId}:${item.providerItemId}`} type="button" className="rounded border px-2 py-1 text-[11px]" aria-label={`Remove ${item.name} from this comment`} onClick={() => {
+              <button key={`${connectionId}:${item.providerItemId}`} type="button" className="rounded border px-2 py-1 text-[0.6875rem]" aria-label={`Remove ${item.name} from this comment`} onClick={() => {
                 setPendingConnectedStorage((current) => current.filter((entry) => !(entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId)));
                 failedAttemptRef.current = null;
               }}>
@@ -2095,7 +2097,7 @@ const TaskDetails = () => {
             ))}
           </div>
         )}
-        <div className="mt-1.5 text-[11px] text-muted-foreground flex justify-between">
+        <div className="mt-1.5 text-[0.6875rem] text-muted-foreground flex justify-between">
           <span>Enter to send · Shift+Enter for new line</span>
           {!isConnected && <span className="text-yellow-600">Offline · HTTP fallback</span>}
         </div>
@@ -2107,7 +2109,7 @@ const TaskDetails = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-6 px-2 text-[11px]"
+                className="h-6 px-2 text-[0.6875rem]"
                 onClick={() => setNewComment((current) => `${current}${current ? " " : ""}@${participant.firstName || ""} ${participant.lastName || ""}`)}
               >
                 @{participant.firstName}
@@ -2126,7 +2128,7 @@ const TaskDetails = () => {
           <div className="flex items-center gap-2">
             <FilesIcon className="h-4 w-4" />
             <h3 className="font-semibold text-sm">Attachments</h3>
-            <Badge variant="outline" className="text-[10px]">{task.attachments?.length || 0}</Badge>
+            <Badge variant="outline" className="text-[0.625rem]">{task.attachments?.length || 0}</Badge>
           </div>
         </div>
         <AttachmentSourcePicker
@@ -2228,7 +2230,7 @@ const TaskDetails = () => {
                           <Button
                             variant="secondary"
                             size="icon"
-                            className="h-6 w-6 text-destructive"
+                            className="h-6 w-6 text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                             title="Remove"
                           >
@@ -2244,7 +2246,7 @@ const TaskDetails = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
+                          className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
                           asChild
                           disabled={!attachmentUrl}
                         >
@@ -2256,7 +2258,7 @@ const TaskDetails = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[11px] flex-1 gap-1 justify-center text-destructive hover:text-destructive"
+                            className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center text-destructive-text hover:text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                           >
                             <Trash2 className="w-3 h-3" /> Remove
@@ -2268,7 +2270,7 @@ const TaskDetails = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] flex-1 gap-1 justify-center"
+                          className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center"
                           onClick={() => {
                             if (!file?.id || !id) return;
                             void openTaskAttachmentPreview(id, file.id, fileName, mimeType, true);
@@ -2280,7 +2282,7 @@ const TaskDetails = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
+                          className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
                           onClick={() => handleSaveToGoogleDrive({
                             id: file?.id || "",
                             fileName: fileName || "",
@@ -2301,7 +2303,7 @@ const TaskDetails = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[11px] w-7 shrink-0 justify-center text-destructive hover:text-destructive"
+                            className="h-7 text-[0.6875rem] w-7 shrink-0 justify-center text-destructive-text hover:text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                             title="Remove"
                           >
@@ -2371,25 +2373,25 @@ const TaskDetails = () => {
             <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <MessageSquare className="h-3.5 w-3.5" /> Chat
-                    {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
+                    {comments.length > 0 && <Badge variant="outline" className="text-[0.625rem] ml-1 h-4 px-1">{comments.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Chat — press 1</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <FilesIcon className="h-3.5 w-3.5" /> Files
-                    {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
+                    {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[0.625rem] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Files — press 2</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <ActivityIcon className="h-3.5 w-3.5" /> Activity
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2397,7 +2399,7 @@ const TaskDetails = () => {
               </Tooltip>
               {canSeeClientComments && !task.parentTaskId && <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="client" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="client" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <User2 className="h-3.5 w-3.5" /> Client
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2405,7 +2407,7 @@ const TaskDetails = () => {
               </Tooltip>}
               {canTrackTime && <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <Timer className="h-3.5 w-3.5" /> Time
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2414,7 +2416,7 @@ const TaskDetails = () => {
               {!isReadOnly && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                       <Pencil className="h-3.5 w-3.5" /> Edit
                     </TabsTrigger>
                   </TooltipTrigger>
@@ -2552,7 +2554,7 @@ const TaskDetails = () => {
 
       <DashboardLayout hidePadding>
         {isMobile ? (
-          <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
+          <div className="flex h-[calc(100dvh-var(--app-header-h,3.5rem))] flex-col overflow-hidden">
             <div className="flex-1 min-h-0 overflow-hidden">{DetailsPanel}</div>
 
             {/* Bottom action bar — respects browser safe area */}
@@ -2563,14 +2565,14 @@ const TaskDetails = () => {
                     key={key}
                     onClick={() => setMobilePanel(key as any)}
                     className={cn(
-                      "relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-medium transition-colors active:scale-[0.97]",
-                      mobilePanel === key ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                      "relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[0.625rem] font-medium transition-colors active:scale-[0.97]",
+                      mobilePanel === key ? "bg-primary/10 text-primary-text" : "text-muted-foreground"
                     )}
                   >
                     <Icon className="h-[18px] w-[18px]" />
                     {label}
                     {count > 0 && (
-                      <span className="absolute top-1 right-1.5 min-w-[14px] rounded-full bg-primary px-1 text-[9px] leading-[14px] text-primary-foreground">
+                      <span className="absolute top-1 right-1.5 min-w-[14px] rounded-full bg-primary px-1 text-[0.5625rem] leading-[14px] text-primary-foreground">
                         {count > 99 ? "99+" : count}
                       </span>
                     )}
@@ -2580,7 +2582,7 @@ const TaskDetails = () => {
             </nav>
           </div>
         ) : (
-          <div className="flex h-[calc(100dvh-3.5rem)] relative">
+          <div className="flex h-[calc(100dvh-var(--app-header-h,3.5rem))] relative">
             {/* Collapsed task-list rail */}
             {!listPanelOpen && (
               <div className="w-11 shrink-0 border-r bg-background flex flex-col items-center gap-2 py-3">
@@ -2602,7 +2604,7 @@ const TaskDetails = () => {
                     <TooltipContent side="right">New task</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <span className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
+                <span className="mt-2 text-[0.625rem] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
                   Tasks
                 </span>
               </div>

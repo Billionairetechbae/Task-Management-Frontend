@@ -222,7 +222,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
         {/* ── Not-connected / loading state ── */}
         {statusLoading && !isConnected ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-10">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <Loader2 className="w-8 h-8 text-primary-text animate-spin" />
             <p className="text-sm text-muted-foreground">Checking Google Drive status…</p>
           </div>
         ) : !canBrowseDrive ? (
@@ -270,7 +270,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                 </p>
               </div>
               {pickerError && (
-                <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/5 rounded-md px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-destructive-text bg-destructive/5 rounded-md px-3 py-2">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                   <span className="flex-1">{pickerError}</span>
                   {/reconnect|connect/i.test(pickerError) && (
@@ -290,10 +290,10 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
 
             {/* ── Divider label ── */}
             <div className="px-5 pt-3 pb-1 shrink-0">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground">
                 Recent files
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                 Files already accessible to Admiino
               </p>
             </div>
@@ -338,7 +338,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                   <span className="inline-flex items-center gap-1 flex-wrap">
                     <Badge
                       variant="secondary"
-                      className="cursor-pointer h-5 px-1.5 text-[10px] font-medium"
+                      className="cursor-pointer h-5 px-1.5 text-[0.625rem] font-medium"
                       onClick={() => { setFolderStack([]); drive.setFolderId(undefined); }}
                     >
                       My Drive
@@ -349,9 +349,9 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                         <Badge
                           variant="secondary"
                           className={cn(
-                            "h-5 px-1.5 text-[10px] font-medium",
+                            "h-5 px-1.5 text-[0.625rem] font-medium",
                             i === folderStack.length - 1
-                              ? "bg-primary/10 text-primary"
+                              ? "bg-primary/10 text-primary-text"
                               : "cursor-pointer"
                           )}
                           onClick={() => {
@@ -367,7 +367,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                     ))}
                   </span>
                 </div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-[0.625rem] text-muted-foreground">
                   {drive.loading && !drive.files.length
                     ? "Loading…"
                     : `${sorted.length} item${sorted.length === 1 ? "" : "s"}`}
@@ -437,7 +437,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                           ) : folder ? (
                             <FolderIcon className="w-9 h-9 text-[#FBBC04]" />
                           ) : (
-                            <FileTypeIcon className="w-8 h-8 text-primary/70" />
+                            <FileTypeIcon className="w-8 h-8 text-primary-text/70" />
                           )}
                           {selected && (
                             <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow">
@@ -445,7 +445,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                             </div>
                           )}
                           {folder && (
-                            <Badge className="absolute bottom-1 left-1 h-4 px-1 text-[9px] bg-muted text-foreground/70 border-none">
+                            <Badge className="absolute bottom-1 left-1 h-4 px-1 text-[0.5625rem] bg-muted text-foreground/70 border-none">
                               Folder
                             </Badge>
                           )}
@@ -454,7 +454,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
                           {f.name}
                         </p>
                         <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[9px] uppercase tracking-wide text-muted-foreground truncate">
+                          <span className="text-[0.5625rem] uppercase tracking-wide text-muted-foreground truncate">
                             {folder ? "Folder" : (f.mimeType || "").split("/").pop() || "file"}
                           </span>
                           {f.webViewLink && (
@@ -496,7 +496,7 @@ const GoogleDrivePickerDialog = ({ open, onOpenChange, onSelect }: GoogleDrivePi
               )}
 
               {drive.error && (
-                <div className="mt-4 text-center text-xs text-destructive">
+                <div className="mt-4 text-center text-xs text-destructive-text">
                   Could not load recent Drive files. Please try again.
                 </div>
               )}

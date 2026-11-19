@@ -321,7 +321,7 @@ const ResetPassword = () => {
               <div className="text-center pt-4">
                 <Link
                   to="/"
-                  className="text-sm text-primary hover:text-primary/80 hover:underline"
+                  className="text-sm text-primary-text hover:text-primary-text/80 hover:underline"
                 >
                   ← Back to Login
                 </Link>
@@ -342,7 +342,7 @@ const ResetPassword = () => {
             </p>
             <Link
               to="/"
-              className="inline-flex items-center justify-center gap-2 text-primary hover:text-primary/80 hover:underline font-medium"
+              className="inline-flex items-center justify-center gap-2 text-primary-text hover:text-primary-text/80 hover:underline font-medium"
             >
               Return to Login
             </Link>

@@ -3,12 +3,14 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Bell,
+  Building2,
   Check,
   ChevronRight,
   Copy,
   CreditCard,
   FileArchive,
   Info,
+  Activity,
   KeyRound,
   Laptop,
   LogOut,
@@ -22,6 +24,9 @@ import {
   Sliders,
   Sun,
   User as UserIcon,
+  Users,
+  Workflow,
+  Bot,
 } from "lucide-react";
 
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -52,6 +57,8 @@ import { SUBSCRIPTION_PATH, canViewSubscription } from "@/lib/workspaceNavigatio
 import { NotificationPreferencesMatrix } from "@/components/notifications/NotificationPreferencesMatrix";
 import { WorkspaceNotificationDelivery, canManageWorkspaceNotificationDeliveries } from "@/components/notifications/WorkspaceNotificationDelivery";
 import McpConnections from "@/components/integrations/McpConnections";
+import SignOutDialog from "@/components/auth/SignOutDialog";
+import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 type TabId =
   | "profile"
@@ -59,6 +66,8 @@ type TabId =
   | "appearance"
   | "notifications"
   | "preferences"
+  | "workspace"
+  | "team"
   | "integrations"
   | "audit"
   | "about";
@@ -74,6 +83,8 @@ const TABS: {
   { id: "appearance", label: "Appearance", description: "Theme, density & motion", icon: Palette },
   { id: "notifications", label: "Notifications", description: "Alerts on this device", icon: Bell },
   { id: "preferences", label: "Preferences", description: "Navigation & behaviour", icon: Sliders },
+  { id: "workspace", label: "Workspace & operations", description: "Access, workload & governance", icon: Activity },
+  { id: "team", label: "Team administration", description: "Members, teams & company", icon: Users },
   { id: "integrations", label: "Integrations", description: "Connected apps & services", icon: Plug },
   { id: "audit",        label: "Audit & Exports", description: "Workspace data exports",    icon: FileArchive },
   { id: "about",        label: "About",        description: "App info & support",          icon: Info },
@@ -97,7 +108,7 @@ const SectionCard = ({
   <Card className="rounded-2xl border-border/70 shadow-sm">
     <CardHeader className="pb-4">
       <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
-      {description && <CardDescription className="text-[13px]">{description}</CardDescription>}
+      {description && <CardDescription className="text-[0.8125rem]">{description}</CardDescription>}
     </CardHeader>
     <CardContent className="space-y-1 pb-5">{children}</CardContent>
     {footer && <div className="px-6 pb-5">{footer}</div>}
@@ -146,7 +157,7 @@ const THEME_OPTIONS: { id: ThemeMode; label: string; icon: typeof Sun; hint: str
 const Settings = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { user, logout, workspaceRole, activeCompanyId } = useAuth();
+  const { user, workspaceRole, activeCompanyId } = useAuth();
   const { theme, setTheme, resolved } = useTheme();
   const { prefs, update, reset } = useLocalPreferences();
 
@@ -241,7 +252,7 @@ const Settings = () => {
                 value={
                   <button
                     onClick={() => user?.id && copy(user.id, "User ID")}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary-text"
                   >
                     {user?.id ? `${user.id.slice(0, 12)}…` : "—"}
                     <Copy className="h-3 w-3" />
@@ -261,7 +272,7 @@ const Settings = () => {
                 value={
                   <button
                     onClick={() => activeCompanyId && copy(activeCompanyId, "Workspace ID")}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary-text"
                   >
                     {activeCompanyId ? `${activeCompanyId.slice(0, 12)}…` : "—"}
                     <Copy className="h-3 w-3" />
@@ -292,9 +303,11 @@ const Settings = () => {
                 >
                   <KeyRound className="h-4 w-4 mr-2" /> Reset password
                 </Button>
-                <Button variant="destructive" onClick={logout} className="justify-start">
-                  <LogOut className="h-4 w-4 mr-2" /> Sign out
-                </Button>
+                <SignOutDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="justify-start"><LogOut className="h-4 w-4 mr-2" /> Sign out</Button>
+                  </AlertDialogTrigger>
+                </SignOutDialog>
               </div>
             </SectionCard>
           </div>
@@ -325,7 +338,7 @@ const Settings = () => {
                         <opt.icon
                           className={cn(
                             "h-5 w-5",
-                            selected ? "text-primary" : "text-muted-foreground"
+                            selected ? "text-primary-text" : "text-muted-foreground"
                           )}
                         />
                         {selected && (
@@ -453,6 +466,16 @@ const Settings = () => {
                 checked={prefs.sidebarCollapsedByDefault}
                 onChange={(v) => update("sidebarCollapsedByDefault", v)}
               />
+              <div className="flex flex-col gap-2 py-3 border-b border-border/60 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium">Default Dashboard task view</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Choose the task view used when you open or refresh Dashboard.</p>
+                </div>
+                <Select value={prefs.dashboardDefaultView} onValueChange={(v) => update("dashboardDefaultView", v as "board" | "list")}>
+                  <SelectTrigger className="w-full sm:w-[170px]" aria-label="Default Dashboard task view"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="board">Board</SelectItem><SelectItem value="list">List</SelectItem></SelectContent>
+                </Select>
+              </div>
             </SectionCard>
 
             <SectionCard title="Behaviour" description="Guard-rails and list sizing.">
@@ -548,6 +571,53 @@ const Settings = () => {
             </SectionCard>
           </div>
         );
+
+      case "workspace":
+        return (
+          <div className="space-y-5">
+            <SectionCard title="Workspace and operations" description="Workspace-wide tools remain permission-controlled by the backend.">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  ["Workspace Insights", "/workspace-insights", "Review workspace performance and trends."],
+                  ["Workload", "/workload", "See capacity and workload across the workspace."],
+                  ["Time Tracking", "/time", "Review tracked time and work sessions."],
+                  ["Workspace Access", "/workspace-access", "Review your workspace access and requests."],
+                  ["Client Access", "/resource-access", "Manage shared resource access where permitted."],
+                  ["Shared With Me", "/shared-with-me", "Find resources shared with your account."],
+                  ["Governance", "/settings/workspace/governance", "Review workspace policies and controls."],
+                  ["Activity Log", "/settings/workspace/activity", "Review workspace activity and changes."],
+                  ["Trash & recovery", "/trash", "Recover deleted tasks, projects and files."],
+                ].map(([label, href, description]) => (
+                  <Button key={href} variant="outline" asChild className="h-auto min-h-16 justify-start text-left whitespace-normal">
+                    <Link to={href}><Activity className="mr-2 h-4 w-4 shrink-0" /><span><span className="block font-medium">{label}</span><span className="block text-xs font-normal text-muted-foreground">{description}</span></span></Link>
+                  </Button>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+        );
+
+      case "team":
+        return (
+          <div className="space-y-5">
+            <SectionCard title="Team administration" description="Administrative destinations appear here only when your workspace role permits them.">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  ["Teams", "/teams", "Organize workspace members into teams."],
+                  ["Team Directory", "/team-directory", "Browse workspace people and profiles."],
+                  ["Team Management", "/team-management", "Manage members and workspace roles."],
+                  ["Hire Talent", "/assistance-requests", "Request additional talent for your work."],
+                  ["Company Profile", "/company-profile", "Manage the workspace company profile."],
+                  ["Customization", "/settings/workspace/customization", "Configure workspace fields and defaults."],
+                ].map(([label, href, description]) => (
+                  <Button key={href} variant="outline" asChild className="h-auto min-h-16 justify-start text-left whitespace-normal">
+                    <Link to={href}><Users className="mr-2 h-4 w-4 shrink-0" /><span><span className="block font-medium">{label}</span><span className="block text-xs font-normal text-muted-foreground">{description}</span></span></Link>
+                  </Button>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+        );
     }
   };
 
@@ -556,7 +626,7 @@ const Settings = () => {
       <div className="space-y-6 animate-fade-in">
         {/* Page header */}
         <div className="flex items-start gap-3">
-          <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary-text flex items-center justify-center shrink-0">
             <SettingsIcon className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -578,7 +648,7 @@ const Settings = () => {
                     key={t.id}
                     onClick={() => setActive(t.id)}
                     className={cn(
-                      "flex items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-medium transition-all",
+                      "flex items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[0.8125rem] font-medium transition-all",
                       active === t.id
                         ? "border-primary bg-primary text-primary-foreground shadow-sm"
                         : "border-border bg-card text-muted-foreground hover:text-foreground"
@@ -604,7 +674,7 @@ const Settings = () => {
                         className={cn(
                           "group w-full flex items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200",
                           selected
-                            ? "bg-primary/10 text-primary"
+                            ? "bg-primary/10 text-primary-text"
                             : "text-foreground hover:bg-muted"
                         )}
                       >
@@ -619,10 +689,10 @@ const Settings = () => {
                           <t.icon className="h-3.5 w-3.5" />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[13px] font-semibold truncate">
+                          <span className="block text-[0.8125rem] font-semibold truncate">
                             {t.label}
                           </span>
-                          <span className="block text-[11px] text-muted-foreground truncate">
+                          <span className="block text-[0.6875rem] text-muted-foreground truncate">
                             {t.description}
                           </span>
                         </span>
@@ -632,16 +702,6 @@ const Settings = () => {
                 </nav>
               </ScrollArea>
               <Separator />
-              <div className="p-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={logout}
-                  className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <LogOut className="h-4 w-4 mr-2" /> Sign out
-                </Button>
-              </div>
             </Card>
           </aside>
 
