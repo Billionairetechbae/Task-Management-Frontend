@@ -3421,6 +3421,10 @@ class ApiClient {
   async addTeamMembers(teamId: string, companyMemberIds: string[]) {
     return this.request(`/team/teams/${teamId}/members/bulk`, { method: "POST", headers: this.getAuthHeaders(), body: JSON.stringify({ companyMemberIds }) });
   }
+  // GET /team/teams/:teamId/eligible-members — active workspace members a Team Lead (or Owner/Executive) may add.
+  async getTeamEligibleMembers(teamId: string): Promise<{ status: string; results: number; data: { members: CompanyMember[] } }> {
+    return this.request(`/team/teams/${teamId}/eligible-members`, { method: "GET", headers: this.getAuthHeaders() });
+  }
   async removeTeamMembers(teamId: string, companyMemberIds: string[]) {
     return this.request(`/team/teams/${teamId}/members/bulk`, { method: "DELETE", headers: this.getAuthHeaders(), body: JSON.stringify({ companyMemberIds }) });
   }

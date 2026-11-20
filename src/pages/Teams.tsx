@@ -143,6 +143,10 @@ export default function Teams() {
   const [teamActionLoading, setTeamActionLoading] = useState(false);
 
   const selectedTeam = teams.find((team) => team.id === (routeTeamId || selectedId)) || null;
+  // The designated Team Lead of the selected team may manage that team's membership (the backend re-checks every request).
+  const selectedLeadUserId = selectedTeam?.leadMember?.userId || selectedTeam?.leadMember?.user?.id;
+  const isLeadOfSelectedTeam = !!user?.id && String(selectedLeadUserId || "") === String(user.id);
+  const canManageMembers = canManage || isLeadOfSelectedTeam;
   const workspaceQuery = useQuery({
     queryKey: ["teams", "workspace", selectedTeam?.id, activeCompanyId],
     queryFn: () => api.getTeamWorkspace(selectedTeam!.id),
@@ -202,6 +206,17 @@ export default function Teams() {
   useEffect(() => {
     void loadTeams(true);
   }, [activeCompanyId, canManage]);
+
+  const membersDialogOpen = dialog === "members";
+  useEffect(() => {
+    if (!membersDialogOpen || canManage || !isLeadOfSelectedTeam || !selectedTeam) return;
+    let cancelled = false;
+    api.getTeamEligibleMembers(selectedTeam.id)
+      .then((response) => { if (!cancelled) setMembers(response.data.members || []); })
+      .catch((error) => { if (!cancelled) toast({ title: "Could not load workspace members", description: errorMessage(error, "Please try again."), variant: "destructive" }); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [membersDialogOpen, canManage, isLeadOfSelectedTeam, selectedTeam?.id]);
 
   useEffect(() => {
     if (!openTask) {
@@ -355,6 +370,7 @@ export default function Teams() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               canManage={canManage}
+              canManageMembers={canManageMembers}
               canReview={canManage || isTeamLead}
               onOpenTask={(id) => navigate(teamTaskPath(selectedTeam.id, id))}
               onEdit={() => {
@@ -406,6 +422,7 @@ export default function Teams() {
           dialog={dialog}
           setDialog={setDialog}
           canManage={canManage}
+          canManageMembers={canManageMembers}
           team={selectedTeam}
           teamMembers={teamMembers}
           allMembers={allMembers}
@@ -440,7 +457,7 @@ export default function Teams() {
 }
 
 function TeamHome({
-  team, tasks, workspace, loading, activeTab, setActiveTab, canManage, canReview, onOpenTask, onEdit, onMembers, onLead, onDelete, onRefresh, onTaskChanged,
+  team, tasks, workspace, loading, activeTab, setActiveTab, canManage, canManageMembers, canReview, onOpenTask, onEdit, onMembers, onLead, onDelete, onRefresh, onTaskChanged,
 }: {
   team: Team;
   tasks: Task[];
@@ -449,6 +466,7 @@ function TeamHome({
   activeTab: TeamTab;
   setActiveTab: (tab: TeamTab) => void;
   canManage: boolean;
+  canManageMembers: boolean;
   canReview: boolean;
   onOpenTask: (id: string) => void;
   onEdit: () => void;
@@ -486,20 +504,18 @@ function TeamHome({
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button variant="outline" size="sm" onClick={onRefresh} aria-label="Refresh Team data"><RefreshCw className="mr-1.5 h-3.5 w-3.5" />Refresh</Button>
-            {canManage && <>
-              <Button variant="outline" size="sm" onClick={onEdit}>Edit team</Button>
-              <Button size="sm" onClick={onMembers}><Plus className="mr-1.5 h-4 w-4" />Add members</Button>
-            </>}
+            {canManage && <Button variant="outline" size="sm" onClick={onEdit}>Edit team</Button>}
+            {canManageMembers && <Button size="sm" onClick={onMembers}><Plus className="mr-1.5 h-4 w-4" />Add members</Button>}
             <DropdownMenu>
               <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="More Team actions"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {canManage && <DropdownMenuItem onSelect={onEdit}>Edit Team</DropdownMenuItem>}
+                {canManageMembers && <DropdownMenuItem onSelect={onMembers}>Manage members</DropdownMenuItem>}
                 {canManage && <>
-                  <DropdownMenuItem onSelect={onEdit}>Edit Team</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={onMembers}>Manage members</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onDelete}><Trash2 className="mr-2 h-4 w-4" />Delete Team</DropdownMenuItem>
                 </>}
-                {!canManage && <DropdownMenuItem disabled>Team actions are managed by workspace admins</DropdownMenuItem>}
+                {!canManage && <DropdownMenuItem disabled>{canManageMembers ? "Other Team actions are managed by workspace admins" : "Team actions are managed by workspace admins"}</DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -533,7 +549,7 @@ function TeamHome({
             {activeTab === "tasks" && <TeamTaskList team={team} tasks={tasks} counts={counts} canManage={canManage} canReview={canReview} onOpenTask={onOpenTask} onTaskChanged={onTaskChanged} />}
             {activeTab === "chat" && <TeamChat team={team} initialMessages={workspace?.messages || []} />}
             {activeTab === "activity" && <ActivityTimeline items={workspace?.activity || []} />}
-            {activeTab === "settings" && <TeamSettings team={team} canManage={canManage} onEdit={onEdit} onLead={onLead} onMembers={onMembers} onDelete={onDelete} />}
+            {activeTab === "settings" && <TeamSettings team={team} canManage={canManage} canManageMembers={canManageMembers} onEdit={onEdit} onLead={onLead} onMembers={onMembers} onDelete={onDelete} />}
           </>
         )}
       </div>
@@ -909,8 +925,8 @@ function ActivityTimeline({ items }: { items: TaskActivity[] }) {
   </section>;
 }
 
-function TeamSettings({ team, canManage, onEdit, onLead, onMembers, onDelete }: {
-  team: Team; canManage: boolean; onEdit: () => void; onLead: () => void; onMembers: () => void; onDelete: () => void;
+function TeamSettings({ team, canManage, canManageMembers, onEdit, onLead, onMembers, onDelete }: {
+  team: Team; canManage: boolean; canManageMembers: boolean; onEdit: () => void; onLead: () => void; onMembers: () => void; onDelete: () => void;
 }) {
   const settingCard = (title: string, children: React.ReactNode, action?: React.ReactNode) => <section className="rounded-lg border bg-background">
     <div className="flex items-center justify-between border-b px-4 py-3"><h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>{action}</div><div className="p-4">{children}</div>
@@ -918,7 +934,7 @@ function TeamSettings({ team, canManage, onEdit, onLead, onMembers, onDelete }: 
   return <div className="grid gap-3 lg:max-w-4xl">
     {settingCard("General", <div><p className="text-sm font-medium">{team.name}</p><p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{team.description || "No description provided."}</p></div>, canManage && <Button variant="outline" size="sm" onClick={onEdit}>Edit</Button>)}
     {settingCard("Leadership", <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /><div><p className="text-sm font-medium">{nameOf(team.leadMember)}</p><p className="text-[11px] text-muted-foreground">Team Lead</p></div></div>, canManage && <Button variant="outline" size="sm" onClick={onLead}>Change Lead</Button>)}
-    {settingCard("Members", <div><p className="text-sm font-medium">{team.memberLinks?.length || 0} members</p><p className="mt-1 text-xs text-muted-foreground">Manage membership and remove inactive participants.</p></div>, canManage && <Button variant="outline" size="sm" onClick={onMembers}>Manage members</Button>)}
+    {settingCard("Members", <div><p className="text-sm font-medium">{team.memberLinks?.length || 0} members</p><p className="mt-1 text-xs text-muted-foreground">Manage membership and remove inactive participants.</p></div>, canManageMembers && <Button variant="outline" size="sm" onClick={onMembers}>Manage members</Button>)}
     {canManage && settingCard("Danger zone", <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium">Delete this Team</p><p className="mt-1 text-xs text-muted-foreground">Team work will be unassigned. This cannot be undone.</p></div><Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-1.5 h-3.5 w-3.5" />Delete Team</Button></div>)}
   </div>;
 }
@@ -1314,11 +1330,12 @@ function MetadataField({ label, children }: { label: string; children: React.Rea
 }
 
 function TeamDialogs({
-  dialog, setDialog, canManage, team, teamMembers, allMembers, selectedMemberIds, setSelectedMemberIds, memberSearch, setMemberSearch, teamName, setTeamName, teamDescription, setTeamDescription, saving, save,
+  dialog, setDialog, canManage, canManageMembers, team, teamMembers, allMembers, selectedMemberIds, setSelectedMemberIds, memberSearch, setMemberSearch, teamName, setTeamName, teamDescription, setTeamDescription, saving, save,
 }: {
   dialog: DialogMode;
   setDialog: (dialog: DialogMode) => void;
   canManage: boolean;
+  canManageMembers: boolean;
   team: Team | null;
   teamMembers: TeamMemberLink[];
   allMembers: CompanyMember[];
@@ -1349,7 +1366,7 @@ function TeamDialogs({
         <DialogFooter className="flex-wrap sm:justify-between">
           <Button type="button" variant="outline" onClick={() => { setDialog(null); reset(); }}>Cancel</Button>
           {canManage && dialog === "lead" && <Button disabled={saving || !selectedMemberIds[0]} onClick={() => team && void save(() => api.assignTeamLead(team.id, selectedMemberIds[0], { expectedCurrentLeadMemberId: team.leadMemberId || undefined, confirmTransfer: true }), "Team Lead updated")}>{saving ? "Saving…" : "Save Lead"}</Button>}
-          {canManage && dialog === "members" && <>
+          {canManageMembers && dialog === "members" && <>
             <Button variant="outline" disabled={saving || !selectedMemberIds.some(isMember) || leadSelected} onClick={() => team && void save(() => api.removeTeamMembers(team.id, selectedMemberIds.filter(isMember)), "Members removed")}>Remove selected</Button>
             <Button disabled={saving || !selectedMemberIds.some((id) => !isMember(id))} onClick={() => team && void save(() => api.addTeamMembers(team.id, selectedMemberIds.filter((id) => !isMember(id))), "Members added")}>{saving ? "Saving…" : "Add selected"}</Button>
           </>}
