@@ -314,7 +314,7 @@ export default function Teams() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-sm font-semibold">Teams</h1>
-              <p className="text-[11px] text-muted-foreground">{teams.length} workspace teams</p>
+              <p className="text-[0.6875rem] text-muted-foreground">{teams.length} workspace teams</p>
             </div>
             {canManage && (
               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Create team" onClick={() => {
@@ -335,13 +335,13 @@ export default function Teams() {
                 aria-current={selectedTeam?.id === team.id ? "page" : undefined}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-lg border-l-2 px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                  selectedTeam?.id === team.id ? "border-primary bg-primary/10 text-primary" : "border-transparent hover:bg-muted",
+                  selectedTeam?.id === team.id ? "border-primary bg-primary/10 text-primary-text" : "border-transparent hover:bg-muted",
                 )}
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[11px] font-bold text-primary">{initials(team.name)}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[0.6875rem] font-bold text-primary-text">{initials(team.name)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{team.name}</span>
-                  <span className="block text-[11px] text-muted-foreground">{team.memberLinks?.length || 0} members</span>
+                  <span className="block text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} members</span>
                 </span>
               </button>
             ))}
@@ -495,16 +495,16 @@ function TeamHome({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 gap-3">
             <Avatar className="h-11 w-11 rounded-xl">
-              <AvatarFallback className="rounded-xl bg-primary/10 text-sm font-bold text-primary">{initials(team.name)}</AvatarFallback>
+              <AvatarFallback className="rounded-xl bg-primary/10 text-sm font-bold text-primary-text">{initials(team.name)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <h2 className="truncate text-xl font-semibold tracking-tight">{team.name}</h2>
               <p className="mt-0.5 max-w-2xl truncate text-xs text-muted-foreground">{team.description || "No description provided."}</p>
               <div className="mt-2 flex items-center gap-2">
                 <div className="flex -space-x-2">
-                  {team.memberLinks?.slice(0, 5).map((link) => <Avatar key={link.id} className="h-6 w-6 border-2 border-background"><AvatarImage src={link.companyMember?.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[9px]">{personInitials(link.companyMember)}</AvatarFallback></Avatar>)}
+                  {team.memberLinks?.slice(0, 5).map((link) => <Avatar key={link.id} className="h-6 w-6 border-2 border-background"><AvatarImage src={link.companyMember?.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.5625rem]">{personInitials(link.companyMember)}</AvatarFallback></Avatar>)}
                 </div>
-                <span className="text-[11px] text-muted-foreground">{team.memberLinks?.length || 0} members</span>
+                <span className="text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} members</span>
               </div>
             </div>
           </div>
@@ -519,7 +519,7 @@ function TeamHome({
                 {canManageMembers && <DropdownMenuItem onSelect={onMembers}>Manage members</DropdownMenuItem>}
                 {canManage && <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onDelete}><Trash2 className="mr-2 h-4 w-4" />Delete Team</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive-text focus:text-destructive-text" onSelect={onDelete}><Trash2 className="mr-2 h-4 w-4" />Delete Team</DropdownMenuItem>
                 </>}
                 {!canManage && <DropdownMenuItem disabled>{canManageMembers ? "Other Team actions are managed by workspace admins" : "Team actions are managed by workspace admins"}</DropdownMenuItem>}
               </DropdownMenuContent>
@@ -540,9 +540,9 @@ function TeamHome({
               role="tab"
               aria-selected={activeTab === value}
               onClick={() => setActiveTab(value)}
-              className={cn("shrink-0 border-b-2 px-1 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", activeTab === value ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+              className={cn("shrink-0 border-b-2 px-1 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", activeTab === value ? "border-primary text-primary-text" : "border-transparent text-muted-foreground hover:text-foreground")}
             >
-              {label}{value === "tasks" && <span className="ml-1.5 text-[10px] text-muted-foreground">{openCount}</span>}
+              {label}{value === "tasks" && <span className="ml-1.5 text-[0.625rem] text-muted-foreground">{openCount}</span>}
             </button>
           ))}
         </nav>
@@ -565,8 +565,8 @@ function TeamHome({
 
 function Metric({ label, value, icon: Icon }: { label: string; value: number; icon: typeof CheckSquare }) {
   return <div className="flex min-h-16 items-center gap-2.5 rounded-lg border bg-background px-3 py-2">
-    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span>
-    <div><p className="text-lg font-semibold leading-none">{value}</p><p className="mt-1 text-[10px] text-muted-foreground">{label}</p></div>
+    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary-text"><Icon className="h-4 w-4" /></span>
+    <div><p className="text-lg font-semibold leading-none">{value}</p><p className="mt-1 text-[0.625rem] text-muted-foreground">{label}</p></div>
   </div>;
 }
 
@@ -580,18 +580,18 @@ function Overview({ team, tasks, workspace, onOpenTask, onMembers, onLead, canMa
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,.8fr)]">
       <section className="overflow-hidden rounded-lg border bg-background">
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <div><h3 className="text-sm font-semibold">Team workload</h3><p className="mt-0.5 text-[11px] text-muted-foreground">Active work by assigned member</p></div>
+          <div><h3 className="text-sm font-semibold">Team workload</h3><p className="mt-0.5 text-[0.6875rem] text-muted-foreground">Active work by assigned member</p></div>
           <Badge variant="secondary">{active.length} active</Badge>
         </div>
         {workspace?.workload?.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-left text-xs">
-              <thead className="bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-2.5 font-medium">Member</th><th className="px-3 py-2.5 font-medium">Active tasks</th><th className="px-3 py-2.5 font-medium">Overdue</th><th className="px-3 py-2.5 font-medium">Nearest due</th></tr></thead>
+              <thead className="bg-muted/40 text-[0.625rem] uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-2.5 font-medium">Member</th><th className="px-3 py-2.5 font-medium">Active tasks</th><th className="px-3 py-2.5 font-medium">Overdue</th><th className="px-3 py-2.5 font-medium">Nearest due</th></tr></thead>
               <tbody className="divide-y">
                 {workspace.workload.map((item, index) => <tr key={item.user?.id || index} className="hover:bg-muted/30">
-                  <td className="px-4 py-2.5"><div className="flex items-center gap-2"><Avatar className="h-7 w-7"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[9px]">{initials(userName(item.user))}</AvatarFallback></Avatar><span className="font-medium">{userName(item.user)}</span></div></td>
+                  <td className="px-4 py-2.5"><div className="flex items-center gap-2"><Avatar className="h-7 w-7"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.5625rem]">{initials(userName(item.user))}</AvatarFallback></Avatar><span className="font-medium">{userName(item.user)}</span></div></td>
                   <td className="px-3 py-2.5">{item.activeSubtasks}</td>
-                  <td className="px-3 py-2.5">{item.overdue ? <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{item.overdue}</Badge> : <span className="text-muted-foreground">0</span>}</td>
+                  <td className="px-3 py-2.5">{item.overdue ? <Badge variant="destructive" className="h-5 px-1.5 text-[0.625rem]">{item.overdue}</Badge> : <span className="text-muted-foreground">0</span>}</td>
                   <td className="px-3 py-2.5 text-muted-foreground">{formattedDate(item.nearestDueDate)}</td>
                 </tr>)}
               </tbody>
@@ -601,16 +601,16 @@ function Overview({ team, tasks, workspace, onOpenTask, onMembers, onLead, canMa
       </section>
       <div className="space-y-4">
         <section className="rounded-lg border bg-background p-4">
-          <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">Team lead</h3>{canChangeLead && <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={onLead}>Change Lead</Button>}</div>
+          <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">Team lead</h3>{canChangeLead && <Button variant="ghost" size="sm" className="h-7 px-2 text-[0.625rem]" onClick={onLead}>Change Lead</Button>}</div>
           <div className="mt-3 flex items-center gap-2.5">
             <Avatar className="h-9 w-9"><AvatarImage src={lead?.user?.profilePictureUrl || undefined} /><AvatarFallback>{personInitials(lead)}</AvatarFallback></Avatar>
-            <div className="min-w-0"><p className="truncate text-xs font-medium">{nameOf(lead)}</p><p className="truncate text-[11px] text-muted-foreground">{lead?.user?.email || "No Team Lead assigned"}</p></div>
+            <div className="min-w-0"><p className="truncate text-xs font-medium">{nameOf(lead)}</p><p className="truncate text-[0.6875rem] text-muted-foreground">{lead?.user?.email || "No Team Lead assigned"}</p></div>
           </div>
         </section>
         <section className="rounded-lg border bg-background p-4">
           <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">Members</h3>{canManageMembers && <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onMembers}>Manage</Button>}</div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {team.memberLinks?.slice(0, 8).map((link) => <Badge key={link.id} variant="secondary" className="gap-1.5 py-1 font-normal"><Avatar className="h-4 w-4"><AvatarImage src={link.companyMember?.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[7px]">{personInitials(link.companyMember)}</AvatarFallback></Avatar>{nameOf(link.companyMember)}</Badge>)}
+            {team.memberLinks?.slice(0, 8).map((link) => <Badge key={link.id} variant="secondary" className="gap-1.5 py-1 font-normal"><Avatar className="h-4 w-4"><AvatarImage src={link.companyMember?.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.4375rem]">{personInitials(link.companyMember)}</AvatarFallback></Avatar>{nameOf(link.companyMember)}</Badge>)}
             {!team.memberLinks?.length && <p className="text-xs text-muted-foreground">No active Team members.</p>}
             {(team.memberLinks?.length || 0) > 8 && <Badge variant="outline">+{team.memberLinks!.length - 8} more</Badge>}
           </div>
@@ -618,8 +618,8 @@ function Overview({ team, tasks, workspace, onOpenTask, onMembers, onLead, canMa
         <section className="rounded-lg border bg-background">
           <div className="border-b px-4 py-3"><h3 className="text-sm font-semibold">Recently updated tasks</h3></div>
           {recentTasks.length ? recentTasks.slice(0, 4).map((task) => <button key={task.id} type="button" onClick={() => task.id && onOpenTask(task.id)} className="flex w-full items-center justify-between gap-2 border-b px-4 py-2.5 text-left last:border-0 hover:bg-muted/30">
-            <span className="min-w-0"><span className="block truncate text-xs font-medium">{task.title}</span><span className="text-[10px] text-muted-foreground">{formattedDate(task.updatedAt || task.createdAt)}</span></span>
-            <Badge variant="outline" className="shrink-0 text-[10px]">{statusLabel(task.status)}</Badge>
+            <span className="min-w-0"><span className="block truncate text-xs font-medium">{task.title}</span><span className="text-[0.625rem] text-muted-foreground">{formattedDate(task.updatedAt || task.createdAt)}</span></span>
+            <Badge variant="outline" className="shrink-0 text-[0.625rem]">{statusLabel(task.status)}</Badge>
           </button>) : <p className="px-4 py-6 text-center text-xs text-muted-foreground">No Team tasks yet.</p>}
         </section>
       </div>
@@ -722,9 +722,9 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
   return (
     <section className="overflow-hidden rounded-lg border bg-background">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3">
-        <div><h3 className="text-sm font-semibold">Tasks</h3><p className="mt-0.5 text-[11px] text-muted-foreground">{filteredTasks.length} of {tasks.length} Team tasks</p>
+        <div><h3 className="text-sm font-semibold">Tasks</h3><p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{filteredTasks.length} of {tasks.length} Team tasks</p>
           <div role="tablist" aria-label="Team task views" className="mt-2 flex flex-wrap gap-1">
-            {TEAM_TASK_VIEWS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} data-testid={`team-view-${key}`} onClick={() => setView(key)} className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", view === key ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted")}>{label}<span className="ml-1 tabular-nums">{counts[key]}</span></button>)}
+            {TEAM_TASK_VIEWS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} data-testid={`team-view-${key}`} onClick={() => setView(key)} className={cn("rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium", view === key ? "border-primary bg-primary/10 text-primary-text" : "text-muted-foreground hover:bg-muted")}>{label}<span className="ml-1 tabular-nums">{counts[key]}</span></button>)}
           </div></div>
         <div className="flex flex-wrap items-center gap-1.5">
           <div className="relative">
@@ -733,9 +733,9 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
             {search && <button type="button" aria-label="Clear task search" onClick={() => setSearch("")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
           </div>
           <Popover>
-            <PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8"><Filter className="mr-1.5 h-3.5 w-3.5" />Filter{filtersCount > 0 && <Badge className="ml-1 h-4 min-w-4 px-1 text-[9px]">{filtersCount}</Badge>}</Button></PopoverTrigger>
+            <PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8"><Filter className="mr-1.5 h-3.5 w-3.5" />Filter{filtersCount > 0 && <Badge className="ml-1 h-4 min-w-4 px-1 text-[0.5625rem]">{filtersCount}</Badge>}</Button></PopoverTrigger>
             <PopoverContent align="end" className="w-64 space-y-3">
-              <div className="flex items-center justify-between"><p className="text-xs font-semibold">Filter tasks</p><Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={clearFilters}>Clear all</Button></div>
+              <div className="flex items-center justify-between"><p className="text-xs font-semibold">Filter tasks</p><Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-[0.625rem]" onClick={clearFilters}>Clear all</Button></div>
               <FilterSelect label="Status" value={status} onValueChange={setStatus} options={[["all", "All statuses"], ["pending", "Pending"], ["in_progress", "In Progress"], ["in_review", "In Review"], ["completed", "Completed"], ["overdue", "Overdue"], ["delayed", "Delayed"], ["cancelled", "Cancelled"]]} />
               <FilterSelect label="Priority" value={priority} onValueChange={setPriority} options={[["all", "All priorities"], ...priorities.map((item) => [item, priorityLabel(item)] as [string, string])]} />
               <FilterSelect label="Due" value={due} onValueChange={(value) => setDue(value as DueFilter)} options={[["all", "Any due date"], ["overdue", "Overdue"], ["today", "Today"], ["week", "This week"], ["none", "No due date"]]} />
@@ -755,7 +755,7 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[900px]">
-          <div className="grid grid-cols-[minmax(260px,1fr)_110px_90px_105px_100px_110px_38px] items-center border-b bg-muted/30 px-3 py-2 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="grid grid-cols-[minmax(260px,1fr)_110px_90px_105px_100px_110px_38px] items-center border-b bg-muted/30 px-3 py-2 text-[0.5625rem] font-medium uppercase tracking-wide text-muted-foreground">
             <span>Task</span><span>Status</span><span>Priority</span><span>Due</span><span>Progress</span><span>Updated</span><span />
           </div>
           {filteredTasks.length ? filteredTasks.map((task) => {
@@ -765,12 +765,12 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
             const canUpdateTask = canReview;
             return <div key={task.id} className="group relative grid grid-cols-[minmax(260px,1fr)_110px_90px_105px_100px_110px_38px] items-center border-b px-3 py-2.5 last:border-0 hover:bg-primary/[0.035]">
               <button type="button" aria-label={`Open task ${task.title}`} onClick={() => task.id && onOpenTask(task.id)} className="absolute inset-0 z-0 rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary" />
-              <span className="pointer-events-none relative z-[1] min-w-0 pr-2"><span className="block truncate text-xs font-medium">{task.title}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{task.description || team.name}</span></span>
-              <span className="relative z-[1] pointer-events-none"><Badge variant="outline" className="h-5 text-[9px]">{statusLabel(task.status)}</Badge></span>
-              <span className="relative z-[1] pointer-events-none text-[10px] text-muted-foreground">{priorityLabel(task.priority)}</span>
-              <span className={cn("relative z-[1] pointer-events-none text-[10px]", isOverdue(task) && "font-medium text-destructive")}>{formattedDate(task.deadline)}</span>
-              <span className="relative z-[1] pointer-events-none flex items-center gap-1.5 text-[10px] text-muted-foreground">{progress === null ? "—" : <><Progress value={progress} className="h-1.5 w-12" />{done}/{total}</>}</span>
-              <span className="relative z-[1] pointer-events-none text-[10px] text-muted-foreground">{formattedDate(task.updatedAt || task.createdAt)}</span>
+              <span className="pointer-events-none relative z-[1] min-w-0 pr-2"><span className="block truncate text-xs font-medium">{task.title}</span><span className="mt-0.5 block truncate text-[0.625rem] text-muted-foreground">{task.description || team.name}</span></span>
+              <span className="relative z-[1] pointer-events-none"><Badge variant="outline" className="h-5 text-[0.5625rem]">{statusLabel(task.status)}</Badge></span>
+              <span className="relative z-[1] pointer-events-none text-[0.625rem] text-muted-foreground">{priorityLabel(task.priority)}</span>
+              <span className={cn("relative z-[1] pointer-events-none text-[0.625rem]", isOverdue(task) && "font-medium text-destructive-text")}>{formattedDate(task.deadline)}</span>
+              <span className="relative z-[1] pointer-events-none flex items-center gap-1.5 text-[0.625rem] text-muted-foreground">{progress === null ? "—" : <><Progress value={progress} className="h-1.5 w-12" />{done}/{total}</>}</span>
+              <span className="relative z-[1] pointer-events-none text-[0.625rem] text-muted-foreground">{formattedDate(task.updatedAt || task.createdAt)}</span>
               <div className="relative z-10">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Actions for ${task.title}`} disabled={mutatingId === task.id}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -781,7 +781,7 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
                       : <DropdownMenuItem disabled={!task.id || !canUpdateTask} onSelect={() => void markComplete(task)}><Check className="mr-2 h-3.5 w-3.5" />Mark complete</DropdownMenuItem>}
                     <DropdownMenuItem onSelect={() => task.id && navigate(taskWorkbenchPath(task.id))}><FileText className="mr-2 h-3.5 w-3.5" />Open in Task Workbench</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {canManage && <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteTask(task)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete</DropdownMenuItem>}
+                    {canManage && <DropdownMenuItem className="text-destructive-text focus:text-destructive-text" onSelect={() => setDeleteTask(task)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -804,7 +804,7 @@ function TeamTaskList({ team, tasks, counts, canManage, canReview, onOpenTask, o
 function FilterSelect({ label, value, onValueChange, options }: {
   label: string; value: string; onValueChange: (value: string) => void; options: Array<[string, string]>;
 }) {
-  return <label className="block space-y-1.5"><span className="text-[10px] font-medium text-muted-foreground">{label}</span><Select value={value} onValueChange={onValueChange}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent>{options.map(([option, title]) => <SelectItem key={option} value={option}>{title}</SelectItem>)}</SelectContent></Select></label>;
+  return <label className="block space-y-1.5"><span className="text-[0.625rem] font-medium text-muted-foreground">{label}</span><Select value={value} onValueChange={onValueChange}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent>{options.map(([option, title]) => <SelectItem key={option} value={option}>{title}</SelectItem>)}</SelectContent></Select></label>;
 }
 
 function TaskCreateDialog({ team, open, onOpenChange, onCreated }: {
@@ -885,24 +885,24 @@ function TeamChat({ team, initialMessages }: { team: Team; initialMessages: Team
   };
   return (
     <section className="flex min-h-[420px] flex-col overflow-hidden rounded-lg border bg-background">
-      <div className="flex items-center justify-between border-b px-4 py-3"><div><h3 className="text-sm font-semibold">Team chat</h3><p className="text-[11px] text-muted-foreground">{team.memberLinks?.length || 0} participants</p></div><MessageSquare className="h-4 w-4 text-primary" /></div>
+      <div className="flex items-center justify-between border-b px-4 py-3"><div><h3 className="text-sm font-semibold">Team chat</h3><p className="text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} participants</p></div><MessageSquare className="h-4 w-4 text-primary-text" /></div>
       <div className="max-h-[calc(100vh-360px)] min-h-[260px] flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length ? messages.map((item) => (
           <article key={item.id} className={cn("flex gap-2.5", item.parentMessageId && "ml-8")}>
-            <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[10px]">{initials(userName(item.user))}</AvatarFallback></Avatar>
+            <Avatar className="h-8 w-8 shrink-0"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.625rem]">{initials(userName(item.user))}</AvatarFallback></Avatar>
             <div className="min-w-0 flex-1">
-              <div className="mb-1 flex items-baseline gap-2"><span className="text-xs font-semibold">{userName(item.user)}</span><time className="text-[10px] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div>
+              <div className="mb-1 flex items-baseline gap-2"><span className="text-xs font-semibold">{userName(item.user)}</span><time className="text-[0.625rem] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div>
               <div className="inline-block max-w-full rounded-xl rounded-tl-sm bg-muted/70 px-3 py-2 text-sm"><p className="whitespace-pre-wrap break-words">{item.content}</p></div>
-              <Button type="button" variant="ghost" size="sm" className="ml-1 mt-0.5 h-6 px-2 text-[10px]" onClick={() => setReplyTo(item)}>Reply</Button>
+              <Button type="button" variant="ghost" size="sm" className="ml-1 mt-0.5 h-6 px-2 text-[0.625rem]" onClick={() => setReplyTo(item)}>Reply</Button>
             </div>
           </article>
         )) : <div className="flex min-h-[240px] flex-col items-center justify-center text-center"><MessageSquare className="mb-2 h-8 w-8 text-muted-foreground/40" /><p className="text-sm font-medium">No messages yet</p><p className="mt-1 text-xs text-muted-foreground">Start the conversation with your Team.</p></div>}
       </div>
       <form onSubmit={send} className="sticky bottom-0 border-t bg-background p-3">
-        {replyTo && <div className="mb-2 flex items-center justify-between rounded-md bg-muted px-2.5 py-1.5 text-[11px]"><span>Replying to {userName(replyTo.user)}</span><Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label="Cancel reply" onClick={() => setReplyTo(null)}><X className="h-3 w-3" /></Button></div>}
+        {replyTo && <div className="mb-2 flex items-center justify-between rounded-md bg-muted px-2.5 py-1.5 text-[0.6875rem]"><span>Replying to {userName(replyTo.user)}</span><Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label="Cancel reply" onClick={() => setReplyTo(null)}><X className="h-3 w-3" /></Button></div>}
         <Textarea aria-label="Write a message" placeholder="Write a message…" value={message} onChange={(event) => setMessage(event.target.value)} rows={2} className="min-h-16 resize-y border-0 px-1 shadow-none focus-visible:ring-0" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(event); } }} />
         <div className="mt-1 flex items-center justify-between gap-2">
-          <div className="flex max-w-[70%] gap-1 overflow-x-auto">{team.memberLinks?.slice(0, 5).map((member) => <Button type="button" variant="outline" size="sm" key={member.id} className="h-6 shrink-0 px-2 text-[10px]" onClick={() => addMention(member)}>@{member.companyMember?.user?.firstName}</Button>)}</div>
+          <div className="flex max-w-[70%] gap-1 overflow-x-auto">{team.memberLinks?.slice(0, 5).map((member) => <Button type="button" variant="outline" size="sm" key={member.id} className="h-6 shrink-0 px-2 text-[0.625rem]" onClick={() => addMention(member)}>@{member.companyMember?.user?.firstName}</Button>)}</div>
           <Button type="submit" size="sm" disabled={sending || !message.trim()}><Send className="mr-1.5 h-3.5 w-3.5" />{sending ? "Sending…" : "Send"}</Button>
         </div>
       </form>
@@ -918,14 +918,14 @@ function formattedDateTime(value?: string | null) {
 
 function ActivityTimeline({ items }: { items: TaskActivity[] }) {
   return <section className="rounded-lg border bg-background">
-    <div className="border-b px-4 py-3"><h3 className="text-sm font-semibold">Team activity</h3><p className="text-[11px] text-muted-foreground">Recent changes and events</p></div>
+    <div className="border-b px-4 py-3"><h3 className="text-sm font-semibold">Team activity</h3><p className="text-[0.6875rem] text-muted-foreground">Recent changes and events</p></div>
     {items.length ? <ol className="divide-y">{items.map((item) => {
       const target = typeof item.newValue === "object" && item.newValue && "title" in item.newValue ? String(item.newValue.title) : "";
       const action = item.actionType.replace(/_/g, " ");
       return <li key={item.id} className="flex gap-3 px-4 py-3">
-        <Avatar className="h-7 w-7 shrink-0"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[9px]">{initials(userName(item.user))}</AvatarFallback></Avatar>
-        <div className="min-w-0 flex-1"><p className="text-xs"><span className="font-medium">{userName(item.user)}</span> <span className="text-muted-foreground">{action}</span>{target && <> <span className="font-medium">“{target}”</span></>}</p><time className="mt-0.5 block text-[10px] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div>
-        <Activity className="mt-1 h-3.5 w-3.5 shrink-0 text-primary" />
+        <Avatar className="h-7 w-7 shrink-0"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.5625rem]">{initials(userName(item.user))}</AvatarFallback></Avatar>
+        <div className="min-w-0 flex-1"><p className="text-xs"><span className="font-medium">{userName(item.user)}</span> <span className="text-muted-foreground">{action}</span>{target && <> <span className="font-medium">“{target}”</span></>}</p><time className="mt-0.5 block text-[0.625rem] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div>
+        <Activity className="mt-1 h-3.5 w-3.5 shrink-0 text-primary-text" />
       </li>;
     })}</ol> : <div className="px-4 py-12 text-center"><Activity className="mx-auto mb-2 h-7 w-7 text-muted-foreground/40" /><p className="text-sm font-medium">No Team activity yet</p><p className="mt-1 text-xs text-muted-foreground">Task and membership changes will appear here.</p></div>}
   </section>;
@@ -935,11 +935,11 @@ function TeamSettings({ team, canManage, canManageMembers, canChangeLead, onEdit
   team: Team; canManage: boolean; canManageMembers: boolean; canChangeLead: boolean; onEdit: () => void; onLead: () => void; onMembers: () => void; onDelete: () => void;
 }) {
   const settingCard = (title: string, children: React.ReactNode, action?: React.ReactNode) => <section className="rounded-lg border bg-background">
-    <div className="flex items-center justify-between border-b px-4 py-3"><h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>{action}</div><div className="p-4">{children}</div>
+    <div className="flex items-center justify-between border-b px-4 py-3"><h3 className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>{action}</div><div className="p-4">{children}</div>
   </section>;
   return <div className="grid gap-3 lg:max-w-4xl">
     {settingCard("General", <div><p className="text-sm font-medium">{team.name}</p><p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{team.description || "No description provided."}</p></div>, canManage && <Button variant="outline" size="sm" onClick={onEdit}>Edit</Button>)}
-    {settingCard("Leadership", <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary" /><div><p className="text-sm font-medium">{nameOf(team.leadMember)}</p><p className="text-[11px] text-muted-foreground">Team Lead</p></div></div>, canChangeLead && <Button variant="outline" size="sm" onClick={onLead}>Change Lead</Button>)}
+    {settingCard("Leadership", <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-primary-text" /><div><p className="text-sm font-medium">{nameOf(team.leadMember)}</p><p className="text-[0.6875rem] text-muted-foreground">Team Lead</p></div></div>, canChangeLead && <Button variant="outline" size="sm" onClick={onLead}>Change Lead</Button>)}
     {settingCard("Members", <div><p className="text-sm font-medium">{team.memberLinks?.length || 0} members</p><p className="mt-1 text-xs text-muted-foreground">Manage membership and remove inactive participants.</p></div>, canManageMembers && <Button variant="outline" size="sm" onClick={onMembers}>Manage members</Button>)}
     {canManage && settingCard("Danger zone", <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium">Delete this Team</p><p className="mt-1 text-xs text-muted-foreground">Team work will be unassigned. This cannot be undone.</p></div><Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="mr-1.5 h-3.5 w-3.5" />Delete Team</Button></div>)}
   </div>;
@@ -1076,14 +1076,14 @@ function TaskWorkspace({
               {taskSearch && <button type="button" aria-label="Clear task search" onClick={() => { setTaskSearch(""); setTaskSearchOpen(false); }} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
               {taskSearchOpen && (taskSearch || taskFilterCount > 0) && <div className="absolute right-0 top-9 z-30 max-h-64 w-72 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
                 {taskLookupResults.length ? taskLookupResults.slice(0, 8).map((candidate) => <button key={candidate.id} type="button" className="block w-full rounded-sm px-2.5 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" onClick={() => { if (candidate.id) navigate(teamTaskPath(team.id, candidate.id)); setTaskSearch(""); setTaskSearchOpen(false); }}>
-                  <span className="block truncate text-xs font-medium">{candidate.title}</span><span className="mt-0.5 block text-[10px] text-muted-foreground">{statusLabel(candidate.status)} · {priorityLabel(candidate.priority)}</span>
+                  <span className="block truncate text-xs font-medium">{candidate.title}</span><span className="mt-0.5 block text-[0.625rem] text-muted-foreground">{statusLabel(candidate.status)} · {priorityLabel(candidate.priority)}</span>
                 </button>) : <p className="px-2.5 py-3 text-xs text-muted-foreground">No tasks match your search or filters.</p>}
               </div>}
             </div>
             <Popover>
-              <PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8"><Filter className="mr-1 h-3.5 w-3.5" />Filter{taskFilterCount > 0 && <Badge className="ml-1 h-4 min-w-4 px-1 text-[9px]">{taskFilterCount}</Badge>}</Button></PopoverTrigger>
+              <PopoverTrigger asChild><Button variant="outline" size="sm" className="h-8"><Filter className="mr-1 h-3.5 w-3.5" />Filter{taskFilterCount > 0 && <Badge className="ml-1 h-4 min-w-4 px-1 text-[0.5625rem]">{taskFilterCount}</Badge>}</Button></PopoverTrigger>
               <PopoverContent align="end" className="w-60 space-y-3">
-                <div className="flex items-center justify-between"><p className="text-xs font-semibold">Filter Team tasks</p><Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => { setTaskStatusFilter("all"); setTaskPriorityFilter("all"); }}>Clear all</Button></div>
+                <div className="flex items-center justify-between"><p className="text-xs font-semibold">Filter Team tasks</p><Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-[0.625rem]" onClick={() => { setTaskStatusFilter("all"); setTaskPriorityFilter("all"); }}>Clear all</Button></div>
                 <FilterSelect label="Status" value={taskStatusFilter} onValueChange={(value) => { setTaskStatusFilter(value); setTaskSearchOpen(true); }} options={[["all", "All statuses"], ...statuses.map((value) => [value, statusLabel(value)] as [string, string])]} />
                 <FilterSelect label="Priority" value={taskPriorityFilter} onValueChange={(value) => { setTaskPriorityFilter(value); setTaskSearchOpen(true); }} options={[["all", "All priorities"], ...priorities.map((value) => [value, priorityLabel(value)] as [string, string])]} />
               </PopoverContent>
@@ -1103,7 +1103,7 @@ function TaskWorkspace({
         <article className="overflow-hidden rounded-lg border bg-background">
           <header className="border-b px-4 py-4 sm:px-5">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-[.14em] text-muted-foreground">Team task</p><h2 className="mt-1 break-words text-xl font-semibold tracking-tight">{task.title}</h2><p className="mt-1 text-xs text-muted-foreground">Assigned to <span className="font-medium text-foreground">{team.name}</span></p></div>
+              <div className="min-w-0"><p className="text-[0.5625rem] font-semibold uppercase tracking-[.14em] text-muted-foreground">Team task</p><h2 className="mt-1 break-words text-xl font-semibold tracking-tight">{task.title}</h2><p className="mt-1 text-xs text-muted-foreground">Assigned to <span className="font-medium text-foreground">{team.name}</span></p></div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="More task actions"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -1111,34 +1111,34 @@ function TaskWorkspace({
                   <DropdownMenuItem onSelect={() => navigate(taskWorkbenchPath(task.id!))}><ExternalLink className="mr-2 h-3.5 w-3.5" />Open in Task Workbench</DropdownMenuItem>
                   <DropdownMenuItem disabled={saving || task.status === "completed"} onSelect={markComplete}><Check className="mr-2 h-3.5 w-3.5" />Mark complete</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteOpen(true)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete task</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive-text focus:text-destructive-text" onSelect={() => setDeleteOpen(true)}><Trash2 className="mr-2 h-3.5 w-3.5" />Delete task</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {canEdit ? <>
-                <Select value={task.status || "pending"} onValueChange={(status) => void updateParent({ status: status as TaskStatus })} disabled={saving}><SelectTrigger aria-label="Task status" className="h-7 w-[130px] text-[11px]"><SelectValue /></SelectTrigger><SelectContent>{statuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select>
-                <Select value={task.priority || "medium"} onValueChange={(priority) => void updateParent({ priority: priority as TaskPriority })} disabled={saving}><SelectTrigger aria-label="Task priority" className="h-7 w-[110px] text-[11px]"><SelectValue /></SelectTrigger><SelectContent>{priorities.map((priority) => <SelectItem key={priority} value={priority}>{priorityLabel(priority)}</SelectItem>)}</SelectContent></Select>
-                <label className="flex h-7 items-center gap-1.5 rounded-md border px-2"><CalendarDays className="h-3 w-3 text-muted-foreground" /><Input aria-label="Task due date" type="date" className="h-6 w-[125px] border-0 p-0 text-[10px] shadow-none" value={dateInputValue(task.deadline)} onChange={(event) => void updateParent({ deadline: dateValue(event.target.value) })} disabled={saving} /></label>
+                <Select value={task.status || "pending"} onValueChange={(status) => void updateParent({ status: status as TaskStatus })} disabled={saving}><SelectTrigger aria-label="Task status" className="h-7 w-[130px] text-[0.6875rem]"><SelectValue /></SelectTrigger><SelectContent>{statuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select>
+                <Select value={task.priority || "medium"} onValueChange={(priority) => void updateParent({ priority: priority as TaskPriority })} disabled={saving}><SelectTrigger aria-label="Task priority" className="h-7 w-[110px] text-[0.6875rem]"><SelectValue /></SelectTrigger><SelectContent>{priorities.map((priority) => <SelectItem key={priority} value={priority}>{priorityLabel(priority)}</SelectItem>)}</SelectContent></Select>
+                <label className="flex h-7 items-center gap-1.5 rounded-md border px-2"><CalendarDays className="h-3 w-3 text-muted-foreground" /><Input aria-label="Task due date" type="date" className="h-6 w-[125px] border-0 p-0 text-[0.625rem] shadow-none" value={dateInputValue(task.deadline)} onChange={(event) => void updateParent({ deadline: dateValue(event.target.value) })} disabled={saving} /></label>
               </> : <>
                 <Badge variant="outline">{statusLabel(task.status)}</Badge><Badge variant="outline">{priorityLabel(task.priority)}</Badge><Badge variant="outline">{formattedDate(task.deadline)}</Badge>
               </>}
-              <span className="ml-auto text-[10px] text-muted-foreground">{task.attachments?.length || 0} files · {task.activities?.length || 0} activity events</span>
+              <span className="ml-auto text-[0.625rem] text-muted-foreground">{task.attachments?.length || 0} files · {task.activities?.length || 0} activity events</span>
             </div>
           </header>
           <div className="space-y-4 p-3 sm:p-4">
             <section className="rounded-md border bg-muted/20 px-3 py-3">
-              <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><FileText className="h-3.5 w-3.5 text-primary" />Execution brief</h3>{canEdit && <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={openEdit}>Edit</Button>}</div>
+              <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><FileText className="h-3.5 w-3.5 text-primary-text" />Execution brief</h3>{canEdit && <Button variant="ghost" size="sm" className="h-7 px-2 text-[0.6875rem]" onClick={openEdit}>Edit</Button>}</div>
               <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{task.description || "No execution brief provided."}</p>
             </section>
             <section className="overflow-hidden rounded-md border">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3">
                 <div className="min-w-48 flex-1">
-                  <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><CheckSquare className="h-3.5 w-3.5 text-primary" />Sub-tasks <span className="font-normal text-muted-foreground">{completed}/{activeSubtasks.length} completed</span></h3><span className="text-[10px] text-muted-foreground">{activeSubtasks.length ? Math.round(completed / activeSubtasks.length * 100) : 0}%</span></div>
+                  <div className="flex items-center justify-between gap-2"><h3 className="flex items-center gap-2 text-xs font-semibold"><CheckSquare className="h-3.5 w-3.5 text-primary-text" />Sub-tasks <span className="font-normal text-muted-foreground">{completed}/{activeSubtasks.length} completed</span></h3><span className="text-[0.625rem] text-muted-foreground">{activeSubtasks.length ? Math.round(completed / activeSubtasks.length * 100) : 0}%</span></div>
                   <Progress value={activeSubtasks.length ? completed / activeSubtasks.length * 100 : 0} className="mt-2 h-1.5 max-w-[280px]" />
                 </div>
                 <div className="relative w-full max-w-[210px]">
-                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" /><Input aria-label="Search subtasks" placeholder="Search sub-tasks…" className="h-7 pl-7 pr-7 text-[11px]" value={subtaskFilter} onChange={(event) => setSubtaskFilter(event.target.value)} />
+                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" /><Input aria-label="Search subtasks" placeholder="Search sub-tasks…" className="h-7 pl-7 pr-7 text-[0.6875rem]" value={subtaskFilter} onChange={(event) => setSubtaskFilter(event.target.value)} />
                   {subtaskFilter && <button type="button" aria-label="Clear subtask search" onClick={() => setSubtaskFilter("")} className="absolute right-1.5 top-1.5 text-muted-foreground"><X className="h-4 w-4" /></button>}
                 </div>
               </div>
@@ -1297,33 +1297,33 @@ function SubtaskInspector({ task, team, subtask, loading, error, canEdit, canCha
   return (
     <aside className="fixed inset-0 z-40 flex w-full flex-col overflow-y-auto border-l bg-background p-4 shadow-2xl lg:static lg:z-auto lg:w-[400px] lg:shrink-0 lg:p-4" aria-label="Sub-task inspector">
       <header className="flex items-start justify-between gap-3 border-b pb-3">
-        <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-[.14em] text-primary">Sub-task</p><h2 className="mt-1 break-words text-lg font-semibold">{subtask?.title || (loading ? "Loading sub-task…" : "Sub-task unavailable")}</h2><p className="mt-1 truncate text-[10px] text-muted-foreground">Parent: {task.title} · {team.name}</p></div>
+        <div className="min-w-0"><p className="text-[0.5625rem] font-semibold uppercase tracking-[.14em] text-primary-text">Sub-task</p><h2 className="mt-1 break-words text-lg font-semibold">{subtask?.title || (loading ? "Loading sub-task…" : "Sub-task unavailable")}</h2><p className="mt-1 truncate text-[0.625rem] text-muted-foreground">Parent: {task.title} · {team.name}</p></div>
         <Button variant="ghost" size="icon" aria-label="Close sub-task inspector" onClick={onClose}><X className="h-4 w-4" /></Button>
       </header>
       {loading ? <div className="mt-4 space-y-3"><div className="h-24 animate-pulse rounded-lg bg-muted" /><div className="h-40 animate-pulse rounded-lg bg-muted" /></div> : error || !subtask || String(subtask.parentTaskId || "") !== String(task.id) ? <p className="py-8 text-center text-xs text-muted-foreground">This sub-task is unavailable in this Team context.</p> : <>
         <div className="grid grid-cols-2 gap-x-3 gap-y-3 border-b py-3">
-          <MetadataField label="Assignee">{canEdit ? <Select value={subtask.assigneeId || "none"} onValueChange={(value) => void updateSubtask({ assigneeId: value === "none" ? null : value })} disabled={saving}><SelectTrigger aria-label="Sub-task assignee" className="h-8 text-[11px]"><SelectValue placeholder="Unassigned" /></SelectTrigger><SelectContent><SelectItem value="none">Unassigned</SelectItem>{members.map((person) => <SelectItem key={person.id} value={person.id}>{userName(person)}</SelectItem>)}</SelectContent></Select> : <p className="truncate text-xs">{userName(subtask.assignee)}</p>}</MetadataField>
-          <MetadataField label="Due date">{canEdit ? <Input aria-label="Sub-task due date" type="date" className="h-8 text-[11px]" value={dateInputValue(subtask.deadline)} onChange={(event) => void updateSubtask({ deadline: dateValue(event.target.value) })} disabled={saving} /> : <p className="text-xs">{formattedDate(subtask.deadline)}</p>}</MetadataField>
-          <MetadataField label="Priority">{canEdit ? <Select value={subtask.priority || "medium"} onValueChange={(value) => void updateSubtask({ priority: value as TaskPriority })} disabled={saving}><SelectTrigger aria-label="Sub-task priority" className="h-8 text-[11px]"><SelectValue /></SelectTrigger><SelectContent>{priorities.map((priority) => <SelectItem key={priority} value={priority}>{priorityLabel(priority)}</SelectItem>)}</SelectContent></Select> : <p className="text-xs">{priorityLabel(subtask.priority)}</p>}</MetadataField>
-          <MetadataField label="Status">{canChangeStatus ? <Select value={subtask.status || "pending"} onValueChange={(value) => void updateSubtask({ status: value as TaskStatus })} disabled={saving}><SelectTrigger aria-label="Sub-task status" className="h-8 text-[11px]"><SelectValue /></SelectTrigger><SelectContent>{statuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select> : <p className="text-xs">{statusLabel(subtask.status)}</p>}</MetadataField>
+          <MetadataField label="Assignee">{canEdit ? <Select value={subtask.assigneeId || "none"} onValueChange={(value) => void updateSubtask({ assigneeId: value === "none" ? null : value })} disabled={saving}><SelectTrigger aria-label="Sub-task assignee" className="h-8 text-[0.6875rem]"><SelectValue placeholder="Unassigned" /></SelectTrigger><SelectContent><SelectItem value="none">Unassigned</SelectItem>{members.map((person) => <SelectItem key={person.id} value={person.id}>{userName(person)}</SelectItem>)}</SelectContent></Select> : <p className="truncate text-xs">{userName(subtask.assignee)}</p>}</MetadataField>
+          <MetadataField label="Due date">{canEdit ? <Input aria-label="Sub-task due date" type="date" className="h-8 text-[0.6875rem]" value={dateInputValue(subtask.deadline)} onChange={(event) => void updateSubtask({ deadline: dateValue(event.target.value) })} disabled={saving} /> : <p className="text-xs">{formattedDate(subtask.deadline)}</p>}</MetadataField>
+          <MetadataField label="Priority">{canEdit ? <Select value={subtask.priority || "medium"} onValueChange={(value) => void updateSubtask({ priority: value as TaskPriority })} disabled={saving}><SelectTrigger aria-label="Sub-task priority" className="h-8 text-[0.6875rem]"><SelectValue /></SelectTrigger><SelectContent>{priorities.map((priority) => <SelectItem key={priority} value={priority}>{priorityLabel(priority)}</SelectItem>)}</SelectContent></Select> : <p className="text-xs">{priorityLabel(subtask.priority)}</p>}</MetadataField>
+          <MetadataField label="Status">{canChangeStatus ? <Select value={subtask.status || "pending"} onValueChange={(value) => void updateSubtask({ status: value as TaskStatus })} disabled={saving}><SelectTrigger aria-label="Sub-task status" className="h-8 text-[0.6875rem]"><SelectValue /></SelectTrigger><SelectContent>{statuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select> : <p className="text-xs">{statusLabel(subtask.status)}</p>}</MetadataField>
         </div>
         <Tabs value={tab} onValueChange={setTab} className="mt-3 flex min-h-0 flex-1 flex-col">
-          <TabsList className="grid h-8 w-full grid-cols-3"><TabsTrigger value="notes" className="text-[11px]">Notes</TabsTrigger><TabsTrigger value="files" className="text-[11px]">Files <span className="ml-1">{subtask.attachments?.length || 0}</span></TabsTrigger><TabsTrigger value="activity" className="text-[11px]">Activity</TabsTrigger></TabsList>
+          <TabsList className="grid h-8 w-full grid-cols-3"><TabsTrigger value="notes" className="text-[0.6875rem]">Notes</TabsTrigger><TabsTrigger value="files" className="text-[0.6875rem]">Files <span className="ml-1">{subtask.attachments?.length || 0}</span></TabsTrigger><TabsTrigger value="activity" className="text-[0.6875rem]">Activity</TabsTrigger></TabsList>
           <TabsContent value="notes" className="mt-3 flex min-h-0 flex-1 flex-col">
             <div className="min-h-28 flex-1 space-y-3 overflow-y-auto">
               {commentsLoading && <p className="text-xs text-muted-foreground">Loading notes…</p>}
-              {commentsError && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">{commentsError}</div>}
+              {commentsError && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive-text">{commentsError}</div>}
               {!commentsLoading && !commentsError && comments.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">No notes yet. Add context for the Team here.</p>}
-              {comments.map((comment) => <div key={comment.id} className="flex gap-2"><Avatar className="h-7 w-7 shrink-0"><AvatarImage src={comment.user?.profilePictureUrl} /><AvatarFallback className="text-[9px]">{initials(userName(comment.user))}</AvatarFallback></Avatar><div className="min-w-0 flex-1 rounded-md bg-muted/50 px-2.5 py-2"><div className="flex items-center justify-between gap-2"><span className="truncate text-[10px] font-medium">{userName(comment.user)}</span><time className="shrink-0 text-[9px] text-muted-foreground">{formattedDateTime(comment.createdAt)}</time></div><p className="mt-1 whitespace-pre-wrap break-words text-xs">{comment.content}</p></div></div>)}
+              {comments.map((comment) => <div key={comment.id} className="flex gap-2"><Avatar className="h-7 w-7 shrink-0"><AvatarImage src={comment.user?.profilePictureUrl} /><AvatarFallback className="text-[0.5625rem]">{initials(userName(comment.user))}</AvatarFallback></Avatar><div className="min-w-0 flex-1 rounded-md bg-muted/50 px-2.5 py-2"><div className="flex items-center justify-between gap-2"><span className="truncate text-[0.625rem] font-medium">{userName(comment.user)}</span><time className="shrink-0 text-[0.5625rem] text-muted-foreground">{formattedDateTime(comment.createdAt)}</time></div><p className="mt-1 whitespace-pre-wrap break-words text-xs">{comment.content}</p></div></div>)}
             </div>
-            <form onSubmit={submitComment} className="mt-3 border-t pt-3"><Textarea aria-label="Write a note" placeholder="Add a note…" rows={2} className="min-h-16 resize-y text-xs" value={commentText} onChange={(event) => setCommentText(event.target.value)} /><div className="mt-2 flex justify-end"><Button type="submit" size="sm" className="h-7 text-[11px]" disabled={sending || !commentText.trim()}><Send className="mr-1.5 h-3 w-3" />{sending ? "Adding…" : "Add note"}</Button></div></form>
+            <form onSubmit={submitComment} className="mt-3 border-t pt-3"><Textarea aria-label="Write a note" placeholder="Add a note…" rows={2} className="min-h-16 resize-y text-xs" value={commentText} onChange={(event) => setCommentText(event.target.value)} /><div className="mt-2 flex justify-end"><Button type="submit" size="sm" className="h-7 text-[0.6875rem]" disabled={sending || !commentText.trim()}><Send className="mr-1.5 h-3 w-3" />{sending ? "Adding…" : "Add note"}</Button></div></form>
           </TabsContent>
           <TabsContent value="files" className="mt-3">
-            <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">{subtask.attachments?.length || 0} attachments</p>{canEdit && <label className="inline-flex cursor-pointer items-center"><input type="file" multiple className="sr-only" aria-label="Upload files" onChange={(event) => void uploadFiles(event)} disabled={uploading} /><Button asChild size="sm" variant="outline" className="h-7 text-[11px]"><span><Paperclip className="mr-1.5 h-3 w-3" />{uploading ? "Uploading…" : "Upload"}</span></Button></label>}</div>
-            {subtask.attachments?.length ? <div className="mt-3 divide-y rounded-md border">{subtask.attachments.map((file) => <div key={file.id} className="flex items-center gap-2 px-2.5 py-2"><FileText className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate text-xs">{file.fileName}</span><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={() => void downloadFile(file)} disabled={deletingAttachment === file.id}>{deletingAttachment === file.id ? "Working…" : "Download"}</Button>{canEdit && <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" aria-label={`Remove ${file.fileName}`} onClick={() => void removeFile(file.id)} disabled={deletingAttachment === file.id}><Trash2 className="h-3.5 w-3.5" /></Button>}</div>)}</div> : <p className="py-10 text-center text-xs text-muted-foreground">No files attached to this sub-task.</p>}
+            <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">{subtask.attachments?.length || 0} attachments</p>{canEdit && <label className="inline-flex cursor-pointer items-center"><input type="file" multiple className="sr-only" aria-label="Upload files" onChange={(event) => void uploadFiles(event)} disabled={uploading} /><Button asChild size="sm" variant="outline" className="h-7 text-[0.6875rem]"><span><Paperclip className="mr-1.5 h-3 w-3" />{uploading ? "Uploading…" : "Upload"}</span></Button></label>}</div>
+            {subtask.attachments?.length ? <div className="mt-3 divide-y rounded-md border">{subtask.attachments.map((file) => <div key={file.id} className="flex items-center gap-2 px-2.5 py-2"><FileText className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate text-xs">{file.fileName}</span><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[0.625rem]" onClick={() => void downloadFile(file)} disabled={deletingAttachment === file.id}>{deletingAttachment === file.id ? "Working…" : "Download"}</Button>{canEdit && <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive-text" aria-label={`Remove ${file.fileName}`} onClick={() => void removeFile(file.id)} disabled={deletingAttachment === file.id}><Trash2 className="h-3.5 w-3.5" /></Button>}</div>)}</div> : <p className="py-10 text-center text-xs text-muted-foreground">No files attached to this sub-task.</p>}
           </TabsContent>
           <TabsContent value="activity" className="mt-3">
-            {subtask.activities?.length ? <ol className="space-y-3">{[...subtask.activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item) => <li key={item.id} className="flex gap-2.5"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" /><div><p className="text-xs"><span className="font-medium">{userName(item.user)}</span> <span className="text-muted-foreground">{item.actionType.replace(/_/g, " ")}</span></p><time className="text-[10px] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div></li>)}</ol> : <p className="py-10 text-center text-xs text-muted-foreground">No activity for this sub-task yet.</p>}
+            {subtask.activities?.length ? <ol className="space-y-3">{[...subtask.activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item) => <li key={item.id} className="flex gap-2.5"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" /><div><p className="text-xs"><span className="font-medium">{userName(item.user)}</span> <span className="text-muted-foreground">{item.actionType.replace(/_/g, " ")}</span></p><time className="text-[0.625rem] text-muted-foreground">{formattedDateTime(item.createdAt)}</time></div></li>)}</ol> : <p className="py-10 text-center text-xs text-muted-foreground">No activity for this sub-task yet.</p>}
           </TabsContent>
         </Tabs>
       </>}
@@ -1332,7 +1332,7 @@ function SubtaskInspector({ task, team, subtask, loading, error, canEdit, canCha
 }
 
 function MetadataField({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="min-w-0 space-y-1"><span className="block text-[10px] font-medium text-muted-foreground">{label}</span>{children}</label>;
+  return <label className="min-w-0 space-y-1"><span className="block text-[0.625rem] font-medium text-muted-foreground">{label}</span>{children}</label>;
 }
 
 function TeamDialogs({
@@ -1369,7 +1369,7 @@ function TeamDialogs({
         <DialogHeader><DialogTitle>{dialog === "members" ? "Manage members" : dialog === "lead" ? "Change Team Lead" : dialog === "create" ? "Create Team" : "Edit Team"}</DialogTitle><DialogDescription>{dialog === "members" ? "Search workspace members and select who should belong to this Team." : dialog === "lead" ? "Only active Team members can become Team Lead." : dialog === "create" ? "Create a Team in the current workspace." : "Update this Team's name and description."}</DialogDescription></DialogHeader>
         {(dialog === "create" || dialog === "edit") && <div className="space-y-3"><div><Label htmlFor="team-name">Team name</Label><Input id="team-name" className="mt-1" value={teamName} onChange={(event) => setTeamName(event.target.value)} maxLength={120} /></div><div><Label htmlFor="team-description">Description</Label><Textarea id="team-description" className="mt-1" value={teamDescription} onChange={(event) => setTeamDescription(event.target.value)} /></div></div>}
         {dialog === "lead" && <Select value={selectedMemberIds[0] || "none"} onValueChange={(value) => setSelectedMemberIds(value === "none" ? [] : [value])}><SelectTrigger aria-label="Select Team Lead"><SelectValue placeholder="Select a Team member" /></SelectTrigger><SelectContent><SelectItem value="none">Select a member</SelectItem>{teamMembers.map((link) => <SelectItem key={link.companyMemberId} value={link.companyMemberId}>{nameOf(link.companyMember)}</SelectItem>)}</SelectContent></Select>}
-        {dialog === "members" && <div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input autoFocus aria-label="Search workspace members" value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Search workspace members…" className="pl-8" /></div><div className="max-h-72 divide-y overflow-y-auto rounded-md border">{allMembers.map((member) => <label key={member.id} className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-muted/50"><input type="checkbox" checked={selectedMemberIds.includes(member.id)} onChange={() => toggle(member.id)} disabled={member.id === currentLead && isMember(member.id)} aria-label={`${isMember(member.id) ? "Remove" : "Add"} ${nameOf(member)}`} /><Avatar className="h-8 w-8"><AvatarFallback className="text-[10px]">{personInitials(member)}</AvatarFallback></Avatar><span className="min-w-0 flex-1 truncate text-xs font-medium">{nameOf(member)}</span><span className="text-[10px] text-muted-foreground">{isMember(member.id) ? "In Team" : "Available"}</span></label>)}{!allMembers.length && <p className="p-5 text-center text-xs text-muted-foreground">No matching workspace members.</p>}</div></div>}
+        {dialog === "members" && <div className="space-y-3"><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input autoFocus aria-label="Search workspace members" value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Search workspace members…" className="pl-8" /></div><div className="max-h-72 divide-y overflow-y-auto rounded-md border">{allMembers.map((member) => <label key={member.id} className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-muted/50"><input type="checkbox" checked={selectedMemberIds.includes(member.id)} onChange={() => toggle(member.id)} disabled={member.id === currentLead && isMember(member.id)} aria-label={`${isMember(member.id) ? "Remove" : "Add"} ${nameOf(member)}`} /><Avatar className="h-8 w-8"><AvatarFallback className="text-[0.625rem]">{personInitials(member)}</AvatarFallback></Avatar><span className="min-w-0 flex-1 truncate text-xs font-medium">{nameOf(member)}</span><span className="text-[0.625rem] text-muted-foreground">{isMember(member.id) ? "In Team" : "Available"}</span></label>)}{!allMembers.length && <p className="p-5 text-center text-xs text-muted-foreground">No matching workspace members.</p>}</div></div>}
         <DialogFooter className="flex-wrap sm:justify-between">
           <Button type="button" variant="outline" onClick={() => { setDialog(null); reset(); }}>Cancel</Button>
           {canChangeLead && dialog === "lead" && <Button disabled={saving || !selectedMemberIds[0]} onClick={() => team && void save(() => api.assignTeamLead(team.id, selectedMemberIds[0], { expectedCurrentLeadMemberId: team.leadMemberId || undefined, confirmTransfer: true }), "Team Lead updated")}>{saving ? "Saving…" : "Save Lead"}</Button>}

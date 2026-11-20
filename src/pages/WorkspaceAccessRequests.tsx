@@ -68,9 +68,9 @@ const permissionLabel = (key: string) =>
     .join(" ");
 
 const statusBadgeClass = (status: string) => {
-  if (status === "approved") return "bg-success/10 text-success border-success/20";
-  if (status === "denied") return "bg-destructive/10 text-destructive border-destructive/20";
-  return "bg-warning/10 text-warning border-warning/20";
+  if (status === "approved") return "bg-success/10 text-success-text border-success/20";
+  if (status === "denied") return "bg-destructive/10 text-destructive-text border-destructive/20";
+  return "bg-warning/10 text-warning-text border-warning/20";
 };
 
 const getRequesterName = (request: WorkspaceAccessRequest) => {
@@ -239,7 +239,7 @@ export default function WorkspaceAccessRequests() {
           </p>
         )}
 
-        <p className="mt-2 text-[11px] text-muted-foreground">
+        <p className="mt-2 text-[0.6875rem] text-muted-foreground">
           {request.createdAt
             ? new Date(request.createdAt).toLocaleString()
             : "No date"}
@@ -308,7 +308,7 @@ export default function WorkspaceAccessRequests() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-4 w-4 text-primary" />
+              <ShieldCheck className="h-4 w-4 text-primary-text" />
               Current access summary
             </CardTitle>
             <CardDescription>
@@ -332,7 +332,7 @@ export default function WorkspaceAccessRequests() {
                   >
                     <div>
                       <p className="text-sm font-medium">{permission.title}</p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-[0.6875rem] text-muted-foreground">
                         {allowed ? "Allowed" : "Restricted"}
                       </p>
                     </div>
@@ -341,7 +341,7 @@ export default function WorkspaceAccessRequests() {
                       variant="outline"
                       className={
                         allowed
-                          ? "bg-success/10 text-success border-success/20"
+                          ? "bg-success/10 text-success-text border-success/20"
                           : "bg-muted text-muted-foreground"
                       }
                     >
@@ -358,7 +358,7 @@ export default function WorkspaceAccessRequests() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <LockKeyhole className="h-4 w-4 text-primary" />
+                <LockKeyhole className="h-4 w-4 text-primary-text" />
                 Request additional permissions
               </CardTitle>
               <CardDescription>
@@ -390,7 +390,7 @@ export default function WorkspaceAccessRequests() {
                           {alreadyAllowed && (
                             <Badge
                               variant="outline"
-                              className="bg-success/10 text-success border-success/20"
+                              className="bg-success/10 text-success-text border-success/20"
                             >
                               Already allowed
                             </Badge>
@@ -399,7 +399,7 @@ export default function WorkspaceAccessRequests() {
                           {!alreadyAllowed && alreadyPending && (
                             <Badge
                               variant="outline"
-                              className="bg-warning/10 text-warning border-warning/20"
+                              className="bg-warning/10 text-warning-text border-warning/20"
                             >
                               Pending
                             </Badge>
@@ -456,7 +456,7 @@ export default function WorkspaceAccessRequests() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <UserCheck className="h-4 w-4 text-primary" />
+                <UserCheck className="h-4 w-4 text-primary-text" />
                 Approval queue
               </CardTitle>
               <CardDescription>
@@ -472,7 +472,7 @@ export default function WorkspaceAccessRequests() {
 
         {isJoinApprover && (
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><UserCheck className="h-4 w-4 text-primary" />Workspace join requests</CardTitle><CardDescription>Membership admission has a dedicated review screen with pending requests and decision history.</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><UserCheck className="h-4 w-4 text-primary-text" />Workspace join requests</CardTitle><CardDescription>Membership admission has a dedicated review screen with pending requests and decision history.</CardDescription></CardHeader>
             <CardContent><Button asChild><Link to="/settings/workspace/join-requests">Open Join Requests</Link></Button></CardContent>
           </Card>
         )}
@@ -480,7 +480,7 @@ export default function WorkspaceAccessRequests() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <History className="h-4 w-4 text-primary" />
+              <History className="h-4 w-4 text-primary-text" />
               {isApprover ? "Request history" : "My request history"}
             </CardTitle>
             <CardDescription>
@@ -493,7 +493,7 @@ export default function WorkspaceAccessRequests() {
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <Loader2 className="h-6 w-6 animate-spin text-primary-text" />
               </div>
             ) : historyRequests.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border py-10 text-center">

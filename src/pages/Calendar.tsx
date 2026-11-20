@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { viewportAtLeastRem } from "@/hooks/use-viewport-width";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -57,7 +58,8 @@ export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [createTaskOpen, setCreateTaskOpen] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // Start collapsed where the 18rem panel would leave the calendar itself too narrow (phones, tablets, high zoom).
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => !viewportAtLeastRem(64));
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<{ event: CalendarEvent; anchor: AnchorRect } | null>(null);
     const [slot, setSlot] = useState<CalendarSlot | null>(null);
@@ -272,7 +274,7 @@ export default function CalendarPage() {
 
     return (
       <DashboardLayout hidePadding fullWidth>
-        <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 bg-gradient-to-br from-gray-50 to-gray-100/50">
+        <div className="flex h-[calc(100dvh-var(--app-header-h,3.5rem))] min-h-[28rem] bg-gradient-to-br from-gray-50 to-gray-100/50">
             {/* Sidebar */}
             <CalendarSidebar
                 view={view}

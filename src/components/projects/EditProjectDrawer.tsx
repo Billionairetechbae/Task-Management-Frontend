@@ -112,7 +112,7 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
               placeholder="e.g. Website Redesign"
               className={errors.name ? "border-destructive" : ""}
             />
-            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+            {errors.name && <p className="text-xs text-destructive-text">{errors.name}</p>}
           </div>
 
           <TeamSelector value={form.teamId} onChange={(teamId) => setForm(p => ({ ...p, teamId }))} />
@@ -158,7 +158,7 @@ const EditProjectDrawer = ({ project, open, onOpenChange, onSuccess, mode }: Edi
                 onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))}
                 className={errors.endDate ? "border-destructive" : ""}
               />
-              {errors.endDate && <p className="text-xs text-destructive">{errors.endDate}</p>}
+              {errors.endDate && <p className="text-xs text-destructive-text">{errors.endDate}</p>}
             </div>
           </div>
 

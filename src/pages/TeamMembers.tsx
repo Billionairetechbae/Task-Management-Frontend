@@ -95,7 +95,7 @@ const TeamMembers = () => {
     return (
       <DashboardLayout>
         <div className="text-center py-24 animate-fade-in">
-          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive/60" />
+          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-destructive-text/60" />
           <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
             You don't have permission to view workspace members. Contact your workspace administrator if you need access.
@@ -170,7 +170,7 @@ const TeamMembers = () => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8">
-                            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary-text">
                               {tm.firstName.charAt(0)}{tm.lastName.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
@@ -181,7 +181,7 @@ const TeamMembers = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px] capitalize">{tm.specialization}</Badge>
+                        <Badge variant="outline" className="text-[0.625rem] capitalize">{tm.specialization}</Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -193,16 +193,16 @@ const TeamMembers = () => {
                         <span className="text-sm font-semibold">${tm.hourlyRate}/hr</span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={cn("text-[10px]", tm.isAvailable ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20")}>
+                        <Badge variant="outline" className={cn("text-[0.625rem]", tm.isAvailable ? "bg-success/10 text-success-text border-success/20" : "bg-destructive/10 text-destructive-text border-destructive/20")}>
                           {tm.isAvailable ? "Available" : "Busy"}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap max-w-[160px]">
                           {tm.skills.slice(0, 2).map((skill, i) => (
-                            <Badge key={i} variant="secondary" className="text-[9px] h-5">{skill}</Badge>
+                            <Badge key={i} variant="secondary" className="text-[0.5625rem] h-5">{skill}</Badge>
                           ))}
-                          {tm.skills.length > 2 && <Badge variant="secondary" className="text-[9px] h-5">+{tm.skills.length - 2}</Badge>}
+                          {tm.skills.length > 2 && <Badge variant="secondary" className="text-[0.5625rem] h-5">+{tm.skills.length - 2}</Badge>}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -230,7 +230,7 @@ const TeamMembers = () => {
                   <div key={tm.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-sm transition-shadow group">
                     <div className="flex items-start gap-3 mb-3">
                       <Avatar className="w-11 h-11">
-                        <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
+                        <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary-text">
                           {tm.firstName.charAt(0)}{tm.lastName.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
@@ -241,23 +241,23 @@ const TeamMembers = () => {
                           {[1, 2, 3, 4, 5].map(star => (
                             <Star key={star} className={cn("w-3 h-3", star <= tm.rating ? "fill-amber-400 text-amber-400" : "text-muted")} />
                           ))}
-                          <span className="text-[10px] text-muted-foreground ml-0.5">({tm.rating.toFixed(1)})</span>
+                          <span className="text-[0.625rem] text-muted-foreground ml-0.5">({tm.rating.toFixed(1)})</span>
                         </div>
                       </div>
-                      <Badge variant="outline" className={cn("text-[10px] shrink-0", tm.isAvailable ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20")}>
+                      <Badge variant="outline" className={cn("text-[0.625rem] shrink-0", tm.isAvailable ? "bg-success/10 text-success-text border-success/20" : "bg-destructive/10 text-destructive-text border-destructive/20")}>
                         {tm.isAvailable ? "Available" : "Busy"}
                       </Badge>
                     </div>
                     {tm.bio && <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{tm.bio}</p>}
                     <div className="flex flex-wrap gap-1 mb-3">
                       {tm.skills.slice(0, 3).map((skill, i) => (
-                        <Badge key={i} variant="secondary" className="text-[9px]">{skill}</Badge>
+                        <Badge key={i} variant="secondary" className="text-[0.5625rem]">{skill}</Badge>
                       ))}
-                      {tm.skills.length > 3 && <Badge variant="secondary" className="text-[9px]">+{tm.skills.length - 3}</Badge>}
+                      {tm.skills.length > 3 && <Badge variant="secondary" className="text-[0.5625rem]">+{tm.skills.length - 3}</Badge>}
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <div>
-                        <p className="text-[10px] text-muted-foreground">Hourly Rate</p>
+                        <p className="text-[0.625rem] text-muted-foreground">Hourly Rate</p>
                         <p className="font-bold text-base">${tm.hourlyRate}/hr</p>
                       </div>
                       <Button size="sm" className="h-8 text-xs" disabled={!tm.isAvailable}>

@@ -20,7 +20,7 @@ const Help = () => {
         <div className="mb-10">
           <Logo className="h-8 mb-6" />
           <div className="flex items-center gap-3 mb-2">
-            <LifeBuoy className="w-6 h-6 text-primary" />
+            <LifeBuoy className="w-6 h-6 text-primary-text" />
             <h1 className="text-3xl font-bold tracking-tight">Help &amp; Support</h1>
           </div>
           <p className="text-muted-foreground">
@@ -32,7 +32,7 @@ const Help = () => {
           <Card className="sm:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Mail className="w-5 h-5 text-primary" />
+                <Mail className="w-5 h-5 text-primary-text" />
                 Contact support
               </CardTitle>
             </CardHeader>
@@ -50,7 +50,7 @@ const Help = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="w-5 h-5 text-primary" />
+                <FileText className="w-5 h-5 text-primary-text" />
                 Terms of Service
               </CardTitle>
             </CardHeader>
@@ -66,7 +66,7 @@ const Help = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <ShieldCheck className="w-5 h-5 text-primary" />
+                <ShieldCheck className="w-5 h-5 text-primary-text" />
                 Privacy Policy
               </CardTitle>
             </CardHeader>

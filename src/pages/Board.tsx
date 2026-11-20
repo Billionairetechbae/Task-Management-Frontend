@@ -166,7 +166,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
     return String(a.deadline || "9999").localeCompare(String(b.deadline || "9999")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
   })])), [tasks]);
 
-  const content = <main className={embedded ? "flex h-[calc(100dvh-22rem)] min-h-[25rem] w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70" : "flex h-[calc(100dvh-3.5rem)] min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70"}>
+  const content = <main className={embedded ? "flex h-[calc(100dvh-22rem)] min-h-[25rem] w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70" : "flex h-[calc(100dvh-var(--app-header-h,3.5rem))] min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70"}>
       {!embedded && <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
         <WorkspaceSwitcher />
         <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold">Board</h1><p className="text-sm text-muted-foreground">Active workspace tasks by status</p></div>
@@ -176,7 +176,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
           <select aria-label="Filter board by team" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All teams</option>{teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
         </>}
       </header>}
-      {isError && <p role="alert" className="m-4 text-sm text-destructive">Could not load board tasks. Please try again.</p>}
+      {isError && <p role="alert" className="m-4 text-sm text-destructive-text">Could not load board tasks. Please try again.</p>}
       <section
         aria-label="Task board"
         data-testid="board-grid"
@@ -188,11 +188,11 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
             key={status}
             aria-label={`${STATUS_LABELS[status]} column`}
             data-testid={`board-panel-${status}`}
-            className={`flex h-full w-[min(86vw,290px)] min-w-[260px] max-w-[290px] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm ${accent.bar} ${accent.panel}`}
+            className={`flex h-full w-[min(86vw,18rem)] min-w-[min(16rem,86vw)] max-w-[18rem] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm ${accent.bar} ${accent.panel}`}
           >
-            <header className="flex shrink-0 items-center justify-between border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
-              <span className="flex items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
-              <span aria-label={`${!embedded && (hasNextPage || isFetchingNextPage) ? "loading" : columns[status].length} tasks`} className={`min-w-[1.75rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{!embedded && (hasNextPage || isFetchingNextPage) ? "…" : columns[status].length}</span>
+            <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
+              <span className="flex min-w-0 items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
+              <span aria-label={`${!embedded && (hasNextPage || isFetchingNextPage) ? "loading" : columns[status].length} tasks`} className={`min-w-[1.75rem] shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{!embedded && (hasNextPage || isFetchingNextPage) ? "…" : columns[status].length}</span>
             </header>
             <div data-testid={`board-scroll-${status}`} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-2.5">
               {isLoading ? <p className="p-2 text-sm text-muted-foreground">Loading…</p> : columns[status].length === 0 ? <p className="rounded-lg border border-dashed bg-white/60 p-4 text-center text-sm text-muted-foreground">No tasks</p> : columns[status].map((task) => {
@@ -220,7 +220,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
                     {Number(task.subtaskCount || 0) > 0 && <span className="flex items-center gap-1"><CheckSquare size={12} />{task.subtaskCount} subtask{task.subtaskCount === 1 ? "" : "s"}</span>}
                     {Number((task as any).commentCount || 0) > 0 && <span className="flex items-center gap-1"><MessageSquare size={12} />{(task as any).commentCount}</span>}
                   </div>}
-                  {Array.isArray((task as any).customFieldChips) && (task as any).customFieldChips.length > 0 && <div className="mt-2 flex flex-wrap gap-1" aria-label="Custom fields">{(task as any).customFieldChips.slice(0, 3).map((chip: any) => <span key={chip.fieldId} title={chip.name} className="max-w-full truncate rounded border bg-slate-50 px-2 py-0.5 text-[10px] text-slate-700">{chip.name}: {Array.isArray(chip.display) ? chip.display.join(", ") : String(chip.display)}</span>)}</div>}
+                  {Array.isArray((task as any).customFieldChips) && (task as any).customFieldChips.length > 0 && <div className="mt-2 flex flex-wrap gap-1" aria-label="Custom fields">{(task as any).customFieldChips.slice(0, 3).map((chip: any) => <span key={chip.fieldId} title={chip.name} className="max-w-full truncate rounded border bg-slate-50 px-2 py-0.5 text-[0.625rem] text-slate-700">{chip.name}: {Array.isArray(chip.display) ? chip.display.join(", ") : String(chip.display)}</span>)}</div>}
                   {people.length > 0 && <p className="mt-2 truncate text-xs text-muted-foreground">{people.slice(0, 3).join(", ")}{people.length > 3 ? ` +${people.length - 3}` : ""}</p>}
                   {canMove && <label className="mt-3 flex items-center gap-1 border-t pt-2 text-xs font-medium text-slate-600">Move to <ChevronDown size={13} /><select aria-label={`Move ${task.title} to`} value={task.status || "pending"} disabled={move.isPending || leaving} onChange={(e) => startMove(task, e.target.value as TaskStatus)} className="min-w-0 flex-1 rounded border bg-white p-1 text-xs hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30">{TASK_STATUSES.map((next) => <option key={next} value={next}>{STATUS_LABELS[next]}</option>)}</select></label>}
                 </article>;

@@ -142,7 +142,7 @@ const ExternalShareDialog = ({ open, onOpenChange, resourceType, resourceId, res
                 <li key={s.id} className="rounded-md border p-2 grid gap-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm break-all">{s.email}</span>
-                    <Badge variant={s.expired ? "destructive" : "outline"} className="text-[10px]">{statusLabel(s)}</Badge>
+                    <Badge variant={s.expired ? "destructive" : "outline"} className="text-[0.625rem]">{statusLabel(s)}</Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Select value={s.permission} disabled={busyId === s.id} onValueChange={(v) => act(s.id, () => api.updateExternalShare(s.id, { permission: v as ExternalSharePermission }), "Permission updated")}>
@@ -155,10 +155,10 @@ const ExternalShareDialog = ({ open, onOpenChange, resourceType, resourceId, res
                     <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" disabled={busyId === s.id} onClick={() => act(s.id, () => api.resendExternalShare(s.id), "Invitation resent")}>
                       <RefreshCw className="h-3 w-3" /> Resend
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-destructive" disabled={busyId === s.id} onClick={() => act(s.id, () => api.revokeExternalShare(s.id), "Access revoked")}>
+                    <Button size="sm" variant="outline" className="h-8 gap-1 text-xs text-destructive-text" disabled={busyId === s.id} onClick={() => act(s.id, () => api.revokeExternalShare(s.id), "Access revoked")}>
                       <Ban className="h-3 w-3" /> Revoke
                     </Button>
-                    <span className="text-[11px] text-muted-foreground ml-auto">
+                    <span className="text-[0.6875rem] text-muted-foreground ml-auto">
                       {s.expiresAt ? `Expires ${new Date(s.expiresAt).toLocaleDateString()}` : "No expiry"}
                     </span>
                   </div>

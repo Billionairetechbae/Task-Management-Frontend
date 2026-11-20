@@ -1,11 +1,11 @@
 import OfficeDocumentPreview from "@/components/OfficeDocumentPreview";
 import { getOfficePreviewKind } from "@/lib/officePreview";
-import { X, Download, ExternalLink, Plus, Check } from "lucide-react";
+import { X, Download, ExternalLink, Plus, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getFileIcon } from "@/utils/fileIcons";
 
 interface AttachmentPreviewProps {
-  url: string;
+  url?: string;
   blob?: Blob;
   type: string;
   name: string;
@@ -15,6 +15,9 @@ interface AttachmentPreviewProps {
   /** When true, marks the file as already in task documents. */
   alreadyInTaskDocs?: boolean;
   addingToTaskDocs?: boolean;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 const isOffice = (type: string, name: string) => {
@@ -39,6 +42,9 @@ const AttachmentPreview = ({
   onAddToTaskDocs,
   alreadyInTaskDocs,
   addingToTaskDocs,
+  loading = false,
+  error = null,
+  onRetry,
 }: AttachmentPreviewProps) => {
   const t = (type || "").toLowerCase();
   const isImage = t.startsWith("image") || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name);
@@ -60,11 +66,11 @@ const AttachmentPreview = ({
         <div className="flex items-center justify-between gap-3 p-3 sm:p-4 border-b">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Icon className="w-5 h-5 text-primary" />
+              <Icon className="w-5 h-5 text-primary-text" />
             </div>
             <div className="min-w-0">
               <h2 className="font-semibold text-sm sm:text-base truncate">{name}</h2>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+              <p className="text-[0.625rem] uppercase tracking-wide text-muted-foreground truncate">
                 {type || "file"}
               </p>
             </div>
@@ -91,14 +97,14 @@ const AttachmentPreview = ({
                 )}
               </Button>
             )}
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
-              <a href={url} download={url.startsWith("blob:") && (unsupported || isOfficeFile) ? name : undefined} target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild disabled={!url || loading || !!error}>
+              <a href={url || "#"} download={url?.startsWith("blob:") && (unsupported || isOfficeFile) ? name : undefined} target="_blank" rel="noreferrer">
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Open</span>
               </a>
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
-              <a href={url} download={name}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild disabled={!url || loading || !!error}>
+              <a href={url || "#"} download={name}>
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Download</span>
               </a>
@@ -136,27 +142,34 @@ const AttachmentPreview = ({
 
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-auto bg-muted/20 flex items-center justify-center">
-          {isImage && (
+          {loading && <div className="flex flex-col items-center gap-3 p-12 text-sm text-muted-foreground" role="status"><span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />Loading preview…</div>}
+          {!loading && error && (
+            <div className="p-8 text-center text-sm text-destructive-text" role="alert">
+              <p>{error}</p>
+              {onRetry && <Button type="button" variant="outline" size="sm" className="mt-3 gap-2" onClick={onRetry}><RefreshCw className="h-3.5 w-3.5" />Retry preview</Button>}
+            </div>
+          )}
+          {!loading && !error && isImage && url && (
             <img src={url} alt={name} className="max-h-full max-w-full object-contain" />
           )}
-          {isPDF && (
+          {!loading && !error && isPDF && url && (
             <iframe src={url} title={name} className="w-full h-full min-h-[70vh] border-0" />
           )}
-          {isVideo && (
+          {!loading && !error && isVideo && url && (
             <video src={url} controls className="max-h-full max-w-full">
               Your browser does not support the video tag.
             </video>
           )}
-          {isAudio && (
+          {!loading && !error && isAudio && url && (
             <div className="p-6 w-full max-w-lg">
               <audio src={url} controls className="w-full" />
             </div>
           )}
-          {canPreviewOffice && <OfficeDocumentPreview blob={blob} kind={officeKind} />}
-          {isText && !isPDF && !isOfficeFile && (
+          {!loading && !error && canPreviewOffice && <OfficeDocumentPreview blob={blob} kind={officeKind} />}
+          {!loading && !error && isText && !isPDF && !isOfficeFile && url && (
             <iframe src={url} title={name} className="w-full h-full min-h-[60vh] border-0 bg-white" />
           )}
-          {(!canPreviewOffice && (isOfficeFile || unsupported)) && (
+          {!loading && !error && (!canPreviewOffice && (isOfficeFile || unsupported)) && (
             <div className="p-8 text-center text-muted-foreground">
               <Icon className="w-12 h-12 mx-auto mb-3 opacity-40" />
               <p className="text-sm">Preview not available for this file type.</p>

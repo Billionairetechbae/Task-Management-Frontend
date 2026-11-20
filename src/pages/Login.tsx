@@ -145,7 +145,7 @@ const Login = () => {
                     }
                   }
                 }}
-                className="underline text-primary font-semibold mt-2"
+                className="underline text-primary-text font-semibold mt-2"
               >
                 Resend verification email
               </button>
@@ -174,7 +174,7 @@ const Login = () => {
           <div className="mb-6">
             <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-10 h-10 text-destructive"
+                className="w-10 h-10 text-destructive-text"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -306,7 +306,7 @@ const Login = () => {
               <div className="flex justify-end">
                 <Link
                   to="/forgot-password"
-                  className="text-xs text-primary hover:underline transition-colors duration-150"
+                  className="text-xs text-primary-text hover:underline transition-colors duration-150"
                 >
                   Forgot password?
                 </Link>

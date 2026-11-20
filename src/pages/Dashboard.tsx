@@ -46,13 +46,13 @@ const tasks = [
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case "In Progress":
-      return "bg-primary/10 text-primary border-primary/20";
+      return "bg-primary/10 text-primary-text border-primary/20";
     case "Pending":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-warning/10 text-warning-text border-warning/20";
     case "Past Due":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive-text border-destructive/20";
     case "Completed":
-      return "bg-success/10 text-success border-success/20";
+      return "bg-success/10 text-success-text border-success/20";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -61,11 +61,11 @@ const getStatusBadgeClass = (status: string) => {
 const getPriorityBadgeClass = (priority: string) => {
   switch (priority) {
     case "High":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive-text border-destructive/20";
     case "Medium":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-warning/10 text-warning-text border-warning/20";
     case "Low":
-      return "bg-info/10 text-info border-info/20";
+      return "bg-info/10 text-info-text border-info/20";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -102,7 +102,7 @@ const Dashboard = () => {
       <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <h1 className="text-primary font-bold text-2xl">
+            <h1 className="text-primary-text font-bold text-2xl">
               admiino<span className="text-accent">°</span>
             </h1>
             <Badge variant="outline" className="hidden sm:inline-flex">
@@ -228,7 +228,7 @@ const Dashboard = () => {
                   className={cn(
                     "rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition",
                     activeTab === tab.key
-                      ? "border-primary text-primary"
+                      ? "border-primary text-primary-text"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   )}
                 >

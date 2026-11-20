@@ -52,7 +52,7 @@ const ForgotPassword = () => {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8">
 
-        <Link to="/" className="flex items-center gap-2 text-primary mb-6">
+        <Link to="/" className="flex items-center gap-2 text-primary-text mb-6">
           <ArrowLeft className="w-4 h-4" />
           Back to Login
         </Link>
@@ -95,7 +95,7 @@ const ForgotPassword = () => {
               If <strong>{email}</strong> is registered, you will receive password reset instructions shortly.
             </p>
 
-            <Link to="/" className="text-primary underline block text-center">
+            <Link to="/" className="text-primary-text underline block text-center">
               Return to Login
             </Link>
           </>

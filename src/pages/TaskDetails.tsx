@@ -1,4 +1,5 @@
 import { deliverComment, describeCommentFailure, messageIdForAttempt, type FailedAttempt } from "@/lib/commentDelivery";
+import { canSendTaskComment, shouldSendTypingStart, validateCommentFiles } from "@/lib/commentComposer";
 import { usePreviewBlobUrl } from "@/hooks/usePreviewBlobUrl";
 import { classifyTaskLoadError } from "@/lib/taskLoadError";
 import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
@@ -40,7 +41,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Task, TaskComment, TaskAccess } from "@/lib/api";
+import { api, Task, TaskComment } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -49,6 +50,7 @@ import { useBreakpoint } from "@/hooks/use-breakpoint";
 import CompanyBadge from "@/components/CompanyBadge";
 import AttachmentPreview from "@/components/AttachmentPreview";
 import FilePreviewCard from "@/components/tasks/FilePreviewCard";
+import { PendingTaskCommentAttachment, TaskCommentAttachment } from "@/components/tasks/TaskCommentAttachment";
 import SubtaskList from "@/components/tasks/SubtaskList";
 import TaskActivityTimeline from "@/components/tasks/TaskActivityTimeline";
 import TaskWatcherSection from "@/components/tasks/TaskWatcherSection";
@@ -122,11 +124,20 @@ const TaskDetails = () => {
   const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
-  const [taskAccess, setTaskAccess] = useState<TaskAccess | null>(null);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
   const [replyToComment, setReplyToComment] = useState<CorrectedTaskComment | null>(null);
   const [pendingCommentFiles, setPendingCommentFiles] = useState<File[]>([]);
+  const [commentSendError, setCommentSendError] = useState<string | null>(null);
+  const [chatAccessError, setChatAccessError] = useState<string | null>(null);
+  const [chatConnectionNotice, setChatConnectionNotice] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingActiveRef = useRef(false);
+  const sendingCommentRef = useRef(false);
+  const currentTaskIdRef = useRef(id);
+  currentTaskIdRef.current = id;
+  const optimisticCommentRef = useRef<Map<string, any>>(new Map());
+  const failedAttemptRef = useRef<FailedAttempt | null>(null);
   // Dropbox files chosen in the composer. They become visible attachments only after the comment is posted successfully.
   const [pendingConnectedStorage, setPendingConnectedStorage] = useState<Array<{ connectionId: string; item: ConnectedStorageItem }>>([]);
   
@@ -140,51 +151,61 @@ const TaskDetails = () => {
     queryKey: ["task-details", id, activeCompanyId], // workspace last: prefix invalidations by id still match, but a switch never reuses another workspace's cache
     queryFn: async () => {
       if (!id) throw new Error("No task id");
-      try {
-        const response = await api.getTaskById(id);
-        return response.data;
-      } catch (err: any) {
-        if (classifyTaskLoadError(err).kind === "forbidden") {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to view this task.",
-            variant: "destructive"
-          });
-        }
-        throw err;
-      }
+      const response = await api.getTaskById(id);
+      return response.data;
     },
     enabled: !!id,
     refetchOnWindowFocus: false,
     retry: false,
   });
 
+  const taskReady = !!id && taskQuery.isSuccess && String(taskQuery.data?.task?.id || "") === id;
+  const currentTaskAccess = taskReady ? taskQuery.data?.access ?? null : null;
+  const canCollaborate = taskReady && (
+    currentTaskAccess?.canCollaborate === true ||
+    (currentTaskAccess?.readOnly !== true && currentTaskAccess?.canEdit === true)
+  );
+
+  useEffect(() => {
+    if (taskReady && canCollaborate) setChatAccessError(null);
+  }, [taskReady, canCollaborate, currentTaskAccess]);
+
   const commentsQuery = useQuery({
-    queryKey: ["task-comments", id],
+    queryKey: ["task-comments", id, activeCompanyId, user?.id],
     queryFn: async () => {
       if (!id) throw new Error("No task id");
       const response = await api.getTaskComments(id, { limit: 50 });
       return (response.comments || []).filter(Boolean).map(fixCommentProfilePicture);
     },
-    enabled: !!id,
+    enabled: taskReady,
     refetchOnWindowFocus: false,
     retry: false,
   });
+
+  useEffect(() => {
+    setNewComment("");
+    setComments([]);
+    setReplyToComment(null);
+    setPendingCommentFiles([]);
+    setPendingConnectedStorage([]);
+    setCommentSendError(null);
+    setChatAccessError(null);
+    setChatConnectionNotice(null);
+    failedAttemptRef.current = null;
+    typingActiveRef.current = false;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+  }, [id, activeCompanyId, user?.id]);
 
   // Sync state with query data
   useEffect(() => {
     if (taskQuery.data) {
       setTask(taskQuery.data.task ?? null);
-      setTaskAccess(taskQuery.data.access ?? null);
     }
   }, [taskQuery.data]);
 
   // The backend access object is the final authority: treat the task as
   // read-only whenever editing is not explicitly permitted.
-  const isReadOnly = taskAccess
-    ? taskAccess.readOnly === true || taskAccess.canEdit === false
-    : false;
-  const canCollaborate = taskAccess?.canCollaborate === true || !isReadOnly;
+  const isReadOnly = !taskReady || currentTaskAccess?.readOnly === true || currentTaskAccess?.canEdit === false;
   const mobileActionTabs = [
     { key: "list" as const, label: "Tasks", Icon: ListChecks, count: 0 },
     { key: "chat" as const, label: "Chat", Icon: MessageSquare, count: comments.length },
@@ -205,14 +226,33 @@ const TaskDetails = () => {
   const [updating, setUpdating] = useState(false);
   const previewBlob = usePreviewBlobUrl();
   const [preview, setPreview] = useState<{
-    url: string;
-    blob: Blob;
+    url?: string;
+    blob?: Blob;
     type: string;
     name: string;
+    taskId?: string;
     attachmentId?: string;
     alreadyInDocs?: boolean;
+    loading?: boolean;
+    error?: string | null;
   } | null>(null);
   const [addingToDocs, setAddingToDocs] = useState(false);
+
+  const previewRequestRef = useRef(0);
+  const openTaskAttachmentPreview = useCallback(async (taskId: string, attachmentId: string, name: string, type: string, alreadyInDocs = true) => {
+    const requestId = ++previewRequestRef.current;
+    setPreview({ name: name || "Attachment", type: type || "application/octet-stream", taskId, alreadyInDocs, loading: true, error: null });
+    try {
+      const { blob, fileName, contentType } = await api.previewTaskAttachment(taskId, attachmentId);
+      if (requestId !== previewRequestRef.current) return; // closed or superseded while loading
+      const url = previewBlob.create(blob);
+      setPreview({ blob, url, type: contentType || blob.type || type, name: fileName || name || "download", taskId, attachmentId, alreadyInDocs, loading: false, error: null });
+    } catch (error: any) {
+      if (requestId !== previewRequestRef.current) return;
+      const code = error?.statusCode ?? error?.status;
+      setPreview((current) => current ? { ...current, loading: false, error: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : "This file could not be previewed. Please try again." } : current);
+    }
+  }, [api, previewBlob]);
   
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
@@ -329,13 +369,9 @@ const TaskDetails = () => {
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const { uploadToGoogleDrive, uploadLoading } = useGoogleDriveFiles({ enabled: false });
   const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "";
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const optimisticCommentRef = useRef<Map<string, any>>(new Map());
-  const failedAttemptRef = useRef<FailedAttempt | null>(null);
-
   // WebSocket setup
   useEffect(() => {
-    if (!id || !isConnected) return;
+    if (!id || !isConnected || !taskReady) return;
 
     // Join task room
     joinTaskRoom(id);
@@ -452,16 +488,11 @@ const TaskDetails = () => {
       
       if (message.type === 'comment_error') {
         if (message.messageId) return; // correlated with a send in progress: that flow restores the draft and reports the failure
-        toast({
-          title: "Failed to send comment",
-          description: message.message || "Please try again",
-          variant: "destructive",
-        });
+        setCommentSendError(message.message || "The comment was not sent. Your draft is still here.");
         
         // Remove any pending optimistic comments
-        const messageId = Object.keys(optimisticCommentRef.current).find(
-          key => optimisticCommentRef.current.get(key)?.content === message.comment?.content
-        );
+        const messageId = [...optimisticCommentRef.current.entries()]
+          .find(([, comment]) => comment?.content === message.comment?.content)?.[0];
         
         if (messageId) {
           setComments(prev => prev.filter(comment => 
@@ -470,12 +501,8 @@ const TaskDetails = () => {
           ));
           optimisticCommentRef.current.delete(messageId);
         }
-      } else {
-        toast({
-          title: "Chat Error",
-          description: message.message || "Connection issue",
-          variant: "destructive",
-        });
+      } else if (message.taskId === id) {
+        setChatConnectionNotice("Live chat is temporarily unavailable. Send will try the authenticated HTTP connection.");
       }
     };
 
@@ -489,9 +516,13 @@ const TaskDetails = () => {
     on('typing_indicator', handleTypingIndicator);
     on('connection_established', handleConnectionEstablished);
     on('error', handleError);
+    on('comment_error', handleError);
 
     // Cleanup on unmount
     return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typingActiveRef.current && id && isConnected) sendTypingIndicator(id, false);
+      typingActiveRef.current = false;
       if (id) {
         leaveTaskRoom(id);
       }
@@ -504,8 +535,9 @@ const TaskDetails = () => {
       off('typing_indicator', handleTypingIndicator);
       off('connection_established', handleConnectionEstablished);
       off('error', handleError);
+      off('comment_error', handleError);
     };
-  }, [id, isConnected, user?.id]);
+  }, [id, isConnected, taskReady, user?.id]);
 
   // Helper function to fix profile picture field in comments
   const fixCommentProfilePicture = (comment: any): CorrectedTaskComment => {
@@ -570,7 +602,7 @@ const TaskDetails = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isChat = false) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0 || !id || isReadOnly) return;
 
@@ -585,16 +617,6 @@ const TaskDetails = () => {
         description: `${files.length} file(s) uploaded successfully`,
       });
 
-      if (isChat) {
-        // Post a comment about the uploaded file(s)
-        const fileNames = files.map(f => f.name).join(", ");
-        const content = `📎 Uploaded ${files.length} file(s): ${fileNames}`;
-        
-        // Use the existing handleSendComment logic but with pre-filled content
-        setNewComment(content);
-        // We'll trigger send immediately after this state update in a timeout or just call send logic
-        setTimeout(() => handleSendComment(content), 100);
-      }
     } catch (error: any) {
       toast({
         title: "Upload failed",
@@ -610,7 +632,20 @@ const TaskDetails = () => {
   const handleCommentFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setPendingCommentFiles((current) => [...current, ...files].slice(0, 10));
+    const result = validateCommentFiles(pendingCommentFiles, files);
+    if (result.rejected.length) {
+      const first = result.rejected[0];
+      toast({
+        title: "Some attachments were not added",
+        description: `${first.file.name}: ${first.reason}${result.rejected.length > 1 ? ` ${result.rejected.length - 1} more were rejected.` : ""}`,
+        variant: "destructive",
+      });
+    }
+    if (result.accepted.length) {
+      setPendingCommentFiles((current) => [...current, ...result.accepted]);
+      failedAttemptRef.current = null;
+      setCommentSendError(null);
+    }
     e.target.value = "";
   };
 
@@ -731,13 +766,24 @@ const TaskDetails = () => {
   };
 
   const handleSendComment = async (overrideContent?: string) => {
-    const content = (overrideContent || newComment).trim();
-    if (!id || !content || sendingComment || !canCollaborate) return;
+    const taskId = id;
+    const content = (overrideContent ?? newComment).trim();
+    const files = pendingCommentFiles;
+    const connectedStorageAttachments = pendingConnectedStorage;
+    const parentCommentId = replyToComment?.id || null;
+    if (
+      !taskId ||
+      !taskReady ||
+      !canCollaborate ||
+      sendingCommentRef.current ||
+      !canSendTaskComment(content, files.length + connectedStorageAttachments.length)
+    ) return;
     
     // messageId will be determined by WebSocket send (preferred) or local fallback
-    let messageId = messageIdForAttempt(failedAttemptRef.current, id, content, Boolean(replyToComment));
+    const messageId = messageIdForAttempt(failedAttemptRef.current, taskId, content, Boolean(parentCommentId));
     
     try {
+      sendingCommentRef.current = true;
       setSendingComment(true);
       
       // Create optimistic comment with correct profile picture field
@@ -754,7 +800,7 @@ const TaskDetails = () => {
         .filter(Boolean) as string[];
       const optimisticComment: CorrectedTaskComment = {
         id: `optimistic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        taskId: id,
+        taskId,
         userId: user?.id || '',
         content: content,
         isSystemMessage: false,
@@ -763,7 +809,7 @@ const TaskDetails = () => {
           isOptimistic: true,
           sending: true
         },
-        parentCommentId: replyToComment?.id || null,
+        parentCommentId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         user: {
@@ -794,11 +840,11 @@ const TaskDetails = () => {
       const simpleComment = !replyToComment && mentionedUserIds.length === 0 && pendingCommentFiles.length === 0 && pendingConnectedStorage.length === 0;
       await deliverComment({
         clientMessageId: messageId,
-        viaSocket: isConnected && simpleComment && supportsCommentAck() ? () => { joinTaskRoom(id); return sendCommentWithAck(id, content, messageId); } : null,
-        viaHttp: () => sendCommentViaHttp(content, messageId),
+        viaSocket: isConnected && simpleComment && supportsCommentAck() ? () => { joinTaskRoom(taskId); return sendCommentWithAck(taskId, content, messageId); } : null,
+        viaHttp: () => sendCommentViaHttp(taskId, content, messageId, files, connectedStorageAttachments, parentCommentId),
       }).then(({ comment, via }) => {
         failedAttemptRef.current = null;
-        if (via === 'websocket') {
+        if (via === 'websocket' && currentTaskIdRef.current === taskId) {
           removeOptimisticComment(messageId);
           const fixed = fixCommentProfilePicture(comment);
           setComments(prev => (prev.some(c => c.id === fixed.id) ? prev : [...prev, fixed]));
@@ -806,54 +852,71 @@ const TaskDetails = () => {
         }
       });
 
-      setNewComment("");
-      setReplyToComment(null);
-      setPendingCommentFiles([]);
-      setPendingConnectedStorage([]);
+      if (currentTaskIdRef.current === taskId) {
+        setNewComment("");
+        setReplyToComment(null);
+        setPendingCommentFiles([]);
+        setPendingConnectedStorage([]);
+        setCommentSendError(null);
+        setChatConnectionNotice(null);
+      }
       
       // Clear typing indicator
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
-      if (isConnected) {
-        sendTypingIndicator(id, false);
+      if (typingActiveRef.current && isConnected) {
+        sendTypingIndicator(taskId, false);
+        typingActiveRef.current = false;
       }
       
     } catch (error: any) {
       // Never present an undelivered comment as sent: drop the optimistic copy and put the text back in the composer.
-      toast({
-        title: "Comment not sent",
-        description: describeCommentFailure(error),
-        variant: "destructive",
-      });
       removeOptimisticComment(messageId);
-      failedAttemptRef.current = { taskId: id!, content, id: messageId }; // a resend of the same text reuses this id
-      setNewComment((current) => (current.trim() ? current : content));
+      if (currentTaskIdRef.current === taskId) {
+        failedAttemptRef.current = { taskId, content, id: messageId }; // a resend of this unchanged draft reuses its id
+        if (error?.statusCode === 403 || error?.body?.code === "ACCESS_DENIED") {
+          setChatAccessError(describeCommentFailure(error));
+          setChatConnectionNotice(null);
+          setCommentSendError(null);
+        } else {
+          setCommentSendError(describeCommentFailure(error));
+        }
+        setNewComment((current) => (current.trim() ? current : content));
+      }
     } finally {
+      sendingCommentRef.current = false;
       setSendingComment(false);
     }
   };
 
   // Helper function to send comment via HTTP API
-  const sendCommentViaHttp = async (content: string, messageId: string) => {
-    try {
-      const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
-      const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
-      const response = await api.addTaskComment(id!, content, { clientMessageId: messageId, parentCommentId: replyToComment?.id || null, mentionedUserIds, files: pendingCommentFiles, connectedStorageAttachments: pendingConnectedStorage.map(({ connectionId, item }) => ({ connectionId, providerItemId: item.providerItemId })) });
-      
-      // Fix the profile picture in the response
+  const sendCommentViaHttp = async (
+    taskId: string,
+    content: string,
+    messageId: string,
+    files: File[],
+    connectedStorageAttachments: Array<{ connectionId: string; item: ConnectedStorageItem }>,
+    parentCommentId: string | null,
+  ): Promise<TaskComment> => {
+    const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
+    const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
+    const response = await api.addTaskComment(taskId, content, {
+      clientMessageId: messageId,
+      parentCommentId,
+      mentionedUserIds,
+      files,
+      connectedStorageAttachments: connectedStorageAttachments.map(({ connectionId, item }) => ({ connectionId, providerItemId: item.providerItemId })),
+    });
+
+    if (currentTaskIdRef.current === taskId) {
       const fixedComment = fixCommentProfilePicture(response.comment);
-      
-      // Remove optimistic comment
       removeOptimisticComment(messageId);
-      
-      // Add real comment (a duplicate response or the socket echo may already have added it)
-      setComments(prev => (prev.some(c => c.id === fixedComment.id) ? prev : [...prev, fixedComment]));
-      
+      setComments((prev) => (prev.some((comment) => comment.id === fixedComment.id) ? prev : [...prev, fixedComment]));
       scrollToBottom();
-    } catch (error: any) {
-      throw error;
     }
+    return response.comment;
   };
 
   // Helper function to remove optimistic comment
@@ -873,10 +936,16 @@ const TaskDetails = () => {
   };
 
   const handleTyping = useCallback(() => {
-    if (!id || !isConnected) return;
-
-    // Send typing indicator
-    sendTypingIndicator(id, true);
+    if (!id) return;
+    if (shouldSendTypingStart({
+      isConnected,
+      canCollaborate,
+      taskReady,
+      alreadyTyping: typingActiveRef.current,
+    })) {
+      sendTypingIndicator(id, true);
+      typingActiveRef.current = true;
+    }
 
     // Clear previous timeout
     if (typingTimeoutRef.current) {
@@ -885,9 +954,13 @@ const TaskDetails = () => {
 
     // Set timeout to stop typing indicator after 2 seconds
     typingTimeoutRef.current = setTimeout(() => {
-      sendTypingIndicator(id, false);
+      if (typingActiveRef.current) {
+        sendTypingIndicator(id, false);
+        typingActiveRef.current = false;
+      }
+      typingTimeoutRef.current = null;
     }, 2000);
-  }, [id, isConnected, sendTypingIndicator]);
+  }, [id, isConnected, canCollaborate, taskReady, sendTypingIndicator]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -928,7 +1001,7 @@ const TaskDetails = () => {
     return (
       <span className="ml-2 inline-flex items-center opacity-70">
         {isOptimistic ? (
-          <Check className="w-3 h-3" />
+          <Clock className="w-3 h-3 animate-spin" aria-label="Sending" />
         ) : (
           <CheckCheck className="w-3 h-3" />
         )}
@@ -1115,9 +1188,9 @@ const TaskDetails = () => {
     if (status === "cancelled") return { text: "Cancelled", tone: "text-muted-foreground" };
     const ms = new Date(deadline).getTime() - Date.now();
     const d = Math.ceil(ms / 86400000);
-    if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive" };
-    if (d === 0) return { text: "Due today", tone: "text-warning" };
-    return { text: `${d} day${d === 1 ? "" : "s"} left`, tone: "text-warning" };
+    if (d < 0) return { text: `${Math.abs(d)}d overdue`, tone: "text-destructive-text" };
+    if (d === 0) return { text: "Due today", tone: "text-warning-text" };
+    return { text: `${d} day${d === 1 ? "" : "s"} left`, tone: "text-warning-text" };
   };
 
   const TaskListPanel = (
@@ -1242,11 +1315,11 @@ const TaskDetails = () => {
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{t.description}</p>
                     )}
                     <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                      <Badge className={cn("text-[10px] px-1.5 py-0", STATUS_COLORS[t.status as keyof typeof STATUS_COLORS])}>
+                      <Badge className={cn("text-[0.625rem] px-1.5 py-0", STATUS_COLORS[t.status as keyof typeof STATUS_COLORS])}>
                         {STATUS_LABEL[t.status as keyof typeof STATUS_LABEL] || t.status}
                       </Badge>
                       {t.deadline && (
-                        <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                        <span className="text-[0.625rem] text-muted-foreground inline-flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {new Date(t.deadline).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                         </span>
@@ -1254,14 +1327,14 @@ const TaskDetails = () => {
                       {t.assignee && (
                         <Avatar className="h-4 w-4 ml-auto">
                           <AvatarImage src={(t.assignee as any)?.profilePictureUrl} />
-                          <AvatarFallback className="text-[8px]">
+                          <AvatarFallback className="text-[0.5rem]">
                             {getInitials(t.assignee?.firstName || '', t.assignee?.lastName || '')}
                           </AvatarFallback>
                         </Avatar>
                       )}
                     </div>
                     {dl && isSelected && (
-                      <p className={cn("text-[10px] mt-1 font-medium", dl.tone)}>{dl.text}</p>
+                      <p className={cn("text-[0.625rem] mt-1 font-medium", dl.tone)}>{dl.text}</p>
                     )}
                   </div>
                 </div>
@@ -1339,15 +1412,15 @@ const TaskDetails = () => {
                       {task.title || "Untitled Task"}
                     </h1>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                      <Badge className={cn("text-[10px] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
-                      <Badge className={cn("text-[10px] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
+                      <Badge className={cn("text-[0.625rem] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
+                      <Badge className={cn("text-[0.625rem] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
                       {task.teamId && !task.parentTaskId && (
-                        <Badge variant="outline" className="text-[10px] sm:text-xs">Assigned to Team{task.team?.name ? ` · ${task.team.name}` : ""}</Badge>
+                        <Badge variant="outline" className="text-[0.625rem] sm:text-xs">Assigned to Team{task.team?.name ? ` · ${task.team.name}` : ""}</Badge>
                       )}
                       {isReadOnly && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] sm:text-xs gap-1 text-muted-foreground border-border bg-muted/40"
+                          className="text-[0.625rem] sm:text-xs gap-1 text-muted-foreground border-border bg-muted/40"
                           title="You can view this task but not modify it"
                         >
                           <Lock className="h-3 w-3" /> Read only
@@ -1373,7 +1446,7 @@ const TaskDetails = () => {
                 )}
                 <TooltipProvider delayDuration={150}>
                   <div className="hidden lg:flex items-center gap-1.5 pr-1 border-r mr-1">
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Status</span>
+                    <span className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">Status</span>
                     <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating || isReadOnly}>
                       <SelectTrigger className="h-8 w-[130px] text-xs">
                         <SelectValue />
@@ -1523,9 +1596,9 @@ const TaskDetails = () => {
                 </div>
                 <p className="font-semibold text-sm mt-1">{task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</p>
                 {task.calendarSynced ? (
-                  <p className="text-[11px] mt-1 text-muted-foreground flex items-center gap-2">📅 Synced to Google Calendar</p>
+                  <p className="text-[0.6875rem] mt-1 text-muted-foreground flex items-center gap-2">📅 Synced to Google Calendar</p>
                 ) : null}
-                {dl && <p className={cn("text-[11px] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
+                {dl && <p className={cn("text-[0.6875rem] mt-0.5 font-medium", dl.tone)}>{dl.text}</p>}
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1534,7 +1607,7 @@ const TaskDetails = () => {
                 <div className="mt-1 flex items-center gap-2">
                   {task.assignee ? (
                     <>
-                      <Avatar className="h-6 w-6"><AvatarImage src={(task.assignee as any)?.profilePictureUrl} /><AvatarFallback className="text-[10px]">{getInitials(task.assignee?.firstName || '', task.assignee?.lastName || '')}</AvatarFallback></Avatar>
+                      <Avatar className="h-6 w-6"><AvatarImage src={(task.assignee as any)?.profilePictureUrl} /><AvatarFallback className="text-[0.625rem]">{getInitials(task.assignee?.firstName || '', task.assignee?.lastName || '')}</AvatarFallback></Avatar>
                       <p className="font-semibold text-sm truncate">{task.assignee?.firstName || ''} {task.assignee?.lastName || ''}</p>
                     </>
                   ) : (
@@ -1547,13 +1620,13 @@ const TaskDetails = () => {
                   <Building2 className="h-3.5 w-3.5" /> Workspace
                 </div>
                 <p className="font-semibold text-sm mt-1 truncate">{task.company?.name || "—"}</p>
-                {task.category && <p className="text-[11px] text-muted-foreground truncate">{task.category}</p>}
+                {task.category && <p className="text-[0.6875rem] text-muted-foreground truncate">{task.category}</p>}
               </div>
               <div className="rounded-lg border bg-card p-3">
                 <div className="text-xs text-muted-foreground">Team</div>
                 <p className="font-semibold text-sm mt-1 truncate">{task.team?.name || "No team"}</p>
                 {task.team?.leadMember?.user && (
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p className="text-[0.6875rem] text-muted-foreground truncate">
                     Lead: {task.team.leadMember.user.firstName} {task.team.leadMember.user.lastName}
                   </p>
                 )}
@@ -1564,7 +1637,7 @@ const TaskDetails = () => {
                 </div>
                 <p className="font-semibold text-sm mt-1">{(task as any).createdAt ? new Date((task as any).createdAt).toLocaleDateString() : "—"}</p>
                 {task.creator && (
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p className="text-[0.6875rem] text-muted-foreground truncate">
                     by {task.creator?.firstName || ''} {task.creator?.lastName || ''}
                   </p>
                 )}
@@ -1607,29 +1680,29 @@ const TaskDetails = () => {
                 <p className="text-sm text-muted-foreground italic">No description provided.</p>
               )}
             </section>
-            {task.id && taskAccess?.canView && <CustomFieldValueDisplay entityType="task" entityId={task.id} />}
+            {task.id && currentTaskAccess?.canView && <CustomFieldValueDisplay entityType="task" entityId={task.id} />}
 
             {/* Stats Cards - MOVED OUTSIDE Overview */}
             <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Subtasks</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Subtasks</p>
                 <p className="font-bold text-lg">{completedSub}/{subtaskCount || 0}</p>
-                <p className="text-[10px] text-muted-foreground">{progressPct}% completed</p>
+                <p className="text-[0.625rem] text-muted-foreground">{progressPct}% completed</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Attachments</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Attachments</p>
                 <p className="font-bold text-lg">{task.attachments?.length || 0}</p>
-                <p className="text-[10px] text-muted-foreground">Files</p>
+                <p className="text-[0.625rem] text-muted-foreground">Files</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Comments</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Comments</p>
                 <p className="font-bold text-lg">{comments.length}</p>
-                <p className="text-[10px] text-muted-foreground">Total</p>
+                <p className="text-[0.625rem] text-muted-foreground">Total</p>
               </div>
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Watchers</p>
+                <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wide">Watchers</p>
                 <p className="font-bold text-lg">{getTaskWatcherCount(task)}</p>
-                <p className="text-[10px] text-muted-foreground">Following</p>
+                <p className="text-[0.625rem] text-muted-foreground">Following</p>
               </div>
             </section>
 
@@ -1687,7 +1760,7 @@ const TaskDetails = () => {
                 parentTeamId={task.teamId}
                 canEdit={canEditSubtasks && canCreateSubtasksByPolicy && !isReadOnly}
                 canCreate={canEditSubtasks && canCreateSubtasksByPolicy && !isReadOnly}
-                canUpdate={(subtask) => taskAccess?.canCollaborate === true && subtask.assigneeId === user?.id}
+                canUpdate={(subtask) => currentTaskAccess?.canCollaborate === true && subtask.assigneeId === user?.id}
                 onChanged={(next) => setTask((prev) => (prev ? { ...prev, subtasks: next } : prev))}
               />
             </section>
@@ -1811,7 +1884,7 @@ const TaskDetails = () => {
                         ? comment.id.startsWith('optimistic-') ? "bg-primary/70 text-primary-foreground" : "bg-primary text-primary-foreground"
                         : "bg-muted"
                   )}>
-                    <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
+                    {!!comment.content?.trim() && <p className="text-sm whitespace-pre-wrap break-words">{comment.content}</p>}
                     {comment.content.includes("📎 Uploaded") && (() => {
                       const names = parseUploadedFilenames(comment.content);
                       const matched = names.map((n) => findAttachmentByName(n)).filter(Boolean) as NonNullable<Task["attachments"]>;
@@ -1850,15 +1923,7 @@ const TaskDetails = () => {
                                     window.open(displayUrl, "_blank", "noopener,noreferrer");
                                   } else if (f.id && id) {
                                     // Phase 2: backend streams bytes — create ephemeral object URL for preview
-                                    api.downloadTaskAttachment(id, f.id)
-                                      .then(({ blob, fileName: serverName }) => {
-                                        const objectUrl = previewBlob.create(blob);
-                                        setPreview({ blob, url: objectUrl, type: blob.type || displayType, name: serverName || displayName || "download", attachmentId: f.id, alreadyInDocs: true });
-                                      })
-                                      .catch((err: any) => {
-                                        const code = err?.statusCode ?? err?.status;
-                                        toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
-                                      });
+                                    void openTaskAttachmentPreview(id, f.id, displayName, displayType, true);
                                   } else if (displayUrl) {
                                     window.open(displayUrl, "_blank", "noopener,noreferrer");
                                   }
@@ -1867,7 +1932,7 @@ const TaskDetails = () => {
                                   <Button
                                     size="sm"
                                     variant="secondary"
-                                    className="h-6 px-2 text-[10px] gap-1"
+                                    className="h-6 px-2 text-[0.625rem] gap-1"
                                     disabled
                                     title="Already in task documents"
                                   >
@@ -1883,18 +1948,27 @@ const TaskDetails = () => {
                     {renderDeliveryMark(comment)}
                   </div>
                   {comment.attachments && comment.attachments.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {comment.attachments.map((attachment) => (
-                        <Button key={attachment.id} variant="outline" size="sm" className="h-7 max-w-full text-xs" onClick={async () => {
-                          try {
-                            const file = await api.downloadTaskAttachment(comment.taskId, attachment.id);
-                            triggerBlobDownload(file.blob, file.fileName || attachment.fileName);
-                          } catch (error: any) {
-                            toast({ title: "Download failed", description: error.message, variant: "destructive" });
-                          }
-                        }}>
-                          {attachment.fileName}
-                        </Button>
+                        <TaskCommentAttachment
+                          key={attachment.id}
+                          taskId={comment.taskId || id || ""}
+                          attachment={attachment}
+                          onPreview={() => void openTaskAttachmentPreview(comment.taskId || id || "", attachment.id, attachment.fileName, attachment.fileType || attachment.mimeType || "", false)}
+                          onDownload={async () => {
+                            try {
+                              const result = await api.downloadTaskAttachment(comment.taskId || id || "", attachment.id);
+                              triggerBlobDownload(result.blob, result.fileName || attachment.fileName);
+                            } catch (error: any) {
+                              const code = error?.statusCode ?? error?.status;
+                              toast({
+                                title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Download failed",
+                                description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : error?.message || "Please try again.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        />
                       ))}
                     </div>
                   )}
@@ -1931,7 +2005,12 @@ const TaskDetails = () => {
             placeholder={!canCollaborate ? "You can't comment on this task" : "Type a message..."}
             rows={2}
             value={newComment}
-            onChange={(e) => { setNewComment(e.target.value); handleTyping(); }}
+            onChange={(e) => {
+              setNewComment(e.target.value);
+              failedAttemptRef.current = null;
+              setCommentSendError(null);
+              handleTyping();
+            }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
             className="flex-1 resize-none text-sm"
             disabled={sendingComment || !canCollaborate}
@@ -1949,33 +2028,76 @@ const TaskDetails = () => {
                 targetType="comment"
                 taskId={id}
                 disabled={sendingComment}
-                onSelect={(item, connectionId) => setPendingConnectedStorage((current) => (current.some((entry) => entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId) ? current : [...current, { connectionId, item }]))}
+                onSelect={(item, connectionId) => {
+                  setPendingConnectedStorage((current) => (current.some((entry) => entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId) ? current : [...current, { connectionId, item }]));
+                  failedAttemptRef.current = null;
+                  setCommentSendError(null);
+                }}
               /> : undefined}
             />
-            <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!newComment.trim() || sendingComment || !canCollaborate}>
+            <Button size="icon" className="h-8 w-8" aria-label="Send comment" onClick={() => handleSendComment()} disabled={!canSendTaskComment(newComment, pendingCommentFiles.length + pendingConnectedStorage.length) || sendingComment || !canCollaborate}>
               {sendingComment ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </Button>
           </div>
         </div>
+        {taskReady && !canCollaborate && (
+          <p role="alert" className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+            You can view this task, but you don't have permission to post comments or attachments.
+          </p>
+        )}
+        {chatAccessError && (
+          <p role="alert" className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+            {chatAccessError} Your draft has been kept.
+          </p>
+        )}
+        {chatConnectionNotice && !chatAccessError && (
+          <p role="status" className="mt-2 rounded-md border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
+            {chatConnectionNotice}
+          </p>
+        )}
+        {commentSendError && (
+          <div role="alert" className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+            <span>{commentSendError}</span>
+            <Button type="button" size="sm" variant="outline" className="h-7" disabled={sendingComment || !canCollaborate} onClick={() => void handleSendComment()}>
+              Retry send
+            </Button>
+          </div>
+        )}
+        {sendingComment && pendingCommentFiles.length > 0 && (
+          <div className="mt-2 space-y-1" role="status" aria-live="polite">
+            <p className="text-xs text-muted-foreground">Uploading {pendingCommentFiles.length} attachment{pendingCommentFiles.length === 1 ? "" : "s"}…</p>
+            <div role="progressbar" aria-valuetext="Uploading attachments" className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+            </div>
+          </div>
+        )}
         {pendingConnectedStorage.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1" data-testid="pending-connected-storage">
             {pendingConnectedStorage.map(({ connectionId, item }) => (
-              <button key={`${connectionId}:${item.providerItemId}`} type="button" className="rounded border px-2 py-1 text-[11px]" aria-label={`Remove ${item.name} from this comment`} onClick={() => setPendingConnectedStorage((current) => current.filter((entry) => !(entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId)))}>
+              <button key={`${connectionId}:${item.providerItemId}`} type="button" className="rounded border px-2 py-1 text-[0.6875rem]" aria-label={`Remove ${item.name} from this comment`} onClick={() => {
+                setPendingConnectedStorage((current) => current.filter((entry) => !(entry.connectionId === connectionId && entry.item.providerItemId === item.providerItemId)));
+                failedAttemptRef.current = null;
+              }}>
                 Dropbox: {item.name} ×
               </button>
             ))}
           </div>
         )}
         {pendingCommentFiles.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="pending-comment-files">
             {pendingCommentFiles.map((file, index) => (
-              <button key={`${file.name}-${index}`} type="button" className="rounded border px-2 py-1 text-[11px]" onClick={() => setPendingCommentFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}>
-                {file.name} ×
-              </button>
+              <PendingTaskCommentAttachment
+                key={`${file.name}-${file.size}-${index}`}
+                file={file}
+                onRemove={() => {
+                  setPendingCommentFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
+                  failedAttemptRef.current = null;
+                }}
+              />
             ))}
           </div>
         )}
-        <div className="mt-1.5 text-[11px] text-muted-foreground flex justify-between">
+        <div className="mt-1.5 text-[0.6875rem] text-muted-foreground flex justify-between">
           <span>Enter to send · Shift+Enter for new line</span>
           {!isConnected && <span className="text-yellow-600">Offline · HTTP fallback</span>}
         </div>
@@ -1987,7 +2109,7 @@ const TaskDetails = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-6 px-2 text-[11px]"
+                className="h-6 px-2 text-[0.6875rem]"
                 onClick={() => setNewComment((current) => `${current}${current ? " " : ""}@${participant.firstName || ""} ${participant.lastName || ""}`)}
               >
                 @{participant.firstName}
@@ -2006,7 +2128,7 @@ const TaskDetails = () => {
           <div className="flex items-center gap-2">
             <FilesIcon className="h-4 w-4" />
             <h3 className="font-semibold text-sm">Attachments</h3>
-            <Badge variant="outline" className="text-[10px]">{task.attachments?.length || 0}</Badge>
+            <Badge variant="outline" className="text-[0.625rem]">{task.attachments?.length || 0}</Badge>
           </div>
         </div>
         <AttachmentSourcePicker
@@ -2062,15 +2184,7 @@ const TaskDetails = () => {
                         window.open(attachmentUrl, "_blank", "noopener,noreferrer");
                       } else if (file?.id && id) {
                         // Phase 2: backend streams bytes — create ephemeral object URL for preview
-                        api.downloadTaskAttachment(id, file.id)
-                          .then(({ blob, fileName: serverName }) => {
-                            const objectUrl = previewBlob.create(blob);
-                            setPreview({ blob, url: objectUrl, type: blob.type || mimeType, name: serverName || fileName || "download", attachmentId: file?.id, alreadyInDocs: true });
-                          })
-                          .catch((err: any) => {
-                            const code = err?.statusCode ?? err?.status;
-                            toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
-                          });
+                        void openTaskAttachmentPreview(id, file.id, fileName, mimeType, true);
                       } else if (attachmentUrl) {
                         window.open(attachmentUrl, "_blank", "noopener,noreferrer");
                       }
@@ -2116,7 +2230,7 @@ const TaskDetails = () => {
                           <Button
                             variant="secondary"
                             size="icon"
-                            className="h-6 w-6 text-destructive"
+                            className="h-6 w-6 text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                             title="Remove"
                           >
@@ -2132,7 +2246,7 @@ const TaskDetails = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
+                          className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
                           asChild
                           disabled={!attachmentUrl}
                         >
@@ -2144,7 +2258,7 @@ const TaskDetails = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[11px] flex-1 gap-1 justify-center text-destructive hover:text-destructive"
+                            className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center text-destructive-text hover:text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                           >
                             <Trash2 className="w-3 h-3" /> Remove
@@ -2156,18 +2270,10 @@ const TaskDetails = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] flex-1 gap-1 justify-center"
+                          className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center"
                           onClick={() => {
                             if (!file?.id || !id) return;
-                            api.downloadTaskAttachment(id, file.id)
-                              .then(({ blob, fileName: serverName }) => {
-                                const objectUrl = previewBlob.create(blob);
-                                setPreview({ blob, url: objectUrl, type: blob.type || mimeType, name: serverName || fileName || "download", attachmentId: file?.id, alreadyInDocs: true });
-                              })
-                              .catch((err: any) => {
-                                const code = err?.statusCode ?? err?.status;
-                                toast({ title: code === 403 ? "Access denied" : code === 404 ? "File unavailable" : "Error", description: code === 403 ? "You don't have access to this file." : code === 404 ? "This file is no longer available." : err?.message, variant: "destructive" });
-                              });
+                            void openTaskAttachmentPreview(id, file.id, fileName, mimeType, true);
                           }}
                           disabled={!file?.id}
                         >
@@ -2176,7 +2282,7 @@ const TaskDetails = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
+                          className="h-7 text-[0.6875rem] flex-1 gap-1 justify-center border-[#4285F4]/30 hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
                           onClick={() => handleSaveToGoogleDrive({
                             id: file?.id || "",
                             fileName: fileName || "",
@@ -2197,7 +2303,7 @@ const TaskDetails = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[11px] w-7 shrink-0 justify-center text-destructive hover:text-destructive"
+                            className="h-7 text-[0.6875rem] w-7 shrink-0 justify-center text-destructive-text hover:text-destructive-text"
                             onClick={() => handleDeleteAttachment(file?.id, fileName)}
                             title="Remove"
                           >
@@ -2267,25 +2373,25 @@ const TaskDetails = () => {
             <TabsList className="w-full bg-transparent p-0 h-auto gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="chat" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <MessageSquare className="h-3.5 w-3.5" /> Chat
-                    {comments.length > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{comments.length}</Badge>}
+                    {comments.length > 0 && <Badge variant="outline" className="text-[0.625rem] ml-1 h-4 px-1">{comments.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Chat — press 1</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="files" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <FilesIcon className="h-3.5 w-3.5" /> Files
-                    {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[10px] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
+                    {(task.attachments?.length || 0) > 0 && <Badge variant="outline" className="text-[0.625rem] ml-1 h-4 px-1">{task.attachments!.length}</Badge>}
                   </TabsTrigger>
                 </TooltipTrigger>
                 <TooltipContent>Files — press 2</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="activity" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <ActivityIcon className="h-3.5 w-3.5" /> Activity
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2293,7 +2399,7 @@ const TaskDetails = () => {
               </Tooltip>
               {canSeeClientComments && !task.parentTaskId && <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="client" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="client" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <User2 className="h-3.5 w-3.5" /> Client
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2301,7 +2407,7 @@ const TaskDetails = () => {
               </Tooltip>}
               {canTrackTime && <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                  <TabsTrigger value="time" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                     <Timer className="h-3.5 w-3.5" /> Time
                   </TabsTrigger>
                 </TooltipTrigger>
@@ -2310,7 +2416,7 @@ const TaskDetails = () => {
               {!isReadOnly && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md gap-1.5 transition-all">
+                    <TabsTrigger value="edit" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary-text rounded-md gap-1.5 transition-all">
                       <Pencil className="h-3.5 w-3.5" /> Edit
                     </TabsTrigger>
                   </TooltipTrigger>
@@ -2347,8 +2453,12 @@ const TaskDetails = () => {
           blob={preview.blob}
           type={preview.type}
           name={preview.name}
+          loading={preview.loading}
+          error={preview.error}
+          onRetry={preview.attachmentId ? () => void openTaskAttachmentPreview(preview.taskId || id || "", preview.attachmentId!, preview.name, preview.type, preview.alreadyInDocs) : undefined}
           onClose={() => {
             // Phase 2: revoke ephemeral object URL created from Blob to free browser memory
+            previewRequestRef.current += 1;
             previewBlob.clear();
             setPreview(null);
           }}
@@ -2357,7 +2467,7 @@ const TaskDetails = () => {
           onAddToTaskDocs={
             preview.alreadyInDocs
               ? undefined
-              : () => handleAddToTaskDocsFromUrl(preview.url, preview.name, preview.type)
+              : preview.url ? () => handleAddToTaskDocsFromUrl(preview.url!, preview.name, preview.type) : undefined
           }
         />
       )}
@@ -2444,7 +2554,7 @@ const TaskDetails = () => {
 
       <DashboardLayout hidePadding>
         {isMobile ? (
-          <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
+          <div className="flex h-[calc(100dvh-var(--app-header-h,3.5rem))] flex-col overflow-hidden">
             <div className="flex-1 min-h-0 overflow-hidden">{DetailsPanel}</div>
 
             {/* Bottom action bar — respects browser safe area */}
@@ -2455,14 +2565,14 @@ const TaskDetails = () => {
                     key={key}
                     onClick={() => setMobilePanel(key as any)}
                     className={cn(
-                      "relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-medium transition-colors active:scale-[0.97]",
-                      mobilePanel === key ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                      "relative flex flex-col items-center gap-0.5 rounded-lg py-2 text-[0.625rem] font-medium transition-colors active:scale-[0.97]",
+                      mobilePanel === key ? "bg-primary/10 text-primary-text" : "text-muted-foreground"
                     )}
                   >
                     <Icon className="h-[18px] w-[18px]" />
                     {label}
                     {count > 0 && (
-                      <span className="absolute top-1 right-1.5 min-w-[14px] rounded-full bg-primary px-1 text-[9px] leading-[14px] text-primary-foreground">
+                      <span className="absolute top-1 right-1.5 min-w-[14px] rounded-full bg-primary px-1 text-[0.5625rem] leading-[14px] text-primary-foreground">
                         {count > 99 ? "99+" : count}
                       </span>
                     )}
@@ -2472,7 +2582,7 @@ const TaskDetails = () => {
             </nav>
           </div>
         ) : (
-          <div className="flex h-[calc(100dvh-3.5rem)] relative">
+          <div className="flex h-[calc(100dvh-var(--app-header-h,3.5rem))] relative">
             {/* Collapsed task-list rail */}
             {!listPanelOpen && (
               <div className="w-11 shrink-0 border-r bg-background flex flex-col items-center gap-2 py-3">
@@ -2494,7 +2604,7 @@ const TaskDetails = () => {
                     <TooltipContent side="right">New task</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <span className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
+                <span className="mt-2 text-[0.625rem] uppercase tracking-widest text-muted-foreground [writing-mode:vertical-rl]">
                   Tasks
                 </span>
               </div>

@@ -300,7 +300,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
                     variant="ghost"
                     size="sm"
                     onClick={clearAllAttachments}
-                    className="text-xs text-destructive hover:text-destructive"
+                    className="text-xs text-destructive-text hover:text-destructive-text"
                   >
                     Clear All
                   </Button>
@@ -334,7 +334,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
                         className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/30 transition-colors"
                       >
                         <div className="flex-shrink-0">
-                          <Icon className="w-5 h-5 text-primary" />
+                          <Icon className="w-5 h-5 text-primary-text" />
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -352,7 +352,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive-text hover:text-destructive-text hover:bg-destructive/10"
                             onClick={() => removeAttachment(idx)}
                             title="Remove file"
                           >

@@ -118,7 +118,7 @@ export function ResourcePicker({ projects, tasks, value, onChange, onTaskQuery, 
             <li key={item.key} id={`${uid}-opt-${index}`} data-index={index} role="option" aria-selected={selected} aria-label={item.context ? `${item.label}, project ${item.context}` : item.label}
               onClick={() => choose(index)} onMouseMove={() => setActive(index)}
               className={cn("flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm", index === active && "bg-muted/60", selected && "bg-primary/10")}>
-              {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : item.type === "project" ? <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ListChecks className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              {selected ? <Check className="h-4 w-4 shrink-0 text-primary-text" /> : item.type === "project" ? <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ListChecks className="h-4 w-4 shrink-0 text-muted-foreground" />}
               <span className="min-w-0 flex-1">
                 <span className="block truncate" title={item.label}>{item.label}</span>
                 {item.context && <span className="block truncate text-xs text-muted-foreground" title={item.context}>{item.context}</span>}

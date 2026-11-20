@@ -74,7 +74,7 @@ const ClientViewShareButton = ({
       ) : (
         <Share2 className="w-3.5 h-3.5" />
       )}
-      <span className="hidden sm:inline text-[11px]">
+      <span className="hidden sm:inline text-[0.6875rem]">
         {copied ? "Copied" : label}
       </span>
     </Button>

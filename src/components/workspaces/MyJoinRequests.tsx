@@ -41,7 +41,7 @@ export function MyJoinRequests({ onOpenWorkspace }: { onOpenWorkspace?: (workspa
   };
 
   if (query.isPending) return <p className="mt-4 text-sm text-muted-foreground" role="status">Loading your requests…</p>;
-  if (query.isError) return <p className="mt-4 text-sm text-destructive" role="alert">Your join requests could not be loaded. <button type="button" className="underline" onClick={() => query.refetch()}>Try again</button></p>;
+  if (query.isError) return <p className="mt-4 text-sm text-destructive-text" role="alert">Your join requests could not be loaded. <button type="button" className="underline" onClick={() => query.refetch()}>Try again</button></p>;
   if (!requests.length) return null;
 
   return <Card className="mt-4" data-testid="my-join-requests">

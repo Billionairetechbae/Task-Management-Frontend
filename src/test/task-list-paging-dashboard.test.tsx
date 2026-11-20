@@ -33,6 +33,7 @@ describe("Dashboard task loading stops when the server's total over-reports (pro
   const real = [t("A", "pending"), t("B", "pending"), t("C", "completed")];
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   beforeEach(() => {
+    localStorage.setItem("admiino:preferences", JSON.stringify({ dashboardDefaultView: "list" }));
     state.role = "owner"; state.isError = false; state.canViewAll = true;
     state.data = { tasks: real, myTasks: real, teamStats: { totalAssistants: 0, availableAssistants: 0, pendingVerifications: 0, totalExecutives: 0 }, taskStats: stat({ totalTasks: 3 }), myStats: stat({ totalTasks: 3 }) };
   });

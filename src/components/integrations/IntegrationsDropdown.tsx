@@ -36,7 +36,7 @@ export default function IntegrationsDropdown() {
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+            <Button variant="ghost" size="icon" className="h-8 w-8 relative" aria-label="Integrations">
               <Plug className="h-4 w-4" />
               {connectedCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500" />
@@ -79,7 +79,7 @@ export default function IntegrationsDropdown() {
                 >
                   <IntegrationLogo integration={i} size={28} />
                   <span className="text-sm font-medium flex-1 truncate">{i.name}</span>
-                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${style.className}`}>
+                  <Badge variant="outline" className={`text-[0.625rem] px-1.5 py-0 ${style.className}`}>
                     {style.label}
                   </Badge>
                 </Link>
@@ -92,7 +92,7 @@ export default function IntegrationsDropdown() {
         <Link
           to="/settings/integrations"
           onClick={() => setOpen(false)}
-          className="block text-center text-sm font-medium text-primary hover:underline py-2"
+          className="block text-center text-sm font-medium text-primary-text hover:underline py-2"
         >
           View all →
         </Link>
