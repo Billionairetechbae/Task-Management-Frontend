@@ -22,7 +22,7 @@ const authMock = vi.hoisted(() => ({
   workspaceRole: "member",
   user: { id: "lead-member-user", role: "team_member" },
 }));
-const permissionMock = vi.hoisted(() => ({ canManage: false }));
+const permissionMock = vi.hoisted(() => ({ canManage: false, canAdmin: false }));
 
 vi.mock("@/lib/api", () => ({ api: apiMock, ApiError: class ApiError extends Error {} }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => authMock }));
@@ -32,7 +32,7 @@ vi.mock("@/components/dashboard/DashboardComponents", () => ({
   PageHeader: ({ title, actions }: { title: string; actions?: React.ReactNode }) => <header><h1>{title}</h1>{actions}</header>,
   LoadingState: () => <div>Loading</div>,
 }));
-vi.mock("@/lib/permissions", () => ({ canManageWorkspace: () => permissionMock.canManage, canAdminWorkspace: () => permissionMock.canManage }));
+vi.mock("@/lib/permissions", () => ({ canManageWorkspace: () => permissionMock.canManage, canAdminWorkspace: () => permissionMock.canAdmin }));
 vi.mock("@/lib/queryClient", () => ({ queryClient: { removeQueries: vi.fn() } }));
 
 const companyMember = (id: string, firstName: string) => ({ id, userId: `${id}-user`, companyId: "workspace-1", role: "member", status: "active", isVerified: true, user: { id: `${id}-user`, firstName, lastName: "User", email: `${firstName.toLowerCase()}@test.invalid` } });
@@ -49,12 +49,14 @@ const renderTeams = () => render(<QueryClientProvider client={new QueryClient({ 
 beforeEach(() => {
   vi.clearAllMocks();
   permissionMock.canManage = false;
+  permissionMock.canAdmin = false;
   authMock.user = { id: "lead-member-user", role: "team_member" };
   apiMock.listTeams.mockResolvedValue({ data: { teams: [team()] } });
   apiMock.getCompanyTeam.mockResolvedValue({ data: { members: [] } });
   apiMock.getTeamEligibleMembers.mockResolvedValue({ data: { members: [companyMember("lead-member", "Victoria"), companyMember("richard", "Richard"), companyMember("sarah", "Sarah")] } });
   apiMock.getTeamWorkspace.mockResolvedValue({ data: { activeAssignments: [], workload: [], activity: [], messages: [] } });
   apiMock.getTasks.mockResolvedValue({ data: { tasks: [] } });
+  apiMock.assignTeamLead.mockResolvedValue({ status: "success" });
   apiMock.addTeamMembers.mockResolvedValue({ status: "success" });
   apiMock.removeTeamMembers.mockResolvedValue({ status: "success" });
 });
@@ -115,6 +117,7 @@ describe("Team Lead membership management UI", () => {
 
   it("keeps Owner/Executive behaviour: they load the workspace directory, not the Team Lead endpoint", async () => {
     permissionMock.canManage = true;
+    permissionMock.canAdmin = true;
     authMock.user = { id: "owner-user", role: "executive" };
     apiMock.getCompanyTeam.mockResolvedValue({ data: { members: [companyMember("sarah", "Sarah")] } });
     const user = userEvent.setup();
@@ -125,5 +128,51 @@ describe("Team Lead membership management UI", () => {
     await screen.findByRole("checkbox", { name: "Add Sarah User" });
     expect(apiMock.getCompanyTeam).toHaveBeenCalled();
     expect(apiMock.getTeamEligibleMembers).not.toHaveBeenCalled();
+  });
+
+  it("hides membership and lead controls from a Manager who is not the team's Lead", async () => {
+    permissionMock.canManage = true; // Manager: manages work, but the backend does not let Managers change Team membership
+    authMock.user = { id: "manager-user", role: "manager" };
+    const user = userEvent.setup();
+    renderTeams();
+    await screen.findByRole("heading", { name: "Marketing" });
+    await screen.findByRole("heading", { name: "Team lead" });
+    expect(screen.queryByRole("button", { name: /add members/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "More Team actions" }));
+    expect(within(await screen.findByRole("menu")).queryByText("Manage members")).not.toBeInTheDocument();
+  });
+
+  it("gives a Manager membership controls only as the designated Team Lead, with the Lead-scoped member list", async () => {
+    permissionMock.canManage = true;
+    authMock.user = { id: "lead-member-user", role: "manager" };
+    const user = userEvent.setup();
+    renderTeams();
+    await screen.findByRole("heading", { name: "Marketing" });
+    await user.click(screen.getByRole("button", { name: /add members/i }));
+    await waitFor(() => expect(apiMock.getTeamEligibleMembers).toHaveBeenCalledWith("team-1"));
+    await user.click(await screen.findByRole("checkbox", { name: "Add Sarah User" }));
+    await user.click(screen.getByRole("button", { name: /add selected/i }));
+    await waitFor(() => expect(apiMock.addTeamMembers).toHaveBeenCalledWith("team-1", ["sarah"]));
+  });
+
+  it("lets the Team Lead transfer leadership to another Team member with confirmation", async () => {
+    const user = userEvent.setup();
+    renderTeams();
+    await screen.findByRole("heading", { name: "Marketing" });
+    await user.click((await screen.findAllByRole("button", { name: "Change Lead" }))[0]);
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "Richard User" }));
+    await user.click(screen.getByRole("button", { name: /save lead/i }));
+    await waitFor(() => expect(apiMock.assignTeamLead).toHaveBeenCalledWith("team-1", "richard", expect.objectContaining({ confirmTransfer: true, expectedCurrentLeadMemberId: "lead-member" })));
+  });
+
+  it("does not offer Change Lead or Manage to an ordinary Team member", async () => {
+    authMock.user = { id: "richard-user", role: "team_member" };
+    renderTeams();
+    await screen.findByRole("heading", { name: "Marketing" });
+    await screen.findByRole("heading", { name: "Team lead" }); // Overview has rendered, so absence below is meaningful
+    expect(screen.queryByRole("button", { name: "Change Lead" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage" })).not.toBeInTheDocument();
   });
 });
