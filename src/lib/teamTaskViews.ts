@@ -6,9 +6,9 @@ export const TEAM_TASK_VIEWS: Array<[TeamTaskView, string]> = [["all", "All"], [
 
 const CLOSED = ["completed", "cancelled"];
 export const isClosedStatus = (status?: string | null) => CLOSED.includes(status || "");
-/** Overdue = due before the start of today (same rule the Team page has always used) and not closed. */
+/** Overdue = deadline instant has passed and the task is not completed or cancelled. */
 export const isTaskOverdue = (task: Pick<Task, "deadline" | "status">, now = Date.now()) =>
-  !!task.deadline && new Date(task.deadline).getTime() < new Date(new Date(now).toDateString()).getTime() && !isClosedStatus(task.status);
+  !!task.deadline && new Date(task.deadline).getTime() < new Date(now).getTime() && !isClosedStatus(task.status);
 
 export const taskMatchesView = (task: Pick<Task, "deadline" | "status">, view: TeamTaskView, now = Date.now()) => {
   if (view === "all") return true;

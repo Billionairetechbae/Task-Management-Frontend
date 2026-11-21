@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Teams from "@/pages/Teams";
-import { countTeamTasks, mergeTeamTasks, taskMatchesView } from "@/lib/teamTaskViews";
+import { countTeamTasks, isTaskOverdue, mergeTeamTasks, taskMatchesView } from "@/lib/teamTaskViews";
 
 const apiMock = vi.hoisted(() => ({ listTeams: vi.fn(), getCompanyTeam: vi.fn(), getTeamWorkspace: vi.fn(), getTasks: vi.fn(), updateTask: vi.fn() }));
 const authMock = vi.hoisted(() => ({ activeCompanyId: "workspace-1", activeWorkspace: { id: "workspace-1", name: "W", role: "owner" }, workspaceRole: "owner", user: { id: "user-owner", role: "executive" } as { id: string; role: string }, refreshWorkspaces: vi.fn() }));
@@ -24,14 +24,20 @@ vi.mock("@/lib/queryClient", () => ({ queryClient: { removeQueries: vi.fn() } })
 const task = (id: string, title: string, status: string, extra: Record<string, unknown> = {}) => ({ id, title, status, priority: "medium", teamId: "team-1", companyId: "workspace-1", updatedAt: "2026-10-18T10:00:00Z", createdAt: "2026-10-01T10:00:00Z", ...extra });
 const leadMember = { id: "lead-m", userId: "user-lead", companyId: "workspace-1", role: "member", status: "active", user: { id: "user-lead", firstName: "Lia", lastName: "Lead", email: "l@x.test" } };
 const team = { id: "team-1", companyId: "workspace-1", name: "Marketing", description: "", leadMemberId: "lead-m", createdBy: "user-owner", createdAt: "", updatedAt: "", leadMember, memberLinks: [{ id: "l1", companyMemberId: "lead-m", teamId: "team-1", companyMember: leadMember }] };
-const workspace = (tasks: unknown[], counts?: unknown) => ({ data: { team, messages: [], workload: [], activity: [], activeAssignments: (tasks as { status: string }[]).filter((t) => !["completed", "cancelled"].includes(t.status)), tasks, taskCounts: counts } });
+const workspace = (tasks: unknown[], counts?: unknown, selectedTeam = team, workload: unknown[] = []) => ({ data: { team: selectedTeam, messages: [], workload, activity: [], activeAssignments: (tasks as { status: string }[]).filter((t) => !["completed", "cancelled"].includes(t.status)), tasks, taskCounts: counts } });
 
-const open = (view = "tasks") => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={[`/teams?team=team-1&tab=${view}`]}><Teams /></MemoryRouter></QueryClientProvider>);
+const open = (view = "tasks") => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const app = () => <QueryClientProvider client={client}><MemoryRouter initialEntries={[`/teams?team=team-1&tab=${view}`]}><Teams /></MemoryRouter></QueryClientProvider>;
+  const result = render(app());
+  return { ...result, rerenderPage: () => result.rerender(app()) };
+};
 const rows = () => screen.getAllByRole("button", { name: /^Open task / }).map((b) => b.getAttribute("aria-label")!.replace("Open task ", ""));
 
 beforeEach(() => {
-  vi.clearAllMocks(); sockets.handlers.clear(); permissions.manage = true; authMock.user = { id: "user-owner", role: "executive" }; authMock.workspaceRole = "owner";
+  vi.clearAllMocks(); sockets.handlers.clear(); permissions.manage = true; authMock.activeCompanyId = "workspace-1"; authMock.user = { id: "user-owner", role: "executive" }; authMock.workspaceRole = "owner";
   apiMock.listTeams.mockResolvedValue({ data: { teams: [team] } }); apiMock.getCompanyTeam.mockResolvedValue({ data: { members: [] } });
+  apiMock.getTeamWorkspace.mockReset().mockResolvedValue(workspace([], { all: 0, active: 0, completed: 0, overdue: 0 }));
   apiMock.getTasks.mockResolvedValue({ data: { tasks: [] } }); apiMock.updateTask.mockResolvedValue({ status: "success" });
 });
 afterEach(() => { vi.restoreAllMocks(); });
@@ -49,11 +55,24 @@ describe("view logic", () => {
     expect(countTeamTasks(T)).toMatchObject({ all: 6, active: 3, in_review: 1, completed: 2, overdue: 1 });
     expect(countTeamTasks(T, { all: 400, completed: 150 })).toMatchObject({ all: 400, completed: 150, active: 3 });
   });
+  it("uses an instant-based overdue boundary rather than a browser-local start-of-day boundary", () => {
+    const now = new Date("2026-10-21T12:00:00.000Z");
+    expect(isTaskOverdue({ status: "pending", deadline: "2026-10-21T11:59:59.999Z" }, now)).toBe(true);
+    expect(isTaskOverdue({ status: "pending", deadline: now.toISOString() }, now)).toBe(false);
+    expect(isTaskOverdue({ status: "completed", deadline: "2026-10-21T11:59:59.999Z" }, now)).toBe(false);
+  });
   it("merging never drops a completed task that only one source has, and prefers the freshest copy", () => {
     const stale = task("x", "X", "in_progress", { updatedAt: "2026-10-18T09:00:00Z" }); const fresh = task("x", "X", "completed", { updatedAt: "2026-10-18T11:00:00Z" });
     const merged = mergeTeamTasks([stale] as never, [fresh] as never, [task("only", "Only", "completed")] as never);
     expect(merged.find((t) => t.id === "x")?.status).toBe("completed"); expect(merged.map((t) => t.id).sort()).toEqual(["only", "x"]);
     expect(mergeTeamTasks([{ ...task("s", "Sub", "pending"), parentTaskId: "p" }] as never)).toEqual([]);
+  });
+
+  it("uses the backend's exact team-level active count instead of the capped task list", async () => {
+    apiMock.getTeamWorkspace.mockResolvedValue(workspace([task("one", "One", "pending")], { all: 8, active: 6, completed: 2, cancelled: 0, in_review: 0, overdue: 0 }));
+    open("overview");
+    expect(await screen.findByText("Team workload")).toBeInTheDocument();
+    expect(screen.getByText("6 active")).toBeInTheDocument();
   });
 });
 
@@ -131,5 +150,82 @@ describe("Team workspace task list", () => {
     apiMock.getTasks.mockResolvedValue({ data: { tasks: [task("t3", "Shared work", "completed", { assigneeId: "user-lead" })] } });
     open(); await screen.findByText("Shared work");
     expect(rows()).toEqual(["Shared work"]); expect(screen.getByTestId("team-view-all").textContent).toContain("1");
+  });
+
+  it("groups visible teams by authenticated active membership and preserves administrative controls", async () => {
+    const user = userEvent.setup();
+    const mine = {
+      ...team,
+      id: "team-2",
+      name: "Product",
+      memberLinks: [{ id: "m2", companyMemberId: "cm-owner", teamId: "team-2", companyMember: { id: "cm-owner", userId: "user-owner", status: "active", user: { id: "user-owner" } } }],
+    };
+    apiMock.listTeams.mockResolvedValue({ data: { teams: [team, mine] } });
+    apiMock.getTeamWorkspace.mockResolvedValue(workspace([], { all: 0, active: 0, completed: 0, overdue: 0 }, team));
+    open("overview");
+    expect(await screen.findByText("Team workload")).toBeInTheDocument();
+
+    expect(screen.getByText("My Teams (1)")).toBeInTheDocument();
+    expect(screen.getByText("Other Workspace Teams (1)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Product.*1 members/ })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("button", { name: /Marketing.*1 members/ })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Create team" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Choose Team" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getByText("My Teams (1)")).toBeInTheDocument();
+    expect(within(menu).getByText("Other Workspace Teams (1)")).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: /Product/ })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: /Marketing/ })).toBeInTheDocument();
+  });
+
+  it("does not keep previous workspace teams visible while a new workspace list is pending", async () => {
+    const nextTeam = { ...team, id: "team-2", companyId: "workspace-2", name: "Product" };
+    let release: (value: unknown) => void = () => {};
+    apiMock.listTeams
+      .mockResolvedValueOnce({ data: { teams: [team] } })
+      .mockReturnValueOnce(new Promise((resolve) => { release = resolve; }));
+    apiMock.getTeamWorkspace.mockImplementation(async (id: string) => workspace([], { all: 0, active: 0, completed: 0, overdue: 0 }, id === "team-2" ? nextTeam : team));
+    const page = open("overview");
+    expect(await screen.findByText("Team workload")).toBeInTheDocument();
+
+    authMock.activeCompanyId = "workspace-2";
+    page.rerenderPage();
+    await waitFor(() => expect(screen.queryByText("Marketing")).not.toBeInTheDocument());
+    release({ data: { teams: [nextTeam] } });
+    expect(await screen.findByRole("heading", { name: "Product" })).toBeInTheDocument();
+    expect(screen.queryByText("Marketing")).not.toBeInTheDocument();
+  });
+
+  it("shows a visible error instead of zeroed Team metrics when the workspace endpoint fails", async () => {
+    apiMock.getTeamWorkspace.mockRejectedValue(new Error("workspace unavailable"));
+    open("overview");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load Team statistics and workload");
+    expect(screen.queryByText("Active tasks")).not.toBeInTheDocument();
+  });
+
+  it("keeps the responsive desktop sidebar and mobile Team chooser breakpoints", async () => {
+    apiMock.getTeamWorkspace.mockResolvedValue(workspace([], { all: 0, active: 0, completed: 0, overdue: 0 }));
+    open("overview");
+    expect(await screen.findByText("Team workload")).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Teams navigator" }).className).toContain("md:flex");
+    expect(screen.getByRole("button", { name: "Choose Team" }).closest('[class*="md:hidden"]')).not.toBeNull();
+  });
+
+  it("does not grant access merely by listing another visible team", async () => {
+    const user = userEvent.setup();
+    const otherTeam = { ...team, id: "team-2", name: "Product" };
+    permissions.manage = false;
+    authMock.workspaceRole = "member";
+    authMock.user = { id: "user-lead", role: "team_member" };
+    apiMock.listTeams.mockResolvedValue({ data: { teams: [team, otherTeam] } });
+    apiMock.getTeamWorkspace.mockImplementation(async (id: string) => {
+      if (id === "team-2") throw new Error("forbidden");
+      return workspace([], { all: 0, active: 0, completed: 0, overdue: 0 });
+    });
+    open("overview");
+    expect(await screen.findByText("Team workload")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Product/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load Team statistics and workload");
   });
 });
