@@ -12,6 +12,7 @@ import { taskWorkbenchPath, teamSubtaskPath, teamTaskPath } from "@/lib/taskExec
 import { useAuth } from "@/contexts/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { splitTeamsByActiveMembership, activeTeamMemberCount } from "@/lib/teamMembershipSections";
 
 const nameOf = (person: any) => person ? `${person.firstName || ""} ${person.lastName || ""}`.trim() || "Unassigned" : "Unassigned";
 
@@ -20,10 +21,12 @@ export default function TeamTaskView() {
   const subtaskMatch = useMatch("/teams/:teamId/tasks/:taskId/subtasks/:subtaskId");
   const subtaskId = subtaskMatch?.params.subtaskId;
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, activeCompanyId } = useAuth();
   const { toast } = useToast();
-  const taskQuery = useQuery({ queryKey: ["team-task", teamId, taskId], queryFn: () => api.getTaskById(taskId!), enabled: !!teamId && !!taskId, retry: false });
-  const teamsQuery = useQuery({ queryKey: ["teams-navigator"], queryFn: () => api.listTeams(), staleTime: 60_000 });
+  const taskQuery = useQuery({ queryKey: ["team-task", teamId, taskId, activeCompanyId], queryFn: () => api.getTaskById(taskId!), enabled: !!teamId && !!taskId, retry: false });
+  const teamsQuery = useQuery({ queryKey: ["teams-navigator", activeCompanyId], queryFn: () => api.listTeams(), staleTime: 60_000, enabled: !!activeCompanyId });
+  const teams = teamsQuery.data?.data?.teams || [];
+  const teamSections = splitTeamsByActiveMembership(teams, user?.id);
   const task = taskQuery.data?.data?.task;
   const access = taskQuery.data?.data?.access;
   const execution = taskQuery.data?.data?.execution || task?.execution;
@@ -31,7 +34,7 @@ export default function TeamTaskView() {
   const canManageSubtasks = !!access?.canEdit && access?.readOnly !== true;
   const completed = (task?.subtasks || []).filter((item) => item?.status === "completed").length;
   const members = useMemo(() => task?.team?.memberLinks || [], [task]);
-  const subtaskQuery = useQuery({ queryKey: ["team-task-subtask", subtaskId], queryFn: () => api.getTaskById(subtaskId!), enabled: !!subtaskId, retry: false });
+  const subtaskQuery = useQuery({ queryKey: ["team-task-subtask", subtaskId, activeCompanyId], queryFn: () => api.getTaskById(subtaskId!), enabled: !!subtaskId, retry: false });
   const selectedSubtask = subtaskQuery.data?.data?.task;
   const selectedAccess = subtaskQuery.data?.data?.access;
   const selectedValid = !subtaskId || (!!selectedSubtask && String(selectedSubtask.teamId || "") === String(teamId) && String(selectedSubtask.parentTaskId || "") === String(taskId));
@@ -43,7 +46,18 @@ export default function TeamTaskView() {
   return <DashboardLayout><main className="flex w-full min-w-0 gap-0 p-0">
     <aside className="hidden w-[228px] shrink-0 border-r bg-muted/10 lg:flex lg:flex-col">
       <div className="flex items-center justify-between border-b px-4 py-4"><div><p className="text-sm font-semibold">Teams</p><p className="text-xs text-muted-foreground">Workspace navigator</p></div><Button asChild size="sm" variant="ghost" className="h-8 px-2"><Link to="/teams" title="Open Teams workspace">All teams</Link></Button></div>
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">{teamsQuery.data?.data?.teams?.map((team: any) => <Link key={team.id} to={`/teams?team=${team.id}`} className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${team.id === teamId ? "bg-primary/10 font-medium text-primary-text" : "hover:bg-muted"}`}><span className="flex h-7 w-7 items-center justify-center rounded bg-muted text-xs font-semibold">{team.name?.slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1 truncate">{team.name}</span><span className="text-xs text-muted-foreground">{team.memberLinks?.length || 0}</span></Link>)}</div>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2">
+        {teamsQuery.isLoading ? <p className="p-2 text-xs text-muted-foreground">Loading Teams…</p> : teamsQuery.isError ? <p role="alert" className="p-2 text-xs text-destructive-text">Could not load Teams.</p> : <>
+          <div>
+            <p className="px-2 py-1 text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">My Teams ({teamSections.myTeams.length})</p>
+            {teamSections.myTeams.length ? teamSections.myTeams.map((team) => <Link key={team.id} to={`/teams?team=${team.id}`} aria-current={team.id === teamId ? "page" : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${team.id === teamId ? "bg-primary/10 font-medium text-primary-text" : "hover:bg-muted"}`}><span className="flex h-7 w-7 items-center justify-center rounded bg-muted text-xs font-semibold">{team.name?.slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1 truncate">{team.name}</span><span className="text-xs text-muted-foreground">{activeTeamMemberCount(team)}</span></Link>) : <p className="px-2 py-1 text-xs text-muted-foreground">No active team memberships.</p>}
+          </div>
+          <div>
+            <p className="px-2 py-1 text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">Other Workspace Teams ({teamSections.otherTeams.length})</p>
+            {teamSections.otherTeams.length ? teamSections.otherTeams.map((team) => <Link key={team.id} to={`/teams?team=${team.id}`} aria-current={team.id === teamId ? "page" : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${team.id === teamId ? "bg-primary/10 font-medium text-primary-text" : "hover:bg-muted"}`}><span className="flex h-7 w-7 items-center justify-center rounded bg-muted text-xs font-semibold">{team.name?.slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1 truncate">{team.name}</span><span className="text-xs text-muted-foreground">{activeTeamMemberCount(team)}</span></Link>) : <p className="px-2 py-1 text-xs text-muted-foreground">No other Teams are available to you.</p>}
+          </div>
+        </>}
+      </div>
     </aside>
     <section className="min-w-0 flex-1 space-y-4 p-4 sm:p-6 lg:p-7">
     <nav className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground" aria-label="Breadcrumb">

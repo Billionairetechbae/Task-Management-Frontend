@@ -125,7 +125,7 @@ export interface TeamWorkspaceResponse {
   tasks?: Task[];
   /** Exact per-status counts over all of the Team's parent tasks. */
   taskCounts?: Partial<import("./teamTaskViews").TeamTaskCounts>;
-  workload: Array<{ user: User | null; activeSubtasks: number; overdue: number; nearestDueDate: string | null }>;
+  workload: Array<{ user: User | null; activeTasks: number; overdue: number; nearestDueDate: string | null }>;
   activity: TaskActivity[];
 }
 

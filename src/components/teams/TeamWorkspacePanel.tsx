@@ -26,14 +26,17 @@ export default function TeamWorkspacePanel({ team }: Props) {
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const [replyTo, setReplyTo] = useState<TeamMessage | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [sending, setSending] = useState(false);
 
   const load = async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       const response = await api.getTeamWorkspace(team.id);
       setWorkspace(response.data);
     } catch (error: any) {
+      setLoadError(true);
       toast({ title: "Could not load Team workspace", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -60,7 +63,7 @@ export default function TeamWorkspacePanel({ team }: Props) {
 
   const stats = workspace ? [
     { label: "Active assignments", value: workspace.activeAssignments.length, icon: ClipboardList },
-    { label: "Active subtasks", value: workspace.workload.reduce((sum, item) => sum + item.activeSubtasks, 0), icon: Activity },
+    { label: "Member task assignments", value: workspace.workload.reduce((sum, item) => sum + item.activeTasks, 0), icon: Activity },
     { label: "Team activity", value: workspace.activity.length, icon: Users },
   ] : [];
 
@@ -89,7 +92,12 @@ export default function TeamWorkspacePanel({ team }: Props) {
         <div className="p-3">
           {loading && <p className="py-8 text-center text-sm text-muted-foreground">Loading Team workspace...</p>}
 
-          {!loading && workspace && (
+          {!loading && loadError && <div role="alert" className="py-8 text-center text-sm text-destructive-text">
+            <p>Could not load Team statistics and workload.</p>
+            <Button className="mt-3" variant="outline" size="sm" onClick={() => void load()}>Retry</Button>
+          </div>}
+
+          {!loading && !loadError && workspace && (
             <>
               <TabsContent value="overview" className="mt-0 space-y-4">
                 <div className="grid grid-cols-3 gap-2">
@@ -115,7 +123,7 @@ export default function TeamWorkspacePanel({ team }: Props) {
                             <span className="truncate text-sm">{personName(item.user)}</span>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
-                            <Badge variant="secondary" className="text-[0.625rem]">{item.activeSubtasks} active</Badge>
+                            <Badge variant="secondary" className="text-[0.625rem]">{item.activeTasks} active</Badge>
                             {item.overdue > 0 && <Badge variant="destructive" className="text-[0.625rem]">{item.overdue} late</Badge>}
                           </div>
                         </div>
