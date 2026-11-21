@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -43,7 +43,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -58,6 +58,7 @@ import { TaskLoadErrorPanel } from "@/components/tasks/TaskLoadErrorPanel";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { TEAM_TASK_VIEWS, countTeamTasks, isTaskOverdue, mergeTeamTasks, taskMatchesView } from "@/lib/teamTaskViews";
 import type { TeamTaskCounts, TeamTaskView } from "@/lib/teamTaskViews";
+import { activeTeamMemberCount, splitTeamsByActiveMembership } from "@/lib/teamMembershipSections";
 import {
   api,
   CompanyMember,
@@ -132,9 +133,17 @@ export default function Teams() {
   // Team membership is an Owner/Executive operation (the backend rejects Managers); a Manager only gets it as the team's designated Lead.
   const canAdminTeams = canAdminWorkspace(workspaceRole, user?.role);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsWorkspaceId, setTeamsWorkspaceId] = useState<string | null>(null);
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [teamListError, setTeamListError] = useState(false);
+  const teamsLoadVersion = useRef(0);
+  const teamSelectionRef = useRef<{ routeTeamId?: string; searchTeamId: string | null }>({
+    routeTeamId,
+    searchTeamId: searchParams.get("team"),
+  });
+  teamSelectionRef.current = { routeTeamId, searchTeamId: searchParams.get("team") };
   const [dialog, setDialog] = useState<DialogMode>(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
@@ -144,7 +153,10 @@ export default function Teams() {
   const [deleteTeamOpen, setDeleteTeamOpen] = useState(false);
   const [teamActionLoading, setTeamActionLoading] = useState(false);
 
-  const selectedTeam = teams.find((team) => team.id === (routeTeamId || selectedId)) || null;
+  const visibleTeams = useMemo(() => teamsWorkspaceId === activeCompanyId ? teams : [], [teamsWorkspaceId, activeCompanyId, teams]);
+  const teamSections = useMemo(() => splitTeamsByActiveMembership(visibleTeams, user?.id), [visibleTeams, user?.id]);
+  const isTeamsLoading = loading || (!!activeCompanyId && teamsWorkspaceId !== activeCompanyId && !teamListError);
+  const selectedTeam = visibleTeams.find((team) => team.id === (routeTeamId || selectedId)) || null;
   // The designated Team Lead of the selected team may manage that team's membership (the backend re-checks every request).
   const selectedLeadUserId = selectedTeam?.leadMember?.userId || selectedTeam?.leadMember?.user?.id;
   const isLeadOfSelectedTeam = !!user?.id && String(selectedLeadUserId || "") === String(user.id);
@@ -183,32 +195,55 @@ export default function Teams() {
   const [activeTab, setActiveTab] = useState<TeamTab>("overview");
   const openTask = !!routeTeamId && !!taskId;
 
-  const loadTeams = async (showLoading = false) => {
+  const loadTeams = useCallback(async (showLoading = false) => {
+    const requestVersion = ++teamsLoadVersion.current;
+    const requestedWorkspaceId = activeCompanyId;
     if (!activeCompanyId) {
       setTeams([]);
+      setTeamsWorkspaceId(null);
       setLoading(false);
+      setTeamListError(false);
       return;
     }
+    if (showLoading) setLoading(true);
+    setTeamListError(false);
     try {
-      if (showLoading) setLoading(true);
       const [teamResponse, memberResponse] = await Promise.all([
         api.listTeams(),
         canManage ? api.getCompanyTeam() : Promise.resolve({ data: { members: [] as CompanyMember[] } }),
       ]);
+      if (requestVersion !== teamsLoadVersion.current) return;
       const nextTeams = teamResponse.data.teams || [];
       setTeams(nextTeams);
+      setTeamsWorkspaceId(requestedWorkspaceId);
       setMembers(memberResponse.data.members || []);
-      setSelectedId((current) => routeTeamId || searchParams.get("team") || current || nextTeams[0]?.id || null);
+      setSelectedId((current) => {
+        const preferred = teamSelectionRef.current.routeTeamId || teamSelectionRef.current.searchTeamId;
+        if (preferred && nextTeams.some((team) => team.id === preferred)) return preferred;
+        return current && nextTeams.some((team) => team.id === current) ? current : nextTeams[0]?.id || null;
+      });
     } catch (error) {
+      if (requestVersion !== teamsLoadVersion.current) return;
+      setTeams([]);
+      setTeamsWorkspaceId(requestedWorkspaceId);
+      setMembers([]);
+      setTeamListError(true);
       toast({ title: "Could not load Teams", description: errorMessage(error, "Please try again."), variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (requestVersion === teamsLoadVersion.current) setLoading(false);
     }
-  };
+  }, [activeCompanyId, canManage, toast]);
 
   useEffect(() => {
+    teamsLoadVersion.current += 1;
+    setTeams([]);
+    setTeamsWorkspaceId(null);
+    setMembers([]);
+    setSelectedId(null);
+    setTeamListError(false);
     void loadTeams(true);
-  }, [activeCompanyId, canManage]);
+    return () => { teamsLoadVersion.current += 1; };
+  }, [activeCompanyId, canManage, loadTeams]);
 
   const membersDialogOpen = dialog === "members";
   useEffect(() => {
@@ -314,7 +349,7 @@ export default function Teams() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-sm font-semibold">Teams</h1>
-              <p className="text-[0.6875rem] text-muted-foreground">{teams.length} workspace teams</p>
+              <p className="text-[0.6875rem] text-muted-foreground">{visibleTeams.length} available teams</p>
             </div>
             {canManage && (
               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Create team" onClick={() => {
@@ -327,24 +362,31 @@ export default function Teams() {
             )}
           </div>
           <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
-            {loading ? <div className="space-y-2 p-2"><div className="h-10 animate-pulse rounded-md bg-muted" /><div className="h-10 animate-pulse rounded-md bg-muted" /></div> : teams.map((team) => (
-              <button
-                key={team.id}
-                type="button"
-                onClick={() => chooseTeam(team)}
-                aria-current={selectedTeam?.id === team.id ? "page" : undefined}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-lg border-l-2 px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                  selectedTeam?.id === team.id ? "border-primary bg-primary/10 text-primary-text" : "border-transparent hover:bg-muted",
-                )}
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[0.6875rem] font-bold text-primary-text">{initials(team.name)}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{team.name}</span>
-                  <span className="block text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} members</span>
-                </span>
-              </button>
-            ))}
+            {isTeamsLoading ? <div className="space-y-2 p-2"><div className="h-10 animate-pulse rounded-md bg-muted" /><div className="h-10 animate-pulse rounded-md bg-muted" /></div> : teamListError ? (
+              <div role="alert" className="space-y-2 p-2 text-xs text-destructive-text">
+                <p>Could not load Teams.</p>
+                <Button variant="outline" size="sm" onClick={() => void loadTeams(true)}>Retry</Button>
+              </div>
+            ) : <>
+              <div>
+                <p className="px-2 py-1 text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">My Teams ({teamSections.myTeams.length})</p>
+                {teamSections.myTeams.length ? teamSections.myTeams.map((team) => (
+                  <button key={team.id} type="button" onClick={() => chooseTeam(team)} aria-current={selectedTeam?.id === team.id ? "page" : undefined} className={cn("flex w-full items-center gap-2.5 rounded-lg border-l-2 px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", selectedTeam?.id === team.id ? "border-primary bg-primary/10 text-primary-text" : "border-transparent hover:bg-muted")}>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[0.6875rem] font-bold text-primary-text">{initials(team.name)}</span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{team.name}</span><span className="block text-[0.6875rem] text-muted-foreground">{activeTeamMemberCount(team)} members</span></span>
+                  </button>
+                )) : <p className="px-2 py-1 text-xs text-muted-foreground">No active team memberships.</p>}
+              </div>
+              <div className="pt-2">
+                <p className="px-2 py-1 text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">Other Workspace Teams ({teamSections.otherTeams.length})</p>
+                {teamSections.otherTeams.length ? teamSections.otherTeams.map((team) => (
+                  <button key={team.id} type="button" onClick={() => chooseTeam(team)} aria-current={selectedTeam?.id === team.id ? "page" : undefined} className={cn("flex w-full items-center gap-2.5 rounded-lg border-l-2 px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", selectedTeam?.id === team.id ? "border-primary bg-primary/10 text-primary-text" : "border-transparent hover:bg-muted")}>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[0.6875rem] font-bold text-primary-text">{initials(team.name)}</span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{team.name}</span><span className="block text-[0.6875rem] text-muted-foreground">{activeTeamMemberCount(team)} members</span></span>
+                  </button>
+                )) : <p className="px-2 py-1 text-xs text-muted-foreground">No other Teams are available to you.</p>}
+              </div>
+            </>}
           </div>
         </aside>
 
@@ -352,24 +394,36 @@ export default function Teams() {
           <div className="flex items-center gap-2 border-b bg-background px-3 py-2 md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" aria-label="Choose Team"><Users className="mr-2 h-4 w-4" />{selectedTeam?.name || "Teams"}</Button>
+                <Button variant="outline" size="sm" aria-label="Choose Team" disabled={isTeamsLoading}><Users className="mr-2 h-4 w-4" />{selectedTeam?.name || "Teams"}</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                {teams.map((team) => <DropdownMenuItem key={team.id} onSelect={() => chooseTeam(team)}>{team.name}</DropdownMenuItem>)}
+                {teamListError ? <>
+                  <DropdownMenuLabel>Teams unavailable</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => void loadTeams(true)}>Retry loading Teams</DropdownMenuItem>
+                </> : <>
+                  <DropdownMenuLabel>My Teams ({teamSections.myTeams.length})</DropdownMenuLabel>
+                  {teamSections.myTeams.length ? teamSections.myTeams.map((team) => <DropdownMenuItem key={team.id} onSelect={() => chooseTeam(team)}>{team.id === selectedTeam?.id && <Check className="mr-2 h-4 w-4" />}<span className="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-[0.5625rem] font-semibold text-primary-text">{initials(team.name)}</span><span className="truncate">{team.name}</span><span className="ml-auto text-xs text-muted-foreground">{activeTeamMemberCount(team)}</span></DropdownMenuItem>) : <DropdownMenuItem disabled>No active team memberships</DropdownMenuItem>}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Other Workspace Teams ({teamSections.otherTeams.length})</DropdownMenuLabel>
+                  {teamSections.otherTeams.length ? teamSections.otherTeams.map((team) => <DropdownMenuItem key={team.id} onSelect={() => chooseTeam(team)}>{team.id === selectedTeam?.id && <Check className="mr-2 h-4 w-4" />}<span className="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-[0.5625rem] font-semibold text-primary-text">{initials(team.name)}</span><span className="truncate">{team.name}</span><span className="ml-auto text-xs text-muted-foreground">{activeTeamMemberCount(team)}</span></DropdownMenuItem>) : <DropdownMenuItem disabled>No other Teams are available</DropdownMenuItem>}
+                </>}
                 {canManage && <><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => { setTeamName(""); setTeamDescription(""); setDialog("create"); }}><Plus className="mr-2 h-4 w-4" />Create Team</DropdownMenuItem></>}
               </DropdownMenuContent>
             </DropdownMenu>
-            <span className="text-xs text-muted-foreground">{teams.length} teams</span>
+            <span className="text-xs text-muted-foreground">{visibleTeams.length} teams</span>
           </div>
 
-          {!selectedTeam && !loading && <div className="p-8 text-sm text-muted-foreground">No teams are available in this workspace.</div>}
-          {!selectedTeam && loading && <div className="space-y-3 p-5"><div className="h-20 animate-pulse rounded-xl bg-muted" /><div className="h-52 animate-pulse rounded-xl bg-muted" /></div>}
+          {!selectedTeam && !isTeamsLoading && (teamListError
+            ? <div role="alert" className="m-5 rounded-lg border border-destructive/30 bg-background p-5 text-sm text-destructive-text"><p>Could not load Teams for this workspace.</p><Button className="mt-3" variant="outline" size="sm" onClick={() => void loadTeams(true)}>Retry</Button></div>
+            : <div className="p-8 text-sm text-muted-foreground">No teams are available in this workspace.</div>)}
+          {!selectedTeam && isTeamsLoading && <div className="space-y-3 p-5"><div className="h-20 animate-pulse rounded-xl bg-muted" /><div className="h-52 animate-pulse rounded-xl bg-muted" /></div>}
           {selectedTeam && !openTask && (
             <TeamHome
               team={currentTeam || selectedTeam}
               tasks={teamTasks}
               workspace={workspace}
               loading={workspaceQuery.isLoading || teamTasksQuery.isLoading}
+              workspaceError={workspaceQuery.isError}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               canManage={canManage}
@@ -462,12 +516,13 @@ export default function Teams() {
 }
 
 function TeamHome({
-  team, tasks, workspace, loading, activeTab, setActiveTab, canManage, canManageMembers, canChangeLead, canReview, onOpenTask, onEdit, onMembers, onLead, onDelete, onRefresh, onTaskChanged,
+  team, tasks, workspace, loading, workspaceError, activeTab, setActiveTab, canManage, canManageMembers, canChangeLead, canReview, onOpenTask, onEdit, onMembers, onLead, onDelete, onRefresh, onTaskChanged,
 }: {
   team: Team;
   tasks: Task[];
   workspace?: TeamWorkspaceResponse;
   loading: boolean;
+  workspaceError: boolean;
   activeTab: TeamTab;
   setActiveTab: (tab: TeamTab) => void;
   canManage: boolean;
@@ -489,6 +544,12 @@ function TeamHome({
   const tabs: Array<[TeamTab, string]> = [["overview", "Overview"], ["tasks", "Tasks"], ["chat", "Chat"], ["activity", "Activity"], ["settings", "Team settings"]];
   const openCount = counts.active;
 
+  if (loading) return <div role="status" className="space-y-3 p-5"><div className="h-20 animate-pulse rounded-xl bg-muted" /><div className="h-52 animate-pulse rounded-xl bg-muted" /><span className="sr-only">Loading Team workspace…</span></div>;
+  if (workspaceError) return <div role="alert" className="m-5 rounded-lg border border-destructive/30 bg-background p-5 text-sm text-destructive-text">
+    <p>Could not load Team statistics and workload.</p>
+    <Button className="mt-3" variant="outline" size="sm" onClick={onRefresh}>Retry</Button>
+  </div>;
+
   return (
     <div className="min-h-full">
       <header className="sticky top-0 z-20 border-b bg-background/95 px-4 pt-4 backdrop-blur sm:px-6">
@@ -504,7 +565,7 @@ function TeamHome({
                 <div className="flex -space-x-2">
                   {team.memberLinks?.slice(0, 5).map((link) => <Avatar key={link.id} className="h-6 w-6 border-2 border-background"><AvatarImage src={link.companyMember?.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.5625rem]">{personInitials(link.companyMember)}</AvatarFallback></Avatar>)}
                 </div>
-                <span className="text-[0.6875rem] text-muted-foreground">{team.memberLinks?.length || 0} members</span>
+                <span className="text-[0.6875rem] text-muted-foreground">{activeTeamMemberCount(team)} members</span>
               </div>
             </div>
           </div>
@@ -530,8 +591,9 @@ function TeamHome({
           <Metric label="Active tasks" value={activeCount} icon={CheckSquare} />
           <Metric label="Completed" value={completed} icon={Check} />
           <Metric label="Overdue" value={overdue} icon={Clock3} />
-          <Metric label="Members" value={team.memberLinks?.length || 0} icon={Users} />
+          <Metric label="Members" value={activeTeamMemberCount(team)} icon={Users} />
         </div>
+        <p className="pb-3 text-[0.625rem] text-muted-foreground">Team totals count parent task records once. Completed means status is completed; active includes every status except completed or cancelled. Overdue means a non-terminal deadline instant has passed.</p>
         <nav className="flex gap-5 overflow-x-auto" aria-label="Team tabs">
           {tabs.map(([value, label]) => (
             <button
@@ -551,7 +613,7 @@ function TeamHome({
       <div className="p-4 sm:p-5">
         {loading ? <div className="space-y-3"><div className="h-32 animate-pulse rounded-lg bg-muted" /><div className="h-48 animate-pulse rounded-lg bg-muted" /></div> : (
           <>
-            {activeTab === "overview" && <Overview team={team} tasks={tasks} workspace={workspace} onOpenTask={onOpenTask} onMembers={onMembers} onLead={onLead} canManageMembers={canManageMembers} canChangeLead={canChangeLead} />}
+            {activeTab === "overview" && <Overview team={team} tasks={tasks} counts={counts} workspace={workspace} onOpenTask={onOpenTask} onMembers={onMembers} onLead={onLead} canManageMembers={canManageMembers} canChangeLead={canChangeLead} />}
             {activeTab === "tasks" && <TeamTaskList team={team} tasks={tasks} counts={counts} canManage={canManage} canReview={canReview} onOpenTask={onOpenTask} onTaskChanged={onTaskChanged} />}
             {activeTab === "chat" && <TeamChat team={team} initialMessages={workspace?.messages || []} />}
             {activeTab === "activity" && <ActivityTimeline items={workspace?.activity || []} />}
@@ -570,18 +632,17 @@ function Metric({ label, value, icon: Icon }: { label: string; value: number; ic
   </div>;
 }
 
-function Overview({ team, tasks, workspace, onOpenTask, onMembers, onLead, canManageMembers, canChangeLead }: {
-  team: Team; tasks: Task[]; workspace?: TeamWorkspaceResponse; onOpenTask: (id: string) => void; onMembers: () => void; onLead: () => void; canManageMembers: boolean; canChangeLead: boolean;
+function Overview({ team, tasks, counts, workspace, onOpenTask, onMembers, onLead, canManageMembers, canChangeLead }: {
+  team: Team; tasks: Task[]; counts: TeamTaskCounts; workspace?: TeamWorkspaceResponse; onOpenTask: (id: string) => void; onMembers: () => void; onLead: () => void; canManageMembers: boolean; canChangeLead: boolean;
 }) {
-  const active = tasks.filter((task) => !["completed", "cancelled"].includes(task.status || ""));
   const lead = team.leadMember;
   const recentTasks = [...tasks].sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()).slice(0, 5);
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,.8fr)]">
       <section className="overflow-hidden rounded-lg border bg-background">
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <div><h3 className="text-sm font-semibold">Team workload</h3><p className="mt-0.5 text-[0.6875rem] text-muted-foreground">Active work by assigned member</p></div>
-          <Badge variant="secondary">{active.length} active</Badge>
+          <div><h3 className="text-sm font-semibold">Team workload</h3><p className="mt-0.5 text-[0.6875rem] text-muted-foreground">Active parent tasks and subtasks assigned to each active member. Multi-assignee work appears once per assignee; unassigned team work is not allocated. Nearest due is the earliest assigned active deadline, including overdue work.</p></div>
+          <Badge variant="secondary">{counts.active} active</Badge>
         </div>
         {workspace?.workload?.length ? (
           <div className="overflow-x-auto">
@@ -590,7 +651,7 @@ function Overview({ team, tasks, workspace, onOpenTask, onMembers, onLead, canMa
               <tbody className="divide-y">
                 {workspace.workload.map((item, index) => <tr key={item.user?.id || index} className="hover:bg-muted/30">
                   <td className="px-4 py-2.5"><div className="flex items-center gap-2"><Avatar className="h-7 w-7"><AvatarImage src={item.user?.profilePictureUrl || undefined} /><AvatarFallback className="text-[0.5625rem]">{initials(userName(item.user))}</AvatarFallback></Avatar><span className="font-medium">{userName(item.user)}</span></div></td>
-                  <td className="px-3 py-2.5">{item.activeSubtasks}</td>
+                  <td className="px-3 py-2.5">{item.activeTasks}</td>
                   <td className="px-3 py-2.5">{item.overdue ? <Badge variant="destructive" className="h-5 px-1.5 text-[0.625rem]">{item.overdue}</Badge> : <span className="text-muted-foreground">0</span>}</td>
                   <td className="px-3 py-2.5 text-muted-foreground">{formattedDate(item.nearestDueDate)}</td>
                 </tr>)}
