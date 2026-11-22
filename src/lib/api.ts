@@ -2,6 +2,8 @@
 import { envOr } from "@/lib/env";
 import { rememberVerificationProof } from "@/lib/emailVerification";
 import type { CalendarResponse, CalendarEvent } from "../types/calendar";
+import type { ProjectStatus } from "./projectStatus";
+export type { ProjectStatus } from "./projectStatus";
 
 /* ============================
    SHARED TYPES
@@ -572,6 +574,8 @@ export interface Task {
   executiveId?: string | null;
   assigneeId?: string | null;
   teamId?: string | null;
+  projectId?: string | null;
+  project?: { id: string; companyId: string; name: string } | null;
   team?: (Pick<Team, "id" | "name" | "leadMemberId"> & { leadMember?: CompanyMember | null; memberLinks?: TeamMemberLink[] }) | null;
   parentTaskId?: string | null;
 
@@ -1140,6 +1144,7 @@ export interface Folder {
   id: string;
   scope: "workspace" | "personal";
   companyId?: string | null;
+  projectId?: string | null;
   ownerUserId?: string | null;
   name: string;
   description?: string | null;
@@ -1155,8 +1160,19 @@ export interface FolderFile {
   fileType: string;
   fileSize: number;
   uploadedBy: string;
+  downloadUrl?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProjectFileListing {
+  rootFolder: Pick<Folder, "id" | "name">;
+  folder: Pick<Folder, "id" | "name" | "parentId">;
+  breadcrumbs: Array<Pick<Folder, "id" | "name">>;
+  folders: Folder[];
+  folderOptions: Array<Pick<Folder, "id" | "name" | "parentId">>;
+  files: FolderFile[];
+  permissions: { canUpload: boolean; canManage: boolean };
 }
 
 export interface ProjectInvite {
@@ -1298,8 +1314,6 @@ export interface CostEstimation {
 /* ============================
    PROJECTS
 ============================ */
-
-export type ProjectStatus = "planning" | "active" | "on_hold" | "completed" | "cancelled";
 
 export interface ChecklistItem {
   id: string;
@@ -2771,7 +2785,7 @@ class ApiClient {
     });
   }
 
-  async globalSearch(query: string, workspaceId?: string | null, signal?: AbortSignal): Promise<{ status: string; data: { groups: Record<string, Array<{ id: string; title: string; subtitle: string; href: string }>> } }> {
+  async globalSearch(query: string, workspaceId?: string | null, signal?: AbortSignal): Promise<{ status: string; data: { groups: Record<string, Array<{ id: string; title: string; subtitle: string; href: string; projectId?: string; projectName?: string; projectCompanyId?: string }>> } }> {
     const params = new URLSearchParams({ q: query.slice(0, 100) });
     const headers = new Headers(this.getAuthHeaders());
     if (workspaceId) headers.set("x-company-id", workspaceId);
@@ -4792,7 +4806,64 @@ async getHarmonyAiSummaryTeam(force?: boolean): Promise<HarmonyAiReportResponse>
     });
   }
 
-  async createProjectTask(projectId: string, data: CreateTaskData | FormData): Promise<{ status: string; data: { task: Task } | Task | any }> {
+  async listProjectFiles(projectId: string, folderId?: string): Promise<{ status: string; data: ProjectFileListing }> {
+    const query = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
+    return this.request(`/projects/${encodeURIComponent(projectId)}/files${query}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createProjectFolder(projectId: string, data: { name: string; description?: string; parentId?: string | null }): Promise<{ status: string; data: { folder: Folder } }> {
+    return this.request(`/projects/${encodeURIComponent(projectId)}/folders`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async uploadProjectFiles(projectId: string, folderId: string, files: File[]): Promise<{ status: string; data: { files: FolderFile[] } }> {
+    const form = new FormData();
+    form.append("folderId", folderId);
+    files.forEach((file) => form.append("files", file));
+    return this.request(`/projects/${encodeURIComponent(projectId)}/files`, {
+      method: "POST",
+      headers: this.getAuthHeaders(true),
+      body: form,
+    });
+  }
+
+  async updateProjectFolder(projectId: string, folderId: string, changes: Partial<Pick<Folder, "name" | "parentId">>): Promise<{ status: string; data: { folder: Folder } }> {
+    return this.request(`/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(folderId)}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+    });
+  }
+
+  async updateProjectFile(projectId: string, fileId: string, changes: { fileName?: string; folderId?: string }): Promise<{ status: string; data: { file: FolderFile } }> {
+    return this.request(`/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(fileId)}`, {
+      method: "PATCH",
+      headers: { ...this.getAuthHeaders(true), "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+    });
+  }
+
+  async deleteProjectFile(projectId: string, fileId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(fileId)}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async deleteProjectFolder(projectId: string, folderId: string): Promise<{ status: string; message?: string }> {
+    return this.request(`/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(folderId)}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  async createProjectTask(projectId: string, data: CreateTaskData | FormData): Promise<{ status: string; data: Task }> {
     const isFormData = data instanceof FormData;
     const headers: HeadersInit = isFormData
       ? this.getAuthHeaders(true)

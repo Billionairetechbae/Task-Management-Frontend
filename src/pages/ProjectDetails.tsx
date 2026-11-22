@@ -15,7 +15,10 @@ import {
   Project,
   ProjectChecklist,
   ProjectInvite,
+  ProjectStatus,
+  OrganizationAuditEvent,
 } from "@/lib/api";
+import { PROJECT_STATUS_OPTIONS } from "@/lib/projectStatus";
 import { useToast } from "@/hooks/use-toast";
 import { viewportAtLeastRem } from "@/hooks/use-viewport-width";
 import { Button } from "@/components/ui/button";
@@ -56,6 +59,7 @@ import CreateProjectTaskDialog from "@/components/projects/CreateProjectTaskDial
 import CustomFieldValueDisplay from "@/components/customFields/CustomFieldValueDisplay";
 import ProjectTimeSummary from "@/components/time/ProjectTimeSummary";
 import CreateChecklistDialog from "@/components/projects/CreateChecklistDialog";
+import ProjectFilesManager from "@/components/projects/ProjectFilesManager";
 import KanbanBoard from "@/components/projects/KanbanBoard";
 import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import {
@@ -96,6 +100,7 @@ import {
   Kanban,
   Lock,
   KeyRound,
+  Search,
 } from "lucide-react";
 import {
   ResizablePanelGroup,
@@ -156,6 +161,8 @@ export default function ProjectDetails() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [invites, setInvites] = useState<ProjectInvite[]>([]);
   const [checklists, setChecklists] = useState<ProjectChecklist[]>([]);
+  const [projectActivity, setProjectActivity] = useState<OrganizationAuditEvent[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
   const [connectedStorageAttachments, setConnectedStorageAttachments] = useState<ConnectedStorageAttachment[] | undefined>(undefined);
   const [tasks, setTasks] = useState<any[]>([]);
   const [externalShareOpen, setExternalShareOpen] = useState(false);
@@ -179,6 +186,8 @@ export default function ProjectDetails() {
 
   const [taskView, setTaskView] = useState<"table" | "kanban">("table");
   const [taskPage, setTaskPage] = useState(1);
+  const [taskSearch, setTaskSearch] = useState("");
+  const [taskStatusFilter, setTaskStatusFilter] = useState("all");
   const tasksPerPage = 10;
 
   const [descExpanded, setDescExpanded] = useState(false);
@@ -198,7 +207,7 @@ export default function ProjectDetails() {
   const [settingsForm, setSettingsForm] = useState({
     name: "",
     description: "",
-    status: "active",
+    status: "active" as ProjectStatus,
     startDate: "",
     endDate: "",
   });
@@ -340,6 +349,19 @@ export default function ProjectDetails() {
     }
   };
 
+  const loadProjectActivity = async () => {
+    if (!id) return;
+    setActivityLoading(true);
+    try {
+      const response = await api.getOrganizationAuditEvents({ projectId: id, page: 1, limit: 8 });
+      setProjectActivity(response.data.events);
+    } catch (error: any) {
+      toast({ title: "Could not load project activity", description: error?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
   const loadPendingAccessRequests = async () => {
     try {
       if (workspaceRole !== "member") {
@@ -361,6 +383,7 @@ export default function ProjectDetails() {
     loadMembers();
     loadTasks();
     loadChecklists();
+    loadProjectActivity();
     loadPendingAccessRequests();
   };
 
@@ -371,11 +394,13 @@ export default function ProjectDetails() {
 
   const handleTaskUpdated = (updatedTask: any) => {
     setTasks((prev) => prev.map((t) => t.id === updatedTask.id ? updatedTask : t));
+    void loadProjectActivity();
   };
 
   const handleTaskDeleted = (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     setTaskEditDrawerOpen(false);
+    void loadProjectActivity();
   };
 
   useEffect(() => {
@@ -403,6 +428,7 @@ export default function ProjectDetails() {
       await loadMembers();
 
       toast({ title: "Invitation sent" });
+      void loadProjectActivity();
     } catch (err: any) {
       toast({
         title: "Invite failed",
@@ -422,6 +448,7 @@ export default function ProjectDetails() {
       await loadMembers();
 
       toast({ title: "Member removed" });
+      void loadProjectActivity();
     } catch (err: any) {
       toast({
         title: "Remove failed",
@@ -439,6 +466,7 @@ export default function ProjectDetails() {
       await loadMembers();
 
       toast({ title: "Invite revoked" });
+      void loadProjectActivity();
     } catch (err: any) {
       toast({
         title: "Revoke failed",
@@ -495,6 +523,7 @@ export default function ProjectDetails() {
       
       await loadMembers();
       toast({ title: "Member added" });
+      void loadProjectActivity();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -509,6 +538,7 @@ export default function ProjectDetails() {
       await api.updateProjectMemberRole(id, userId, newRole);
       await loadMembers();
       toast({ title: "Role updated" });
+      void loadProjectActivity();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
@@ -582,19 +612,35 @@ export default function ProjectDetails() {
   const saveSettings = async () => {
     if (!id) return;
 
+    const unfinishedTasks = tasks.filter((task) => !["completed", "cancelled"].includes(task.status)).length;
+    if (
+      settingsForm.status === "completed" &&
+      project?.status !== "completed" &&
+      unfinishedTasks > 0 &&
+      !window.confirm(`This project has ${unfinishedTasks} unfinished task${unfinishedTasks === 1 ? "" : "s"}. Marking the project Completed will not change their task statuses. Continue?`)
+    ) return;
+
     try {
       setSavingSettings(true);
 
-      await api.updateProject(id, {
+      const response = await api.updateProject(id, {
         name: settingsForm.name,
         description: settingsForm.description,
-        status: settingsForm.status as any,
+        status: settingsForm.status,
         startDate: settingsForm.startDate || null,
         endDate: settingsForm.endDate || null,
       });
 
+      const updatedProject = response.data?.project;
+      if (updatedProject) {
+        setProject(updatedProject);
+        setSettingsForm((current) => ({ ...current, status: updatedProject.status }));
+      } else {
+        await loadProject();
+      }
+      await queryClient.invalidateQueries({ queryKey: ["projects", activeCompanyId] });
       toast({ title: "Project updated" });
-      loadProject();
+      void loadProjectActivity();
     } catch (err: any) {
       toast({
         title: "Update failed",
@@ -681,19 +727,68 @@ export default function ProjectDetails() {
     completed: tasks.filter((t) => t.status === "completed").length,
     inProgress: tasks.filter((t) => t.status === "in_progress").length,
     pending: tasks.filter((t) => t.status === "pending").length,
+    inReview: tasks.filter((t) => t.status === "in_review").length,
+    overdue: tasks.filter((task) =>
+      task.deadline &&
+      !["completed", "cancelled"].includes(task.status) &&
+      new Date(task.deadline).getTime() < Date.now()
+    ).length,
+    eligibleTotal: tasks.filter((task) => task.status !== "cancelled").length,
   };
 
-  // Connected Storage (Dropbox) files. UI hint mirrors the server rule for modifying a Project: owner/admin/manager or a Project owner/admin.
+  const filteredTasks = tasks.filter((task) => {
+    const matchesText = !taskSearch.trim() || `${task.title || ""} ${task.description || ""}`.toLowerCase().includes(taskSearch.trim().toLowerCase());
+    const matchesStatus = taskStatusFilter === "all" || task.status === taskStatusFilter;
+    return matchesText && matchesStatus;
+  });
+  const projectDeadline = project.dueDate || project.endDate;
+  const projectOverdue = Boolean(projectDeadline && new Date(projectDeadline).getTime() < Date.now() && project.status !== "completed" && project.status !== "cancelled");
+
+  // Dropbox remains an optional connected-storage reference; native project files are isolated in their own backend scope.
   const myProjectRole = members.find((member: any) => String((member as any).userId ?? (member as any).id) === String(authUser?.id))?.role as string | undefined;
   const canAttachProjectFiles = ["owner", "admin", "manager"].includes(String(workspaceRole)) || ["owner", "admin"].includes(String(myProjectRole));
   const projectFiles = (
-    <ConnectedStorageAttachmentsSection targetType="project" targetId={project.id} canAttach={canAttachProjectFiles} initialAttachments={connectedStorageAttachments} />
+    <div className="space-y-5">
+      <ProjectFilesManager projectId={project.id} />
+      <ConnectedStorageAttachmentsSection targetType="project" targetId={project.id} canAttach={canAttachProjectFiles} initialAttachments={connectedStorageAttachments} title="Dropbox Connected Storage" />
+    </div>
   );
 
-  const totalTaskPages = Math.ceil(tasks.length / tasksPerPage);
-  const paginatedTasks = tasks.slice(
+  const totalTaskPages = Math.ceil(filteredTasks.length / tasksPerPage);
+  const paginatedTasks = filteredTasks.slice(
     (taskPage - 1) * tasksPerPage,
     taskPage * tasksPerPage
+  );
+  const taskFilters = (
+    <div className="flex flex-col gap-2 px-3 py-2 sm:flex-row">
+      <div className="relative min-w-0 flex-1">
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input aria-label="Search project tasks" value={taskSearch} onChange={(event) => { setTaskSearch(event.target.value); setTaskPage(1); }} placeholder="Search project tasks" className="h-8 pl-8 text-xs" />
+      </div>
+      <Select value={taskStatusFilter} onValueChange={(value) => { setTaskStatusFilter(value); setTaskPage(1); }}>
+        <SelectTrigger aria-label="Filter project tasks by status" className="h-8 w-full text-xs sm:w-40"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          <SelectItem value="pending">Pending</SelectItem>
+          <SelectItem value="in_progress">In Progress</SelectItem>
+          <SelectItem value="in_review">In Review</SelectItem>
+          <SelectItem value="completed">Completed</SelectItem>
+          <SelectItem value="delayed">Delayed</SelectItem>
+          <SelectItem value="cancelled">Cancelled</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+  const activityContent = (
+    <section className="space-y-2 border-t pt-3" aria-label="Project activity history">
+      <h3 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground">Recent activity</h3>
+      {activityLoading ? <p className="text-xs text-muted-foreground">Loading activity…</p>
+        : projectActivity.length ? <ol className="space-y-2">{projectActivity.map((event) => <li key={event.id} className="border-l-2 border-primary/20 pl-2.5">
+          <p className="text-xs">{event.summary}</p>
+          <p className="mt-0.5 text-[0.625rem] text-muted-foreground">{event.actor?.name || "Admiino"} · {format(new Date(event.occurredAt), "MMM d, yyyy h:mm a")}</p>
+        </li>)}</ol>
+          : <p className="text-xs text-muted-foreground">No project activity recorded yet.</p>}
+    </section>
   );
 
   return (
@@ -1013,6 +1108,12 @@ export default function ProjectDetails() {
                   >
                     <div className="px-3 pb-3 space-y-3">
                       {project?.id && <CustomFieldValueDisplay entityType="project" entityId={project.id} />}
+                      {projectDeadline && (
+                        <div className={cn("rounded-md border px-2.5 py-2 text-xs", projectOverdue ? "border-destructive/30 bg-destructive/5 text-destructive-text" : "text-muted-foreground")}>
+                          <span className="font-medium">{projectOverdue ? "Project overdue" : "Project deadline"}</span>
+                          <span className="ml-1">{format(new Date(projectDeadline), "MMM d, yyyy")}</span>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-2">
                         <MiniStat
                           label="Tasks"
@@ -1034,26 +1135,37 @@ export default function ProjectDetails() {
                           value={taskStats.pending}
                           color="text-warning-text"
                         />
+                        <MiniStat
+                          label="In Review"
+                          value={taskStats.inReview}
+                          color="text-info-text"
+                        />
+                        <MiniStat
+                          label="Overdue"
+                          value={taskStats.overdue}
+                          color="text-destructive-text"
+                        />
                       </div>
 
-                      {taskStats.total > 0 && (
+                      {taskStats.eligibleTotal > 0 ? (
                         <div className="space-y-1">
                           <div className="flex justify-between text-[0.5625rem] text-muted-foreground uppercase font-bold tracking-wider">
                             <span>Completion</span>
                             <span>
                               {Math.round(
-                                (taskStats.completed / taskStats.total) * 100
+                                (taskStats.completed / taskStats.eligibleTotal) * 100
                               )}
                               %
                             </span>
+                            {activityContent}
                           </div>
 
                           <Progress
-                            value={(taskStats.completed / taskStats.total) * 100}
+                            value={(taskStats.completed / taskStats.eligibleTotal) * 100}
                             className="h-1.5"
                           />
                         </div>
-                      )}
+                      ) : <p className="text-[0.625rem] text-muted-foreground">No eligible tasks to calculate progress.</p>}
                       {project?.id && <ProjectTimeSummary projectId={project.id} />}
                     </div>
                   </CollapsiblePanel>
@@ -1332,16 +1444,14 @@ export default function ProjectDetails() {
                           onChange={(e) =>
                             setSettingsForm((p) => ({
                               ...p,
-                              status: e.target.value,
+                              status: e.target.value as ProjectStatus,
                             }))
                           }
                           className="flex h-7 w-full rounded-lg border border-input bg-background px-2 text-[0.6875rem]"
                         >
-                          <option value="planning">Planning</option>
-                          <option value="active">Active</option>
-                          <option value="on_hold">On Hold</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
+                          {PROJECT_STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
                         </select>
                       </div>
 
@@ -1451,6 +1561,7 @@ export default function ProjectDetails() {
                         policy.
                       </p>
                     )}
+                    {taskFilters}
 
                     {tasks.length === 0 ? (
                       <div className="px-4 py-10 text-center">
@@ -1473,9 +1584,11 @@ export default function ProjectDetails() {
                           Add Task
                         </Button>
                       </div>
+                    ) : filteredTasks.length === 0 ? (
+                      <p className="px-4 py-8 text-center text-xs text-muted-foreground">No tasks match the selected search and filters.</p>
                     ) : taskView === "kanban" ? (
-                      <KanbanBoard 
-                        tasks={tasks} 
+                      <KanbanBoard
+                        tasks={filteredTasks}
                         onEdit={handleOpenTaskEdit}
                         onView={(taskId) => navigate(`/task-details/${taskId}`)}
                       />
@@ -1616,8 +1729,8 @@ export default function ProjectDetails() {
                           <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
                             <span className="text-[0.5625rem] text-muted-foreground">
                               {(taskPage - 1) * tasksPerPage + 1}–
-                              {Math.min(taskPage * tasksPerPage, tasks.length)}{" "}
-                              of {tasks.length}
+                              {Math.min(taskPage * tasksPerPage, filteredTasks.length)}{" "}
+                              of {filteredTasks.length}
                             </span>
 
                             <div className="flex items-center gap-0.5">
@@ -1763,6 +1876,12 @@ export default function ProjectDetails() {
               >
                 <div className="px-3 pb-3 space-y-3">
                   {project?.id && <CustomFieldValueDisplay entityType="project" entityId={project.id} />}
+                  {projectDeadline && (
+                    <div className={cn("rounded-md border px-2.5 py-2 text-xs", projectOverdue ? "border-destructive/30 bg-destructive/5 text-destructive-text" : "text-muted-foreground")}>
+                      <span className="font-medium">{projectOverdue ? "Project overdue" : "Project deadline"}</span>
+                      <span className="ml-1">{format(new Date(projectDeadline), "MMM d, yyyy")}</span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-4 gap-2">
                     <MiniStat label="Tasks" value={taskStats.total} color="text-primary-text" />
                     <MiniStat label="Done" value={taskStats.completed} color="text-success-text" />
@@ -1778,6 +1897,7 @@ export default function ProjectDetails() {
                       <Progress value={(taskStats.completed / taskStats.total) * 100} className="h-1.5" />
                     </div>
                   )}
+                  {activityContent}
                 </div>
               </CollapsiblePanel>
 
@@ -1801,10 +1921,13 @@ export default function ProjectDetails() {
                   </Button>
                 }
               >
+                {taskFilters}
                 {tasks.length === 0 ? (
                   <div className="px-4 py-8 text-center text-xs text-muted-foreground">
                     No tasks yet
                   </div>
+                ) : filteredTasks.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-xs text-muted-foreground">No tasks match the selected search and filters.</p>
                 ) : (
                   <div className="divide-y divide-border">
                     {paginatedTasks.map((task) => (
@@ -1846,7 +1969,7 @@ export default function ProjectDetails() {
                   <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/10">
                     <span className="text-[0.625rem] text-muted-foreground">
                       {(taskPage - 1) * tasksPerPage + 1}–
-                      {Math.min(taskPage * tasksPerPage, tasks.length)} of {tasks.length}
+                      {Math.min(taskPage * tasksPerPage, filteredTasks.length)} of {filteredTasks.length}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setTaskPage((p) => p - 1)} disabled={taskPage === 1}>
@@ -2084,6 +2207,7 @@ export default function ProjectDetails() {
         onSuccess={() => {
           loadTasks();
           loadProject();
+          loadProjectActivity();
         }}
       />
 

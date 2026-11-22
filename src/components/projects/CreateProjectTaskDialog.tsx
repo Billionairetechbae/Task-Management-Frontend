@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api, CompanyMember } from "@/lib/api";
+import { api, type CompanyMember, type CreateTaskData, type TaskPriority } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User } from "lucide-react";
+import { Loader2, Paperclip, User, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import TeamSelector from "@/components/TeamSelector";
 import CustomFieldsForm from "@/components/customFields/CustomFieldsForm";
 
@@ -27,11 +28,14 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
   const { canPerformRoleOperation } = useWorkspaceSettings();
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<CompanyMember[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
+  const [pendingUploads, setPendingUploads] = useState<File[]>([]);
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [form, setForm] = useState({
     title: "",
     description: "",
-    priority: "medium",
+    priority: "medium" as TaskPriority,
     deadline: "",
     assigneeId: "",
     category: "",
@@ -42,7 +46,10 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
 
   useEffect(() => {
     if (open) {
+      if (createdTaskId) return;
       setForm({ title: "", description: "", priority: "medium", deadline: "", assigneeId: "", category: "", teamId: null });
+      setFiles([]);
+      setPendingUploads([]);
       setCustomFields({});
       if (canAssignOthers) {
         api.getCompanyTeam().then(r => setMembers(r.data.members || [])).catch(() => {});
@@ -50,16 +57,50 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
         setMembers([]);
       }
     }
-  }, [open, canAssignOthers]);
+  }, [open, canAssignOthers, createdTaskId]);
+
+  const uploadPendingAttachments = async (taskId: string, attachments: File[]) => {
+    for (let index = 0; index < attachments.length; index += 1) {
+      try {
+        await api.uploadTaskAttachments(taskId, [attachments[index]]);
+      } catch (uploadError) {
+        const remaining = attachments.slice(index);
+        setPendingUploads(remaining);
+        toast({
+          title: "Task created, but some attachments failed",
+          description: `${remaining.length} attachment${remaining.length === 1 ? "" : "s"} still need uploading. Retry here; the task will not be created again. ${uploadError instanceof Error ? uploadError.message : ""}`.trim(),
+          variant: "destructive",
+        });
+        onSuccess();
+        return false;
+      }
+    }
+    setPendingUploads([]);
+    return true;
+  };
 
   const handleSubmit = async () => {
+    if (createdTaskId) {
+      setLoading(true);
+      try {
+        const uploaded = await uploadPendingAttachments(createdTaskId, pendingUploads);
+        if (!uploaded) return;
+        setCreatedTaskId(null);
+        toast({ title: "Attachments uploaded" });
+        onSuccess();
+        onOpenChange(false);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     if (!form.title.trim()) {
       toast({ title: "Title required", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      const payload: any = {
+      const payload: CreateTaskData = {
         title: form.title.trim(),
         description: form.description.trim(),
         priority: form.priority,
@@ -70,12 +111,20 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
       payload.teamId = form.teamId;
       payload.customFields = customFields;
 
-      await api.createProjectTask(projectId, payload);
+      const result = await api.createProjectTask(projectId, payload);
+      const taskId = result.data?.id;
+      if (!taskId) throw new Error("Task was created but its identifier was not returned.");
+      setCreatedTaskId(taskId);
+      if (files.length) {
+        const uploaded = await uploadPendingAttachments(taskId, files);
+        if (!uploaded) return;
+      }
+      setCreatedTaskId(null);
       toast({ title: "Task created" });
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Task creation failed.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -90,6 +139,13 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {createdTaskId && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Task created. {pendingUploads.length} attachment{pendingUploads.length === 1 ? "" : "s"} remain. Retrying uploads will not create another task.
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="space-y-1.5">
             <Label className="text-xs">Title *</Label>
             <Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Task title" />
@@ -101,10 +157,51 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
           </div>
           <CustomFieldsForm entityType="task" value={customFields} onChange={setCustomFields} />
 
+          <div className="space-y-2">
+            <Label htmlFor="project-task-attachments">Attachments</Label>
+            <Input
+              id="project-task-attachments"
+              type="file"
+              multiple
+              onChange={(event) => {
+                const selected = Array.from(event.target.files || []);
+                const uniqueFiles = selected.filter((file) => !files.some((item) => item.name === file.name && item.size === file.size));
+                const availableSlots = Math.max(0, 10 - files.length);
+                if (uniqueFiles.length > availableSlots) {
+                  toast({ title: "Attachment limit reached", description: "A task can have up to 10 uploaded files.", variant: "destructive" });
+                }
+                setFiles((existing) => [
+                  ...existing,
+                  ...uniqueFiles.slice(0, availableSlots),
+                ]);
+                event.target.value = "";
+              }}
+              aria-describedby="project-task-attachments-help"
+            />
+            <p id="project-task-attachments-help" className="text-xs text-muted-foreground">
+              Up to 10 files. File type and size limits are enforced during upload.
+            </p>
+            {files.length > 0 && (
+              <ul className="space-y-1">
+                {files.map((file, index) => (
+                  <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 truncate">
+                      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{file.name}</span>
+                    </span>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label={`Remove ${file.name}`} onClick={() => setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Priority</Label>
-              <Select value={form.priority} onValueChange={v => setForm(p => ({ ...p, priority: v }))}>
+              <Select value={form.priority} onValueChange={v => setForm(p => ({ ...p, priority: v as TaskPriority }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="low">Low</SelectItem>
@@ -161,9 +258,9 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={loading || !canCreateProjectTask}>
+            <Button onClick={handleSubmit} disabled={loading || (!createdTaskId && !canCreateProjectTask) || (createdTaskId && pendingUploads.length === 0)}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create Task
+              {createdTaskId ? "Retry failed attachments" : "Create Task"}
             </Button>
           </div>
         </div>
