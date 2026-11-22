@@ -38,6 +38,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import BlockedBadge from "@/components/tasks/BlockedBadge";
 import RepeatBadge from "@/components/tasks/RepeatBadge";
 import { dependencyWarningMessage } from "@/lib/taskDependencies";
+import ProjectBadge from "@/components/projects/ProjectBadge";
 
 interface TaskTableProps {
   tasks: Task[];
@@ -344,6 +345,8 @@ export const TaskTable = ({
                       </p>
                     )}
 
+                    {task.project && <div className="mt-1"><ProjectBadge project={task.project} /></div>}
+
                     {task.team && (
                       <p className="mt-1 truncate text-[0.625rem] font-medium text-primary-text">
                         Team: {task.team.name}
@@ -502,6 +505,8 @@ export const TaskTable = ({
                     {task.description}
                   </p>
                 )}
+
+                {task.project && <div className="mt-1"><ProjectBadge project={task.project} /></div>}
 
                 {task.team && (
                   <p className="mt-1 truncate text-[0.625rem] font-medium text-primary-text">
@@ -695,6 +700,7 @@ export const CompactTaskTable = ({
                     {task.calendarSynced ? <Calendar className="w-3 h-3 text-muted-foreground" /> : null}
                   </span>
                 )}
+                {task.project && <ProjectBadge project={task.project} />}
               </div>
             </div>
           </div>
