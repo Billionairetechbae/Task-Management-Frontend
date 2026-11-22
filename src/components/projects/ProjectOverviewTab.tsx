@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, ClipboardList, ListChecks, Info, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { StatsCard } from "@/components/dashboard/DashboardComponents";
+import { getProjectStatusLabel } from "@/lib/projectStatus";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -25,7 +26,7 @@ const ProjectOverviewTab = ({ project }: ProjectOverviewTabProps) => {
         />
         <StatsCard
           title="Project Status"
-          value={project.status.replace("_", " ")}
+          value={getProjectStatusLabel(project.status)}
           icon={TrendingUp}
           className="capitalize"
         />

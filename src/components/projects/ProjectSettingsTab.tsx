@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { PROJECT_STATUS_OPTIONS, type ProjectStatus } from "@/lib/projectStatus";
 
 interface ProjectSettingsTabProps {
   project: Project;
@@ -127,14 +128,12 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
           <select
             id="status"
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as ProjectStatus })}
             className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
           >
-            <option value="planning">Planning</option>
-            <option value="active">Active</option>
-            <option value="on_hold">On Hold</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            {PROJECT_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
 
@@ -201,14 +200,12 @@ const ProjectSettingsTab = ({ project, onRefresh, isCompact = false }: ProjectSe
               <select
                 id="status"
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as ProjectStatus })}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="planning">Planning</option>
-                <option value="active">Active</option>
-                <option value="on_hold">On Hold</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                {PROJECT_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
 

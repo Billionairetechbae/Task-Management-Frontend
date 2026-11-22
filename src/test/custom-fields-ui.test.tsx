@@ -8,7 +8,7 @@ const api = vi.hoisted(() => ({
   getTaskCustomFields: vi.fn(), listCustomFields: vi.fn(), createCustomField: vi.fn(), updateCustomField: vi.fn(),
   previewCustomFieldConfig: vi.fn(), reorderCustomFields: vi.fn(), archiveCustomField: vi.fn(), restoreCustomField: vi.fn(),
   addCustomFieldOption: vi.fn(), updateCustomFieldOption: vi.fn(), archiveCustomFieldOption: vi.fn(), restoreCustomFieldOption: vi.fn(), reorderCustomFieldOptions: vi.fn(),
-  createTask: vi.fn(), createProjectTask: vi.fn(), getProjectCustomFields: vi.fn(), createProject: vi.fn(), updateProject: vi.fn(), patchTaskCustomFields: vi.fn(), updateTask: vi.fn(), getTaskById: vi.fn(),
+  createTask: vi.fn(), createProjectTask: vi.fn(), uploadTaskAttachments: vi.fn(), getProjectCustomFields: vi.fn(), createProject: vi.fn(), updateProject: vi.fn(), patchTaskCustomFields: vi.fn(), updateTask: vi.fn(), getTaskById: vi.fn(),
   toast: vi.fn(),
 }));
 vi.mock("@/lib/api", () => ({ api }));
@@ -194,13 +194,43 @@ describe("custom fields UI integration", () => {
     expect(requestValues[1]).toEqual({ [required.id]: "West" });
 
     taskDialog.unmount();
-    api.createProjectTask.mockResolvedValue({ data: { task: { id: "project-task", customFields: { [required.id]: "East" } } } });
+    api.createProjectTask.mockReset();
+    api.uploadTaskAttachments.mockReset();
+    api.createProjectTask.mockResolvedValue({ data: { id: "project-task", customFields: { [required.id]: "East" } } });
+    api.uploadTaskAttachments.mockResolvedValue({ status: "success" });
     render(<CreateProjectTaskDialog projectId="project-1" open onOpenChange={() => undefined} onSuccess={() => undefined} />);
     expect(await screen.findByText("Region *")).toBeInTheDocument();
     await userEvent.type(screen.getByPlaceholderText("Task title"), "Project work");
     await userEvent.type(screen.getByLabelText("Region"), "East");
+    const taskAttachments = [
+      new File(["supporting details"], "supporting-details.pdf", { type: "application/pdf" }),
+      new File(["screenshot"], "screenshot.png", { type: "image/png" }),
+    ];
+    await userEvent.upload(screen.getByLabelText("Attachments"), taskAttachments);
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
     await waitFor(() => expect(api.createProjectTask).toHaveBeenCalledWith("project-1", expect.objectContaining({ customFields: { [required.id]: "East" } })));
+    await waitFor(() => expect(api.uploadTaskAttachments).toHaveBeenCalledTimes(2));
+    expect(api.uploadTaskAttachments).toHaveBeenNthCalledWith(1, "project-task", [taskAttachments[0]]);
+    expect(api.uploadTaskAttachments).toHaveBeenNthCalledWith(2, "project-task", [taskAttachments[1]]);
+  });
+
+  it("retries failed project-task attachments without creating a second task", async () => {
+    api.listCustomFields.mockResolvedValue({ data: { definitions: [] } });
+    api.createProjectTask.mockReset();
+    api.uploadTaskAttachments.mockReset();
+    api.createProjectTask.mockResolvedValue({ data: { id: "created-once" } });
+    api.uploadTaskAttachments.mockRejectedValueOnce(new Error("Upload temporarily failed")).mockResolvedValueOnce({ status: "success" });
+    const attachment = new File(["brief"], "brief.pdf", { type: "application/pdf" });
+    render(<CreateProjectTaskDialog projectId="project-1" open onOpenChange={() => undefined} onSuccess={() => undefined} />);
+    await userEvent.type(await screen.findByPlaceholderText("Task title"), "Draft proposal");
+    await userEvent.upload(screen.getByLabelText("Attachments"), attachment);
+    await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
+    expect(await screen.findByText(/Task created\. 1 attachment remain/)).toBeInTheDocument();
+    expect(api.createProjectTask).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: "Retry failed attachments" }));
+    await waitFor(() => expect(api.uploadTaskAttachments).toHaveBeenCalledTimes(2));
+    expect(api.uploadTaskAttachments).toHaveBeenNthCalledWith(2, "created-once", [attachment]);
+    expect(api.createProjectTask).toHaveBeenCalledTimes(1);
   });
 
   it("Create and Edit Project load definitions and submit values with core changes; legacy empty values remain untouched", async () => {

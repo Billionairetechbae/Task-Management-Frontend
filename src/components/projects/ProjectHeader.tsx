@@ -6,6 +6,7 @@ import { Calendar, Edit, ImagePlus, ListChecks, Plus, Settings, FolderOpen } fro
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getStatusBadgeClass } from "@/components/dashboard/TaskComponents";
+import { getProjectStatusLabel } from "@/lib/projectStatus";
 
 interface ProjectHeaderProps {
   project: Project;
@@ -47,7 +48,7 @@ const ProjectHeader = ({ project, onEdit, onAddTask, onAddChecklist, onUploadLog
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{project.name}</h1>
             <Badge className={cn("text-[0.625rem] uppercase tracking-wider px-2 py-0", getStatusBadgeClass(project.status))}>
-              {project.status.replace("_", " ")}
+              {getProjectStatusLabel(project.status)}
             </Badge>
           </div>
           

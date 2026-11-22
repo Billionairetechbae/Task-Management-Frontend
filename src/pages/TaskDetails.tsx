@@ -91,6 +91,7 @@ import { cn } from "@/lib/utils";
 import { teamTaskPath } from "@/lib/taskExecutionRoutes";
 import CustomFieldValueDisplay from "@/components/customFields/CustomFieldValueDisplay";
 import TaskTimePanel from "@/components/time/TaskTimePanel";
+import ProjectBadge from "@/components/projects/ProjectBadge";
 
 // Define the correct User type based on your database schema
 interface CorrectedUser {
@@ -1412,6 +1413,7 @@ const TaskDetails = () => {
                       {task.title || "Untitled Task"}
                     </h1>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                      {task.project && <ProjectBadge project={task.project} />}
                       <Badge className={cn("text-[0.625rem] sm:text-xs", STATUS_COLORS[task.status])}>{STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status}</Badge>
                       <Badge className={cn("text-[0.625rem] sm:text-xs", PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])}>{task.priority}</Badge>
                       {task.teamId && !task.parentTaskId && (

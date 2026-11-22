@@ -36,6 +36,25 @@ describe("global search", () => {
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/task-details/task-1"));
   });
 
+  it("renders a clickable project badge beside project tasks", async () => {
+    mocks.globalSearch.mockResolvedValue({ data: { groups: { tasks: [{
+      id: "task-1",
+      title: "Prepare report",
+      subtitle: "pending",
+      href: "/task-details/task-1",
+      projectId: "project-1",
+      projectName: "Quarterly report",
+      projectCompanyId: "workspace-1",
+    }] } } });
+    renderSearch();
+    fireEvent.change(screen.getByRole("combobox", { name: "Search Admiino" }), { target: { value: "report" } });
+    const projectLinks = await screen.findAllByRole("link", { name: "Open project Quarterly report" });
+    const projectLink = projectLinks[0];
+    expect(projectLink).toHaveAttribute("href", "/projects/project-1?workspace=workspace-1");
+    fireEvent.click(projectLink);
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/projects/project-1"));
+  });
+
   it("opens from Cmd/Ctrl+K and closes on Escape", async () => {
     renderSearch();
     fireEvent.keyDown(window, { key: "k", metaKey: true });
