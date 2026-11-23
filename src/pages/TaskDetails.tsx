@@ -1457,7 +1457,7 @@ const TaskDetails = () => {
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="in_progress">In Progress</SelectItem>
                         <SelectItem value="in_review">Ready for Executive Review</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
+                        {(workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager" || user?.id === task.creator?.id || task.team?.leadMember?.userId === user?.id) && <SelectItem value="completed">Completed</SelectItem>}
                         <SelectItem value="delayed">Delayed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
@@ -1548,7 +1548,7 @@ const TaskDetails = () => {
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="in_review">Ready for Executive Review</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    {(workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager" || user?.id === task.creator?.id || task.team?.leadMember?.userId === user?.id) && <SelectItem value="completed">Completed</SelectItem>}
                     <SelectItem value="delayed">Delayed</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
@@ -1729,7 +1729,7 @@ const TaskDetails = () => {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {(task.team?.leadMember?.userId === user?.id || user?.id === task.creator?.id || ["admin", "manager"].includes(user?.role || "")) && task.status !== "in_review" && task.status !== "completed" && (
+                  {(task.team?.leadMember?.userId === user?.id || user?.id === task.creator?.id || ["admin", "manager"].includes(user?.role || "") || user?.id === task.assigneeId || task.assignees?.some((assignee) => assignee.id === user?.id)) && task.status !== "in_review" && task.status !== "completed" && (
                     <Button size="sm" onClick={() => handleStatusChange("in_review")} disabled={updating}>Submit for Executive Review</Button>
                   )}
                   {(user?.id === task.creator?.id || ["admin", "manager", "executive"].includes(user?.role || "")) && task.status === "in_review" && (

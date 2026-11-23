@@ -127,6 +127,8 @@ const DashboardLayout = ({
   const getNavItems = (): NavItemOrGroup[] => {
     const canViewMembers = canPerformRoleOperation("view_workspace_members");
     const canHireTalent = workspaceRole === "owner" || workspaceRole === "admin" || workspaceRole === "manager";
+    const hasOwnTeamAccess = !!workspaceRole && workspaceRole !== "guest";
+    const showTeamSection = canViewMembers || canHireTalent || hasOwnTeamAccess;
     return [
       { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
       { label: "Tasks", items: [
@@ -139,9 +141,9 @@ const DashboardLayout = ({
         { label: "Templates", href: "/templates", icon: <LayoutTemplate className="w-[18px] h-[18px]" /> },
       ] },
       { label: "Calendar", href: "/calendar", icon: <CalendarDays className="w-[18px] h-[18px]" /> },
-      ...(canViewMembers || canHireTalent ? [{ label: "Team", items: [
+      ...(showTeamSection ? [{ label: "Team", items: [
+        { label: "My Teams", href: "/teams", icon: <Crown className="w-[18px] h-[18px]" /> },
         ...(canViewMembers ? [
-          { label: "Teams", href: "/teams", icon: <Crown className="w-[18px] h-[18px]" /> },
           { label: "Team Directory", href: "/team-directory", icon: <Users className="w-[18px] h-[18px]" /> },
         ] : []),
         ...(canHireTalent ? [{ label: "Hire Talent", href: "/assistance-requests", icon: <Users className="w-[18px] h-[18px]" /> }] : []),
