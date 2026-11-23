@@ -456,7 +456,8 @@ export default function Teams() {
               subtaskLoading={subtaskQuery.isLoading}
               subtaskError={subtaskQuery.isError}
               subtaskId={subtaskId}
-              canEdit={canManage && !!taskAccess?.canEdit && taskAccess.readOnly !== true}
+              canEdit={canManage || isTeamLead}
+              canChangeStatus={!!taskAccess?.canEdit && taskAccess.readOnly !== true}
               canCollaborate={taskAccess?.canCollaborate === true}
               canCreateSubtasks={canManage || isTeamLead}
               canChangeSubtaskStatus={canManage || isTeamLead}
@@ -1007,7 +1008,7 @@ function TeamSettings({ team, canManage, canManageMembers, canChangeLead, onEdit
 }
 
 function TaskWorkspace({
-  team, tasks, task, loading, taskError, taskErrorDetail, subtask, subtaskLoading, subtaskError, subtaskId, canEdit, canCollaborate, canCreateSubtasks, canChangeSubtaskStatus, userId, onClose, onRefresh, onRefreshWorkspace, onTaskCreated, onSubtaskChanged,
+  team, tasks, task, loading, taskError, taskErrorDetail, subtask, subtaskLoading, subtaskError, subtaskId, canEdit, canChangeStatus, canCollaborate, canCreateSubtasks, canChangeSubtaskStatus, userId, onClose, onRefresh, onRefreshWorkspace, onTaskCreated, onSubtaskChanged,
 }: {
   team: Team;
   tasks: Task[];
@@ -1020,6 +1021,7 @@ function TaskWorkspace({
   subtaskError: boolean;
   subtaskId?: string;
   canEdit: boolean;
+  canChangeStatus: boolean;
   canCollaborate: boolean;
   canCreateSubtasks: boolean;
   canChangeSubtaskStatus: boolean;
@@ -1177,10 +1179,12 @@ function TaskWorkspace({
               </DropdownMenu>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {canEdit ? <>
-                <Select value={task.status || "pending"} onValueChange={(status) => void updateParent({ status: status as TaskStatus })} disabled={saving}><SelectTrigger aria-label="Task status" className="h-7 w-[130px] text-[0.6875rem]"><SelectValue /></SelectTrigger><SelectContent>{statuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select>
+              {canEdit || canChangeStatus ? <>
+                {canChangeStatus ? <Select value={task.status || "pending"} onValueChange={(status) => void updateParent({ status: status as TaskStatus })} disabled={saving}><SelectTrigger aria-label="Task status" className="h-7 w-[130px] text-[0.6875rem]"><SelectValue /></SelectTrigger><SelectContent>{statuses.filter((status) => canEdit || !(status === "completed" || status === "cancelled")).map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select> : null}
+                {canEdit ? <>
                 <Select value={task.priority || "medium"} onValueChange={(priority) => void updateParent({ priority: priority as TaskPriority })} disabled={saving}><SelectTrigger aria-label="Task priority" className="h-7 w-[110px] text-[0.6875rem]"><SelectValue /></SelectTrigger><SelectContent>{priorities.map((priority) => <SelectItem key={priority} value={priority}>{priorityLabel(priority)}</SelectItem>)}</SelectContent></Select>
                 <label className="flex h-7 items-center gap-1.5 rounded-md border px-2"><CalendarDays className="h-3 w-3 text-muted-foreground" /><Input aria-label="Task due date" type="date" className="h-6 w-[125px] border-0 p-0 text-[0.625rem] shadow-none" value={dateInputValue(task.deadline)} onChange={(event) => void updateParent({ deadline: dateValue(event.target.value) })} disabled={saving} /></label>
+                </> : null}
               </> : <>
                 <Badge variant="outline">{statusLabel(task.status)}</Badge><Badge variant="outline">{priorityLabel(task.priority)}</Badge><Badge variant="outline">{formattedDate(task.deadline)}</Badge>
               </>}
