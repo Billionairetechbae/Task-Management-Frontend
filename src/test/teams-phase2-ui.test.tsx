@@ -70,6 +70,24 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe("Teams leadership handover UI", () => {
+    it("uses the theme background for the Teams workspace", async () => {
+    render(
+      <QueryClientProvider
+        client={new QueryClient({
+          defaultOptions: { queries: { retry: false } },
+        })}
+      >
+        <MemoryRouter>
+          <Teams />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await screen.findByRole("heading", { name: "Marketing" });
+
+    expect(screen.getByTestId("teams-workspace-shell").className)
+      .toContain("bg-background");
+  });
   it("renders Change Lead, supports cancellation, and confirms a lead transfer", async () => {
     const user = userEvent.setup();
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><Teams /></MemoryRouter></QueryClientProvider>);

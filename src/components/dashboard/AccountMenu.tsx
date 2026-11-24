@@ -62,6 +62,6 @@ export default function AccountMenu() {
         </AlertDialogTrigger>
       </SignOutDialog>
     </DropdownMenuContent>
-  </DropdownMenu>;
+  </DropdownMenu>
   </>;
 }
