@@ -18,43 +18,45 @@ import { nextTaskPageParam } from "@/lib/taskListUtils";
 const BOARD_KEY = "board-tasks";
 const STATUS_LABELS = Object.fromEntries(TASK_STATUSES.map((status) => [status, getStatusStyle(status).label])) as Record<TaskStatus, string>;
 
-// Literal class names so Tailwind can see them. Subtle tints: the accent identifies the lane, text labels still carry the meaning.
+// Literal class names so Tailwind can see them. Semantic tokens keep the lanes
+// distinct while allowing the existing light/dark theme variables to control
+// their contrast.
 const STATUS_ACCENT: Record<TaskStatus, { bar: string; panel: string; badge: string; dot: string }> = {
   pending: {
     bar: "border-t-slate-400",
-    panel: "bg-slate-50/80 dark:bg-slate-900/70",
-    badge: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+    panel: "bg-muted/45",
+    badge: "bg-muted text-muted-foreground border-border",
     dot: "bg-slate-400",
   },
   in_progress: {
     bar: "border-t-blue-500",
-    panel: "bg-blue-50/60 dark:bg-blue-950/30",
-    badge: "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200",
-    dot: "bg-blue-500",
+    panel: "bg-info/5",
+    badge: "bg-info/10 text-info-text border-info/20",
+    dot: "bg-info",
   },
   in_review: {
     bar: "border-t-amber-500",
-    panel: "bg-amber-50/60 dark:bg-amber-950/30",
-    badge: "bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200",
-    dot: "bg-amber-500",
+    panel: "bg-warning/5",
+    badge: "bg-warning/10 text-warning-text border-warning/20",
+    dot: "bg-warning",
   },
   completed: {
     bar: "border-t-emerald-500",
-    panel: "bg-emerald-50/60 dark:bg-emerald-950/30",
-    badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200",
-    dot: "bg-emerald-500",
+    panel: "bg-success/5",
+    badge: "bg-success/10 text-success-text border-success/20",
+    dot: "bg-success",
   },
   delayed: {
     bar: "border-t-red-500",
-    panel: "bg-red-50/50 dark:bg-red-950/30",
-    badge: "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200",
-    dot: "bg-red-500",
+    panel: "bg-destructive/5",
+    badge: "bg-destructive/10 text-destructive-text border-destructive/20",
+    dot: "bg-destructive",
   },
   cancelled: {
     bar: "border-t-gray-400",
-    panel: "bg-gray-50/80 dark:bg-gray-900/70",
-    badge: "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200",
-    dot: "bg-gray-400",
+    panel: "bg-muted/45",
+    badge: "bg-muted text-muted-foreground border-border",
+    dot: "bg-muted-foreground",
   },
 };
 
@@ -365,7 +367,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
                             ? "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200"
                             : task.priority === "medium"
                               ? "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200"
-                              : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                            : "bg-muted text-muted-foreground"
                             }`}
                           >
                             {task.priority}
@@ -376,7 +378,7 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
 
                           {task.deadline && (
                             overdue ? (
-                              <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-semibold text-red-700 dark:bg-red-900/60 dark:text-red-200">
+                              <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive-text">
                                 <AlertTriangle size={12} />
                                 Overdue · {dueLabel(task.deadline)}
                               </span>
