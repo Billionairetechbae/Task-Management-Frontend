@@ -344,7 +344,7 @@ export default function Teams() {
 
   return (
     <DashboardLayout>
-      <main className="flex h-[calc(100vh-var(--header-height,0px))] min-h-[560px] w-full overflow-hidden bg-[#f7f7fa]" data-testid="teams-workspace-shell">
+     <main className="flex h-[calc(100vh-var(--header-height,0px))] min-h-[560px] w-full overflow-hidden bg-background" data-testid="teams-workspace-shell">
         <aside className="hidden w-[232px] shrink-0 flex-col border-r bg-background md:flex" aria-label="Teams navigator">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
