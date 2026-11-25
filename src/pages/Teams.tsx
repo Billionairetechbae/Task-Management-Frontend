@@ -344,7 +344,7 @@ export default function Teams() {
 
   return (
     <DashboardLayout>
-      <main className="flex h-[calc(100vh-var(--header-height,0px))] min-h-[560px] w-full overflow-hidden bg-[#f7f7fa]" data-testid="teams-workspace-shell">
+     <main className="flex h-[calc(100vh-var(--header-height,0px))] min-h-[560px] w-full overflow-hidden bg-background" data-testid="teams-workspace-shell">
         <aside className="hidden w-[232px] shrink-0 flex-col border-r bg-background md:flex" aria-label="Teams navigator">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
@@ -611,7 +611,7 @@ function TeamHome({
         </nav>
       </header>
 
-      <div className="p-4 sm:p-5">
+      <div className="min-h-0 flex-1 bg-background p-4 text-foreground sm:p-5">
         {loading ? <div className="space-y-3"><div className="h-32 animate-pulse rounded-lg bg-muted" /><div className="h-48 animate-pulse rounded-lg bg-muted" /></div> : (
           <>
             {activeTab === "overview" && <Overview team={team} tasks={tasks} counts={counts} workspace={workspace} onOpenTask={onOpenTask} onMembers={onMembers} onLead={onLead} canManageMembers={canManageMembers} canChangeLead={canChangeLead} />}

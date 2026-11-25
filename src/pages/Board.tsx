@@ -18,15 +18,48 @@ import { nextTaskPageParam } from "@/lib/taskListUtils";
 const BOARD_KEY = "board-tasks";
 const STATUS_LABELS = Object.fromEntries(TASK_STATUSES.map((status) => [status, getStatusStyle(status).label])) as Record<TaskStatus, string>;
 
-// Literal class names so Tailwind can see them. Subtle tints: the accent identifies the lane, text labels still carry the meaning.
+// Literal class names so Tailwind can see them. Semantic tokens keep the lanes
+// distinct while allowing the existing light/dark theme variables to control
+// their contrast.
 const STATUS_ACCENT: Record<TaskStatus, { bar: string; panel: string; badge: string; dot: string }> = {
-  pending: { bar: "border-t-slate-400", panel: "bg-slate-50/80", badge: "bg-slate-200 text-slate-700", dot: "bg-slate-400" },
-  in_progress: { bar: "border-t-blue-500", panel: "bg-blue-50/60", badge: "bg-blue-100 text-blue-800", dot: "bg-blue-500" },
-  in_review: { bar: "border-t-amber-500", panel: "bg-amber-50/60", badge: "bg-amber-100 text-amber-900", dot: "bg-amber-500" },
-  completed: { bar: "border-t-emerald-500", panel: "bg-emerald-50/60", badge: "bg-emerald-100 text-emerald-800", dot: "bg-emerald-500" },
-  delayed: { bar: "border-t-red-500", panel: "bg-red-50/50", badge: "bg-red-100 text-red-800", dot: "bg-red-500" },
-  cancelled: { bar: "border-t-gray-400", panel: "bg-gray-50/80", badge: "bg-gray-200 text-gray-600", dot: "bg-gray-400" },
+  pending: {
+    bar: "border-t-slate-400",
+    panel: "bg-muted/45",
+    badge: "bg-muted text-muted-foreground border-border",
+    dot: "bg-slate-400",
+  },
+  in_progress: {
+    bar: "border-t-blue-500",
+    panel: "bg-info/5",
+    badge: "bg-info/10 text-info-text border-info/20",
+    dot: "bg-info",
+  },
+  in_review: {
+    bar: "border-t-amber-500",
+    panel: "bg-warning/5",
+    badge: "bg-warning/10 text-warning-text border-warning/20",
+    dot: "bg-warning",
+  },
+  completed: {
+    bar: "border-t-emerald-500",
+    panel: "bg-success/5",
+    badge: "bg-success/10 text-success-text border-success/20",
+    dot: "bg-success",
+  },
+  delayed: {
+    bar: "border-t-red-500",
+    panel: "bg-destructive/5",
+    badge: "bg-destructive/10 text-destructive-text border-destructive/20",
+    dot: "bg-destructive",
+  },
+  cancelled: {
+    bar: "border-t-gray-400",
+    panel: "bg-muted/45",
+    badge: "bg-muted text-muted-foreground border-border",
+    dot: "bg-muted-foreground",
+  },
 };
+
 const LEAVE_MS = 160;
 const SETTLE_MS = 700;
 const prefersReducedMotion = () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
@@ -62,13 +95,22 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
   const ws = useWebSocket();
   const [filters, setFilters] = useState<Filters>({ projectId: "", teamId: "", search: "" });
   const queryKey = [BOARD_KEY, activeCompanyId, workspaceRole, filters] as const;
+
   // Purely visual: which card is animating out of its lane / settling into a lane. Task data stays in react-query.
   const [leavingId, setLeavingId] = useState<string | null>(null);
   const [settledId, setSettledId] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
+
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
-  const later = useCallback((fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)); }, []);
-  const flash = useCallback((id: string) => { setSettledId(id); later(() => setSettledId((cur) => (cur === id ? null : cur)), SETTLE_MS); }, [later]);
+
+  const later = useCallback((fn: () => void, ms: number) => {
+    timers.current.push(window.setTimeout(fn, ms));
+  }, []);
+
+  const flash = useCallback((id: string) => {
+    setSettledId(id);
+    later(() => setSettledId((cur) => (cur === id ? null : cur)), SETTLE_MS);
+  }, [later]);
 
   const boardQuery = useInfiniteQuery({
     queryKey,
@@ -85,26 +127,47 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
     getNextPageParam: (lastPage, allPages) => nextTaskPageParam(lastPage, allPages, 100),
     staleTime: 30_000,
   });
+
   const { data: boardData, isPending: boardPending, isError: boardIsError, hasNextPage, isFetchingNextPage, fetchNextPage } = boardQuery;
+
   // Keep the first page useful immediately, then complete the authorized set
   // in the background so board counts and drag/drop remain complete.
   useEffect(() => {
     if (embedded || !hasNextPage || isFetchingNextPage) return;
     void fetchNextPage();
   }, [embedded, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const result = boardData?.pages.flatMap((page) => page.data?.tasks || []) || [];
   const queryLoading = boardPending;
   const queryError = boardIsError;
-  const { data: projectResult } = useQuery({ queryKey: ["board-projects", activeCompanyId], enabled: Boolean(activeCompanyId) && !embedded, queryFn: () => api.getProjects(), staleTime: 60_000 });
-  const { data: teamResult } = useQuery({ queryKey: ["board-teams", activeCompanyId], enabled: Boolean(activeCompanyId) && !embedded, queryFn: () => api.listTeams(), staleTime: 60_000 });
+
+  const { data: projectResult } = useQuery({
+    queryKey: ["board-projects", activeCompanyId],
+    enabled: Boolean(activeCompanyId) && !embedded,
+    queryFn: () => api.getProjects(),
+    staleTime: 60_000,
+  });
+
+  const { data: teamResult } = useQuery({
+    queryKey: ["board-teams", activeCompanyId],
+    enabled: Boolean(activeCompanyId) && !embedded,
+    queryFn: () => api.listTeams(),
+    staleTime: 60_000,
+  });
+
   const [embeddedState, setEmbeddedState] = useState<Task[]>(embeddedTasks || []);
-  useEffect(() => { if (embedded) setEmbeddedState(embeddedTasks || []); }, [embedded, embeddedTasks]);
+
+  useEffect(() => {
+    if (embedded) setEmbeddedState(embeddedTasks || []);
+  }, [embedded, embeddedTasks]);
+
   const boardFilter = (task: Task) => {
     if (filters.search && !`${task.title} ${task.description || ""} ${(task as any).project?.name || ""} ${(task as any).team?.name || ""}`.toLowerCase().includes(filters.search.toLowerCase())) return false;
     if (filters.projectId && String((task as any).projectId || (task as any).project?.id || "") !== filters.projectId) return false;
     if (filters.teamId && String((task as any).teamId || (task as any).team?.id || "") !== filters.teamId) return false;
     return true;
   };
+
   const tasks = (embedded ? embeddedState : result || []).filter(boardFilter);
   const isLoading = embedded ? false : queryLoading;
   const isError = embedded ? false : queryError;
@@ -113,8 +176,15 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
 
   useEffect(() => {
     const refresh = () => queryClient.invalidateQueries({ queryKey: [BOARD_KEY] });
-    ws.on("task_updated", refresh); ws.on("task_created", refresh); ws.on("task_deleted", refresh);
-    return () => { ws.off("task_updated", refresh); ws.off("task_created", refresh); ws.off("task_deleted", refresh); };
+    ws.on("task_updated", refresh);
+    ws.on("task_created", refresh);
+    ws.on("task_deleted", refresh);
+
+    return () => {
+      ws.off("task_updated", refresh);
+      ws.off("task_created", refresh);
+      ws.off("task_deleted", refresh);
+    };
   }, [queryClient, ws]);
 
   const move = useMutation({
@@ -123,15 +193,21 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
       await queryClient.cancelQueries({ queryKey: [BOARD_KEY] });
       const previous = queryClient.getQueryData(queryKey);
       const previousEmbedded = embeddedState;
+
       setLeavingId(null);
       flash(id);
+
       queryClient.setQueryData(queryKey, (old: any) => old ? {
         ...old,
         pages: old.pages.map((page: any) => ({
           ...page,
-          data: { ...page.data, tasks: (page.data?.tasks || []).map((task: Task) => task.id === id ? { ...task, status } : task) },
+          data: {
+            ...page.data,
+            tasks: (page.data?.tasks || []).map((task: Task) => task.id === id ? { ...task, status } : task),
+          },
         })),
       } : old);
+
       if (embedded) setEmbeddedState((current) => current.map((task) => task.id === id ? { ...task, status } : task));
       return { previous, previousEmbedded };
     },
@@ -146,37 +222,86 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
       const updated = (res as any)?.data?.task;
       if (embedded && updated?.id) onEmbeddedTaskUpdated?.(updated);
       const warning = dependencyWarningMessage(res?.warnings);
-      if (warning) toast.warning(warning); else toast.success("Task status updated");
+      if (warning) toast.warning(warning);
+      else toast.success("Task status updated");
     },
-    onSettled: () => { if (!embedded) void queryClient.invalidateQueries({ queryKey: [BOARD_KEY] }); },
+    onSettled: () => {
+      if (!embedded) void queryClient.invalidateQueries({ queryKey: [BOARD_KEY] });
+    },
   });
 
   const startMove = (task: Task, status: TaskStatus) => {
     if (!task.id || status === task.status) return;
     const id = task.id;
-    if (prefersReducedMotion()) { move.mutate({ id, status }); return; }
+
+    if (prefersReducedMotion()) {
+      move.mutate({ id, status });
+      return;
+    }
+
     // Let the card fade out of its lane first; the optimistic update then reflows it into the new lane.
     setLeavingId(id);
     later(() => move.mutate({ id, status }), LEAVE_MS);
   };
 
-  const columns = useMemo(() => Object.fromEntries(TASK_STATUSES.map((status) => [status, tasks.filter((task) => task.status === status).sort((a, b) => {
-    const overdueA = isTaskOverdue(a) ? 1 : 0; const overdueB = isTaskOverdue(b) ? 1 : 0;
-    if (overdueA !== overdueB) return overdueB - overdueA;
-    return String(a.deadline || "9999").localeCompare(String(b.deadline || "9999")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
-  })])), [tasks]);
+  const columns = useMemo(() => Object.fromEntries(TASK_STATUSES.map((status) => [
+    status,
+    tasks.filter((task) => task.status === status).sort((a, b) => {
+      const overdueA = isTaskOverdue(a) ? 1 : 0;
+      const overdueB = isTaskOverdue(b) ? 1 : 0;
+      if (overdueA !== overdueB) return overdueB - overdueA;
+      return String(a.deadline || "9999").localeCompare(String(b.deadline || "9999")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
+    }),
+  ])), [tasks]);
 
-  const content = <main className={embedded ? "flex h-[calc(100dvh-22rem)] min-h-[25rem] w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70" : "flex h-[calc(100dvh-var(--app-header-h,3.5rem))] min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-slate-100/70"}>
-      {!embedded && <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-white px-4 py-3 shadow-sm sm:px-6">
-        <WorkspaceSwitcher />
-        <div className="min-w-0 flex-1"><h1 className="text-xl font-semibold">Board</h1><p className="text-sm text-muted-foreground">Active workspace tasks by status</p></div>
-        {!hideEmbeddedControls && <>
-          <input aria-label="Search board tasks" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search tasks" className="h-9 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-52" />
-          <select aria-label="Filter board by project" value={filters.projectId} onChange={(e) => setFilters({ ...filters, projectId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All projects</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
-          <select aria-label="Filter board by team" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value })} className="h-9 rounded-md border px-2 text-sm"><option value="">All teams</option>{teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
-        </>}
-      </header>}
+  const content = (
+    <main className={embedded
+      ? "flex h-[calc(100dvh-22rem)] min-h-[25rem] w-full min-w-0 max-w-full flex-col overflow-hidden bg-background"
+      : "flex h-[calc(100dvh-var(--app-header-h,3.5rem))] min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-background"}
+    >
+      {!embedded && (
+        <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-background px-4 py-3 shadow-sm sm:px-6">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold">Board</h1>
+            <p className="text-sm text-muted-foreground">Active workspace tasks by status</p>
+          </div>
+
+          {!hideEmbeddedControls && (
+            <>
+              <input
+                aria-label="Search board tasks"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                placeholder="Search tasks"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-52"
+              />
+
+              <select
+                aria-label="Filter board by project"
+                value={filters.projectId}
+                onChange={(e) => setFilters({ ...filters, projectId: e.target.value })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+              >
+                <option value="">All projects</option>
+                {projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}
+              </select>
+
+              <select
+                aria-label="Filter board by team"
+                value={filters.teamId}
+                onChange={(e) => setFilters({ ...filters, teamId: e.target.value })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+              >
+                <option value="">All teams</option>
+                {teams.map((team: any) => <option key={team.id} value={team.id}>{team.name}</option>)}
+              </select>
+            </>
+          )}
+        </header>
+      )}
+
       {isError && <p role="alert" className="m-4 text-sm text-destructive-text">Could not load board tasks. Please try again.</p>}
+
       <section
         aria-label="Task board"
         data-testid="board-grid"
@@ -184,51 +309,168 @@ export default function Board({ embeddedTasks, onEmbeddedTaskUpdated, hideEmbedd
       >
         {TASK_STATUSES.map((status) => {
           const accent = STATUS_ACCENT[status];
-          return <section
-            key={status}
-            aria-label={`${STATUS_LABELS[status]} column`}
-            data-testid={`board-panel-${status}`}
-            className={`flex h-full w-[min(86vw,18rem)] min-w-[min(16rem,86vw)] max-w-[18rem] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm ${accent.bar} ${accent.panel}`}
-          >
-            <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-black/5 bg-white/70 px-3 py-2.5 backdrop-blur">
-              <span className="flex min-w-0 items-center gap-2 font-semibold"><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accent.dot}`} aria-hidden="true" />{STATUS_LABELS[status]}</span>
-              <span aria-label={`${!embedded && (hasNextPage || isFetchingNextPage) ? "loading" : columns[status].length} tasks`} className={`min-w-[1.75rem] shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}>{!embedded && (hasNextPage || isFetchingNextPage) ? "…" : columns[status].length}</span>
-            </header>
-            <div data-testid={`board-scroll-${status}`} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-2.5">
-              {isLoading ? <p className="p-2 text-sm text-muted-foreground">Loading…</p> : columns[status].length === 0 ? <p className="rounded-lg border border-dashed bg-white/60 p-4 text-center text-sm text-muted-foreground">No tasks</p> : columns[status].map((task) => {
-                const overdue = isTaskOverdue(task); const canMove = userCanMove(task, user?.id, workspaceRole);
-                const leaving = leavingId === task.id; const settled = settledId === task.id;
-                const people = ((task.assignees && task.assignees.length ? task.assignees : [task.assignee]).filter(Boolean) as any[]).map((a) => `${a.firstName || ""} ${a.lastName || ""}`.trim()).filter(Boolean);
-                return <article
-                  key={task.id}
-                  data-testid="board-card"
-                  data-state={leaving ? "leaving" : settled ? "settled" : "idle"}
-                  className={`group rounded-lg border bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md focus-within:ring-2 focus-within:ring-blue-500/30 ${overdue ? "border-l-4 border-l-red-500 bg-red-50/40" : ""} ${leaving ? "scale-95 opacity-0" : ""} ${settled ? "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-left-3 ring-2 ring-blue-400/50" : ""}`}
+
+          return (
+            <section
+              key={status}
+              aria-label={`${STATUS_LABELS[status]} column`}
+              data-testid={`board-panel-${status}`}
+              className={`flex h-full w-[min(86vw,18rem)] min-w-[min(16rem,86vw)] max-w-[18rem] shrink-0 snap-center flex-col overflow-hidden rounded-xl border border-t-4 shadow-sm ${accent.bar} ${accent.panel}`}
+            >
+              <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-border bg-card/80 px-3 py-2.5 backdrop-blur">
+                <span className="flex min-w-0 items-center gap-2 font-semibold">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${accent.dot}`} aria-hidden="true" />
+                  {STATUS_LABELS[status]}
+                </span>
+
+                <span
+                  aria-label={`${!embedded && (hasNextPage || isFetchingNextPage) ? "loading" : columns[status].length} tasks`}
+                  className={`min-w-[1.75rem] shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums ${accent.badge}`}
                 >
-                  <button onClick={() => navigate(resolveTaskPath(task, task.teamId ? "team" : "workbench"))} className="w-full text-left text-sm font-semibold leading-snug hover:text-blue-700 hover:underline focus:outline-none focus-visible:underline">{task.title}</button>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${task.priority === "urgent" || task.priority === "high" ? "bg-red-100 text-red-800" : task.priority === "medium" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700"}`}>{task.priority}</span>
-                    <BlockedBadge task={task} />
-                    <RepeatBadge task={task} />
-                    {task.deadline && (overdue
-                      ? <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-semibold text-red-700"><AlertTriangle size={12} />Overdue · {dueLabel(task.deadline)}</span>
-                      : <span className="flex items-center gap-1 text-muted-foreground"><CalendarDays size={12} />{dueLabel(task.deadline)}</span>)}
-                  </div>
-                  {((task as any).project || task.team || Number(task.subtaskCount || 0) > 0) && <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    {(task as any).project && <span className="flex min-w-0 items-center gap-1"><FolderKanban size={12} className="shrink-0" /><span className="truncate">{(task as any).project.name}</span></span>}
-                    {task.team && <span className="flex min-w-0 items-center gap-1"><Users size={12} className="shrink-0" /><span className="truncate">{task.team.name}</span></span>}
-                    {Number(task.subtaskCount || 0) > 0 && <span className="flex items-center gap-1"><CheckSquare size={12} />{task.subtaskCount} subtask{task.subtaskCount === 1 ? "" : "s"}</span>}
-                    {Number((task as any).commentCount || 0) > 0 && <span className="flex items-center gap-1"><MessageSquare size={12} />{(task as any).commentCount}</span>}
-                  </div>}
-                  {Array.isArray((task as any).customFieldChips) && (task as any).customFieldChips.length > 0 && <div className="mt-2 flex flex-wrap gap-1" aria-label="Custom fields">{(task as any).customFieldChips.slice(0, 3).map((chip: any) => <span key={chip.fieldId} title={chip.name} className="max-w-full truncate rounded border bg-slate-50 px-2 py-0.5 text-[0.625rem] text-slate-700">{chip.name}: {Array.isArray(chip.display) ? chip.display.join(", ") : String(chip.display)}</span>)}</div>}
-                  {people.length > 0 && <p className="mt-2 truncate text-xs text-muted-foreground">{people.slice(0, 3).join(", ")}{people.length > 3 ? ` +${people.length - 3}` : ""}</p>}
-                  {canMove && <label className="mt-3 flex items-center gap-1 border-t pt-2 text-xs font-medium text-slate-600">Move to <ChevronDown size={13} /><select aria-label={`Move ${task.title} to`} value={task.status || "pending"} disabled={move.isPending || leaving} onChange={(e) => startMove(task, e.target.value as TaskStatus)} className="min-w-0 flex-1 rounded border bg-white p-1 text-xs hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30">{TASK_STATUSES.map((next) => <option key={next} value={next}>{STATUS_LABELS[next]}</option>)}</select></label>}
-                </article>;
-              })}
-            </div>
-          </section>;
+                  {!embedded && (hasNextPage || isFetchingNextPage) ? "…" : columns[status].length}
+                </span>
+              </header>
+
+              <div data-testid={`board-scroll-${status}`} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-2.5">
+                {isLoading ? (
+                  <p className="p-2 text-sm text-muted-foreground">Loading…</p>
+                ) : columns[status].length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border bg-background/60 p-4 text-center text-sm text-muted-foreground">No tasks</p>
+                ) : (
+                  columns[status].map((task) => {
+                    const overdue = isTaskOverdue(task);
+                    const canMove = userCanMove(task, user?.id, workspaceRole);
+                    const leaving = leavingId === task.id;
+                    const settled = settledId === task.id;
+
+                    const people = ((task.assignees && task.assignees.length ? task.assignees : [task.assignee])
+                      .filter(Boolean) as any[])
+                      .map((a) => `${a.firstName || ""} ${a.lastName || ""}`.trim())
+                      .filter(Boolean);
+
+                    return (
+                      <article
+                        key={task.id}
+                        data-testid="board-card"
+                        data-state={leaving ? "leaving" : settled ? "settled" : "idle"}
+                        className={`group rounded-lg border border-border bg-card p-3 text-card-foreground shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md focus-within:ring-2 focus-within:ring-blue-500/30 ${overdue ? "border-l-4 border-l-red-500 bg-red-50/40 dark:bg-red-950/30" : ""} ${leaving ? "scale-95 opacity-0" : ""} ${settled ? "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-left-3 ring-2 ring-blue-400/50" : ""}`}
+                      >
+                        <button
+                          onClick={() => navigate(resolveTaskPath(task, task.teamId ? "team" : "workbench"))}
+                          className="w-full text-left text-sm font-semibold leading-snug hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus-visible:underline"
+                        >
+                          {task.title}
+                        </button>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${task.priority === "urgent" || task.priority === "high"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200"
+                            : task.priority === "medium"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200"
+                            : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {task.priority}
+                          </span>
+
+                          <BlockedBadge task={task} />
+                          <RepeatBadge task={task} />
+
+                          {task.deadline && (
+                            overdue ? (
+                              <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive-text">
+                                <AlertTriangle size={12} />
+                                Overdue · {dueLabel(task.deadline)}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <CalendarDays size={12} />
+                                {dueLabel(task.deadline)}
+                              </span>
+                            )
+                          )}
+                        </div>
+
+                        {((task as any).project || task.team || Number(task.subtaskCount || 0) > 0) && (
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            {(task as any).project && (
+                              <span className="flex min-w-0 items-center gap-1">
+                                <FolderKanban size={12} className="shrink-0" />
+                                <span className="truncate">{(task as any).project.name}</span>
+                              </span>
+                            )}
+
+                            {task.team && (
+                              <span className="flex min-w-0 items-center gap-1">
+                                <Users size={12} className="shrink-0" />
+                                <span className="truncate">{task.team.name}</span>
+                              </span>
+                            )}
+
+                            {Number(task.subtaskCount || 0) > 0 && (
+                              <span className="flex items-center gap-1">
+                                <CheckSquare size={12} />
+                                {task.subtaskCount} subtask{task.subtaskCount === 1 ? "" : "s"}
+                              </span>
+                            )}
+
+                            {Number((task as any).commentCount || 0) > 0 && (
+                              <span className="flex items-center gap-1">
+                                <MessageSquare size={12} />
+                                {(task as any).commentCount}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {Array.isArray((task as any).customFieldChips) && (task as any).customFieldChips.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1" aria-label="Custom fields">
+                            {(task as any).customFieldChips.slice(0, 3).map((chip: any) => (
+                              <span
+                                key={chip.fieldId}
+                                title={chip.name}
+                                className="max-w-full truncate rounded border border-border bg-muted px-2 py-0.5 text-[0.625rem] text-muted-foreground"
+                              >
+                                {chip.name}: {Array.isArray(chip.display) ? chip.display.join(", ") : String(chip.display)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {people.length > 0 && (
+                          <p className="mt-2 truncate text-xs text-muted-foreground">
+                            {people.slice(0, 3).join(", ")}{people.length > 3 ? ` +${people.length - 3}` : ""}
+                          </p>
+                        )}
+
+                        {canMove && (
+                          <label className="mt-3 flex items-center gap-1 border-t border-border pt-2 text-xs font-medium text-muted-foreground">
+                            Move to
+                            <ChevronDown size={13} />
+                            <select
+                              aria-label={`Move ${task.title} to`}
+                              value={task.status || "pending"}
+                              disabled={move.isPending || leaving}
+                              onChange={(e) => startMove(task, e.target.value as TaskStatus)}
+                              className="min-w-0 flex-1 rounded border border-input bg-background p-1 text-xs text-foreground hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                            >
+                              {TASK_STATUSES.map((next) => (
+                                <option key={next} value={next}>{STATUS_LABELS[next]}</option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          );
         })}
       </section>
-    </main>;
+    </main>
+  );
+
   return embedded ? content : <DashboardLayout hidePadding fullWidth>{content}</DashboardLayout>;
-}
+};
