@@ -554,6 +554,13 @@ export interface TaskParticipant {
   user?: TaskWatcher["user"];
 }
 
+export interface TaskParticipantMemberOption {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "pending" | "in_progress" | "in_review" | "completed" | "delayed" | "cancelled";
 
@@ -2923,8 +2930,24 @@ class ApiClient {
     return this.request(`/tasks/${taskId}/participants`, { method: "GET", headers: this.getAuthHeaders() });
   }
 
+  async searchTaskParticipantMembers(taskId: string, search: string, options: { limit?: number; offset?: number } = {}): Promise<{
+    status: string;
+    data: { members: TaskParticipantMemberOption[]; pagination: { limit: number; offset: number; total: number; hasMore: boolean } };
+  }> {
+    const query = new URLSearchParams({ search, limit: String(options.limit ?? 20), offset: String(options.offset ?? 0) });
+    return this.request(`/tasks/${encodeURIComponent(taskId)}/participant-members?${query.toString()}`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
   async addTaskParticipant(taskId: string, userId: string, role: TaskParticipantRole) {
     return this.request(`/tasks/${taskId}/participants`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ userId, role }) });
+  }
+
+  async addTaskParticipantByEmail(taskId: string, email: string, role: TaskParticipantRole) {
+    return this.request(`/tasks/${encodeURIComponent(taskId)}/participants`, {
+      method: "POST",
+      headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ email, role }),
+    });
   }
 
   async removeTaskParticipant(taskId: string, userId: string, role: TaskParticipantRole) {

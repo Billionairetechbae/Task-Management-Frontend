@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -34,13 +34,80 @@ import TaskDetails from "@/pages/TaskDetails";
 const open = () => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={["/task-details/t1"]}><Routes><Route path="/task-details/:id" element={<TaskDetails />} /></Routes></MemoryRouter></QueryClientProvider>);
 const task = { id: "t1", title: "Quarterly report", description: "Compile KPIs", status: "pending", priority: "high", companyId: "w1", subtasks: [], comments: [], activities: [], assignees: [], attachments: [] };
 
-beforeEach(() => { vi.clearAllMocks(); apiMock.getTasks.mockResolvedValue({ data: { tasks: [] } }); apiMock.getAllTasksCrossWorkspace.mockResolvedValue({ data: { tasks: [] }, pagination: {} }); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  apiMock.getTasks.mockResolvedValue({ data: { tasks: [] } });
+  apiMock.getAllTasksCrossWorkspace.mockResolvedValue({ data: { tasks: [] }, pagination: {} });
+  apiMock.getTaskParticipants.mockResolvedValue({ status: "success", data: { participants: [] } });
+  apiMock.searchTaskParticipantMembers.mockResolvedValue({
+    status: "success",
+    data: { members: [], pagination: { limit: 20, offset: 0, total: 0, hasMore: false } },
+  });
+  apiMock.addTaskParticipant.mockResolvedValue({ status: "success" });
+});
 afterEach(() => cleanup());
 
 describe("Task Workbench /task-details/:id", () => {
   it("opens the task from its id", async () => {
     apiMock.getTaskById.mockResolvedValue({ status: "success", data: { task, access: { canView: true, canEdit: true, readOnly: false } } }); open();
     expect((await screen.findAllByText("Quarterly report")).length).toBeGreaterThan(0); expect(apiMock.getTaskById).toHaveBeenCalledWith("t1");
+  });
+
+  it("loads and displays participants from the authorized participants endpoint", async () => {
+    apiMock.getTaskById.mockResolvedValue({ status: "success", data: { task, access: { canView: true, canEdit: true, readOnly: false } } });
+    apiMock.getTaskParticipants.mockResolvedValue({
+      status: "success",
+      data: {
+        participants: [{
+          id: "participant-1",
+          taskId: "t1",
+          userId: "internal-user-id",
+          role: "watcher",
+          user: { id: "internal-user-id", firstName: "Christiana", lastName: "Oladosu", email: "christiana@example.test" },
+        }, {
+          id: "participant-2",
+          taskId: "t1",
+          userId: "reviewer-user-id",
+          role: "reviewer",
+          user: { id: "reviewer-user-id", firstName: "Christine", lastName: "Sarima", email: "contact@example.test" },
+        }],
+      },
+    });
+    open();
+    expect(await screen.findByText("Christiana Oladosu")).toBeInTheDocument();
+    expect(screen.getByText("christiana@example.test")).toBeInTheDocument();
+    expect(screen.getByText("Christine Sarima")).toBeInTheDocument();
+    expect(screen.getByText("contact@example.test")).toBeInTheDocument();
+    expect(screen.getByText("reviewer")).toBeInTheDocument();
+    expect(screen.queryByText("No explicit participants.")).not.toBeInTheDocument();
+    expect(screen.queryByText("internal-user-id")).not.toBeInTheDocument();
+  });
+
+  it("searches workspace members by name and keeps their user IDs internal", async () => {
+    apiMock.getTaskById.mockResolvedValue({
+      status: "success",
+      data: {
+        task: { ...task, creator: { id: "u1", firstName: "Richard", lastName: "Kehinde" } },
+        access: { canView: true, canEdit: true, readOnly: false, canManageParticipants: true, relationship: { creator: true } },
+      },
+    });
+    apiMock.searchTaskParticipantMembers.mockResolvedValue({
+      status: "success",
+      data: {
+        members: [{ userId: "internal-user-id", firstName: "Christiana", lastName: "Oladosu", email: "christiana@example.test" }],
+        pagination: { limit: 20, offset: 0, total: 1, hasMore: false },
+      },
+    });
+    open();
+    const search = await screen.findByRole("textbox", { name: "Search workspace members by name or email" });
+    expect(screen.queryByPlaceholderText("User ID")).not.toBeInTheDocument();
+    fireEvent.change(search, { target: { value: "Christiana" } });
+    expect(search).toHaveValue("Christiana");
+    await waitFor(() => expect(apiMock.searchTaskParticipantMembers).toHaveBeenCalled());
+    expect(await screen.findByText("Christiana Oladosu")).toBeInTheDocument();
+    expect(screen.getByText("christiana@example.test")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add as commenter" }));
+    expect(apiMock.addTaskParticipant).toHaveBeenCalledWith("t1", "internal-user-id", "commenter");
   });
 
   it("a server failure shows a specific error with a Try again that recovers (no generic 'Something went wrong')", async () => {

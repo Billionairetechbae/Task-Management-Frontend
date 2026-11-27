@@ -20,4 +20,8 @@ describe("Team execution route resolution", () => {
   it("resolves sub-task notifications into their parent Team execution context", () => {
     expect(getNotificationLink({ type: "subtask_created", data: { taskId: "sub-1", parentTaskId: "task-1", teamId: "team-1" } } as any)).toBe(teamSubtaskPath("team-1", "task-1", "sub-1"));
   });
+
+  it("routes review notifications to the protected Task Workbench review section", () => {
+    expect(getNotificationLink({ type: "task_review_required", data: { taskId: "task-1", action: "review_task" } } as any)).toBe("/task-details/task-1#task-review");
+  });
 });

@@ -40,7 +40,7 @@ import TaskEditDrawer from "@/components/dashboard/TaskEditDrawer";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, Task, TaskComment, TaskParticipantRole } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -125,7 +125,8 @@ const TaskDetails = () => {
   const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
-  const [participantUserId, setParticipantUserId] = useState("");
+  const [participantSearch, setParticipantSearch] = useState("");
+  const [debouncedParticipantSearch, setDebouncedParticipantSearch] = useState("");
   const [participantRole, setParticipantRole] = useState<TaskParticipantRole>("commenter");
   const [participantBusy, setParticipantBusy] = useState(false);
   const [participantError, setParticipantError] = useState<string | null>(null);
@@ -168,6 +169,41 @@ const TaskDetails = () => {
   const currentTaskAccess = taskReady ? taskQuery.data?.access ?? null : null;
   const canCollaborate = taskReady && currentTaskAccess?.canComment === true;
 
+  const taskParticipantsQuery = useQuery({
+    queryKey: ["task-participants", id, activeCompanyId],
+    queryFn: async () => {
+      if (!id) throw new Error("No task id");
+      return api.getTaskParticipants(id);
+    },
+    enabled: taskReady,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const taskParticipants = taskParticipantsQuery.data?.data?.participants ?? task?.participants ?? [];
+  const canAppointReviewer = Boolean(task?.creator?.id && String(task.creator.id) === String(user?.id));
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedParticipantSearch(participantSearch.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [participantSearch]);
+
+  const participantMembersQuery = useInfiniteQuery({
+    queryKey: ["task-participant-members", id, activeCompanyId, debouncedParticipantSearch],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      if (!id) throw new Error("No task id");
+      const response = await api.searchTaskParticipantMembers(id, debouncedParticipantSearch, { limit: 20, offset: pageParam });
+      return response.data;
+    },
+    getNextPageParam: (lastPage) => lastPage.pagination.hasMore
+      ? lastPage.pagination.offset + lastPage.pagination.limit
+      : undefined,
+    enabled: Boolean(taskReady && currentTaskAccess?.canManageParticipants && debouncedParticipantSearch.length >= 2),
+    retry: false,
+  });
+  const participantMemberOptions = participantMembersQuery.data?.pages.flatMap((page) => page.members) ?? [];
+  const exactEmailAlreadyFound = participantMemberOptions.some((member) => member.email.toLowerCase() === participantSearch.trim().toLowerCase());
+
   useEffect(() => {
     if (taskReady && canCollaborate) setChatAccessError(null);
   }, [taskReady, canCollaborate, currentTaskAccess]);
@@ -206,21 +242,26 @@ const TaskDetails = () => {
     }
   }, [taskQuery.data]);
 
-  const addParticipant = useCallback(async () => {
-    if (!id || !participantUserId.trim() || !currentTaskAccess?.canManageParticipants) return;
+  const addParticipant = useCallback(async (target: { userId?: string; email?: string }) => {
+    if (!id || !currentTaskAccess?.canManageParticipants) return;
     setParticipantBusy(true);
     setParticipantError(null);
     try {
-      await api.addTaskParticipant(id, participantUserId.trim(), participantRole);
-      setParticipantUserId("");
-      await queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] });
-      toast({ title: "Participant added", description: `Added as ${participantRole}.` });
+      if (target.userId) await api.addTaskParticipant(id, target.userId, participantRole);
+      else if (target.email) await api.addTaskParticipantByEmail(id, target.email, participantRole);
+      else return;
+      setParticipantSearch("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] }),
+        queryClient.invalidateQueries({ queryKey: ["task-participants", id, activeCompanyId] }),
+      ]);
+      toast({ title: "Participant added", description: `Saved as ${participantRole}. Notifications follow the recipient's preferences.` });
     } catch (error: any) {
       setParticipantError(error?.message || "Participant could not be added.");
     } finally {
       setParticipantBusy(false);
     }
-  }, [id, participantUserId, participantRole, currentTaskAccess?.canManageParticipants, activeCompanyId, queryClient, toast]);
+  }, [id, participantRole, currentTaskAccess?.canManageParticipants, activeCompanyId, queryClient, toast]);
 
   const removeParticipant = useCallback(async (userId: string, role: TaskParticipantRole) => {
     if (!id || !currentTaskAccess?.canManageParticipants) return;
@@ -228,7 +269,10 @@ const TaskDetails = () => {
     setParticipantError(null);
     try {
       await api.removeTaskParticipant(id, userId, role);
-      await queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] }),
+        queryClient.invalidateQueries({ queryKey: ["task-participants", id, activeCompanyId] }),
+      ]);
     } catch (error: any) {
       setParticipantError(error?.message || "Participant could not be removed.");
     } finally {
@@ -242,7 +286,10 @@ const TaskDetails = () => {
     setParticipantError(null);
     try {
       await api.changeTaskParticipantRole(id, userId, nextRole, currentRole);
-      await queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] }),
+        queryClient.invalidateQueries({ queryKey: ["task-participants", id, activeCompanyId] }),
+      ]);
     } catch (error: any) {
       setParticipantError(error?.message || "Participant role could not be changed.");
     } finally {
@@ -854,7 +901,7 @@ const TaskDetails = () => {
         task?.creator,
         task?.assignee,
         ...(task?.assignees || []),
-        ...(task?.participants || []).map((participant) => participant.user),
+        ...taskParticipants.map((participant) => participant.user),
       ].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
       const mentionedUserIds = mentionParticipants
         .filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim()))
@@ -962,7 +1009,7 @@ const TaskDetails = () => {
     connectedStorageAttachments: Array<{ connectionId: string; item: ConnectedStorageItem }>,
     parentCommentId: string | null,
   ): Promise<TaskComment> => {
-    const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.participants || []).map((participant) => participant.user)].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
+    const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...taskParticipants.map((participant) => participant.user)].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
     const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
     const response = await api.addTaskComment(taskId, content, {
       clientMessageId: messageId,
@@ -1454,7 +1501,7 @@ const TaskDetails = () => {
       return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/20">
           {/* Sticky header */}
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-3 py-3 sm:px-5 sm:py-4">
+          <div id={task.teamId && task.execution ? undefined : "task-review"} className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-3 py-3 sm:px-5 sm:py-4">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0 flex-1 basis-full xl:basis-[52%]">
                 <div className="flex items-start gap-2">
@@ -1770,7 +1817,7 @@ const TaskDetails = () => {
             </section>
 
             {task.teamId && task.execution && (
-              <section className="rounded-lg border bg-card p-4 space-y-3">
+              <section id="task-review" className="rounded-lg border bg-card p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold">Team Execution</h3>
@@ -1874,21 +1921,32 @@ const TaskDetails = () => {
               <h3 className="text-sm font-semibold mb-2">Task Access &amp; Participants</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between"><span className="text-muted-foreground">Creator</span><span>{[task.creator?.firstName, task.creator?.lastName].filter(Boolean).join(" ") || "Unknown"}</span></div>
-                {(task.participants || []).length === 0 ? <p className="text-muted-foreground">No explicit participants.</p> : (task.participants || []).map((participant) => (
+                {taskParticipantsQuery.isPending && <p className="text-muted-foreground" role="status">Loading participants…</p>}
+                {taskParticipantsQuery.isError && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-destructive" role="alert">
+                    <span>Participants could not be loaded. Your task access has not changed.</span>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void taskParticipantsQuery.refetch()}>Retry</Button>
+                  </div>
+                )}
+                {taskParticipantsQuery.isSuccess && taskParticipants.length === 0 && <p className="text-muted-foreground">No explicit participants.</p>}
+                {taskParticipants.map((participant) => (
                   <div key={participant.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                    <span>{[participant.user?.firstName, participant.user?.lastName].filter(Boolean).join(" ") || participant.userId}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate">{[participant.user?.firstName, participant.user?.lastName].filter(Boolean).join(" ") || "Workspace member"}</span>
+                      {participant.user?.email && <span className="block truncate text-xs text-muted-foreground">{participant.user.email}</span>}
+                    </span>
                     <div className="flex items-center gap-2">
-                      {currentTaskAccess?.canManageParticipants ? (
+                      {currentTaskAccess?.canManageParticipants && (participant.role !== "reviewer" || canAppointReviewer) ? (
                         <Select value={participant.role} onValueChange={(value) => changeParticipantRole(participant.userId, participant.role, value as TaskParticipantRole)} disabled={participantBusy}>
                           <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="watcher">Watcher</SelectItem>
                             <SelectItem value="commenter">Commenter</SelectItem>
-                            <SelectItem value="reviewer">Reviewer</SelectItem>
+                            {canAppointReviewer && <SelectItem value="reviewer">Reviewer</SelectItem>}
                           </SelectContent>
                         </Select>
                       ) : <span className="text-xs capitalize text-muted-foreground">{participant.role}</span>}
-                      {currentTaskAccess?.canManageParticipants && <Button type="button" variant="ghost" size="sm" onClick={() => removeParticipant(participant.userId, participant.role)} disabled={participantBusy} aria-label={`Remove ${participant.role}`}><X className="h-4 w-4" /></Button>}
+                      {currentTaskAccess?.canManageParticipants && (participant.role !== "reviewer" || canAppointReviewer) && <Button type="button" variant="ghost" size="sm" onClick={() => removeParticipant(participant.userId, participant.role)} disabled={participantBusy} aria-label={`Remove ${participant.role}`}><X className="h-4 w-4" /></Button>}
                     </div>
                   </div>
                 ))}
@@ -1905,19 +1963,56 @@ const TaskDetails = () => {
                         Allow assignees to add Watchers and Commenters
                       </label>
                     )}
-                    <p className="text-xs text-muted-foreground">Add a workspace member by user ID. The server validates membership and permissions.</p>
+                    <p className="text-xs text-muted-foreground">Search active members of this task’s workspace by name or email.</p>
                     <div className="flex flex-wrap gap-2">
-                      <Input value={participantUserId} onChange={(event) => setParticipantUserId(event.target.value)} placeholder="User ID" className="min-w-[12rem] flex-1" />
+                      <Input
+                        value={participantSearch}
+                        onChange={(event) => { setParticipantSearch(event.target.value); setParticipantError(null); }}
+                        placeholder="Search name or email"
+                        aria-label="Search workspace members by name or email"
+                        className="min-w-[12rem] flex-1"
+                      />
                       <Select value={participantRole} onValueChange={(value) => setParticipantRole(value as TaskParticipantRole)}>
                         <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="watcher">Watcher</SelectItem>
                           <SelectItem value="commenter">Commenter</SelectItem>
-                          <SelectItem value="reviewer">Reviewer</SelectItem>
+                          {canAppointReviewer && <SelectItem value="reviewer">Reviewer</SelectItem>}
                         </SelectContent>
                       </Select>
-                      <Button type="button" onClick={addParticipant} disabled={participantBusy || !participantUserId.trim()}><Plus className="mr-1 h-4 w-4" />Add</Button>
                     </div>
+                    {participantSearch.trim().length < 2 && <p className="text-xs text-muted-foreground">Enter at least two characters to search.</p>}
+                    {participantSearch.trim().length >= 2 && debouncedParticipantSearch !== participantSearch.trim() && <p className="text-xs text-muted-foreground" role="status">Updating search…</p>}
+                    {participantMembersQuery.isPending && debouncedParticipantSearch === participantSearch.trim() && <p className="text-xs text-muted-foreground" role="status">Searching workspace members…</p>}
+                    {participantMembersQuery.isError && <p className="text-xs text-destructive" role="alert">Workspace members could not be loaded. Retry the search.</p>}
+                    {participantSearch.trim().length >= 2 && debouncedParticipantSearch === participantSearch.trim() && participantMembersQuery.isSuccess && participantMemberOptions.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No active workspace members match. An unregistered email will not create an account; the person must first join this workspace.</p>
+                    )}
+                    {participantMemberOptions.map((member) => {
+                      const memberName = [member.firstName, member.lastName].filter(Boolean).join(" ");
+                      const alreadyHasRole = taskParticipants.some((participant) => participant.userId === member.userId && participant.role === participantRole);
+                      return (
+                        <div key={member.userId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{memberName || "Workspace member"}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
+                          </span>
+                          <Button type="button" size="sm" variant="outline" onClick={() => void addParticipant({ userId: member.userId })} disabled={participantBusy || alreadyHasRole || (participantRole === "reviewer" && !canAppointReviewer)}>
+                            <Plus className="mr-1 h-4 w-4" />{alreadyHasRole ? `Already ${participantRole}` : `Add as ${participantRole}`}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participantSearch.trim()) && exactEmailAlreadyFound && (
+                      <Button type="button" size="sm" variant="secondary" onClick={() => void addParticipant({ email: participantSearch.trim() })} disabled={participantBusy || (participantRole === "reviewer" && !canAppointReviewer)}>
+                        Add exact workspace email as {participantRole}
+                      </Button>
+                    )}
+                    {participantMembersQuery.hasNextPage && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => void participantMembersQuery.fetchNextPage()} disabled={participantMembersQuery.isFetchingNextPage}>
+                        {participantMembersQuery.isFetchingNextPage ? "Loading…" : "Load more members"}
+                      </Button>
+                    )}
                     {participantError && <p className="text-xs text-destructive">{participantError}</p>}
                   </div>
                 )}
@@ -1949,7 +2044,7 @@ const TaskDetails = () => {
     task?.creator,
     task?.assignee,
     ...(task?.assignees || []),
-    ...(task?.participants || []).map((participant) => participant.user),
+    ...taskParticipants.map((participant) => participant.user),
   ].filter((participant): participant is { id: string; firstName?: string | null; lastName?: string | null } => Boolean(participant?.id)).map((participant) => [participant.id, participant])).values());
 
   const ChatContent = (

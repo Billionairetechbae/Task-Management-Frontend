@@ -9,6 +9,8 @@ import { teamSubtaskPath, teamTaskPath, taskWorkbenchPath } from "@/lib/taskExec
 export function getNotificationLink(n: Notification): string {
   const d: any = n?.data || {};
 
+  if (d.action === "review_task" && d.taskId) return `${taskWorkbenchPath(encodeURIComponent(d.taskId))}#task-review`;
+
   // Direct identifiers in data payload
   if (d.subtaskId && d.parentTaskId && d.teamId) return teamSubtaskPath(d.teamId, d.parentTaskId, d.subtaskId);
   if ((d.parentTaskId || d.parent_task_id) && d.teamId && (d.taskId || d.task_id)) return teamSubtaskPath(d.teamId, d.parentTaskId || d.parent_task_id, d.taskId || d.task_id);
