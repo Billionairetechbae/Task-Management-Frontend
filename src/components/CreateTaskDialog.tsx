@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { api, CompanyMember } from "@/lib/api";
+import { api, CompanyMember, TaskParticipantRole } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import useGoogleIntegrationStatus from "@/hooks/use-google-integration";
 
@@ -52,6 +52,9 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   const [files, setFiles] = useState<File[]>([]);
   const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
+  const [participantRole, setParticipantRole] = useState<TaskParticipantRole>("watcher");
+  const [participantIds, setParticipantIds] = useState<string[]>([]);
+  const [allowAssigneeSharing, setAllowAssigneeSharing] = useState(true);
   const [fileInputKey, setFileInputKey] = useState(Date.now());
 
   const [formData, setFormData] = useState({
@@ -86,7 +89,7 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
   }, [open]);
 
   useEffect(() => {
-    if (open && canAssignOthers) fetchMembers();
+    if (open && (canAssignOthers || !!user?.id)) fetchMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, canAssignOthers]);
 
@@ -193,6 +196,8 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
           ...(formData.assigneeIds.length ? { assigneeId: formData.assigneeIds[0], assigneeIds: formData.assigneeIds } : {}),
           teamId: formData.teamId,
           customFields,
+          participants: participantIds.map((userId) => ({ userId, role: participantRole })),
+          allowAssigneeSharing,
         };
         await api.createProjectTask(projectId, payload);
       } else {
@@ -207,6 +212,8 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
 
         if (formData.assigneeIds.length) { form.append("assigneeId", formData.assigneeIds[0]); form.append("assigneeIds", JSON.stringify(formData.assigneeIds)); }
         if (formData.teamId) form.append("teamId", formData.teamId);
+        form.append("participants", JSON.stringify(participantIds.map((userId) => ({ userId, role: participantRole }))));
+        form.append("allowAssigneeSharing", String(allowAssigneeSharing));
         files.forEach((file) => form.append("files", file));
 
         await api.createTask(form);
@@ -223,6 +230,9 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
         assigneeIds: [],
         teamId: null,
       });
+      setParticipantIds([]);
+      setParticipantRole("watcher");
+      setAllowAssigneeSharing(true);
 
       setFiles([]);
       setCustomFields({});
@@ -269,6 +279,38 @@ const CreateTaskDialog = ({ open, onOpenChange, onSuccess, projectId, initialDea
               placeholder="Enter task title"
               required
             />
+          </div>
+
+          <div className="lg:col-span-2">
+            <Label>Participants (Optional)</Label>
+            <div className="mt-2 space-y-2 rounded-lg border p-3">
+              <div className="flex items-center gap-2">
+                <Select value={participantRole} onValueChange={(value) => setParticipantRole(value as TaskParticipantRole)}>
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="watcher">Watcher</SelectItem>
+                    <SelectItem value="commenter">Commenter</SelectItem>
+                    <SelectItem value="reviewer">Reviewer</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">Choose workspace members to grant this role.</span>
+              </div>
+              {membersLoading ? <p className="text-sm text-muted-foreground">Loading workspace members…</p> : (
+                <div className="flex flex-wrap gap-2">
+                  {members.filter((member) => member.userId !== user?.id).map((member) => {
+                    const selected = participantIds.includes(member.userId);
+                    return <Button key={member.userId} type="button" size="sm" variant={selected ? "default" : "outline"} onClick={() => setParticipantIds((current) => selected ? current.filter((id) => id !== member.userId) : [...current, member.userId])}>
+                      {selected ? "✓ " : ""}{member.user?.firstName || ""} {member.user?.lastName || ""}
+                    </Button>;
+                  })}
+                  {!members.length && <p className="text-sm text-muted-foreground">No eligible workspace members found.</p>}
+                </div>
+              )}
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={allowAssigneeSharing} onChange={(event) => setAllowAssigneeSharing(event.target.checked)} />
+                Allow assignees to add Watchers and Commenters
+              </label>
+            </div>
           </div>
 
           <div><TeamSelector

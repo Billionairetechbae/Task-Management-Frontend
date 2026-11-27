@@ -113,7 +113,7 @@ const AllTasks = () => {
 
   const canViewAllTasks = canPerformRoleOperation("view_all_tasks", workspaceRole);
   // Narrows My Tasks (created by me OR assigned to me) to one relationship.
-  const [relation, setRelation] = useState<"all" | "assigned" | "created">("all");
+  const [relation, setRelation] = useState<"all" | "assigned" | "created" | "watching" | "reviewing" | "participating">("all");
 
   // Without view_all_tasks there is no "All Tasks" to show — pin to My Tasks.
   useEffect(() => {
@@ -300,7 +300,7 @@ const AllTasks = () => {
 
         {taskScope === "my" && (
           <div role="group" aria-label="My Tasks relationship" className="flex flex-wrap items-center gap-1.5">
-            {([["all", "Created by or assigned to me"], ["assigned", "Assigned to me"], ["created", "Created by me"]] as const).map(([value, text]) => (
+            {([["all", "Created by or assigned to me"], ["assigned", "Assigned to me"], ["created", "Created by me"], ["watching", "Watching"], ["reviewing", "Reviewing"], ["participating", "Participating"]] as const).map(([value, text]) => (
               <button key={value} type="button" aria-pressed={relation === value} onClick={() => { setRelation(value); setPage(1); }}
                 className={`rounded-full border px-3 py-1 text-xs transition ${relation === value ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>{text}</button>
             ))}
