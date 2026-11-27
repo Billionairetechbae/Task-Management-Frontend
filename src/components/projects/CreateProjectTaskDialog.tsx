@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api, type CompanyMember, type CreateTaskData, type TaskPriority } from "@/lib/api";
+import { api, type CompanyMember, type CreateTaskData, type TaskParticipantRole, type TaskPriority } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Paperclip, User, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +32,9 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
+  const [participantIds, setParticipantIds] = useState<string[]>([]);
+  const [participantRole, setParticipantRole] = useState<TaskParticipantRole>("watcher");
+  const [allowAssigneeSharing, setAllowAssigneeSharing] = useState(true);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -51,6 +54,9 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
       setFiles([]);
       setPendingUploads([]);
       setCustomFields({});
+      setParticipantIds([]);
+      setParticipantRole("watcher");
+      setAllowAssigneeSharing(true);
       if (canAssignOthers) {
         api.getCompanyTeam().then(r => setMembers(r.data.members || [])).catch(() => {});
       } else {
@@ -110,6 +116,10 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
       if (form.category) payload.category = form.category;
       payload.teamId = form.teamId;
       payload.customFields = customFields;
+      if (participantIds.length) {
+        payload.participants = participantIds.map((userId) => ({ userId, role: participantRole }));
+      }
+      payload.allowAssigneeSharing = allowAssigneeSharing;
 
       const result = await api.createProjectTask(projectId, payload);
       const taskId = result.data?.id;
@@ -255,6 +265,31 @@ const CreateProjectTaskDialog = ({ projectId, open, onOpenChange, onSuccess }: C
               </Button>
             </div>
           )}
+
+          {canAssignOthers && members.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs">Participants (Optional)</Label>
+              <Select value={participantRole} onValueChange={(value) => setParticipantRole(value as TaskParticipantRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="watcher">Watcher</SelectItem>
+                  <SelectItem value="commenter">Commenter</SelectItem>
+                  <SelectItem value="reviewer">Reviewer</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex flex-wrap gap-2">
+                {members.filter((member) => member.userId !== user?.id).map((member) => {
+                  const selected = participantIds.includes(member.userId);
+                  return <Button key={member.userId} type="button" size="sm" variant={selected ? "default" : "outline"} onClick={() => setParticipantIds((current) => selected ? current.filter((id) => id !== member.userId) : [...current, member.userId])}>{memberLabel(member)}</Button>;
+                })}
+              </div>
+            </div>
+          )}
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={allowAssigneeSharing} onChange={(event) => setAllowAssigneeSharing(event.target.checked)} />
+            Allow assignees to add Watchers and Commenters
+          </label>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

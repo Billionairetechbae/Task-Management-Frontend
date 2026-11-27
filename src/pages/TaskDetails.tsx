@@ -41,7 +41,7 @@ import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Task, TaskComment } from "@/lib/api";
+import { api, Task, TaskComment, TaskParticipantRole } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -125,6 +125,10 @@ const TaskDetails = () => {
   const queryClient = useQueryClient();
 
   const [task, setTask] = useState<Task | null>(null);
+  const [participantUserId, setParticipantUserId] = useState("");
+  const [participantRole, setParticipantRole] = useState<TaskParticipantRole>("commenter");
+  const [participantBusy, setParticipantBusy] = useState(false);
+  const [participantError, setParticipantError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<CorrectedTaskComment[]>([]);
   const [replyToComment, setReplyToComment] = useState<CorrectedTaskComment | null>(null);
@@ -162,10 +166,7 @@ const TaskDetails = () => {
 
   const taskReady = !!id && taskQuery.isSuccess && String(taskQuery.data?.task?.id || "") === id;
   const currentTaskAccess = taskReady ? taskQuery.data?.access ?? null : null;
-  const canCollaborate = taskReady && (
-    currentTaskAccess?.canCollaborate === true ||
-    (currentTaskAccess?.readOnly !== true && currentTaskAccess?.canEdit === true)
-  );
+  const canCollaborate = taskReady && currentTaskAccess?.canComment === true;
 
   useEffect(() => {
     if (taskReady && canCollaborate) setChatAccessError(null);
@@ -201,8 +202,69 @@ const TaskDetails = () => {
   useEffect(() => {
     if (taskQuery.data) {
       setTask(taskQuery.data.task ?? null);
+      setParticipantError(null);
     }
   }, [taskQuery.data]);
+
+  const addParticipant = useCallback(async () => {
+    if (!id || !participantUserId.trim() || !currentTaskAccess?.canManageParticipants) return;
+    setParticipantBusy(true);
+    setParticipantError(null);
+    try {
+      await api.addTaskParticipant(id, participantUserId.trim(), participantRole);
+      setParticipantUserId("");
+      await queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] });
+      toast({ title: "Participant added", description: `Added as ${participantRole}.` });
+    } catch (error: any) {
+      setParticipantError(error?.message || "Participant could not be added.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }, [id, participantUserId, participantRole, currentTaskAccess?.canManageParticipants, activeCompanyId, queryClient, toast]);
+
+  const removeParticipant = useCallback(async (userId: string, role: TaskParticipantRole) => {
+    if (!id || !currentTaskAccess?.canManageParticipants) return;
+    setParticipantBusy(true);
+    setParticipantError(null);
+    try {
+      await api.removeTaskParticipant(id, userId, role);
+      await queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] });
+    } catch (error: any) {
+      setParticipantError(error?.message || "Participant could not be removed.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }, [id, currentTaskAccess?.canManageParticipants, activeCompanyId, queryClient]);
+
+  const changeParticipantRole = useCallback(async (userId: string, currentRole: TaskParticipantRole, nextRole: TaskParticipantRole) => {
+    if (!id || currentRole === nextRole || !currentTaskAccess?.canManageParticipants) return;
+    setParticipantBusy(true);
+    setParticipantError(null);
+    try {
+      await api.changeTaskParticipantRole(id, userId, nextRole, currentRole);
+      await queryClient.invalidateQueries({ queryKey: ["task-details", id, activeCompanyId] });
+    } catch (error: any) {
+      setParticipantError(error?.message || "Participant role could not be changed.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }, [id, currentTaskAccess?.canManageParticipants, activeCompanyId, queryClient]);
+
+  const updateAssigneeSharing = useCallback(async (allow: boolean) => {
+    if (!id || !currentTaskAccess?.canManageParticipants || currentTaskAccess.relationship?.creator !== true) return;
+    setParticipantBusy(true);
+    setParticipantError(null);
+    try {
+      const response = await api.updateTask(id, { allowAssigneeSharing: allow });
+      setTask((previous) => previous ? { ...previous, ...(response.data?.task || {}), accessSettings: { ...(previous.accessSettings || {}), allowAssigneeSharing: allow } } : previous);
+      await queryClient.invalidateQueries({ queryKey: ["task-details", id] });
+      toast({ title: "Participant sharing updated" });
+    } catch (error: any) {
+      setParticipantError(error?.message || "Participant sharing could not be updated.");
+    } finally {
+      setParticipantBusy(false);
+    }
+  }, [id, currentTaskAccess?.canManageParticipants, currentTaskAccess?.relationship?.creator, queryClient, toast]);
 
   // The backend access object is the final authority: treat the task as
   // read-only whenever editing is not explicitly permitted.
@@ -792,8 +854,7 @@ const TaskDetails = () => {
         task?.creator,
         task?.assignee,
         ...(task?.assignees || []),
-        ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user),
-        task?.team?.leadMember?.user,
+        ...(task?.participants || []).map((participant) => participant.user),
       ].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
       const mentionedUserIds = mentionParticipants
         .filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim()))
@@ -901,7 +962,7 @@ const TaskDetails = () => {
     connectedStorageAttachments: Array<{ connectionId: string; item: ConnectedStorageItem }>,
     parentCommentId: string | null,
   ): Promise<TaskComment> => {
-    const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user), task?.team?.leadMember?.user].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
+    const participants = [task?.creator, task?.assignee, ...(task?.assignees || []), ...(task?.participants || []).map((participant) => participant.user)].filter(Boolean) as Array<{ id?: string; firstName?: string | null; lastName?: string | null }>;
     const mentionedUserIds = participants.filter((participant) => content.includes(`@${participant.firstName || ""} ${participant.lastName || ""}`.trim())).map((participant) => participant.id).filter(Boolean) as string[];
     const response = await api.addTaskComment(taskId, content, {
       clientMessageId: messageId,
@@ -1809,11 +1870,62 @@ const TaskDetails = () => {
               />
             </section>
 
+            <section className="rounded-lg border bg-card p-4">
+              <h3 className="text-sm font-semibold mb-2">Task Access &amp; Participants</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between"><span className="text-muted-foreground">Creator</span><span>{[task.creator?.firstName, task.creator?.lastName].filter(Boolean).join(" ") || "Unknown"}</span></div>
+                {(task.participants || []).length === 0 ? <p className="text-muted-foreground">No explicit participants.</p> : (task.participants || []).map((participant) => (
+                  <div key={participant.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <span>{[participant.user?.firstName, participant.user?.lastName].filter(Boolean).join(" ") || participant.userId}</span>
+                    <div className="flex items-center gap-2">
+                      {currentTaskAccess?.canManageParticipants ? (
+                        <Select value={participant.role} onValueChange={(value) => changeParticipantRole(participant.userId, participant.role, value as TaskParticipantRole)} disabled={participantBusy}>
+                          <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="watcher">Watcher</SelectItem>
+                            <SelectItem value="commenter">Commenter</SelectItem>
+                            <SelectItem value="reviewer">Reviewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : <span className="text-xs capitalize text-muted-foreground">{participant.role}</span>}
+                      {currentTaskAccess?.canManageParticipants && <Button type="button" variant="ghost" size="sm" onClick={() => removeParticipant(participant.userId, participant.role)} disabled={participantBusy} aria-label={`Remove ${participant.role}`}><X className="h-4 w-4" /></Button>}
+                    </div>
+                  </div>
+                ))}
+                {currentTaskAccess?.canManageParticipants && (
+                  <div className="space-y-2 border-t pt-3">
+                    {currentTaskAccess.relationship?.creator === true && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={task.accessSettings?.allowAssigneeSharing !== false}
+                          onChange={(event) => updateAssigneeSharing(event.target.checked)}
+                          disabled={participantBusy}
+                        />
+                        Allow assignees to add Watchers and Commenters
+                      </label>
+                    )}
+                    <p className="text-xs text-muted-foreground">Add a workspace member by user ID. The server validates membership and permissions.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Input value={participantUserId} onChange={(event) => setParticipantUserId(event.target.value)} placeholder="User ID" className="min-w-[12rem] flex-1" />
+                      <Select value={participantRole} onValueChange={(value) => setParticipantRole(value as TaskParticipantRole)}>
+                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="watcher">Watcher</SelectItem>
+                          <SelectItem value="commenter">Commenter</SelectItem>
+                          <SelectItem value="reviewer">Reviewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" onClick={addParticipant} disabled={participantBusy || !participantUserId.trim()}><Plus className="mr-1 h-4 w-4" />Add</Button>
+                    </div>
+                    {participantError && <p className="text-xs text-destructive">{participantError}</p>}
+                  </div>
+                )}
+              </div>
+            </section>
+
             {/* Status update — hidden entirely in read-only mode */}
-            {!isReadOnly && (user?.id === task.assigneeId ||
-              (task as any).assignees?.filter(Boolean).some((a: any) => a.id === user?.id) ||
-              user?.id === task.creator?.id ||
-              ["manager", "executive", "admin", "team_member"].includes(user?.role || "")) && (
+            {currentTaskAccess?.canChangeStatus === true && (
               <section className="rounded-lg border bg-card p-4">
                 <p className="text-xs text-muted-foreground mb-2">Update Status</p>
                 <Select value={task.status || "pending"} onValueChange={handleStatusChange} disabled={updating}>
@@ -1837,8 +1949,7 @@ const TaskDetails = () => {
     task?.creator,
     task?.assignee,
     ...(task?.assignees || []),
-    ...(task?.team?.memberLinks || []).map((link) => link.companyMember?.user),
-    task?.team?.leadMember?.user,
+    ...(task?.participants || []).map((participant) => participant.user),
   ].filter((participant): participant is { id: string; firstName?: string | null; lastName?: string | null } => Boolean(participant?.id)).map((participant) => [participant.id, participant])).values());
 
   const ChatContent = (

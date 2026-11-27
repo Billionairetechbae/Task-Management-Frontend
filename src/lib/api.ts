@@ -543,6 +543,17 @@ export interface TaskWatcher {
   };
 }
 
+export type TaskParticipantRole = "watcher" | "commenter" | "reviewer";
+export interface TaskParticipant {
+  id: string;
+  taskId: string;
+  userId: string;
+  role: TaskParticipantRole;
+  grantedBy?: string;
+  grantedAt?: string;
+  user?: TaskWatcher["user"];
+}
+
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "pending" | "in_progress" | "in_review" | "completed" | "delayed" | "cancelled";
 
@@ -555,7 +566,15 @@ export interface TaskAccess {
   canView: boolean;
   canEdit: boolean;
   readOnly: boolean;
-  canCollaborate?: boolean;
+  canCollaborate: boolean;
+  canComment?: boolean;
+  canUploadAttachment?: boolean;
+  canDownloadAttachment?: boolean;
+  canManageParticipants?: boolean;
+  canReview?: boolean;
+  canChangeStatus?: boolean;
+  canAssign?: boolean;
+  relationship?: { creator?: boolean; assignee?: boolean; watcher?: boolean; commenter?: boolean; reviewer?: boolean };
 }
 
 export interface Task {
@@ -569,6 +588,7 @@ export interface Task {
   estimatedHours?: number | null;
   actualHours?: number | null;
   tier?: string | null;
+  accessSettings?: { allowAssigneeSharing?: boolean } | null;
 
   assignedAssistantId?: string | null;
   executiveId?: string | null;
@@ -615,6 +635,7 @@ export interface Task {
   recentWatchers?: TaskWatcher[] | null;
   /** Some APIs return full watcher list instead of only counts */
   watchers?: TaskWatcher[] | null;
+  participants?: TaskParticipant[] | null;
 
   // Some backends return this
   assignees?: any[] | null;
@@ -837,6 +858,8 @@ export interface CreateTaskData {
   assigneeId?: string;
   teamId?: string | null;
   customFields?: Record<string, unknown>;
+  participants?: Array<{ userId: string; role: TaskParticipantRole }>;
+  allowAssigneeSharing?: boolean;
 }
 
 export interface UpdateTaskData {
@@ -851,6 +874,7 @@ export interface UpdateTaskData {
   assigneeId?: string | null;
   teamId?: string | null;
   customFields?: Record<string, unknown>;
+  allowAssigneeSharing?: boolean;
   googleDriveAttachments?: Array<{
     fileId: string;
     name: string;
@@ -906,7 +930,7 @@ export interface AllTasksFilters {
   customFieldFilters?: { fieldId: string; op: string; value?: unknown }[];
   scope?: "workspace" | "all_workspaces" | "assigned_all" | "assigned_workspace";
   /** Only for the personal scopes: "assigned" = assigned to me, "created" = created by me, default both (canonical My Tasks). */
-  relation?: "all" | "assigned" | "created";
+  relation?: "all" | "assigned" | "created" | "watching" | "reviewing" | "participating";
 }
 
 export interface AllTasksResponse {
@@ -2893,6 +2917,22 @@ class ApiClient {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
+  }
+
+  async getTaskParticipants(taskId: string): Promise<{ status: string; data: { participants: TaskParticipant[] } }> {
+    return this.request(`/tasks/${taskId}/participants`, { method: "GET", headers: this.getAuthHeaders() });
+  }
+
+  async addTaskParticipant(taskId: string, userId: string, role: TaskParticipantRole) {
+    return this.request(`/tasks/${taskId}/participants`, { method: "POST", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ userId, role }) });
+  }
+
+  async removeTaskParticipant(taskId: string, userId: string, role: TaskParticipantRole) {
+    return this.request(`/tasks/${taskId}/participants/${userId}/${role}`, { method: "DELETE", headers: this.getAuthHeaders() });
+  }
+
+  async changeTaskParticipantRole(taskId: string, userId: string, role: TaskParticipantRole, currentRole: TaskParticipantRole) {
+    return this.request(`/tasks/${taskId}/participants/${userId}`, { method: "PATCH", headers: { ...this.getAuthHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ role, currentRole }) });
   }
 
   async addTaskWatcher(
